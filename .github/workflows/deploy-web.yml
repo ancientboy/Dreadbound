@@ -20,6 +20,7 @@ env:
 jobs:
   export-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -39,25 +40,45 @@ jobs:
 
       - name: Run gameplay checks
         run: |
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --editor --quit
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_mission.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_combat.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_map.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_resources.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_content.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_progression.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_events.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_vertical_slice.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_loot_equipment.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_dynamic_generation.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_corridor_hub.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_metro_config.gd
-          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_pathways.gd
+          set -o pipefail
+          GODOT="./Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          timeout 60 "$GODOT" --headless --path . --editor --quit
+          for test_script in tests/test_*.gd; do
+            echo "Running ${test_script}"
+            log_file="$(mktemp)"
+            timeout 30 "$GODOT" --headless --path . --script "$test_script" 2>&1 | tee "$log_file"
+            if grep -Eq 'ERROR|SCRIPT ERROR|Parse Error|Assertion failed' "$log_file"; then
+              echo "Godot reported an error in ${test_script}"
+              exit 1
+            fi
+            rm -f "$log_file"
+          done
 
       - name: Export Web build
         run: |
           mkdir -p builds/web
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --export-release Web builds/web/index.html
+          printf '{"revision":"%s"}\n' "$GITHUB_SHA" > builds/web/version.json
+          python3 - <<'PY'
+          from pathlib import Path
+
+          page = Path("builds/web/index.html")
+          html = page.read_text()
+          updater = """<script>
+          (() => {
+            const key = "dreadbound-deployed-revision";
+            fetch(`version.json?check=${Date.now()}`, { cache: "no-store" })
+              .then((response) => response.json())
+              .then(({ revision }) => {
+                const previous = localStorage.getItem(key);
+                localStorage.setItem(key, revision);
+                if (previous && previous !== revision) location.reload();
+              })
+              .catch(() => {});
+          })();
+          </script>"""
+          page.write_text(html.replace("</head>", updater + "\n</head>"))
+          PY
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

@@ -62,7 +62,7 @@ func _ready() -> void:
 		GameState.corridor_intro_seen = true
 		GameState.save_progress()
 		feedback.text = "终末回廊已解锁：在此查看属性、强化身体、选择整备并再次投送。"
-	HubHint.text = "移动靠近司仪、整备终端或投送门；按 E / 点击操作。"
+	$HubHint.text = "移动靠近司仪、整备终端或投送门；按 E / 点击操作。"
 	$HubActions.visible = false
 	queue_redraw()
 
@@ -84,9 +84,9 @@ func _process(delta: float) -> void:
 	var target := _nearby_target()
 	$HubActions.visible = not target.is_empty() and target.id != "curator"
 	if target.is_empty():
-		HubHint.text = "探索终末回廊  ·  WASD / 方向键移动  ·  靠近设施后交互"
+		$HubHint.text = "探索终末回廊  ·  WASD / 方向键移动  ·  靠近设施后交互"
 	else:
-		HubHint.text = "[E] %s" % target.prompt
+		$HubHint.text = "[E] %s" % target.prompt
 	if Input.is_action_just_pressed("interact") and not target.is_empty():
 		_activate_target(target.id)
 
@@ -147,7 +147,7 @@ func _refresh() -> void:
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
 	for node_id in GameProgress.PATH_NODES:
 		var node: Dictionary = GameProgress.PATH_NODES[node_id]
-		var path_name := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}.get(str(node.path), "未知途径")
+		var path_name: String = {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}.get(str(node.path), "未知途径")
 		var button := get_node("Margin/Layout/Columns/Paths/%s" % PATH_BUTTONS[node_id]) as Button
 		var unlocked := GameState.unlocked_path_nodes.has(node_id)
 		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else "%s · %d 碎片" % [str(node.description), int(node.cost)]]

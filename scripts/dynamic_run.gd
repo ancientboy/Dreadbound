@@ -41,7 +41,8 @@ func _init(run_seed: int, requested_world := "sanatorium") -> void:
 func _generate() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
-	var modules: Array[String] = METRO_ROOM_MODULES if world_id == "metro" else ROOM_MODULES
+	var modules: Array[String] = []
+	modules.assign(METRO_ROOM_MODULES if world_id == "metro" else ROOM_MODULES)
 	room_order.assign(modules)
 	# Keep entrance first and extraction last while changing every interior route role.
 	var middle: Array[String] = room_order.slice(1, room_order.size() - 1)
@@ -88,7 +89,8 @@ func _generate() -> void:
 
 
 func validate() -> bool:
-	var modules: Array[String] = METRO_ROOM_MODULES if world_id == "metro" else ROOM_MODULES
+	var modules: Array[String] = []
+	modules.assign(METRO_ROOM_MODULES if world_id == "metro" else ROOM_MODULES)
 	if room_order.size() != modules.size() or room_order[0] != modules[0] or room_order[-1] != modules[-1]:
 		return false
 	if objective_positions.size() != objective_count or objective_count < 2 or objective_count > 4:

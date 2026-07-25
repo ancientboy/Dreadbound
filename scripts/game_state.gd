@@ -219,7 +219,7 @@ func load_progress() -> void:
 	selected_world = str(parsed.get("selected_world", "sanatorium"))
 	if selected_world not in ["sanatorium", "metro"]:
 		selected_world = "sanatorium"
-	var saved_profile := parsed.get("player_profile", {})
+	var saved_profile = parsed.get("player_profile", {})
 	if saved_profile is Dictionary:
 		for key in player_profile:
 			player_profile[key] = saved_profile.get(key, player_profile[key])
