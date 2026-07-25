@@ -14,6 +14,8 @@ var health := 70
 var target: Player
 var _attack_timer := 0.0
 var _hurt_flash := 0.0
+var _last_seen_position := Vector2.ZERO
+var _memory_timer := 0.0
 
 
 func _ready() -> void:
@@ -26,13 +28,20 @@ func _physics_process(delta: float) -> void:
 	var had_hurt_flash := _hurt_flash > 0.0
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
+	_memory_timer = maxf(_memory_timer - delta, 0.0)
 	if not is_instance_valid(target) or target.health <= 0:
 		velocity = Vector2.ZERO
 		return
 
 	var distance := global_position.distance_to(target.global_position)
+	if distance <= detection_range * target.get_detection_multiplier():
+		_last_seen_position = target.global_position
+		_memory_timer = 3.5
 	if distance > detection_range * target.get_detection_multiplier():
-		velocity = Vector2.ZERO
+		if _memory_timer > 0.0 and global_position.distance_to(_last_seen_position) > 18.0:
+			velocity = global_position.direction_to(_last_seen_position) * movement_speed * 0.72
+		else:
+			velocity = Vector2.ZERO
 	elif distance > attack_range:
 		velocity = global_position.direction_to(target.global_position) * movement_speed
 	else:

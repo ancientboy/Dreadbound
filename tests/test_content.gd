@@ -10,10 +10,12 @@ func _run_test() -> void:
 	var player: Player = mission.player
 	player.current_weapon = Player.Weapon.MELEE
 	player.ammo = 6
+	player.ranged_damage = 25
 	var crawlers = get_nodes_in_group("crawlers")
 	assert(crawlers.size() == 3)
 	for enemy in get_nodes_in_group("enemies"):
 		enemy.set_physics_process(false)
+		enemy.global_position = Vector2(-1000, -1000)
 	var crawler: Crawler = crawlers[0]
 	crawler.global_position = player.global_position + Vector2(200, 0)
 	player.facing = Vector2.RIGHT

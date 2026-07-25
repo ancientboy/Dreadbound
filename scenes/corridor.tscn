@@ -24,6 +24,7 @@ color = Color(0.015, 0.032, 0.031, 0)
 mouse_filter = 2
 
 [node name="Margin" type="MarginContainer" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -188,4 +189,65 @@ text = "装备回收仓库"
 custom_minimum_size = Vector2(360, 58)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
+text = "进入废弃疗养院"
+
+[node name="CloseTerminal" type="Button" parent="Margin/Layout/Actions"]
+custom_minimum_size = Vector2(180, 58)
+layout_mode = 2
+text = "关闭终端"
+
+[node name="HubTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 28.0
+offset_right = 650.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(0.38, 0.95, 0.82, 1)
+theme_override_font_sizes/font_size = 30
+text = "终末回廊 // 独立整备空间"
+
+[node name="HubHint" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -172.0
+offset_right = 360.0
+offset_bottom = -120.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.52, 0.77, 0.69, 1)
+theme_override_font_sizes/font_size = 17
+text = "中央终端管理属性、装备与强化；右侧投送门进入灾难世界"
+horizontal_alignment = 1
+
+[node name="HubActions" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -370.0
+offset_top = -112.0
+offset_right = 370.0
+offset_bottom = -42.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+theme_override_constants/separation = 28
+
+[node name="OpenTerminal" type="Button" parent="HubActions"]
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "打开行者整备终端"
+
+[node name="Deploy" type="Button" parent="HubActions"]
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
 text = "进入废弃疗养院"

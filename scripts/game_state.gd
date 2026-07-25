@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11]
@@ -24,6 +24,8 @@ var corridor_unlocked := false
 var corridor_intro_seen := false
 var equipment_inventory: Array[String] = ["service_crowbar", "medical_tag"]
 var equipped := {"weapon": "", "charm": ""}
+var active_run_seed := 0
+var last_action_code := ""
 
 
 func _ready() -> void:
@@ -42,7 +44,14 @@ func get_player_stats() -> Dictionary:
 	}
 
 
-func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0, equipment_rewards: Array[String] = []) -> int:
+func begin_run(requested_seed := 0) -> int:
+	active_run_seed = requested_seed if requested_seed != 0 else int(Time.get_unix_time_from_system()) ^ Time.get_ticks_msec()
+	last_action_code = "SAN-%08X" % absi(active_run_seed)
+	save_progress()
+	return active_run_seed
+
+
+func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0, equipment_rewards: Array[String] = [], run_summary: Dictionary = {}) -> int:
 	var mission_reward := records * 2 + (3 if success else 0)
 	var banked := carried_shards + mission_reward if success else 0
 	var banked_equipment: Array[String] = []
@@ -56,10 +65,11 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 				else:
 					overflow_shards += 1 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
 	banked += overflow_shards
-	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards}
+	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "dynamic_run": run_summary}
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true
+	active_run_seed = 0
 	save_progress()
 	progress_changed.emit()
 	return banked
@@ -124,7 +134,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code}))
 	return true
 
 
@@ -149,6 +159,8 @@ func load_progress() -> void:
 	selected_loadout = saved_loadout if LOADOUTS.has(saved_loadout) else "scavenger"
 	corridor_unlocked = bool(parsed.get("corridor_unlocked", not last_run.is_empty() and bool(last_run.get("success", false))))
 	corridor_intro_seen = bool(parsed.get("corridor_intro_seen", false))
+	active_run_seed = int(parsed.get("active_run_seed", 0))
+	last_action_code = str(parsed.get("last_action_code", ""))
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -174,6 +186,8 @@ func reset_progress() -> void:
 	corridor_intro_seen = false
 	equipment_inventory.assign(["service_crowbar", "medical_tag"])
 	equipped = {"weapon": "", "charm": ""}
+	active_run_seed = 0
+	last_action_code = ""
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

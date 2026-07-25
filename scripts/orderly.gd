@@ -16,6 +16,8 @@ var target: Player
 var _cooldown := 0.0
 var _windup := 0.0
 var _hurt_flash := 0.0
+var _last_seen_position := Vector2.ZERO
+var _memory_timer := 0.0
 
 
 func _ready() -> void:
@@ -28,11 +30,15 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_cooldown = maxf(_cooldown - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
+	_memory_timer = maxf(_memory_timer - delta, 0.0)
 	if not is_instance_valid(target) or target.health <= 0:
 		velocity = Vector2.ZERO
 		return
 	var distance := global_position.distance_to(target.global_position)
 	var effective_detection := detection_range * target.get_detection_multiplier()
+	if distance <= effective_detection:
+		_last_seen_position = target.global_position
+		_memory_timer = 5.0
 	if _windup > 0.0:
 		velocity = Vector2.ZERO
 		_windup -= delta
@@ -46,6 +52,8 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 	elif distance <= effective_detection:
 		velocity = global_position.direction_to(target.global_position) * movement_speed
+	elif _memory_timer > 0.0 and global_position.distance_to(_last_seen_position) > 22.0:
+		velocity = global_position.direction_to(_last_seen_position) * movement_speed * 0.65
 	else:
 		velocity = Vector2.ZERO
 	move_and_slide()

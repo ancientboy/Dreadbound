@@ -29,6 +29,9 @@ func _ready() -> void:
 		var button := get_node("Margin/Layout/Columns/Profile/Loadouts/%s" % loadout_id.capitalize()) as Button
 		button.pressed.connect(_select_loadout.bind(loadout_id))
 	deploy_button.pressed.connect(_deploy)
+	$HubActions/Deploy.pressed.connect(_deploy)
+	$HubActions/OpenTerminal.pressed.connect(_open_terminal)
+	$Margin/Layout/Actions/CloseTerminal.pressed.connect(_close_terminal)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
 	$Margin/Layout/Actions/Warehouse.pressed.connect(_open_warehouse)
 	_create_warehouse_panel()
@@ -58,7 +61,8 @@ func _refresh() -> void:
 	else:
 		var run: Dictionary = GameState.last_run
 		var gear_count: int = run.get("equipment_rewards", []).size()
-		report.text = "%s\n实验记录  %d/3\n风险事件  %d/2\n现场碎片  %d\n任务奖励  %d\n装备回收  %d\n清除威胁  %d" % ["撤离成功" if run.success else "行动失败", run.records, run.get("events_resolved", 0), run.carried_shards, run.mission_reward, gear_count, run.enemies_defeated]
+		var dynamic: Dictionary = run.get("dynamic_run", {})
+		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated]
 	queue_redraw()
 
 
@@ -74,6 +78,7 @@ func _select_loadout(loadout_id: String) -> void:
 func _deploy() -> void:
 	deploy_button.disabled = true
 	feedback.text = "正在建立疗养院连接……"
+	GameState.begin_run()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
@@ -83,21 +88,54 @@ func _reset_progress() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("07110f"))
+	draw_rect(Rect2(Vector2.ZERO, size), Color("0b1916"))
 	# Monumental corridor silhouette, cyan anomaly core and terminal scan lines.
 	for index in range(7):
 		var inset := 36.0 + index * 54.0
 		var alpha := 0.18 - index * 0.018
 		draw_line(Vector2(inset, 0), Vector2(360 + index * 35, size.y), Color(0.13, 0.34, 0.29, alpha), 3.0)
 		draw_line(Vector2(size.x - inset, 0), Vector2(size.x - 360 - index * 35, size.y), Color(0.13, 0.34, 0.29, alpha), 3.0)
-	draw_circle(Vector2(size.x * 0.5, size.y * 0.44), 170.0, Color(0.08, 0.5, 0.42, 0.055))
-	draw_circle(Vector2(size.x * 0.5, size.y * 0.44), 82.0, Color(0.19, 0.9, 0.74, 0.05))
-	draw_arc(Vector2(size.x * 0.5, size.y * 0.44), 118.0, 0.0, TAU, 72, Color(0.22, 0.79, 0.66, 0.16), 2.0)
+	var core := Vector2(size.x * 0.5, size.y * 0.42)
+	draw_circle(core, 190.0, Color(0.08, 0.5, 0.42, 0.12))
+	draw_circle(core, 92.0, Color(0.19, 0.9, 0.74, 0.13))
+	draw_arc(core, 128.0, 0.0, TAU, 72, Color(0.32, 0.95, 0.78, 0.42), 3.0)
+	# Raised platform, archive monolith and active deployment gate make the hub read as a place.
+	draw_colored_polygon(PackedVector2Array([Vector2(220, size.y * 0.76), Vector2(size.x - 220, size.y * 0.76), Vector2(size.x - 70, size.y), Vector2(70, size.y)]), Color("132a25"))
+	draw_line(Vector2(70, size.y), Vector2(220, size.y * 0.76), Color("35685c"), 4.0)
+	draw_line(Vector2(size.x - 70, size.y), Vector2(size.x - 220, size.y * 0.76), Color("35685c"), 4.0)
+	draw_rect(Rect2(core.x - 92, core.y - 135, 184, 270), Color(0.025, 0.12, 0.105, 0.72))
+	draw_rect(Rect2(core.x - 92, core.y - 135, 184, 270), Color("46bca5"), false, 3.0)
+	var gate_center := Vector2(size.x * 0.82, size.y * 0.46)
+	draw_arc(gate_center, 112.0, -2.1, 2.1, 48, Color("5ce8cf"), 12.0)
+	draw_circle(gate_center, 82.0, Color(0.16, 0.75, 0.66, 0.12))
+	# The Drifter remains visibly present in the Corridor rather than becoming only a menu.
+	var avatar := Vector2(size.x * 0.28, size.y * 0.61)
+	draw_circle(avatar + Vector2(0, -34), 13.0, Color("77847d"))
+	draw_rect(Rect2(avatar.x - 18, avatar.y - 22, 36, 52), Color("4f655b"))
+	draw_rect(Rect2(avatar.x - 26, avatar.y - 14, 9, 38), Color("594e39"))
+	draw_circle(avatar + Vector2(-17, 7), 5.0, Color("46e5ca"))
 	for y in range(10, int(size.y), 8):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.4, 0.8, 0.7, 0.012), 1.0)
-	draw_rect(Rect2(30, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.76))
-	draw_rect(Rect2(378, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.76))
-	draw_rect(Rect2(726, 112, size.x - 756, size.y - 220), Color(0.015, 0.055, 0.049, 0.76))
+	if $Margin.visible:
+		draw_rect(Rect2(30, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
+		draw_rect(Rect2(378, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
+		draw_rect(Rect2(726, 112, size.x - 756, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
+
+
+func _open_terminal() -> void:
+	$Margin.visible = true
+	$HubTitle.visible = false
+	$HubHint.visible = false
+	$HubActions.visible = false
+	queue_redraw()
+
+
+func _close_terminal() -> void:
+	$Margin.visible = false
+	$HubTitle.visible = true
+	$HubHint.visible = true
+	$HubActions.visible = true
+	queue_redraw()
 
 
 func _create_warehouse_panel() -> void:

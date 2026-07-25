@@ -16,13 +16,13 @@ func _ready() -> void:
 	queue_redraw()
 
 
-func get_prompt(records_found: int, power_online: bool) -> String:
+func get_prompt(records_found: int, power_online: bool, records_required := 3) -> String:
 	match kind:
 		Kind.RECORD:
 			return "[E] 读取%s" % display_name
 		Kind.POWER:
-			if records_found < 3:
-				return "尚未解锁 // 需要全部实验记录（%d/3）" % records_found
+			if records_found < records_required:
+				return "尚未解锁 // 需要全部目标（%d/%d）" % [records_found, records_required]
 			return "[E] 恢复疗养院电力"
 		Kind.EXIT:
 			if not power_online:

@@ -11,7 +11,6 @@ enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
 const MAP_SIZE := Vector2(2304.0, 1440.0)
 const INTERACTION_DISTANCE := 86.0
-const TOTAL_RECORDS := 3
 
 @onready var player: Player = $Player
 @onready var objective: Label = $Interface/TopBar/Objective
@@ -54,13 +53,26 @@ var active_chest: RewardChest
 var reward_panel: ColorRect
 var reward_buttons: Array[Button] = []
 var _loot_rng := RandomNumberGenerator.new()
+var run_config: DynamicRunConfig
+var director := DreadDirector.new()
+var total_records := 3
+var _director_tick := 0.0
+var _recent_damage := 0.0
+var _previous_health := 100
 
 
 func _ready() -> void:
+	var run_seed: int = GameState.active_run_seed
+	if run_seed == 0:
+		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
+	run_config = DynamicRunConfig.new(run_seed)
+	assert(run_config.validate())
+	total_records = run_config.objective_count
 	_create_collision_walls()
 	fog_of_war.player = player
 	minimap.player = player
 	minimap.fog = fog_of_war
+	minimap.run_config = run_config
 	fog_of_war.exploration_changed.connect(minimap.queue_redraw)
 	minimap.expanded_changed.connect(_on_map_expanded_changed)
 	_create_mission_interactables()
@@ -90,6 +102,7 @@ func _ready() -> void:
 	_loot_rng.randomize()
 	if not GameState.corridor_unlocked:
 		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
+	$Interface/TopBar/Title.text = "%s // %s" % [run_config.mission_title, run_config.action_code]
 	queue_redraw()
 
 
@@ -108,6 +121,18 @@ func _process(delta: float) -> void:
 		_notification_timer -= delta
 		if _notification_timer <= 0.0 and notification:
 			notification.visible = false
+	_director_tick += delta
+	_recent_damage = maxf(_recent_damage - delta * 0.08, 0.0)
+	if _director_tick >= 1.0 and mission_phase < MissionPhase.COMPLETE:
+		_director_tick = 0.0
+		var ammo_ratio := float(player.ammo + player.shells) / float(player.max_ammo + player.max_shells)
+		var decision := director.update(1.0, float(player.health) / player.max_health, ammo_ratio, _unrevealed_room_count(), _recent_damage, enemies_defeated >= 3)
+		if decision == "relief":
+			_add_pickup(ResourcePickup.Kind.BANDAGE, player.global_position + player.facing * 92.0)
+			_show_notification("导演干预：检测到资源短缺，附近出现一次补给机会", 3.5)
+		elif decision == "escalate":
+			_spawn_crawler_wave()
+			_show_notification("导演干预：长时间低压，侧翼出现追击信号", 3.5)
 	if _abandon_armed_until > 0 and Time.get_ticks_msec() > _abandon_armed_until:
 		_abandon_armed_until = 0
 		abandon_button.text = "撤回回廊"
@@ -141,7 +166,7 @@ func _process(delta: float) -> void:
 	var target := _nearest_interactable()
 	prompt_panel.visible = target != null
 	if target:
-		prompt.text = target.get_prompt(collected_records.size(), power_restored)
+		prompt.text = target.get_prompt(collected_records.size(), power_restored, total_records)
 		if wants_to_interact:
 			_handle_interaction(target)
 
@@ -152,17 +177,20 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 			if not collected_records.has(target.objective_id):
 				collected_records[target.objective_id] = true
 				target.mark_complete()
-				if collected_records.size() == TOTAL_RECORDS:
+				if collected_records.size() == total_records:
 					mission_phase = MissionPhase.RESTORE_POWER
 					_show_notification("三份记录已集齐：前往地下维护区恢复电力", 4.0)
 		ObjectiveInteractable.Kind.POWER:
-			if collected_records.size() == TOTAL_RECORDS and not power_restored:
+			if collected_records.size() == total_records and not power_restored:
 				power_restored = true
 				mission_phase = MissionPhase.EVACUATE
 				target.mark_complete()
 				boss.activate(player)
 				_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
 				_play_cue(150.0, 0.35)
+				if run_config.causal_chain == "spore_bloom" and event_results.any(func(result): return "污染药柜：强行开启" in result):
+					_spawn_crawler_wave()
+					_show_notification("因果回响：孢子污染沿供电管线扩散，额外威胁苏醒", 4.5)
 				queue_redraw()
 		ObjectiveInteractable.Kind.EXIT:
 			if power_restored:
@@ -175,7 +203,7 @@ func _complete_mission() -> void:
 	prompt_panel.visible = false
 	complete_panel.visible = true
 	result_heading.text = "撤离完成"
-	result_summary.text = "已回收 3 份实验记录 · 风险事件 %d/2\n现场回响碎片 %d\n返回终末回廊后进行结算" % [event_results.size(), player.echo_shards]
+	result_summary.text = "已完成%s %d/%d · 风险事件 %d/2\n现场回响碎片 %d · 行动代码 %s\n返回终末回廊后进行结算" % [run_config.objective_noun, collected_records.size(), total_records, event_results.size(), player.echo_shards, run_config.action_code]
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(false)
 	_stop_patients()
@@ -189,7 +217,8 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards)
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log}
+		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
 
@@ -202,6 +231,9 @@ func _on_abandon_pressed() -> void:
 
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
+	if current < _previous_health:
+		_recent_damage = clampf(_recent_damage + float(_previous_health - current) / maximum, 0.0, 1.0)
+	_previous_health = current
 	health_status.text = "生命 %d/%d" % [current, maximum]
 
 
@@ -298,13 +330,29 @@ func _resolve_active_event(take_risk: bool) -> void:
 				_spawn_crawler_wave()
 				event_results.append("回响病房：深入取样")
 			else:
-				player.add_echo_shards(1)
+				player.add_echo_shards(2 if run_config.causal_chain == "quiet_signal" else 1)
 				event_results.append("回响病房：远程封锁")
+		"archive_whisper":
+			if take_risk:
+				player.add_echo_shards(3)
+				player.take_damage(8, player.global_position)
+				event_results.append("低语档案：接受记忆")
+			else:
+				player.add_ammo(3)
+				event_results.append("低语档案：烧毁副本")
+		"power_surge":
+			if take_risk:
+				player.add_shells(3)
+				_spawn_crawler_wave()
+				event_results.append("过载回路：导出能量")
+			else:
+				player.add_stimulants(1)
+				event_results.append("过载回路：安全旁路")
 	active_event.mark_resolved()
 	active_event = null
 	event_panel.visible = false
 	_set_gameplay_paused(false)
-	progress.text = "记录 %d/%d  ·  事件 %d/2" % [collected_records.size(), TOTAL_RECORDS, event_results.size()]
+	progress.text = "%s %d/%d  ·  事件 %d/2" % [run_config.objective_noun, collected_records.size(), total_records, event_results.size()]
 
 
 func _set_gameplay_paused(paused: bool) -> void:
@@ -327,10 +375,10 @@ func _spawn_crawler_wave() -> void:
 
 
 func _update_mission_ui() -> void:
-	progress.text = "记录 %d/%d  ·  电力%s" % [collected_records.size(), TOTAL_RECORDS, "已恢复" if power_restored else "中断"]
+	progress.text = "%s %d/%d  ·  电力%s" % [run_config.objective_noun, collected_records.size(), total_records, "已恢复" if power_restored else "中断"]
 	match mission_phase:
 		MissionPhase.COLLECT_RECORDS:
-			objective.text = "当前目标：搜索疗养院内的实验记录"
+			objective.text = "当前目标：%s · 搜索 %d 个%s" % [run_config.mission_title, total_records, run_config.objective_noun]
 		MissionPhase.RESTORE_POWER:
 			objective.text = "当前目标：前往地下维护区恢复电力"
 		MissionPhase.EVACUATE:
@@ -340,15 +388,14 @@ func _update_mission_ui() -> void:
 
 
 func _create_mission_interactables() -> void:
-	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_01", "病房区实验记录", Vector2(672, 256))
-	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_02", "护理站实验记录", Vector2(1184, 480))
-	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_03", "档案室实验记录", Vector2(1952, 288))
-	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "地下室发电机", Vector2(1760, 1184))
-	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "紧急撤离出口", Vector2(224, 1184))
+	for index in range(total_records):
+		_add_interactable(ObjectiveInteractable.Kind.RECORD, "objective_%02d" % index, "%s %d" % [run_config.objective_noun, index + 1], run_config.objective_positions[index])
+	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "供电稳定节点", run_config.power_position)
+	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "动态撤离出口", run_config.exit_position)
 
 
 func _create_patients() -> void:
-	for spawn_position in [Vector2(736, 400), Vector2(1216, 560), Vector2(1888, 360), Vector2(1696, 1088)]:
+	for spawn_position in run_config.patient_spawns:
 		var patient := PATIENT_SCENE.instantiate() as Patient
 		patient.position = spawn_position
 		patient.target = player
@@ -357,7 +404,7 @@ func _create_patients() -> void:
 
 
 func _create_crawlers() -> void:
-	for spawn_position in [Vector2(1120, 400), Vector2(1984, 256), Vector2(1584, 1184)]:
+	for spawn_position in run_config.crawler_spawns:
 		var crawler := CRAWLER_SCENE.instantiate() as Crawler
 		crawler.position = spawn_position
 		crawler.target = player
@@ -366,7 +413,7 @@ func _create_crawlers() -> void:
 
 
 func _create_orderlies() -> void:
-	for spawn_position in [Vector2(1370, 770), Vector2(2080, 1110)]:
+	for spawn_position in run_config.orderly_spawns:
 		var orderly := ORDERLY_SCENE.instantiate() as Orderly
 		orderly.position = spawn_position
 		orderly.target = player
@@ -376,7 +423,7 @@ func _create_orderlies() -> void:
 
 func _create_boss() -> void:
 	boss = BOSS_SCENE.instantiate() as SanatoriumBoss
-	boss.position = Vector2(720, 1160)
+	boss.position = run_config.boss_position
 	boss.target = player
 	boss.tree_exiting.connect(_on_enemy_removed.bind(boss))
 	add_child(boss)
@@ -482,8 +529,26 @@ func _create_pickups() -> void:
 
 
 func _create_risk_events() -> void:
-	_add_risk_event("medicine_cabinet", "污染药柜", "柜门后的药品仍可使用，但内部孢子浓度正在上升。\n强行开启可获得绷带和弹药，同时承受污染伤害。", "强行开启：补给 + 受伤", "封存药柜：安全离开", Vector2(1056, 800))
-	_add_risk_event("echo_ward", "回响病房", "病房内存在高密度回响碎片，爬行声正在墙后聚集。\n深入取样可获得更多碎片，但会惊动附近威胁。", "深入取样：5 碎片 + 敌袭", "远程封锁：1 碎片", Vector2(1904, 736))
+	for index in range(run_config.side_contracts.size()):
+		var event_id: String = run_config.side_contracts[index]
+		var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
+		match event_id:
+			"medicine_cabinet":
+				_add_risk_event(event_id, "污染药柜", "柜门后的药品仍可使用，但内部孢子浓度正在上升。\n强行开启可获得绷带和弹药，同时承受污染伤害。", "强行开启：补给 + 受伤", "封存药柜：安全离开", at)
+			"echo_ward":
+				_add_risk_event(event_id, "回响病房", "高密度碎片与墙后爬行声产生共振。", "深入取样：5 碎片 + 敌袭", "远程封锁：安全碎片", at)
+			"archive_whisper":
+				_add_risk_event(event_id, "低语档案", "档案正在复述并不属于你的记忆。接受它可获得回响，但会损伤神经。", "接受记忆：3 碎片 + 受伤", "烧毁副本：少量弹药", at)
+			"power_surge":
+				_add_risk_event(event_id, "过载回路", "异常电流可转化为霰弹能源，但会唤醒附近爬行者。", "导出能量：霰弹 + 敌袭", "安全旁路：兴奋剂", at)
+
+
+func _unrevealed_room_count() -> int:
+	var count := 0
+	for value in fog_of_war.reveal_progress.values():
+		if float(value) < 0.95:
+			count += 1
+	return count
 
 
 func _add_risk_event(id: String, title: String, description: String, choice_a: String, choice_b: String, at: Vector2) -> void:
@@ -615,10 +680,12 @@ func _draw_grid() -> void:
 
 
 func _draw_zones() -> void:
+	var room_index := 0
 	for room in SanatoriumLayout.rooms():
 		draw_rect(room.rect, Color("18211f"))
 		draw_rect(room.rect, Color("27332f"), false, 2.0)
-		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), room.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
+		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
+		room_index += 1
 
 
 func _create_collision_walls() -> void:
@@ -634,7 +701,7 @@ func _create_collision_walls() -> void:
 
 
 func _wall_rectangles() -> Array[Rect2]:
-	return [
+	var walls: Array[Rect2] = [
 		Rect2(0, 0, MAP_SIZE.x, 32), Rect2(0, MAP_SIZE.y - 32, MAP_SIZE.x, 32),
 		Rect2(0, 0, 32, MAP_SIZE.y), Rect2(MAP_SIZE.x - 32, 0, 32, MAP_SIZE.y),
 		# Patient wing partitions, with door-sized gaps.
@@ -654,3 +721,9 @@ func _wall_rectangles() -> Array[Rect2]:
 		Rect2(480, 992, 32, 96), Rect2(480, 1216, 32, 96),
 		Rect2(512, 896, 320, 32), Rect2(960, 896, 544, 32),
 	]
+	if run_config:
+		match absi(run_config.seed) % 3:
+			0: walls.append(Rect2(832, 896, 64, 32))
+			1: walls.append(Rect2(1408, 448, 32, 64))
+			2: walls.append(Rect2(1888, 448, 64, 32))
+	return walls

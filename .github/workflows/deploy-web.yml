@@ -49,6 +49,8 @@ jobs:
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_events.gd
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_vertical_slice.gd
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_loot_equipment.gd
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_dynamic_generation.gd
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_corridor_hub.gd
 
       - name: Export Web build
         run: |

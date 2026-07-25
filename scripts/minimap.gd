@@ -8,6 +8,7 @@ const MINI_RADIUS := 68.0
 
 var player: Player
 var fog: FogOfWar
+var run_config: DynamicRunConfig
 var expanded := false
 var _last_player_position := Vector2.INF
 
@@ -85,6 +86,7 @@ func _draw_map_contents(target_rect: Rect2, show_labels: bool) -> void:
 	var scale_factor := minf(target_rect.size.x / SanatoriumLayout.MAP_SIZE.x, target_rect.size.y / SanatoriumLayout.MAP_SIZE.y)
 	var drawn_size := SanatoriumLayout.MAP_SIZE * scale_factor
 	var origin := target_rect.get_center() - drawn_size * 0.5
+	var room_index := 0
 	for room in SanatoriumLayout.rooms():
 		var room_rect := Rect2(origin + room.rect.position * scale_factor, room.rect.size * scale_factor)
 		var reveal := fog.get_reveal_progress(room.id) if is_instance_valid(fog) else 0.0
@@ -92,8 +94,10 @@ func _draw_map_contents(target_rect: Rect2, show_labels: bool) -> void:
 		draw_rect(room_rect, fill)
 		draw_rect(room_rect, Color(0.29, 0.55, 0.48, 0.8 if reveal > 0.0 else 0.3), false, 2.0 if show_labels else 1.0)
 		if show_labels:
-			var name: String = room.name if reveal > 0.0 else "未探索"
+			var dynamic_name: String = run_config.room_role(room_index) if run_config else str(room.name)
+			var name: String = dynamic_name if reveal > 0.0 else "未探索"
 			draw_string(UI_FONT, room_rect.position + Vector2(6, 18), name, HORIZONTAL_ALIGNMENT_LEFT, room_rect.size.x - 12, 13, Color(0.54, 0.72, 0.66, 0.9))
+		room_index += 1
 	if is_instance_valid(player):
 		var marker := origin + player.global_position * scale_factor
 		draw_circle(marker, 7.0 if show_labels else 3.5, Color("55e8ce"))

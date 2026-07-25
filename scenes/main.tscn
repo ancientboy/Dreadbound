@@ -29,10 +29,10 @@ theme = ExtResource("4_theme")
 [node name="Title" type="Label" parent="Interface/TopBar"]
 offset_left = 18.0
 offset_top = 9.0
-offset_right = 300.0
+offset_right = 370.0
 offset_bottom = 33.0
 theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 16
 text = "DREADBOUND // 疗养院任务灰盒"
 
 [node name="Objective" type="Label" parent="Interface/TopBar"]
