@@ -29,6 +29,8 @@ var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
 var power_restored := false
 var interactables: Array[ObjectiveInteractable] = []
+var enemies_defeated := 0
+var _run_settled := false
 
 
 func _ready() -> void:
@@ -71,7 +73,7 @@ func _process(_delta: float) -> void:
 
 	if mission_phase == MissionPhase.COMPLETE or mission_phase == MissionPhase.FAILED:
 		if wants_to_interact:
-			get_tree().reload_current_scene()
+			_return_to_corridor()
 		return
 
 	var target := _nearest_interactable()
@@ -106,10 +108,20 @@ func _complete_mission() -> void:
 	prompt_panel.visible = false
 	complete_panel.visible = true
 	result_heading.text = "撤离完成"
-	result_summary.text = "已回收 3 份实验记录\n疗养院电力已恢复"
+	result_summary.text = "已回收 3 份实验记录\n现场回响碎片 %d\n返回终末回廊后进行结算" % player.echo_shards
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(false)
 	_stop_patients()
+
+
+func _return_to_corridor() -> void:
+	if _run_settled:
+		return
+	_run_settled = true
+	var state := get_node_or_null("/root/GameState")
+	if state:
+		state.settle_run(mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated)
+	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
@@ -178,6 +190,7 @@ func _create_patients() -> void:
 		var patient := PATIENT_SCENE.instantiate() as Patient
 		patient.position = spawn_position
 		patient.target = player
+		patient.tree_exiting.connect(_on_enemy_removed.bind(patient))
 		add_child(patient)
 
 
@@ -186,7 +199,13 @@ func _create_crawlers() -> void:
 		var crawler := CRAWLER_SCENE.instantiate() as Crawler
 		crawler.position = spawn_position
 		crawler.target = player
+		crawler.tree_exiting.connect(_on_enemy_removed.bind(crawler))
 		add_child(crawler)
+
+
+func _on_enemy_removed(enemy: Node) -> void:
+	if enemy.get("health") != null and int(enemy.get("health")) <= 0:
+		enemies_defeated += 1
 
 
 func _create_pickups() -> void:

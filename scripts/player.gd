@@ -36,11 +36,24 @@ var _shot_end := Vector2.ZERO
 
 
 func _ready() -> void:
+	_apply_permanent_upgrades()
 	health = max_health
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
+
+
+func _apply_permanent_upgrades() -> void:
+	var state := get_node_or_null("/root/GameState")
+	if state == null:
+		return
+	var stats: Dictionary = state.get_player_stats()
+	max_health = int(stats.max_health)
+	movement_speed = float(stats.movement_speed)
+	attack_damage = int(stats.melee_damage)
+	ranged_damage = int(stats.ranged_damage)
+	bandage_heal = int(stats.bandage_heal)
 
 
 func _physics_process(delta: float) -> void:

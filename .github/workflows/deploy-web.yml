@@ -45,6 +45,7 @@ jobs:
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_map.gd
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_resources.gd
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_content.gd
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_progression.gd
 
       - name: Export Web build
         run: |

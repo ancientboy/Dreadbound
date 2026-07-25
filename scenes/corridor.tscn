@@ -1,0 +1,156 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource path="res://scripts/corridor.gd" type="Script" id="1_corridor"]
+[ext_resource path="res://assets/themes/dreadbound_theme.tres" type="Theme" id="2_theme"]
+
+[node name="Corridor" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_corridor")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.015, 0.032, 0.031, 1)
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 42.0
+offset_top = 28.0
+offset_right = -42.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Header" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Margin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
+theme_override_font_sizes/font_size = 30
+text = "终末回廊 // 行者整备终端"
+
+[node name="Currency" type="Label" parent="Margin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.82, 0.66, 1)
+theme_override_font_sizes/font_size = 18
+text = "回响碎片  0    ·    因果残片  0"
+vertical_alignment = 1
+
+[node name="Divider" type="HSeparator" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="Columns" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 24
+
+[node name="Archive" type="VBoxContainer" parent="Margin/Layout/Columns"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Title" type="Label" parent="Margin/Layout/Columns/Archive"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 21
+text = "上次行动结算"
+
+[node name="Report" type="Label" parent="Margin/Layout/Columns/Archive"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.62, 0.69, 0.65, 1)
+theme_override_font_sizes/font_size = 17
+text = "尚无行动记录。"
+
+[node name="Profile" type="VBoxContainer" parent="Margin/Layout/Columns"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Title" type="Label" parent="Margin/Layout/Columns/Profile"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 21
+text = "漂泊者档案"
+
+[node name="Stats" type="Label" parent="Margin/Layout/Columns/Profile"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.68, 0.73, 0.69, 1)
+theme_override_font_sizes/font_size = 17
+text = "生命上限       100"
+
+[node name="Upgrades" type="VBoxContainer" parent="Margin/Layout/Columns"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/Layout/Columns/Upgrades"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 21
+text = "永久强化"
+
+[node name="Vitality" type="Button" parent="Margin/Layout/Columns/Upgrades"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+text = "耐受训练"
+
+[node name="Mobility" type="Button" parent="Margin/Layout/Columns/Upgrades"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+text = "神经校准"
+
+[node name="Weapons" type="Button" parent="Margin/Layout/Columns/Upgrades"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+text = "武器适配"
+
+[node name="Recovery" type="Button" parent="Margin/Layout/Columns/Upgrades"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+text = "应急处理"
+
+[node name="Feedback" type="Label" parent="Margin/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.75, 0.66, 1)
+theme_override_font_sizes/font_size = 16
+text = "回响碎片可用于稳定行者的身体改造。"
+horizontal_alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="Reset" type="Button" parent="Margin/Layout/Actions"]
+custom_minimum_size = Vector2(180, 58)
+layout_mode = 2
+text = "清除存档"
+
+[node name="Deploy" type="Button" parent="Margin/Layout/Actions"]
+custom_minimum_size = Vector2(360, 58)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "进入废弃疗养院"

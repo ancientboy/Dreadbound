@@ -3,7 +3,10 @@ config_version=5
 
 [application]
 config/name="Dreadbound"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/corridor.tscn"
+
+[autoload]
+GameState="*res://scripts/game_state.gd"
 
 [display]
 window/size/viewport_width=1280
