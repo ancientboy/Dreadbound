@@ -8,6 +8,7 @@ func _run_test() -> void:
 	root.add_child(mission)
 	await process_frame
 	assert(mission.interactables.size() == 5)
+	assert(mission.risk_events.size() == 2)
 	assert(mission.abandon_button.visible)
 	mission._handle_interaction(mission.interactables[3])
 	assert(not mission.power_restored)

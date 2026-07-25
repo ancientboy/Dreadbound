@@ -35,10 +35,10 @@ func get_player_stats() -> Dictionary:
 	}
 
 
-func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int) -> int:
+func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0) -> int:
 	var mission_reward := records * 2 + (3 if success else 0)
 	var banked := carried_shards + mission_reward if success else 0
-	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated}
+	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved}
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true

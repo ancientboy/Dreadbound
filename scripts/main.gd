@@ -26,6 +26,11 @@ const TOTAL_RECORDS := 3
 @onready var weapon_status: Label = $Interface/TopBar/Weapon
 @onready var abandon_button: Button = $Interface/TopBar/Abandon
 @onready var return_button: Button = $Interface/CompletePanel/Return
+@onready var event_panel: ColorRect = $Interface/EventPanel
+@onready var event_title: Label = $Interface/EventPanel/Title
+@onready var event_description: Label = $Interface/EventPanel/Description
+@onready var event_choice_a: Button = $Interface/EventPanel/ChoiceA
+@onready var event_choice_b: Button = $Interface/EventPanel/ChoiceB
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -34,6 +39,9 @@ var interactables: Array[ObjectiveInteractable] = []
 var enemies_defeated := 0
 var _run_settled := false
 var _abandon_armed_until := 0
+var risk_events: Array[RiskEvent] = []
+var active_event: RiskEvent
+var event_results: Array[String] = []
 
 
 func _ready() -> void:
@@ -47,12 +55,15 @@ func _ready() -> void:
 	_create_patients()
 	_create_crawlers()
 	_create_pickups()
+	_create_risk_events()
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
 	player.inventory_changed.connect(_on_inventory_changed)
 	player.weapon_changed.connect(_on_weapon_changed)
 	abandon_button.pressed.connect(_on_abandon_pressed)
 	return_button.pressed.connect(_return_to_corridor)
+	event_choice_a.pressed.connect(_resolve_active_event.bind(true))
+	event_choice_b.pressed.connect(_resolve_active_event.bind(false))
 	_on_player_health_changed(player.health, player.max_health)
 	_on_inventory_changed(player.bandages, player.echo_shards)
 	_on_weapon_changed(player.get_weapon_name(), player.ammo)
@@ -82,6 +93,16 @@ func _process(_delta: float) -> void:
 	if mission_phase == MissionPhase.COMPLETE or mission_phase == MissionPhase.FAILED:
 		if wants_to_interact:
 			_return_to_corridor()
+		return
+	if active_event:
+		return
+
+	var risk_event := _nearest_risk_event()
+	if risk_event:
+		prompt_panel.visible = true
+		prompt.text = risk_event.get_prompt()
+		if wants_to_interact:
+			_open_risk_event(risk_event)
 		return
 
 	var target := _nearest_interactable()
@@ -116,7 +137,7 @@ func _complete_mission() -> void:
 	prompt_panel.visible = false
 	complete_panel.visible = true
 	result_heading.text = "撤离完成"
-	result_summary.text = "已回收 3 份实验记录\n现场回响碎片 %d\n返回终末回廊后进行结算" % player.echo_shards
+	result_summary.text = "已回收 3 份实验记录 · 风险事件 %d/2\n现场回响碎片 %d\n返回终末回廊后进行结算" % [event_results.size(), player.echo_shards]
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(false)
 	_stop_patients()
@@ -130,7 +151,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated)
+		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size())
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
 
@@ -182,6 +203,76 @@ func _nearest_interactable() -> ObjectiveInteractable:
 			nearest = item
 			nearest_distance = distance
 	return nearest
+
+
+func _nearest_risk_event() -> RiskEvent:
+	var nearest: RiskEvent
+	var nearest_distance := INTERACTION_DISTANCE
+	for risk_event in risk_events:
+		if risk_event.resolved:
+			continue
+		var distance := player.global_position.distance_to(risk_event.global_position)
+		if distance <= nearest_distance:
+			nearest = risk_event
+			nearest_distance = distance
+	return nearest
+
+
+func _open_risk_event(risk_event: RiskEvent) -> void:
+	active_event = risk_event
+	event_title.text = risk_event.title
+	event_description.text = risk_event.description
+	event_choice_a.text = risk_event.choice_a
+	event_choice_b.text = risk_event.choice_b
+	event_panel.visible = true
+	prompt_panel.visible = false
+	_set_gameplay_paused(true)
+
+
+func _resolve_active_event(take_risk: bool) -> void:
+	if active_event == null:
+		return
+	match active_event.event_id:
+		"medicine_cabinet":
+			if take_risk:
+				player.add_bandages(1)
+				player.add_ammo(8)
+				player.take_damage(15, player.global_position)
+				event_results.append("污染药柜：强行开启")
+			else:
+				event_results.append("污染药柜：封存")
+		"echo_ward":
+			if take_risk:
+				player.add_echo_shards(5)
+				_spawn_crawler_wave()
+				event_results.append("回响病房：深入取样")
+			else:
+				player.add_echo_shards(1)
+				event_results.append("回响病房：远程封锁")
+	active_event.mark_resolved()
+	active_event = null
+	event_panel.visible = false
+	_set_gameplay_paused(false)
+	progress.text = "记录 %d/%d  ·  事件 %d/2" % [collected_records.size(), TOTAL_RECORDS, event_results.size()]
+
+
+func _set_gameplay_paused(paused: bool) -> void:
+	player.set_physics_process(not paused)
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		enemy.set_physics_process(not paused)
+	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
+	if mobile_controls:
+		mobile_controls.visible = not paused
+		mobile_controls.set_process_input(not paused)
+
+
+func _spawn_crawler_wave() -> void:
+	for offset in [Vector2(-90, 30), Vector2(100, -20)]:
+		var crawler := CRAWLER_SCENE.instantiate() as Crawler
+		crawler.position = player.global_position + offset
+		crawler.target = player
+		crawler.tree_exiting.connect(_on_enemy_removed.bind(crawler))
+		add_child(crawler)
 
 
 func _update_mission_ui() -> void:
@@ -238,6 +329,23 @@ func _create_pickups() -> void:
 	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(576, 416), 6)
 	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(1344, 608), 8)
 	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(2112, 224), 8)
+
+
+func _create_risk_events() -> void:
+	_add_risk_event("medicine_cabinet", "污染药柜", "柜门后的药品仍可使用，但内部孢子浓度正在上升。\n强行开启可获得绷带和弹药，同时承受污染伤害。", "强行开启：补给 + 受伤", "封存药柜：安全离开", Vector2(1056, 800))
+	_add_risk_event("echo_ward", "回响病房", "病房内存在高密度回响碎片，爬行声正在墙后聚集。\n深入取样可获得更多碎片，但会惊动附近威胁。", "深入取样：5 碎片 + 敌袭", "远程封锁：1 碎片", Vector2(1904, 736))
+
+
+func _add_risk_event(id: String, title: String, description: String, choice_a: String, choice_b: String, at: Vector2) -> void:
+	var risk_event := RiskEvent.new()
+	risk_event.event_id = id
+	risk_event.title = title
+	risk_event.description = description
+	risk_event.choice_a = choice_a
+	risk_event.choice_b = choice_b
+	risk_event.position = at
+	add_child(risk_event)
+	risk_events.append(risk_event)
 
 
 func _add_pickup(kind: ResourcePickup.Kind, at: Vector2, amount := 1) -> void:

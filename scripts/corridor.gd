@@ -45,7 +45,7 @@ func _refresh() -> void:
 		report.text = "尚无行动记录。\n疗养院连接等待校准。"
 	else:
 		var run: Dictionary = GameState.last_run
-		report.text = "%s\n实验记录  %d/3\n现场碎片  %d\n任务奖励  %d\n带回总计  %d\n清除威胁  %d" % ["撤离成功" if run.success else "行动失败", run.records, run.carried_shards, run.mission_reward, run.banked_shards, run.enemies_defeated]
+		report.text = "%s\n实验记录  %d/3\n风险事件  %d/2\n现场碎片  %d\n任务奖励  %d\n带回总计  %d\n清除威胁  %d" % ["撤离成功" if run.success else "行动失败", run.records, run.get("events_resolved", 0), run.carried_shards, run.mission_reward, run.banked_shards, run.enemies_defeated]
 
 
 func _purchase(upgrade_id: String) -> void:
