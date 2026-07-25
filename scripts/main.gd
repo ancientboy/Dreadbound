@@ -59,6 +59,10 @@ var total_records := 3
 var _director_tick := 0.0
 var _recent_damage := 0.0
 var _previous_health := 100
+var metro_tide_level := 0
+var metro_tide_timer := 0.0
+var metro_noise := 0
+var metro_train_window := -1.0
 
 
 func _ready() -> void:
@@ -135,6 +139,8 @@ func _process(delta: float) -> void:
 		elif decision == "escalate":
 			_spawn_crawler_wave()
 			_show_notification("导演干预：长时间低压，侧翼出现追击信号", 3.5)
+	if run_config and run_config.world_id == "metro" and mission_phase < MissionPhase.COMPLETE:
+		_update_metro_pressure(delta)
 	if _abandon_armed_until > 0 and Time.get_ticks_msec() > _abandon_armed_until:
 		_abandon_armed_until = 0
 		abandon_button.text = "撤回回廊"
@@ -181,21 +187,25 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 				target.mark_complete()
 				if collected_records.size() == total_records:
 					mission_phase = MissionPhase.RESTORE_POWER
-					_show_notification("三份记录已集齐：前往地下维护区恢复电力", 4.0)
+					_show_notification("%s已集齐：前往信号机房重置道岔" % run_config.objective_noun if run_config.world_id == "metro" else "三份记录已集齐：前往地下维护区恢复电力", 4.0)
 		ObjectiveInteractable.Kind.POWER:
 			if collected_records.size() == total_records and not power_restored:
 				power_restored = true
 				mission_phase = MissionPhase.EVACUATE
 				target.mark_complete()
 				boss.activate(player)
-				_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
+				if run_config.world_id == "metro":
+					metro_train_window = 90.0
+					_show_notification("道岔已重置：末班列车将在南站台停靠 90 秒。\n可击破车长回声取得回收箱，或立刻登车撤离。", 6.0)
+				else:
+					_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
 				_play_cue(150.0, 0.35)
 				if run_config.causal_chain == "spore_bloom" and event_results.any(func(result): return "污染药柜：强行开启" in result):
 					_spawn_crawler_wave()
 					_show_notification("因果回响：孢子污染沿供电管线扩散，额外威胁苏醒", 4.5)
 				queue_redraw()
 		ObjectiveInteractable.Kind.EXIT:
-			if power_restored:
+			if power_restored and (run_config.world_id != "metro" or metro_train_window > 0.0):
 				_complete_mission()
 	_update_mission_ui()
 
@@ -219,7 +229,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -350,6 +360,36 @@ func _resolve_active_event(take_risk: bool) -> void:
 			else:
 				player.add_stimulants(1)
 				event_results.append("过载回路：安全旁路")
+		"floating_locker":
+			if take_risk:
+				player.add_bandages(1)
+				metro_tide_level = mini(metro_tide_level + 1, 2)
+				event_results.append("漂浮失物柜：强取密封包")
+			else: event_results.append("漂浮失物柜：放弃")
+		"wrong_announcement":
+			if take_risk:
+				player.add_echo_shards(4)
+				_spawn_crawler_wave()
+				event_results.append("错误报站：跟随伪信号")
+			else:
+				metro_noise += 1
+				event_results.append("错误报站：忽略")
+		"help_carriage":
+			if take_risk:
+				player.add_ammo(6)
+				_spawn_crawler_wave()
+				event_results.append("求救车厢：开门")
+			else:
+				player.add_echo_shards(2)
+				event_results.append("求救车厢：远程回应")
+		"breaker_bypass":
+			if take_risk:
+				metro_train_window += 20.0 if metro_train_window > 0.0 else 0.0
+				metro_noise += 3
+				event_results.append("断路器旁路：短接")
+			else:
+				player.add_stimulants(1)
+				event_results.append("断路器旁路：保守")
 	active_event.mark_resolved()
 	active_event = null
 	event_panel.visible = false
@@ -377,6 +417,12 @@ func _spawn_crawler_wave() -> void:
 
 
 func _update_mission_ui() -> void:
+	if run_config.world_id == "metro":
+		var tide_names := ["干燥", "浸水", "深水"]
+		var train := "未校准" if metro_train_window < 0.0 else "%ds" % ceili(metro_train_window)
+		progress.text = "%s %d/%d · 潮位%s · 噪音%d · 车次%s" % [run_config.objective_noun, collected_records.size(), total_records, tide_names[metro_tide_level], metro_noise, train]
+		objective.text = "当前目标：%s" % ("校准车次信标" if mission_phase == MissionPhase.COLLECT_RECORDS else ("前往信号机房重置道岔" if mission_phase == MissionPhase.RESTORE_POWER else "前往南站台，在车门关闭前登车"))
+		return
 	progress.text = "%s %d/%d  ·  电力%s" % [run_config.objective_noun, collected_records.size(), total_records, "已恢复" if power_restored else "中断"]
 	match mission_phase:
 		MissionPhase.COLLECT_RECORDS:
@@ -401,6 +447,10 @@ func _create_patients() -> void:
 		var patient := PATIENT_SCENE.instantiate() as Patient
 		patient.position = spawn_position
 		patient.target = player
+		if run_config.world_id == "metro":
+			patient.movement_speed = 96.0
+			patient.max_health = 62
+			patient.enemy_label = "溺行者"
 		patient.tree_exiting.connect(_on_enemy_removed.bind(patient))
 		add_child(patient)
 
@@ -419,6 +469,10 @@ func _create_orderlies() -> void:
 		var orderly := ORDERLY_SCENE.instantiate() as Orderly
 		orderly.position = spawn_position
 		orderly.target = player
+		if run_config.world_id == "metro":
+			orderly.max_health = 130
+			orderly.attack_damage = 24
+			orderly.enemy_label = "检票员"
 		orderly.tree_exiting.connect(_on_enemy_removed.bind(orderly))
 		add_child(orderly)
 
@@ -427,6 +481,9 @@ func _create_boss() -> void:
 	boss = BOSS_SCENE.instantiate() as SanatoriumBoss
 	boss.position = run_config.boss_position
 	boss.target = player
+	if run_config.world_id == "metro":
+		boss.boss_label = "末班列车 · 车长回声"
+		boss.max_health = 360
 	boss.tree_exiting.connect(_on_enemy_removed.bind(boss))
 	add_child(boss)
 
@@ -468,7 +525,7 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 func _spawn_reward_chest(at: Vector2) -> RewardChest:
 	var chest := RewardChest.new()
 	chest.position = at
-	var pool := EquipmentDatabase.reward_pool()
+	var pool := EquipmentDatabase.metro_reward_pool() if run_config.world_id == "metro" else EquipmentDatabase.reward_pool()
 	pool.shuffle()
 	chest.candidates.assign(pool.slice(0, 3))
 	add_child.call_deferred(chest)
@@ -534,6 +591,15 @@ func _create_risk_events() -> void:
 	for index in range(run_config.side_contracts.size()):
 		var event_id: String = run_config.side_contracts[index]
 		var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
+		if run_config.world_id == "metro":
+			var metro_events := ["floating_locker", "wrong_announcement", "help_carriage", "breaker_bypass"]
+			var metro_id: String = metro_events[(absi(run_config.seed) + index) % metro_events.size()]
+			match metro_id:
+				"floating_locker": _add_risk_event(metro_id, "漂浮失物柜", "密封包正在水面上翻转。取走补给会破坏防水层。", "强取：补给 + 潮位上升", "放弃：保持干燥", at)
+				"wrong_announcement": _add_risk_event(metro_id, "错误报站", "广播指向一条未标注的站台。", "跟随：碎片 + 敌袭", "忽略：记录噪音", at)
+				"help_carriage": _add_risk_event(metro_id, "求救车厢", "车厢内的求救灯仍在闪烁。", "开门：补给 + 敌袭", "远程回应：少量碎片", at)
+				"breaker_bypass": _add_risk_event(metro_id, "断路器旁路", "短接能压缩车次等待，但会惊动整座站台。", "短接：车次 +20 秒 · 高噪音", "保守：获得兴奋剂", at)
+			continue
 		match event_id:
 			"medicine_cabinet":
 				_add_risk_event(event_id, "污染药柜", "柜门后的药品仍可使用，但内部孢子浓度正在上升。\n强行开启可获得绷带和弹药，同时承受污染伤害。", "强行开启：补给 + 受伤", "封存药柜：安全离开", at)
@@ -581,6 +647,22 @@ func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: Stri
 	item.position = at
 	add_child(item)
 	interactables.append(item)
+
+
+func _update_metro_pressure(delta: float) -> void:
+	metro_tide_timer += delta
+	if metro_tide_timer >= 75.0 and metro_tide_level < 2:
+		metro_tide_timer = 0.0
+		metro_tide_level += 1
+		_show_notification("潮位上升：%s区域正在改变路线与敌人速度。" % ["浸水" if metro_tide_level == 1 else "深水"], 4.0)
+		queue_redraw()
+	if metro_train_window > 0.0:
+		metro_train_window -= delta
+		if metro_train_window <= 0.0:
+			metro_train_window = 35.0
+			metro_noise += 1
+			_show_notification("错过末班车：备用道岔响应，补救车次开放 35 秒。", 5.0)
+	_update_mission_ui()
 
 
 func _create_feedback_layer() -> void:

@@ -2,7 +2,7 @@ class_name DynamicRunConfig
 extends RefCounted
 
 const ROOM_MODULES := ["入口大厅", "病房甲区", "护理站", "隔离病房", "实验档案室", "地下维护区", "药品库", "撤离通道"]
-const METRO_ROOM_MODULES := ["检票大厅", "湿闸通道", "东侧站台", "信号机房", "维修走廊", "档案月台", "天桥", "零号层"]
+const METRO_ROOM_MODULES := ["检票大厅", "废弃商街", "北站台", "南站台", "淹水隧道", "信号机房", "维修走廊", "售票档案室", "换乘天桥", "零号换乘层"]
 const CONTENT_SLOTS := [
 	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
 	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),

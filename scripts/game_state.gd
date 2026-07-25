@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11]
@@ -27,6 +27,7 @@ var equipped := {"weapon": "", "charm": ""}
 var active_run_seed := 0
 var last_action_code := ""
 var selected_world := "sanatorium"
+var player_profile := {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
 
 
 func _ready() -> void:
@@ -67,6 +68,12 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 					overflow_shards += 1 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
 	banked += overflow_shards
 	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "dynamic_run": run_summary}
+	player_profile.runs = int(player_profile.get("runs", 0)) + 1
+	player_profile.successful_runs = int(player_profile.get("successful_runs", 0)) + (1 if success else 0)
+	player_profile.metro_runs = int(player_profile.get("metro_runs", 0)) + (1 if str(run_summary.get("world", "")) == "metro" else 0)
+	player_profile.noise_actions = int(player_profile.get("noise_actions", 0)) + int(run_summary.get("noise", 0))
+	player_profile.events_taken = int(player_profile.get("events_taken", 0)) + events_resolved
+	player_profile.last_observation = _build_observation(success, enemies_defeated, events_resolved, run_summary)
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true
@@ -135,7 +142,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile}))
 	return true
 
 
@@ -165,6 +172,10 @@ func load_progress() -> void:
 	selected_world = str(parsed.get("selected_world", "sanatorium"))
 	if selected_world not in ["sanatorium", "metro"]:
 		selected_world = "sanatorium"
+	var saved_profile := parsed.get("player_profile", {})
+	if saved_profile is Dictionary:
+		for key in player_profile:
+			player_profile[key] = saved_profile.get(key, player_profile[key])
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -193,6 +204,19 @@ func reset_progress() -> void:
 	active_run_seed = 0
 	last_action_code = ""
 	selected_world = "sanatorium"
+	player_profile = {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()
+
+
+func _build_observation(success: bool, enemies_defeated: int, events_resolved: int, run_summary: Dictionary) -> String:
+	if not success:
+		return "阈值司仪：你在撤离前失去了连接。下一次先确认出口与资源。"
+	if int(run_summary.get("noise", 0)) >= 4:
+		return "阈值司仪：你以高噪声推进仍完成撤离；检票员已记录你的路线。"
+	if events_resolved >= 2:
+		return "阈值司仪：你主动触碰异常并带回了结果。风险适应倾向正在形成。"
+	if enemies_defeated >= 7:
+		return "阈值司仪：你倾向清除威胁再离开。可尝试一次低噪声撤离试炼。"
+	return "阈值司仪：你保持了可控的撤离节奏。继续观察你的路线选择。"

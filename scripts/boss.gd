@@ -11,6 +11,7 @@ var phase_two := false
 var _timer := 1.2
 var _windup := 0.0
 var _attack_index := 0
+var boss_label := "缝合主任"
 
 
 func _ready() -> void:
@@ -84,4 +85,4 @@ func _draw() -> void:
 	draw_circle(Vector2(9, -65), 4.0, Color("39d7c2"))
 	draw_rect(Rect2(-80, -98, 160, 10), Color("1e1718"))
 	draw_rect(Rect2(-80, -98, 160.0 * float(health) / max_health, 10), Color("a73f3a"))
-	draw_string(UI_FONT, Vector2(-80, 72), "缝合主任", HORIZONTAL_ALIGNMENT_CENTER, 160, 18, Color("c3b7a8"))
+	draw_string(UI_FONT, Vector2(-115, 72), boss_label, HORIZONTAL_ALIGNMENT_CENTER, 230, 18, Color("8ed9ef") if boss_label.begins_with("末班") else Color("c3b7a8"))

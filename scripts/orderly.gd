@@ -18,6 +18,7 @@ var _windup := 0.0
 var _hurt_flash := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
+var enemy_label := "护理员"
 
 
 func _ready() -> void:
@@ -81,4 +82,4 @@ func _draw() -> void:
 	draw_line(Vector2(18, -4), Vector2(34, 28), body, 10.0)
 	draw_rect(Rect2(-28, -59, 56, 5), Color("261b1a"))
 	draw_rect(Rect2(-28, -59, 56.0 * float(health) / max_health, 5), Color("9f3e38"))
-	draw_string(UI_FONT, Vector2(-42, 52), "护理员", HORIZONTAL_ALIGNMENT_CENTER, 84, 13, Color("9aa49e"))
+	draw_string(UI_FONT, Vector2(-50, 52), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 100, 13, Color("d89b76") if enemy_label == "检票员" else Color("9aa49e"))

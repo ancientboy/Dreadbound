@@ -117,7 +117,7 @@ func _nearby_target() -> Dictionary:
 func _activate_target(id: String) -> void:
 	match id:
 		"curator":
-			feedback.text = "阈值司仪：我只记录已发生的选择。下一次行动前，请决定你的路线。"
+			feedback.text = "阈值司仪：%s\n建议：%s" % [str(GameState.player_profile.get("last_observation", "尚无足够行动数据。")), "完成一次低噪声撤离试炼。" if int(GameState.player_profile.get("noise_actions", 0)) >= 4 else "继续选择可解释的风险，而非盲目深入。"]
 			_open_terminal()
 		"terminal": _open_terminal()
 		"gate": _deploy()
@@ -146,7 +146,7 @@ func _refresh() -> void:
 		var run: Dictionary = GameState.last_run
 		var gear_count: int = run.get("equipment_rewards", []).size()
 		var dynamic: Dictionary = run.get("dynamic_run", {})
-		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated]
+		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d\n\n司仪观察：%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。"))]
 	queue_redraw()
 
 

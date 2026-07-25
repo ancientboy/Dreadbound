@@ -10,6 +10,10 @@ const ITEMS := {
 	"calming_coil": {"name": "镇静线圈", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 116, "description": "生命上限 +8 · 绷带恢复 +3", "max_health": 8, "bandage_heal": 3},
 	"ward_echo": {"name": "病房回响体", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 148, "description": "生命上限 +12 · 移速 +3", "max_health": 12, "movement_speed": 3.0},
 	"cyan_mark": {"name": "异常青印", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 176, "description": "全武器伤害 +5 · 生命上限 -8", "max_health": -8, "melee_damage": 5, "ranged_damage": 5, "shotgun_damage": 5},
+	"waterproof_pulse": {"name": "防水脉冲腕带", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 124, "description": "潮没区域移速 +8 · 生命上限 -3", "movement_speed": 8.0, "max_health": -3},
+	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "description": "武器伤害 +3 · 会放大行动噪音", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
+	"insulated_crowbar": {"name": "绝缘撬棍", "quality": "回响", "quality_rank": 2, "slot": "weapon", "rating": 158, "description": "近战伤害 +11 · 生命上限 -4", "melee_damage": 11, "max_health": -4},
+	"last_ticket": {"name": "末班票根", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 182, "description": "生命上限 +6 · 全武器伤害 +3", "max_health": 6, "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
@@ -21,6 +25,10 @@ static func get_item(item_id: String) -> Dictionary:
 
 static func reward_pool() -> Array[String]:
 	return ["balanced_pistol", "breach_shotgun", "echo_edge", "calming_coil", "ward_echo", "cyan_mark"]
+
+
+static func metro_reward_pool() -> Array[String]:
+	return ["waterproof_pulse", "station_whistle", "insulated_crowbar", "last_ticket", "echo_edge", "cyan_mark"]
 
 
 static func get_bonuses(equipped: Dictionary) -> Dictionary:

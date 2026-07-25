@@ -16,6 +16,7 @@ var _attack_timer := 0.0
 var _hurt_flash := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
+var enemy_label := "病患"
 
 
 func _ready() -> void:
@@ -74,4 +75,4 @@ func _draw() -> void:
 	if health < max_health:
 		draw_rect(Rect2(-24, -44, 48, 5), Color("261b1a"))
 		draw_rect(Rect2(-24, -44, 48.0 * float(health) / max_health, 5), Color("9f3e38"))
-	draw_string(UI_FONT, Vector2(-35, 42), "病患", HORIZONTAL_ALIGNMENT_CENTER, 70, 12, Color("8d9990"))
+	draw_string(UI_FONT, Vector2(-42, 42), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 84, 12, Color("76bdd0") if enemy_label == "溺行者" else Color("8d9990"))
