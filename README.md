@@ -33,7 +33,7 @@
 3. **最小战斗闭环（完成）**：玩家生命与受击、基础近战攻击、The Patient 追击与扑击、死亡与重开。
 4. **探索地图（完成）**：未探索房间迷雾、进入后渐显、右上角小地图和可展开全图。
 5. **资源管理（下一步）**：拆分正式场景结构，加入资源搜集、一种消耗品和简化物品栏。
-5. **表现与平衡**：统一像素素材、灯光和音效、终端风格 UI、永久强化及 Web 性能优化。
+6. **表现与平衡**：统一像素素材、灯光和音效、终端风格 UI、永久强化及 Web 性能优化。
 
 详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md) 和 [`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 
