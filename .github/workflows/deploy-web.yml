@@ -37,6 +37,12 @@ jobs:
           unzip -q templates.tpz
           mv templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
+      - name: Run gameplay checks
+        run: |
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --editor --quit
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_mission.gd
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script tests/test_combat.gd
+
       - name: Export Web build
         run: |
           mkdir -p builds/web

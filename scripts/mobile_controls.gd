@@ -10,7 +10,9 @@ const ACTION_RADIUS := 62.0
 var movement_vector := Vector2.ZERO
 var _move_touch := -1
 var _action_touch := -1
+var _attack_touch := -1
 var _interact_queued := false
+var _attack_queued := false
 
 
 func _ready() -> void:
@@ -36,12 +38,22 @@ func consume_interact() -> bool:
 	return was_pressed
 
 
+func consume_attack() -> bool:
+	var was_pressed := _attack_queued
+	_attack_queued = false
+	return was_pressed
+
+
 func _handle_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
 		if _move_touch == -1 and event.position.x < size.x * 0.5:
 			_move_touch = event.index
 			_update_stick(event.position)
-		elif _action_touch == -1 and event.position.distance_to(_action_center()) <= ACTION_RADIUS * 1.55:
+		elif _attack_touch == -1 and event.position.distance_to(_attack_center()) <= ACTION_RADIUS * 1.45:
+			_attack_touch = event.index
+			_attack_queued = true
+			queue_redraw()
+		elif _action_touch == -1 and event.position.distance_to(_action_center()) <= ACTION_RADIUS * 1.45:
 			_action_touch = event.index
 			_interact_queued = true
 			queue_redraw()
@@ -51,6 +63,9 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		queue_redraw()
 	elif event.index == _action_touch:
 		_action_touch = -1
+		queue_redraw()
+	elif event.index == _attack_touch:
+		_attack_touch = -1
 		queue_redraw()
 
 
@@ -70,9 +85,14 @@ func _action_center() -> Vector2:
 	return Vector2(size.x - 116.0, size.y - 122.0)
 
 
+func _attack_center() -> Vector2:
+	return Vector2(size.x - 270.0, size.y - 190.0)
+
+
 func _draw() -> void:
 	var stick_center := _stick_center()
 	var action_center := _action_center()
+	var attack_center := _attack_center()
 	draw_circle(stick_center, STICK_RADIUS, Color(0.04, 0.11, 0.1, 0.68))
 	draw_arc(stick_center, STICK_RADIUS, 0.0, TAU, 48, Color(0.25, 0.58, 0.52, 0.72), 3.0)
 	draw_circle(stick_center + movement_vector * STICK_RADIUS, KNOB_RADIUS, Color(0.27, 0.72, 0.63, 0.82))
@@ -82,3 +102,8 @@ func _draw() -> void:
 		draw_circle(action_center, ACTION_RADIUS - 8.0, Color(0.25, 0.88, 0.76, 0.25))
 	draw_string(UI_FONT, action_center + Vector2(-8, 9), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("65e6cf"))
 	draw_string(UI_FONT, action_center + Vector2(-14, 82), "交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.45, 0.72, 0.66, 0.9))
+	draw_circle(attack_center, ACTION_RADIUS, Color(0.14, 0.055, 0.05, 0.88))
+	draw_arc(attack_center, ACTION_RADIUS, 0.0, TAU, 48, Color(0.75, 0.28, 0.24, 0.92), 4.0)
+	if _attack_touch != -1:
+		draw_circle(attack_center, ACTION_RADIUS - 8.0, Color(0.8, 0.25, 0.2, 0.28))
+	draw_string(UI_FONT, attack_center + Vector2(-26, 8), "攻击", HORIZONTAL_ALIGNMENT_CENTER, 52, 20, Color("e8897f"))

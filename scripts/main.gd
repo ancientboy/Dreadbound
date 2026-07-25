@@ -2,7 +2,7 @@ extends Node2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 
-enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE }
+enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
 const MAP_SIZE := Vector2(2304.0, 1440.0)
 const INTERACTION_DISTANCE := 86.0
@@ -14,6 +14,9 @@ const TOTAL_RECORDS := 3
 @onready var prompt_panel: ColorRect = $Interface/PromptPanel
 @onready var prompt: Label = $Interface/PromptPanel/Prompt
 @onready var complete_panel: ColorRect = $Interface/CompletePanel
+@onready var health_status: Label = $Interface/TopBar/Health
+@onready var result_heading: Label = $Interface/CompletePanel/Heading
+@onready var result_summary: Label = $Interface/CompletePanel/Summary
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -24,6 +27,10 @@ var interactables: Array[ObjectiveInteractable] = []
 func _ready() -> void:
 	_create_collision_walls()
 	_create_mission_interactables()
+	_create_patients()
+	player.health_changed.connect(_on_player_health_changed)
+	player.died.connect(_on_player_died)
+	_on_player_health_changed(player.health, player.max_health)
 	_update_mission_ui()
 	queue_redraw()
 
@@ -34,7 +41,7 @@ func _process(_delta: float) -> void:
 	if mobile_controls:
 		wants_to_interact = mobile_controls.consume_interact() or wants_to_interact
 
-	if mission_phase == MissionPhase.COMPLETE:
+	if mission_phase == MissionPhase.COMPLETE or mission_phase == MissionPhase.FAILED:
 		if wants_to_interact:
 			get_tree().reload_current_scene()
 		return
@@ -70,8 +77,30 @@ func _complete_mission() -> void:
 	mission_phase = MissionPhase.COMPLETE
 	prompt_panel.visible = false
 	complete_panel.visible = true
+	result_heading.text = "撤离完成"
+	result_summary.text = "已回收 3 份实验记录\n疗养院电力已恢复"
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(false)
+	_stop_patients()
+
+
+func _on_player_health_changed(current: int, maximum: int) -> void:
+	health_status.text = "生命 %d/%d" % [current, maximum]
+
+
+func _on_player_died() -> void:
+	mission_phase = MissionPhase.FAILED
+	prompt_panel.visible = false
+	complete_panel.visible = true
+	result_heading.text = "行动失败"
+	result_summary.text = "漂泊者已失去生命体征\n终末回廊连接中断"
+	objective.text = "任务失败：行者未能撤离"
+	_stop_patients()
+
+
+func _stop_patients() -> void:
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		enemy.set_physics_process(false)
 
 
 func _nearest_interactable() -> ObjectiveInteractable:
@@ -106,6 +135,14 @@ func _create_mission_interactables() -> void:
 	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_03", "档案室实验记录", Vector2(1952, 288))
 	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "地下室发电机", Vector2(1760, 1184))
 	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "紧急撤离出口", Vector2(224, 1184))
+
+
+func _create_patients() -> void:
+	for spawn_position in [Vector2(736, 560), Vector2(1216, 784), Vector2(1888, 640), Vector2(1696, 1088)]:
+		var patient := Patient.new()
+		patient.position = spawn_position
+		patient.target = player
+		add_child(patient)
 
 
 func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: String, at: Vector2) -> void:
