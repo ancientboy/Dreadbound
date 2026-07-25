@@ -19,7 +19,11 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var can_interact := not record_collected and player.global_position.distance_to(TERMINAL_POSITION) <= INTERACTION_DISTANCE
 	prompt_panel.visible = can_interact
-	if can_interact and Input.is_action_just_pressed("interact"):
+	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
+	var wants_to_interact := Input.is_action_just_pressed("interact")
+	if mobile_controls:
+		wants_to_interact = mobile_controls.consume_interact() or wants_to_interact
+	if can_interact and wants_to_interact:
 		record_collected = true
 		prompt_panel.visible = false
 		objective.text = "RECORD RETRIEVED (1/3) // INTERACTION TEST COMPLETE"

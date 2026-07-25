@@ -18,7 +18,7 @@
 
 ## 运行目标
 
-安装 Godot 4 后，在 Project Manager 中导入 `project.godot` 并按 **F5**，或运行 `godot --path .`（部分系统命令名为 `godot4`）。使用 WASD 或方向键移动，靠近青色终端后按 E 交互。
+安装 Godot 4 后，在 Project Manager 中导入 `project.godot` 并按 **F5**，或运行 `godot --path .`（部分系统命令名为 `godot4`）。电脑使用 WASD/方向键移动、E 交互；手机和平板使用左侧虚拟摇杆移动、右侧按钮交互。建议横屏游玩。
 
 首个可玩目标是一局 10～15 分钟的废弃疗养院垂直切片：寻找三份实验记录、恢复地下室电力，并在怪物追击下撤离。
 
@@ -33,3 +33,14 @@
 5. **表现与平衡**：统一像素素材、灯光和音效、终端风格 UI、永久强化及 Web 性能优化。
 
 详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md) 和 [`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
+
+## Web 版本
+
+项目包含 Web 导出预设。安装与当前 Godot 版本匹配的 Export Templates 后，可以运行：
+
+```bash
+godot --headless --path . --export-release Web builds/web/index.html
+python3 -m http.server 8000 --directory builds/web
+```
+
+然后访问 `http://localhost:8000`。`.github/workflows/deploy-web.yml` 会在 `main` 分支更新时构建并部署 GitHub Pages；首次使用需要在仓库 **Settings → Pages → Source** 中选择 **GitHub Actions**。

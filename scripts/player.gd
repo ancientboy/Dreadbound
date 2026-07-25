@@ -12,6 +12,9 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var input_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
+	if mobile_controls and mobile_controls.movement_vector != Vector2.ZERO:
+		input_direction = mobile_controls.movement_vector
 	velocity = input_direction * movement_speed
 	if input_direction != Vector2.ZERO:
 		facing = input_direction.normalized()
