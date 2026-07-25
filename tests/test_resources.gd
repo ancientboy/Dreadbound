@@ -13,7 +13,7 @@ func _run_test() -> void:
 	assert(player.get_node("CollisionShape2D") != null)
 	assert(get_nodes_in_group("enemies")[0].get_node("CollisionShape2D") != null)
 	var pickups = get_nodes_in_group("pickups")
-	assert(pickups.size() == 6)
+	assert(pickups.size() == 9)
 	var bandage: ResourcePickup
 	var shard: ResourcePickup
 	for pickup in pickups:

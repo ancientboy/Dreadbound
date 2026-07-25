@@ -9,7 +9,7 @@ func _run_test() -> void:
 	await process_frame
 	var player: Player = mission.player
 	var enemies = get_nodes_in_group("enemies")
-	assert(enemies.size() == 4)
+	assert(enemies.size() == 7)
 	var patient: Patient = enemies[0]
 	patient.set_physics_process(false)
 	patient.global_position = player.global_position + Vector2(60, 0)

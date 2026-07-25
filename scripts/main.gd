@@ -3,6 +3,7 @@ extends Node2D
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const PICKUP_SCENE: PackedScene = preload("res://scenes/entities/pickup.tscn")
+const CRAWLER_SCENE: PackedScene = preload("res://scenes/entities/crawler.tscn")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -22,6 +23,7 @@ const TOTAL_RECORDS := 3
 @onready var fog_of_war: FogOfWar = $FogOfWar
 @onready var minimap: SanatoriumMinimap = $Interface/Minimap
 @onready var inventory_status: Label = $Interface/TopBar/Inventory
+@onready var weapon_status: Label = $Interface/TopBar/Weapon
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -38,12 +40,15 @@ func _ready() -> void:
 	minimap.expanded_changed.connect(_on_map_expanded_changed)
 	_create_mission_interactables()
 	_create_patients()
+	_create_crawlers()
 	_create_pickups()
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
 	player.inventory_changed.connect(_on_inventory_changed)
+	player.weapon_changed.connect(_on_weapon_changed)
 	_on_player_health_changed(player.health, player.max_health)
 	_on_inventory_changed(player.bandages, player.echo_shards)
+	_on_weapon_changed(player.get_weapon_name(), player.ammo)
 	_update_mission_ui()
 	queue_redraw()
 
@@ -115,6 +120,10 @@ func _on_inventory_changed(bandages: int, echo_shards: int) -> void:
 	inventory_status.text = "绷带 %d/%d  ·  碎片 %d" % [bandages, player.max_bandages, echo_shards]
 
 
+func _on_weapon_changed(weapon_name: String, ammo: int) -> void:
+	weapon_status.text = "武器 %s  ·  弹药 %d/%d" % [weapon_name, ammo, player.max_ammo]
+
+
 func _on_player_died() -> void:
 	mission_phase = MissionPhase.FAILED
 	prompt_panel.visible = false
@@ -172,6 +181,14 @@ func _create_patients() -> void:
 		add_child(patient)
 
 
+func _create_crawlers() -> void:
+	for spawn_position in [Vector2(1120, 400), Vector2(1984, 256), Vector2(1584, 1184)]:
+		var crawler := CRAWLER_SCENE.instantiate() as Crawler
+		crawler.position = spawn_position
+		crawler.target = player
+		add_child(crawler)
+
+
 func _create_pickups() -> void:
 	_add_pickup(ResourcePickup.Kind.BANDAGE, Vector2(352, 416))
 	_add_pickup(ResourcePickup.Kind.BANDAGE, Vector2(1088, 608))
@@ -179,6 +196,9 @@ func _create_pickups() -> void:
 	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(800, 224), 2)
 	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1280, 352), 3)
 	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1840, 1200), 4)
+	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(576, 416), 6)
+	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(1344, 608), 8)
+	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(2112, 224), 8)
 
 
 func _add_pickup(kind: ResourcePickup.Kind, at: Vector2, amount := 1) -> void:
