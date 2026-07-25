@@ -20,7 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.015, 0.032, 0.031, 1)
+color = Color(0.015, 0.032, 0.031, 0)
 mouse_filter = 2
 
 [node name="Margin" type="MarginContainer" parent="."]
@@ -178,6 +178,11 @@ theme_override_constants/separation = 18
 custom_minimum_size = Vector2(180, 58)
 layout_mode = 2
 text = "清除存档"
+
+[node name="Warehouse" type="Button" parent="Margin/Layout/Actions"]
+custom_minimum_size = Vector2(220, 58)
+layout_mode = 2
+text = "装备回收仓库"
 
 [node name="Deploy" type="Button" parent="Margin/Layout/Actions"]
 custom_minimum_size = Vector2(360, 58)

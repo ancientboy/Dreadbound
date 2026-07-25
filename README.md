@@ -28,6 +28,8 @@
 
 ![终末回廊整备与永久强化界面](docs/images/terminal-corridor.png)
 
+![终末回廊异常装备仓库](docs/images/equipment-warehouse.png)
+
 ![疗养院回响病房风险事件](docs/images/risk-event.png)
 
 ![疗养院完整垂直切片](docs/images/vertical-slice.png)
@@ -47,7 +49,8 @@
 11. **引导与表现（完成）**：首局中文提示、关键任务通知、低成本手电筒、电力环境变化、合成反馈音和统一终端 UI。
 12. **平衡与稳定性（完成首轮）**：敌人分工、移动端安全布局、减少拾取物重绘、WebGL 恢复与 v1→v2 存档迁移。
 13. **完整回归（完成自动化）**：任务、战斗、地图、资源、事件、成长、Boss、三武器和三消耗品均进入部署门禁；真实设备仍需每次发布后持续烟雾测试。
-14. **第二个灾难世界（待立项）**：复用已经验证的任务、敌人、迷雾、结算与存档系统。
+14. **阶段 G 奖励基础（完成）**：普通怪物掉落、Boss 三选一回收箱、8 件样品装备、4 档品质、仓库、装备、拆解和撤离入库。
+15. **第二个灾难世界（下一步）**：复用已经验证的任务、敌人、迷雾、奖励、装备、结算与存档系统。
 
 详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md) 和 [`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 

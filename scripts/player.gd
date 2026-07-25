@@ -71,6 +71,7 @@ func _apply_permanent_upgrades() -> void:
 	movement_speed = float(stats.movement_speed)
 	attack_damage = int(stats.melee_damage)
 	ranged_damage = int(stats.ranged_damage)
+	shotgun_damage = int(stats.get("shotgun_damage", shotgun_damage))
 	bandage_heal = int(stats.bandage_heal)
 	var loadout: Dictionary = state.get_selected_loadout()
 	ammo = clampi(int(loadout.ammo), 0, max_ammo)

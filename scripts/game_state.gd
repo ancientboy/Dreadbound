@@ -3,8 +3,9 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 const UPGRADE_MAX_LEVEL := 3
+const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11]
 const LOADOUTS := {
 	"scavenger": {"name": "搜救配置", "weapon": "melee", "ammo": 6, "bandages": 1, "shells": 2, "sedatives": 0, "stimulants": 0, "description": "撬棍 · 6 发弹药 · 1 份绷带"},
@@ -21,6 +22,8 @@ var last_run := {}
 var selected_loadout := "scavenger"
 var corridor_unlocked := false
 var corridor_intro_seen := false
+var equipment_inventory: Array[String] = ["service_crowbar", "medical_tag"]
+var equipped := {"weapon": "", "charm": ""}
 
 
 func _ready() -> void:
@@ -28,19 +31,32 @@ func _ready() -> void:
 
 
 func get_player_stats() -> Dictionary:
+	var gear := EquipmentDatabase.get_bonuses(equipped)
 	return {
-		"max_health": 100 + int(upgrades.vitality) * 10,
-		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0,
-		"melee_damage": 35 + int(upgrades.weapons) * 4,
-		"ranged_damage": 25 + int(upgrades.weapons) * 3,
-		"bandage_heal": 35 + int(upgrades.recovery) * 7,
+		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health),
+		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0 + float(gear.movement_speed),
+		"melee_damage": 35 + int(upgrades.weapons) * 4 + int(gear.melee_damage),
+		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage),
+		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage),
+		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal),
 	}
 
 
-func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0) -> int:
+func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0, equipment_rewards: Array[String] = []) -> int:
 	var mission_reward := records * 2 + (3 if success else 0)
 	var banked := carried_shards + mission_reward if success else 0
-	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved}
+	var banked_equipment: Array[String] = []
+	var overflow_shards := 0
+	if success:
+		for item_id in equipment_rewards:
+			if EquipmentDatabase.ITEMS.has(item_id):
+				if equipment_inventory.size() < MAX_EQUIPMENT:
+					equipment_inventory.append(item_id)
+					banked_equipment.append(item_id)
+				else:
+					overflow_shards += 1 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
+	banked += overflow_shards
+	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards}
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true
@@ -80,11 +96,35 @@ func get_selected_loadout() -> Dictionary:
 	return LOADOUTS.get(selected_loadout, LOADOUTS.scavenger).duplicate()
 
 
+func equip_item(item_id: String) -> bool:
+	if not equipment_inventory.has(item_id):
+		return false
+	var item := EquipmentDatabase.get_item(item_id)
+	if item.is_empty():
+		return false
+	equipped[item.slot] = item_id
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func disassemble_item(item_id: String) -> bool:
+	var index := equipment_inventory.rfind(item_id)
+	if index < 0 or (equipped.values().has(item_id) and equipment_inventory.count(item_id) <= 1):
+		return false
+	var item := EquipmentDatabase.get_item(item_id)
+	equipment_inventory.remove_at(index)
+	echo_shards += 1 + int(item.get("quality_rank", 0)) * 2
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
 func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped}))
 	return true
 
 
@@ -109,6 +149,18 @@ func load_progress() -> void:
 	selected_loadout = saved_loadout if LOADOUTS.has(saved_loadout) else "scavenger"
 	corridor_unlocked = bool(parsed.get("corridor_unlocked", not last_run.is_empty() and bool(last_run.get("success", false))))
 	corridor_intro_seen = bool(parsed.get("corridor_intro_seen", false))
+	equipment_inventory.clear()
+	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
+		if EquipmentDatabase.ITEMS.has(str(item_id)):
+			equipment_inventory.append(str(item_id))
+	if equipment_inventory.is_empty():
+		equipment_inventory.assign(["service_crowbar", "medical_tag"])
+	var saved_equipped = parsed.get("equipped", {})
+	if saved_equipped is Dictionary:
+		for slot in ["weapon", "charm"]:
+			var item_id := str(saved_equipped.get(slot, equipped[slot]))
+			if equipment_inventory.has(item_id) and EquipmentDatabase.get_item(item_id).get("slot", "") == slot:
+				equipped[slot] = item_id
 
 
 func reset_progress() -> void:
@@ -120,6 +172,8 @@ func reset_progress() -> void:
 	selected_loadout = "scavenger"
 	corridor_unlocked = false
 	corridor_intro_seen = false
+	equipment_inventory.assign(["service_crowbar", "medical_tag"])
+	equipped = {"weapon": "", "charm": ""}
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

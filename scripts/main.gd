@@ -48,6 +48,12 @@ var boss: SanatoriumBoss
 var notification: Label
 var _notification_timer := 0.0
 var _sound_player: AudioStreamPlayer
+var reward_chests: Array[RewardChest] = []
+var run_equipment_rewards: Array[String] = []
+var active_chest: RewardChest
+var reward_panel: ColorRect
+var reward_buttons: Array[Button] = []
+var _loot_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -80,6 +86,8 @@ func _ready() -> void:
 	_on_selected_item_changed(player.get_selected_item_name(), player.get_selected_item_count())
 	_update_mission_ui()
 	_create_feedback_layer()
+	_create_reward_panel()
+	_loot_rng.randomize()
 	if not GameState.corridor_unlocked:
 		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
 	queue_redraw()
@@ -113,6 +121,13 @@ func _process(delta: float) -> void:
 			_return_to_corridor()
 		return
 	if active_event:
+		return
+	var chest := _nearest_reward_chest()
+	if chest:
+		prompt_panel.visible = true
+		prompt.text = chest.get_prompt()
+		if wants_to_interact:
+			_open_reward_chest(chest)
 		return
 
 	var risk_event := _nearest_risk_event()
@@ -174,7 +189,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size())
+		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
 
@@ -370,6 +385,83 @@ func _create_boss() -> void:
 func _on_enemy_removed(enemy: Node) -> void:
 	if enemy.get("health") != null and int(enemy.get("health")) <= 0:
 		enemies_defeated += 1
+		if enemy is SanatoriumBoss:
+			_spawn_reward_chest(enemy.global_position)
+		else:
+			_drop_for_enemy(enemy, _loot_rng.randf())
+
+
+func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
+	var kind := ResourcePickup.Kind.ECHO_SHARD
+	var amount := 1
+	var threshold := 0.38
+	if enemy is Crawler:
+		kind = ResourcePickup.Kind.AMMO
+		amount = 3
+		threshold = 0.52
+	elif enemy is Orderly:
+		kind = ResourcePickup.Kind.SHELLS if roll < 0.24 else ResourcePickup.Kind.SEDATIVE
+		amount = 2 if kind == ResourcePickup.Kind.SHELLS else 1
+		threshold = 0.34
+	elif enemy is Patient:
+		kind = ResourcePickup.Kind.BANDAGE if roll < 0.16 else ResourcePickup.Kind.ECHO_SHARD
+		threshold = 0.42
+	if roll > threshold:
+		return null
+	var pickup := PICKUP_SCENE.instantiate() as ResourcePickup
+	pickup.kind = kind
+	pickup.amount = amount
+	pickup.position = enemy.global_position
+	add_child.call_deferred(pickup)
+	return pickup
+
+
+func _spawn_reward_chest(at: Vector2) -> RewardChest:
+	var chest := RewardChest.new()
+	chest.position = at
+	var pool := EquipmentDatabase.reward_pool()
+	pool.shuffle()
+	chest.candidates.assign(pool.slice(0, 3))
+	add_child.call_deferred(chest)
+	reward_chests.append(chest)
+	_show_notification("主要威胁已清除：异常回收箱已生成\n可选择一件装备，成功撤离后入库", 5.0)
+	return chest
+
+
+func _nearest_reward_chest() -> RewardChest:
+	var nearest: RewardChest
+	var nearest_distance := INTERACTION_DISTANCE
+	for chest in reward_chests:
+		if not is_instance_valid(chest) or chest.opened:
+			continue
+		var distance := player.global_position.distance_to(chest.global_position)
+		if distance <= nearest_distance:
+			nearest = chest
+			nearest_distance = distance
+	return nearest
+
+
+func _open_reward_chest(chest: RewardChest) -> void:
+	active_chest = chest
+	for index in range(3):
+		var item := EquipmentDatabase.get_item(chest.candidates[index])
+		reward_buttons[index].text = "%s · %s\n评级 %d\n%s" % [item.quality, item.name, item.rating, item.description]
+	reward_panel.visible = true
+	prompt_panel.visible = false
+	_set_gameplay_paused(true)
+
+
+func _choose_reward(index: int) -> void:
+	if active_chest == null or index < 0 or index >= active_chest.candidates.size():
+		return
+	var item_id := active_chest.candidates[index]
+	run_equipment_rewards.append(item_id)
+	var item := EquipmentDatabase.get_item(item_id)
+	active_chest.mark_opened()
+	active_chest = null
+	reward_panel.visible = false
+	_set_gameplay_paused(false)
+	_show_notification("已暂存：%s\n成功撤离后转入终末回廊仓库" % item.name, 4.0)
 
 
 func _create_pickups() -> void:
@@ -439,6 +531,43 @@ func _create_feedback_layer() -> void:
 	$Interface.add_child(notification)
 	_sound_player = AudioStreamPlayer.new()
 	add_child(_sound_player)
+
+
+func _create_reward_panel() -> void:
+	reward_panel = ColorRect.new()
+	reward_panel.position = Vector2(170, 160)
+	reward_panel.size = Vector2(940, 410)
+	reward_panel.color = Color(0.012, 0.045, 0.042, 0.98)
+	reward_panel.visible = false
+	reward_panel.z_index = 120
+	$Interface.add_child(reward_panel)
+	var title := Label.new()
+	title.position = Vector2(30, 25)
+	title.size = Vector2(880, 55)
+	title.text = "异常回收协议 // 选择一项奖励"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_override("font", UI_FONT)
+	title.add_theme_font_size_override("font_size", 27)
+	title.add_theme_color_override("font_color", Color("69e4cd"))
+	reward_panel.add_child(title)
+	for index in range(3):
+		var button := Button.new()
+		button.position = Vector2(35 + index * 300, 105)
+		button.size = Vector2(270, 225)
+		button.add_theme_font_override("font", UI_FONT)
+		button.add_theme_font_size_override("font_size", 17)
+		button.pressed.connect(_choose_reward.bind(index))
+		reward_panel.add_child(button)
+		reward_buttons.append(button)
+	var note := Label.new()
+	note.position = Vector2(40, 350)
+	note.size = Vector2(860, 35)
+	note.text = "只能选择一项 · 奖励在成功撤离后入库 · 主动撤回或死亡将失去"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.add_theme_font_override("font", UI_FONT)
+	note.add_theme_font_size_override("font_size", 15)
+	note.add_theme_color_override("font_color", Color("78958d"))
+	reward_panel.add_child(note)
 
 
 func _show_notification(message: String, duration := 3.5) -> void:
