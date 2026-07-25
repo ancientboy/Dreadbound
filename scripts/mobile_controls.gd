@@ -1,6 +1,8 @@
 class_name MobileControls
 extends Control
 
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+
 const STICK_RADIUS := 82.0
 const KNOB_RADIUS := 34.0
 const ACTION_RADIUS := 62.0
@@ -78,5 +80,5 @@ func _draw() -> void:
 	draw_arc(action_center, ACTION_RADIUS, 0.0, TAU, 48, Color(0.25, 0.88, 0.76, 0.9), 4.0)
 	if _action_touch != -1:
 		draw_circle(action_center, ACTION_RADIUS - 8.0, Color(0.25, 0.88, 0.76, 0.25))
-	draw_string(ThemeDB.fallback_font, action_center + Vector2(-8, 9), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("65e6cf"))
-	draw_string(ThemeDB.fallback_font, action_center + Vector2(-34, 88), "INTERACT", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.45, 0.72, 0.66, 0.9))
+	draw_string(UI_FONT, action_center + Vector2(-8, 9), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("65e6cf"))
+	draw_string(UI_FONT, action_center + Vector2(-14, 82), "交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.45, 0.72, 0.66, 0.9))

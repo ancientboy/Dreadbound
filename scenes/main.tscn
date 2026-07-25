@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/player.gd" type="Script" id="2_player"]
 [ext_resource path="res://scripts/mobile_controls.gd" type="Script" id="3_mobile"]
+[ext_resource path="res://assets/themes/dreadbound_theme.tres" type="Theme" id="4_theme"]
 
 [sub_resource type="CapsuleShape2D" id="Capsule_player"]
 radius = 12.0
@@ -36,6 +37,7 @@ offset_top = 20.0
 offset_right = 1256.0
 offset_bottom = 82.0
 color = Color(0.025, 0.055, 0.052, 0.92)
+theme = ExtResource("4_theme")
 
 [node name="Title" type="Label" parent="Interface/TopBar"]
 offset_left = 18.0
@@ -44,7 +46,7 @@ offset_right = 300.0
 offset_bottom = 33.0
 theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
 theme_override_font_sizes/font_size = 18
-text = "DREADBOUND // MOVEMENT PROTOTYPE"
+text = "DREADBOUND // 疗养院任务灰盒"
 
 [node name="Objective" type="Label" parent="Interface/TopBar"]
 offset_left = 18.0
@@ -53,7 +55,7 @@ offset_right = 900.0
 offset_bottom = 57.0
 theme_override_colors/font_color = Color(0.64, 0.72, 0.67, 1)
 theme_override_font_sizes/font_size = 14
-text = "OBJECTIVE: Reach the cyan terminal and retrieve the experiment record"
+text = "当前目标：搜索疗养院内的实验记录"
 
 [node name="Progress" type="Label" parent="Interface/TopBar"]
 offset_left = 760.0
@@ -62,7 +64,7 @@ offset_right = 1198.0
 offset_bottom = 57.0
 theme_override_colors/font_color = Color(0.42, 0.66, 0.58, 1)
 theme_override_font_sizes/font_size = 14
-text = "RECORDS 0/3  ·  POWER OFFLINE"
+text = "记录 0/3  ·  电力中断"
 horizontal_alignment = 2
 
 [node name="Controls" type="Label" parent="Interface/TopBar"]
@@ -72,7 +74,7 @@ offset_right = 1210.0
 offset_bottom = 45.0
 theme_override_colors/font_color = Color(0.42, 0.54, 0.5, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD / ARROWS: MOVE  ·  E: INTERACT"
+text = "摇杆 / WASD：移动  ·  E：交互"
 horizontal_alignment = 2
 
 [node name="PromptPanel" type="ColorRect" parent="Interface"]
@@ -82,6 +84,7 @@ offset_top = 632.0
 offset_right = 852.0
 offset_bottom = 688.0
 color = Color(0.02, 0.08, 0.075, 0.96)
+theme = ExtResource("4_theme")
 
 [node name="Prompt" type="Label" parent="Interface/PromptPanel"]
 layout_mode = 1
@@ -92,7 +95,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(0.34, 0.94, 0.82, 1)
 theme_override_font_sizes/font_size = 18
-text = "[E] RETRIEVE EXPERIMENT RECORD"
+text = "[E] 读取实验记录"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -103,6 +106,7 @@ offset_top = 222.0
 offset_right = 940.0
 offset_bottom = 498.0
 color = Color(0.02, 0.07, 0.065, 0.97)
+theme = ExtResource("4_theme")
 
 [node name="Heading" type="Label" parent="Interface/CompletePanel"]
 offset_left = 32.0
@@ -111,7 +115,7 @@ offset_right = 568.0
 offset_bottom = 94.0
 theme_override_colors/font_color = Color(0.3, 0.91, 0.79, 1)
 theme_override_font_sizes/font_size = 34
-text = "EXTRACTION COMPLETE"
+text = "撤离完成"
 horizontal_alignment = 1
 
 [node name="Summary" type="Label" parent="Interface/CompletePanel"]
@@ -121,7 +125,7 @@ offset_right = 568.0
 offset_bottom = 175.0
 theme_override_colors/font_color = Color(0.59, 0.7, 0.64, 1)
 theme_override_font_sizes/font_size = 18
-text = "3 records secured\nFacility power restored"
+text = "已回收 3 份实验记录\n疗养院电力已恢复"
 horizontal_alignment = 1
 
 [node name="Restart" type="Label" parent="Interface/CompletePanel"]
@@ -131,7 +135,7 @@ offset_right = 568.0
 offset_bottom = 240.0
 theme_override_colors/font_color = Color(0.33, 0.61, 0.55, 1)
 theme_override_font_sizes/font_size = 15
-text = "PRESS E / INTERACT TO RUN AGAIN"
+text = "按 E / 交互按钮重新开始"
 horizontal_alignment = 1
 
 [node name="MobileControls" type="Control" parent="Interface" groups=["mobile_controls"]]

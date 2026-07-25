@@ -1,5 +1,7 @@
 extends Node2D
 
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE }
 
 const MAP_SIZE := Vector2(2304.0, 1440.0)
@@ -86,24 +88,24 @@ func _nearest_interactable() -> ObjectiveInteractable:
 
 
 func _update_mission_ui() -> void:
-	progress.text = "RECORDS %d/%d  ·  POWER %s" % [collected_records.size(), TOTAL_RECORDS, "ONLINE" if power_restored else "OFFLINE"]
+	progress.text = "记录 %d/%d  ·  电力%s" % [collected_records.size(), TOTAL_RECORDS, "已恢复" if power_restored else "中断"]
 	match mission_phase:
 		MissionPhase.COLLECT_RECORDS:
-			objective.text = "OBJECTIVE: Search the sanatorium for experiment records"
+			objective.text = "当前目标：搜索疗养院内的实验记录"
 		MissionPhase.RESTORE_POWER:
-			objective.text = "OBJECTIVE: Restore power in basement maintenance"
+			objective.text = "当前目标：前往地下维护区恢复电力"
 		MissionPhase.EVACUATE:
-			objective.text = "OBJECTIVE: Reach the emergency extraction gate"
+			objective.text = "当前目标：前往紧急撤离出口"
 		MissionPhase.COMPLETE:
-			objective.text = "MISSION COMPLETE: Sanatorium route stabilized"
+			objective.text = "任务完成：疗养院异常路线已稳定"
 
 
 func _create_mission_interactables() -> void:
-	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_01", "PATIENT WING RECORD", Vector2(672, 256))
-	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_02", "NURSE STATION RECORD", Vector2(1184, 480))
-	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_03", "ARCHIVE RECORD", Vector2(1952, 288))
-	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "BASEMENT GENERATOR", Vector2(1760, 1184))
-	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "EXTRACTION GATE", Vector2(224, 1184))
+	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_01", "病房区实验记录", Vector2(672, 256))
+	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_02", "护理站实验记录", Vector2(1184, 480))
+	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_03", "档案室实验记录", Vector2(1952, 288))
+	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "地下室发电机", Vector2(1760, 1184))
+	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "紧急撤离出口", Vector2(224, 1184))
 
 
 func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: String, at: Vector2) -> void:
@@ -134,17 +136,17 @@ func _draw_grid() -> void:
 
 func _draw_zones() -> void:
 	var zones := [
-		[Rect2(96, 160, 320, 320), "ENTRY HALL"],
-		[Rect2(480, 128, 416, 352), "PATIENT WING"],
-		[Rect2(992, 288, 384, 384), "NURSE STATION"],
-		[Rect2(1696, 128, 480, 320), "RECORD ARCHIVE"],
-		[Rect2(1504, 960, 576, 320), "BASEMENT MAINTENANCE"],
-		[Rect2(96, 1024, 352, 256), "EXTRACTION"],
+		[Rect2(96, 160, 320, 320), "入口大厅"],
+		[Rect2(480, 128, 416, 352), "病房区"],
+		[Rect2(992, 288, 384, 384), "护理站"],
+		[Rect2(1696, 128, 480, 320), "实验档案室"],
+		[Rect2(1504, 960, 576, 320), "地下维护区"],
+		[Rect2(96, 1024, 352, 256), "撤离区"],
 	]
 	for zone in zones:
 		draw_rect(zone[0], Color("18211f"))
 		draw_rect(zone[0], Color("27332f"), false, 2.0)
-		draw_string(ThemeDB.fallback_font, zone[0].position + Vector2(24, 42), zone[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
+		draw_string(UI_FONT, zone[0].position + Vector2(24, 42), zone[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
 
 
 func _create_collision_walls() -> void:
