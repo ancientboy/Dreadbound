@@ -43,6 +43,10 @@ map_toggle={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":77)]
 }
+use_item={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":81)]
+}
 
 [rendering]
 renderer/rendering_method="gl_compatibility"

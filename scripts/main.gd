@@ -1,6 +1,8 @@
 extends Node2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
+const PICKUP_SCENE: PackedScene = preload("res://scenes/entities/pickup.tscn")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -19,6 +21,7 @@ const TOTAL_RECORDS := 3
 @onready var result_summary: Label = $Interface/CompletePanel/Summary
 @onready var fog_of_war: FogOfWar = $FogOfWar
 @onready var minimap: SanatoriumMinimap = $Interface/Minimap
+@onready var inventory_status: Label = $Interface/TopBar/Inventory
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -34,9 +37,12 @@ func _ready() -> void:
 	minimap.expanded_changed.connect(_on_map_expanded_changed)
 	_create_mission_interactables()
 	_create_patients()
+	_create_pickups()
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
+	player.inventory_changed.connect(_on_inventory_changed)
 	_on_player_health_changed(player.health, player.max_health)
+	_on_inventory_changed(player.bandages, player.echo_shards)
 	_update_mission_ui()
 	queue_redraw()
 
@@ -104,6 +110,10 @@ func _on_player_health_changed(current: int, maximum: int) -> void:
 	health_status.text = "生命 %d/%d" % [current, maximum]
 
 
+func _on_inventory_changed(bandages: int, echo_shards: int) -> void:
+	inventory_status.text = "绷带 %d/%d  ·  碎片 %d" % [bandages, player.max_bandages, echo_shards]
+
+
 func _on_player_died() -> void:
 	mission_phase = MissionPhase.FAILED
 	prompt_panel.visible = false
@@ -155,10 +165,27 @@ func _create_mission_interactables() -> void:
 
 func _create_patients() -> void:
 	for spawn_position in [Vector2(736, 400), Vector2(1216, 560), Vector2(1888, 360), Vector2(1696, 1088)]:
-		var patient := Patient.new()
+		var patient := PATIENT_SCENE.instantiate() as Patient
 		patient.position = spawn_position
 		patient.target = player
 		add_child(patient)
+
+
+func _create_pickups() -> void:
+	_add_pickup(ResourcePickup.Kind.BANDAGE, Vector2(352, 416))
+	_add_pickup(ResourcePickup.Kind.BANDAGE, Vector2(1088, 608))
+	_add_pickup(ResourcePickup.Kind.BANDAGE, Vector2(2048, 384))
+	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(800, 224), 2)
+	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1280, 352), 3)
+	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1840, 1200), 4)
+
+
+func _add_pickup(kind: ResourcePickup.Kind, at: Vector2, amount := 1) -> void:
+	var pickup := PICKUP_SCENE.instantiate() as ResourcePickup
+	pickup.kind = kind
+	pickup.amount = amount
+	pickup.position = at
+	add_child(pickup)
 
 
 func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: String, at: Vector2) -> void:

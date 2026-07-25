@@ -19,13 +19,6 @@ var _hurt_flash := 0.0
 func _ready() -> void:
 	add_to_group("enemies")
 	health = max_health
-	var collision := CollisionShape2D.new()
-	var shape := CapsuleShape2D.new()
-	shape.radius = 13.0
-	shape.height = 38.0
-	collision.position = Vector2(0, 6)
-	collision.shape = shape
-	add_child(collision)
 	queue_redraw()
 
 
