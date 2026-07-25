@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11]
@@ -12,6 +12,14 @@ const LOADOUTS := {
 	"marksman": {"name": "警戒配置", "weapon": "ranged", "ammo": 14, "bandages": 0, "shells": 0, "sedatives": 1, "stimulants": 0, "description": "手枪 · 14 发弹药 · 1 支镇静剂"},
 	"medic": {"name": "应急配置", "weapon": "melee", "ammo": 3, "bandages": 2, "shells": 0, "sedatives": 1, "stimulants": 0, "description": "撬棍 · 2 份绷带 · 1 支镇静剂"},
 	"breacher": {"name": "破门配置", "weapon": "shotgun", "ammo": 2, "bandages": 0, "shells": 6, "sedatives": 0, "stimulants": 1, "description": "霰弹枪 · 6 发霰弹 · 1 支兴奋剂"},
+}
+const PATH_NODES := {
+	"steadfast_guard": {"path": "steadfast", "name": "坚守者：守望", "cost": 5, "description": "生命上限 +12"},
+	"steadfast_mender": {"path": "steadfast", "name": "坚守者：缝合", "cost": 8, "description": "绷带恢复 +8"},
+	"armorer_calibration": {"path": "armorer", "name": "武装师：校准", "cost": 5, "description": "全部武器伤害 +3"},
+	"armorer_mobility": {"path": "armorer", "name": "武装师：机动装填", "cost": 8, "description": "移动速度 +10 · 手枪伤害 +2"},
+	"resonant_sense": {"path": "resonant", "name": "共鸣者：余响感知", "cost": 5, "description": "移动速度 +8 · 生命上限 -3"},
+	"resonant_bargain": {"path": "resonant", "name": "共鸣者：代价交换", "cost": 8, "description": "全部武器伤害 +5 · 生命上限 -6"},
 }
 
 var save_path := "user://dreadbound_progress.json"
@@ -28,6 +36,7 @@ var active_run_seed := 0
 var last_action_code := ""
 var selected_world := "sanatorium"
 var player_profile := {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
+var unlocked_path_nodes: Array[String] = []
 
 
 func _ready() -> void:
@@ -36,14 +45,52 @@ func _ready() -> void:
 
 func get_player_stats() -> Dictionary:
 	var gear := EquipmentDatabase.get_bonuses(equipped)
+	var path := get_path_bonuses()
 	return {
-		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health),
-		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0 + float(gear.movement_speed),
-		"melee_damage": 35 + int(upgrades.weapons) * 4 + int(gear.melee_damage),
-		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage),
-		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage),
-		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal),
+		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health) + int(path.max_health),
+		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0 + float(gear.movement_speed) + float(path.movement_speed),
+		"melee_damage": 35 + int(upgrades.weapons) * 4 + int(gear.melee_damage) + int(path.melee_damage),
+		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage) + int(path.ranged_damage),
+		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage),
+		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal),
 	}
+
+
+func get_path_bonuses() -> Dictionary:
+	var bonuses := {"max_health": 0, "movement_speed": 0.0, "melee_damage": 0, "ranged_damage": 0, "shotgun_damage": 0, "bandage_heal": 0}
+	for node_id in unlocked_path_nodes:
+		match node_id:
+			"steadfast_guard": bonuses.max_health += 12
+			"steadfast_mender": bonuses.bandage_heal += 8
+			"armorer_calibration":
+				bonuses.melee_damage += 3
+				bonuses.ranged_damage += 3
+				bonuses.shotgun_damage += 3
+			"armorer_mobility":
+				bonuses.movement_speed += 10.0
+				bonuses.ranged_damage += 2
+			"resonant_sense":
+				bonuses.movement_speed += 8.0
+				bonuses.max_health -= 3
+			"resonant_bargain":
+				bonuses.max_health -= 6
+				bonuses.melee_damage += 5
+				bonuses.ranged_damage += 5
+				bonuses.shotgun_damage += 5
+	return bonuses
+
+
+func unlock_path_node(node_id: String) -> bool:
+	if not PATH_NODES.has(node_id) or unlocked_path_nodes.has(node_id):
+		return false
+	var node: Dictionary = PATH_NODES[node_id]
+	if echo_shards < int(node.cost):
+		return false
+	echo_shards -= int(node.cost)
+	unlocked_path_nodes.append(node_id)
+	save_progress()
+	progress_changed.emit()
+	return true
 
 
 func begin_run(requested_seed := 0) -> int:
@@ -142,7 +189,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes}))
 	return true
 
 
@@ -176,6 +223,10 @@ func load_progress() -> void:
 	if saved_profile is Dictionary:
 		for key in player_profile:
 			player_profile[key] = saved_profile.get(key, player_profile[key])
+	unlocked_path_nodes.clear()
+	for node_id in parsed.get("unlocked_path_nodes", []):
+		if PATH_NODES.has(str(node_id)):
+			unlocked_path_nodes.append(str(node_id))
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -205,6 +256,7 @@ func reset_progress() -> void:
 	last_action_code = ""
 	selected_world = "sanatorium"
 	player_profile = {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
+	unlocked_path_nodes.clear()
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()
