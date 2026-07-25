@@ -6,6 +6,11 @@ const UPGRADE_INFO := {
 	"weapons": ["武器适配", "近战 +4 / 手枪 +3"],
 	"recovery": ["应急处理", "绷带恢复 +7"],
 }
+const PATH_BUTTONS := {
+	"steadfast_guard": "SteadfastGuard", "steadfast_mender": "SteadfastMender",
+	"armorer_calibration": "ArmorerCalibration", "armorer_mobility": "ArmorerMobility",
+	"resonant_sense": "ResonantSense", "resonant_bargain": "ResonantBargain",
+}
 
 @onready var currency: Label = $Margin/Layout/Header/Currency
 @onready var report: Label = $Margin/Layout/Columns/Archive/Report
@@ -41,6 +46,9 @@ func _ready() -> void:
 	for loadout_id in GameProgress.LOADOUTS:
 		var button := get_node("Margin/Layout/Columns/Profile/Loadouts/%s" % loadout_id.capitalize()) as Button
 		button.pressed.connect(_select_loadout.bind(loadout_id))
+	for node_id in GameProgress.PATH_NODES:
+		var button := get_node("Margin/Layout/Columns/Paths/%s" % PATH_BUTTONS[node_id]) as Button
+		button.pressed.connect(_unlock_path_node.bind(node_id))
 	deploy_button.pressed.connect(_deploy)
 	$HubActions/Deploy.pressed.connect(_deploy)
 	$HubActions/OpenTerminal.pressed.connect(_open_terminal)
@@ -137,6 +145,13 @@ func _refresh() -> void:
 		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
 		var button := get_node("Margin/Layout/Columns/Profile/Loadouts/%s" % loadout_id.capitalize()) as Button
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
+	for node_id in GameProgress.PATH_NODES:
+		var node: Dictionary = GameProgress.PATH_NODES[node_id]
+		var path_name := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}.get(str(node.path), "未知途径")
+		var button := get_node("Margin/Layout/Columns/Paths/%s" % PATH_BUTTONS[node_id]) as Button
+		var unlocked := GameState.unlocked_path_nodes.has(node_id)
+		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else "%s · %d 碎片" % [str(node.description), int(node.cost)]]
+		button.disabled = unlocked or GameState.echo_shards < int(node.cost)
 	world_button.text = "切换至%s" % ("废弃疗养院" if GameState.selected_world == "metro" else "潮没末班线")
 	deploy_button.text = "投送：%s" % _world_name()
 	$HubActions/Deploy.text = "进入%s" % _world_name()
@@ -157,6 +172,11 @@ func _purchase(upgrade_id: String) -> void:
 func _select_loadout(loadout_id: String) -> void:
 	if GameState.select_loadout(loadout_id):
 		feedback.text = "已选择%s，下一次投送携带该配置。" % GameProgress.LOADOUTS[loadout_id].name
+
+
+func _unlock_path_node(node_id: String) -> void:
+	var node: Dictionary = GameProgress.PATH_NODES[node_id]
+	feedback.text = "%s已锚定：%s" % [str(node.name), str(node.description)] if GameState.unlock_path_node(node_id) else "无法锚定该节点：需要更多回响碎片，或它已生效。"
 
 
 func _deploy() -> void:
