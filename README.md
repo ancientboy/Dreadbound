@@ -56,7 +56,7 @@
 16. **动态任务与 AI 导演 H2–H4（完成首轮）**：支线条件、因果链、压力/节奏导演、敌人记忆和 500 种子回归。
 17. **第二个灾难世界（下一步）**：在动态框架稳定后，以新的房间模块、任务契约和因果链接入。
 
-详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md)、[`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md) 和 [`docs/dynamic-director-plan.md`](docs/dynamic-director-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
+详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md)、[`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md)、[`docs/dynamic-director-plan.md`](docs/dynamic-director-plan.md) 和 [`docs/second-disaster-world-design.md`](docs/second-disaster-world-design.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 
 ## Web 版本
 
