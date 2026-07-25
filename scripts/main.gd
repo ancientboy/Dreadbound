@@ -24,6 +24,8 @@ const TOTAL_RECORDS := 3
 @onready var minimap: SanatoriumMinimap = $Interface/Minimap
 @onready var inventory_status: Label = $Interface/TopBar/Inventory
 @onready var weapon_status: Label = $Interface/TopBar/Weapon
+@onready var abandon_button: Button = $Interface/TopBar/Abandon
+@onready var return_button: Button = $Interface/CompletePanel/Return
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -31,6 +33,7 @@ var power_restored := false
 var interactables: Array[ObjectiveInteractable] = []
 var enemies_defeated := 0
 var _run_settled := false
+var _abandon_armed_until := 0
 
 
 func _ready() -> void:
@@ -48,6 +51,8 @@ func _ready() -> void:
 	player.died.connect(_on_player_died)
 	player.inventory_changed.connect(_on_inventory_changed)
 	player.weapon_changed.connect(_on_weapon_changed)
+	abandon_button.pressed.connect(_on_abandon_pressed)
+	return_button.pressed.connect(_return_to_corridor)
 	_on_player_health_changed(player.health, player.max_health)
 	_on_inventory_changed(player.bandages, player.echo_shards)
 	_on_weapon_changed(player.get_weapon_name(), player.ammo)
@@ -66,6 +71,9 @@ func _on_map_expanded_changed(expanded: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _abandon_armed_until > 0 and Time.get_ticks_msec() > _abandon_armed_until:
+		_abandon_armed_until = 0
+		abandon_button.text = "撤回回廊"
 	var wants_to_interact := Input.is_action_just_pressed("interact")
 	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
 	if mobile_controls:
@@ -112,16 +120,26 @@ func _complete_mission() -> void:
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(false)
 	_stop_patients()
+	return_button.visible = true
+	abandon_button.visible = false
 
 
-func _return_to_corridor() -> void:
+func _return_to_corridor(abandoned := false) -> void:
 	if _run_settled:
 		return
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		state.settle_run(mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated)
+		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
+
+
+func _on_abandon_pressed() -> void:
+	if _abandon_armed_until == 0:
+		_abandon_armed_until = Time.get_ticks_msec() + 3000
+		abandon_button.text = "再次点击确认撤回"
+		return
+	_return_to_corridor(true)
 
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
@@ -144,6 +162,8 @@ func _on_player_died() -> void:
 	result_summary.text = "漂泊者已失去生命体征\n终末回廊连接中断"
 	objective.text = "任务失败：行者未能撤离"
 	_stop_patients()
+	return_button.visible = true
+	abandon_button.visible = false
 
 
 func _stop_patients() -> void:

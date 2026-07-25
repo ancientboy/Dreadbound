@@ -18,6 +18,7 @@ var causality_fragments := 0
 var upgrades := {"vitality": 0, "mobility": 0, "weapons": 0, "recovery": 0}
 var last_run := {}
 var selected_loadout := "scavenger"
+var corridor_unlocked := false
 
 
 func _ready() -> void:
@@ -40,6 +41,7 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated}
 	if success:
 		echo_shards += banked
+		corridor_unlocked = true
 	save_progress()
 	progress_changed.emit()
 	return banked
@@ -80,7 +82,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked}))
 	return true
 
 
@@ -103,6 +105,7 @@ func load_progress() -> void:
 	last_run = saved_run if saved_run is Dictionary else {}
 	var saved_loadout := str(parsed.get("selected_loadout", "scavenger"))
 	selected_loadout = saved_loadout if LOADOUTS.has(saved_loadout) else "scavenger"
+	corridor_unlocked = bool(parsed.get("corridor_unlocked", not last_run.is_empty() and bool(last_run.get("success", false))))
 
 
 func reset_progress() -> void:
@@ -112,6 +115,7 @@ func reset_progress() -> void:
 		upgrades[upgrade_id] = 0
 	last_run = {}
 	selected_loadout = "scavenger"
+	corridor_unlocked = false
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

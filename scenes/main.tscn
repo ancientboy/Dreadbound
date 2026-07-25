@@ -94,6 +94,14 @@ theme_override_font_sizes/font_size = 14
 text = "攻击 · R切换 · E交互 · Q绷带"
 horizontal_alignment = 2
 
+[node name="Abandon" type="Button" parent="Interface/TopBar"]
+offset_left = 0.0
+offset_top = 70.0
+offset_right = 142.0
+offset_bottom = 108.0
+theme_override_font_sizes/font_size = 13
+text = "撤回回廊"
+
 [node name="PromptPanel" type="ColorRect" parent="Interface"]
 visible = false
 offset_left = 428.0
@@ -152,8 +160,16 @@ offset_right = 568.0
 offset_bottom = 240.0
 theme_override_colors/font_color = Color(0.33, 0.61, 0.55, 1)
 theme_override_font_sizes/font_size = 15
-text = "按 E / 交互按钮返回终末回廊"
+text = "按 E / 交互按钮，或点击下方按钮"
 horizontal_alignment = 1
+
+[node name="Return" type="Button" parent="Interface/CompletePanel"]
+offset_left = 170.0
+offset_top = 202.0
+offset_right = 430.0
+offset_bottom = 256.0
+theme_override_font_sizes/font_size = 18
+text = "返回终末回廊"
 
 [node name="MobileControls" type="Control" parent="Interface" groups=["mobile_controls"]]
 layout_mode = 3
