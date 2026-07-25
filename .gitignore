@@ -1,0 +1,8 @@
+.godot/
+/builds/
+/exports/
+.mono/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
