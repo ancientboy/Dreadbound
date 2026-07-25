@@ -6,12 +6,18 @@ signal progress_changed
 const SAVE_VERSION := 1
 const UPGRADE_MAX_LEVEL := 3
 const UPGRADE_COSTS := [4, 7, 11]
+const LOADOUTS := {
+	"scavenger": {"name": "搜救配置", "weapon": "melee", "ammo": 6, "bandages": 1, "description": "撬棍 · 6 发弹药 · 1 份绷带"},
+	"marksman": {"name": "警戒配置", "weapon": "ranged", "ammo": 14, "bandages": 0, "description": "手枪出战 · 14 发弹药 · 无绷带"},
+	"medic": {"name": "应急配置", "weapon": "melee", "ammo": 3, "bandages": 2, "description": "撬棍 · 3 发弹药 · 2 份绷带"},
+}
 
 var save_path := "user://dreadbound_progress.json"
 var echo_shards := 0
 var causality_fragments := 0
 var upgrades := {"vitality": 0, "mobility": 0, "weapons": 0, "recovery": 0}
 var last_run := {}
+var selected_loadout := "scavenger"
 
 
 func _ready() -> void:
@@ -57,11 +63,24 @@ func purchase_upgrade(upgrade_id: String) -> bool:
 	return true
 
 
+func select_loadout(loadout_id: String) -> bool:
+	if not LOADOUTS.has(loadout_id):
+		return false
+	selected_loadout = loadout_id
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func get_selected_loadout() -> Dictionary:
+	return LOADOUTS.get(selected_loadout, LOADOUTS.scavenger).duplicate()
+
+
 func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout}))
 	return true
 
 
@@ -82,6 +101,8 @@ func load_progress() -> void:
 			upgrades[upgrade_id] = clampi(int(saved_upgrades.get(upgrade_id, 0)), 0, UPGRADE_MAX_LEVEL)
 	var saved_run = parsed.get("last_run", {})
 	last_run = saved_run if saved_run is Dictionary else {}
+	var saved_loadout := str(parsed.get("selected_loadout", "scavenger"))
+	selected_loadout = saved_loadout if LOADOUTS.has(saved_loadout) else "scavenger"
 
 
 func reset_progress() -> void:
@@ -90,6 +111,7 @@ func reset_progress() -> void:
 	for upgrade_id in upgrades:
 		upgrades[upgrade_id] = 0
 	last_run = {}
+	selected_loadout = "scavenger"
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

@@ -95,10 +95,35 @@ text = "漂泊者档案"
 
 [node name="Stats" type="Label" parent="Margin/Layout/Columns/Profile"]
 layout_mode = 2
-size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.68, 0.73, 0.69, 1)
-theme_override_font_sizes/font_size = 17
+theme_override_font_sizes/font_size = 15
 text = "生命上限       100"
+
+[node name="LoadoutTitle" type="Label" parent="Margin/Layout/Columns/Profile"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 18
+text = "出发整备"
+
+[node name="Loadouts" type="VBoxContainer" parent="Margin/Layout/Columns/Profile"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="Scavenger" type="Button" parent="Margin/Layout/Columns/Profile/Loadouts"]
+custom_minimum_size = Vector2(0, 55)
+layout_mode = 2
+text = "搜救配置"
+
+[node name="Marksman" type="Button" parent="Margin/Layout/Columns/Profile/Loadouts"]
+custom_minimum_size = Vector2(0, 55)
+layout_mode = 2
+text = "警戒配置"
+
+[node name="Medic" type="Button" parent="Margin/Layout/Columns/Profile/Loadouts"]
+custom_minimum_size = Vector2(0, 55)
+layout_mode = 2
+text = "应急配置"
 
 [node name="Upgrades" type="VBoxContainer" parent="Margin/Layout/Columns"]
 custom_minimum_size = Vector2(390, 0)

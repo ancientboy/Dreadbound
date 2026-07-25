@@ -8,6 +8,9 @@ func _run_test() -> void:
 	root.add_child(mission)
 	await process_frame
 	var player: Player = mission.player
+	player.attack_damage = 35
+	player.max_health = 100
+	player.health = 100
 	var enemies = get_nodes_in_group("enemies")
 	assert(enemies.size() == 7)
 	var patient: Patient = enemies[0]

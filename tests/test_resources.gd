@@ -8,6 +8,7 @@ func _run_test() -> void:
 	root.add_child(mission)
 	await process_frame
 	var player: Player = mission.player
+	player.bandages = 0
 	for enemy in get_nodes_in_group("enemies"):
 		enemy.set_physics_process(false)
 	assert(player.get_node("CollisionShape2D") != null)

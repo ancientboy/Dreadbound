@@ -19,6 +19,9 @@ func _ready() -> void:
 	for upgrade_id in UPGRADE_INFO:
 		var button := get_node("Margin/Layout/Columns/Upgrades/%s" % upgrade_id.capitalize()) as Button
 		button.pressed.connect(_purchase.bind(upgrade_id))
+	for loadout_id in GameProgress.LOADOUTS:
+		var button := get_node("Margin/Layout/Columns/Profile/Loadouts/%s" % loadout_id.capitalize()) as Button
+		button.pressed.connect(_select_loadout.bind(loadout_id))
 	deploy_button.pressed.connect(_deploy)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
 	_refresh()
@@ -34,6 +37,10 @@ func _refresh() -> void:
 		var cost := GameState.get_upgrade_cost(upgrade_id)
 		button.text = "%s  Lv.%d/%d\n%s%s" % [UPGRADE_INFO[upgrade_id][0], level, GameProgress.UPGRADE_MAX_LEVEL, UPGRADE_INFO[upgrade_id][1], "  ·  %d 碎片" % cost if cost > 0 else "  ·  已满级"]
 		button.disabled = cost == 0 or GameState.echo_shards < cost
+	for loadout_id in GameProgress.LOADOUTS:
+		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
+		var button := get_node("Margin/Layout/Columns/Profile/Loadouts/%s" % loadout_id.capitalize()) as Button
+		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
 	if GameState.last_run.is_empty():
 		report.text = "尚无行动记录。\n疗养院连接等待校准。"
 	else:
@@ -43,6 +50,11 @@ func _refresh() -> void:
 
 func _purchase(upgrade_id: String) -> void:
 	feedback.text = "%s已完成，下一次投送生效。" % UPGRADE_INFO[upgrade_id][0] if GameState.purchase_upgrade(upgrade_id) else "资源不足或该强化已达到上限。"
+
+
+func _select_loadout(loadout_id: String) -> void:
+	if GameState.select_loadout(loadout_id):
+		feedback.text = "已选择%s，下一次投送携带该配置。" % GameProgress.LOADOUTS[loadout_id].name
 
 
 func _deploy() -> void:

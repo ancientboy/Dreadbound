@@ -54,6 +54,10 @@ func _apply_permanent_upgrades() -> void:
 	attack_damage = int(stats.melee_damage)
 	ranged_damage = int(stats.ranged_damage)
 	bandage_heal = int(stats.bandage_heal)
+	var loadout: Dictionary = state.get_selected_loadout()
+	ammo = clampi(int(loadout.ammo), 0, max_ammo)
+	bandages = clampi(int(loadout.bandages), 0, max_bandages)
+	current_weapon = Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE
 
 
 func _physics_process(delta: float) -> void:

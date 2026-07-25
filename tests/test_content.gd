@@ -8,6 +8,8 @@ func _run_test() -> void:
 	root.add_child(mission)
 	await process_frame
 	var player: Player = mission.player
+	player.current_weapon = Player.Weapon.MELEE
+	player.ammo = 6
 	var crawlers = get_nodes_in_group("crawlers")
 	assert(crawlers.size() == 3)
 	for enemy in get_nodes_in_group("enemies"):
