@@ -1,60 +1,86 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
+[ext_resource path="res://scripts/player.gd" type="Script" id="2_player"]
 
-[node name="Main" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[sub_resource type="CapsuleShape2D" id="Capsule_player"]
+radius = 12.0
+height = 34.0
+
+[node name="Main" type="Node2D"]
 script = ExtResource("1_main")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(224, 360)
+script = ExtResource("2_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+position = Vector2(0, 7)
+shape = SubResource("Capsule_player")
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position = Vector2(0, -8)
+limit_left = 0
+limit_top = 0
+limit_right = 1600
+limit_bottom = 960
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0
+
+[node name="Interface" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="ColorRect" parent="Interface"]
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 1256.0
+offset_bottom = 82.0
+color = Color(0.025, 0.055, 0.052, 0.92)
+
+[node name="Title" type="Label" parent="Interface/TopBar"]
+offset_left = 18.0
+offset_top = 9.0
+offset_right = 300.0
+offset_bottom = 33.0
+theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
+theme_override_font_sizes/font_size = 18
+text = "DREADBOUND // MOVEMENT PROTOTYPE"
+
+[node name="Objective" type="Label" parent="Interface/TopBar"]
+offset_left = 18.0
+offset_top = 34.0
+offset_right = 900.0
+offset_bottom = 57.0
+theme_override_colors/font_color = Color(0.64, 0.72, 0.67, 1)
+theme_override_font_sizes/font_size = 14
+text = "OBJECTIVE: Reach the cyan terminal and retrieve the experiment record"
+
+[node name="Controls" type="Label" parent="Interface/TopBar"]
+offset_left = 905.0
+offset_top = 20.0
+offset_right = 1210.0
+offset_bottom = 45.0
+theme_override_colors/font_color = Color(0.42, 0.54, 0.5, 1)
+theme_override_font_sizes/font_size = 14
+text = "WASD / ARROWS: MOVE  ·  E: INTERACT"
+horizontal_alignment = 2
+
+[node name="PromptPanel" type="ColorRect" parent="Interface"]
+visible = false
+offset_left = 428.0
+offset_top = 632.0
+offset_right = 852.0
+offset_bottom = 688.0
+color = Color(0.02, 0.08, 0.075, 0.96)
+
+[node name="Prompt" type="Label" parent="Interface/PromptPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.025, 0.035, 0.035, 1)
-
-[node name="Center" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -320.0
-offset_top = -90.0
-offset_right = 320.0
-offset_bottom = 90.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 18
-
-[node name="Title" type="Label" parent="Center"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
-theme_override_font_sizes/font_size = 52
-text = "DREADBOUND"
+theme_override_colors/font_color = Color(0.34, 0.94, 0.82, 1)
+theme_override_font_sizes/font_size = 18
+text = "[E] RETRIEVE EXPERIMENT RECORD"
 horizontal_alignment = 1
-
-[node name="Rule" type="HSeparator" parent="Center"]
-layout_mode = 2
-
-[node name="Status" type="Label" parent="Center"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.58, 0.66, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "TERMINAL LINK // MINIMUM PROJECT FRAMEWORK"
-horizontal_alignment = 1
-
-[node name="Hint" type="Label" parent="Center"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.38, 0.46, 0.43, 1)
-theme_override_font_sizes/font_size = 14
-text = "Vertical slice systems pending"
-horizontal_alignment = 1
+vertical_alignment = 1

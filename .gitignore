@@ -6,3 +6,7 @@
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local movie-maker captures
+/frame*.png
+/frame*.wav
