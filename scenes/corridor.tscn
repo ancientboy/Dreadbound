@@ -66,7 +66,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 24
 
 [node name="Archive" type="VBoxContainer" parent="Margin/Layout/Columns"]
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -84,7 +84,7 @@ theme_override_font_sizes/font_size = 17
 text = "尚无行动记录。"
 
 [node name="Profile" type="VBoxContainer" parent="Margin/Layout/Columns"]
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -132,7 +132,7 @@ layout_mode = 2
 text = "破门配置"
 
 [node name="Upgrades" type="VBoxContainer" parent="Margin/Layout/Columns"]
-custom_minimum_size = Vector2(390, 0)
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
@@ -142,6 +142,48 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.47, 0.76, 0.68, 1)
 theme_override_font_sizes/font_size = 21
 text = "永久强化"
+
+[node name="Paths" type="VBoxContainer" parent="Margin/Layout/Columns"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margin/Layout/Columns/Paths"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 21
+text = "阈值途径 · v1"
+
+[node name="SteadfastGuard" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 57)
+layout_mode = 2
+text = "坚守者：守望"
+
+[node name="SteadfastMender" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 57)
+layout_mode = 2
+text = "坚守者：缝合"
+
+[node name="ArmorerCalibration" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 57)
+layout_mode = 2
+text = "武装师：校准"
+
+[node name="ArmorerMobility" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 57)
+layout_mode = 2
+text = "武装师：机动装填"
+
+[node name="ResonantSense" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 57)
+layout_mode = 2
+text = "共鸣者：余响感知"
+
+[node name="ResonantBargain" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 57)
+layout_mode = 2
+text = "共鸣者：代价交换"
 
 [node name="Vitality" type="Button" parent="Margin/Layout/Columns/Upgrades"]
 custom_minimum_size = Vector2(0, 68)
