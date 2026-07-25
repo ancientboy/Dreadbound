@@ -4,6 +4,8 @@ const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const PICKUP_SCENE: PackedScene = preload("res://scenes/entities/pickup.tscn")
 const CRAWLER_SCENE: PackedScene = preload("res://scenes/entities/crawler.tscn")
+const ORDERLY_SCENE: PackedScene = preload("res://scenes/entities/orderly.tscn")
+const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss.tscn")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -42,6 +44,10 @@ var _abandon_armed_until := 0
 var risk_events: Array[RiskEvent] = []
 var active_event: RiskEvent
 var event_results: Array[String] = []
+var boss: SanatoriumBoss
+var notification: Label
+var _notification_timer := 0.0
+var _sound_player: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -54,12 +60,15 @@ func _ready() -> void:
 	_create_mission_interactables()
 	_create_patients()
 	_create_crawlers()
+	_create_orderlies()
+	_create_boss()
 	_create_pickups()
 	_create_risk_events()
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
 	player.inventory_changed.connect(_on_inventory_changed)
 	player.weapon_changed.connect(_on_weapon_changed)
+	player.utility_changed.connect(_on_utility_changed)
 	abandon_button.pressed.connect(_on_abandon_pressed)
 	return_button.pressed.connect(_return_to_corridor)
 	event_choice_a.pressed.connect(_resolve_active_event.bind(true))
@@ -68,6 +77,9 @@ func _ready() -> void:
 	_on_inventory_changed(player.bandages, player.echo_shards)
 	_on_weapon_changed(player.get_weapon_name(), player.ammo)
 	_update_mission_ui()
+	_create_feedback_layer()
+	if not GameState.corridor_unlocked:
+		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
 	queue_redraw()
 
 
@@ -81,7 +93,11 @@ func _on_map_expanded_changed(expanded: bool) -> void:
 		enemy.set_physics_process(gameplay_active and not expanded)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if _notification_timer > 0.0:
+		_notification_timer -= delta
+		if _notification_timer <= 0.0 and notification:
+			notification.visible = false
 	if _abandon_armed_until > 0 and Time.get_ticks_msec() > _abandon_armed_until:
 		_abandon_armed_until = 0
 		abandon_button.text = "撤回回廊"
@@ -121,11 +137,16 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 				target.mark_complete()
 				if collected_records.size() == TOTAL_RECORDS:
 					mission_phase = MissionPhase.RESTORE_POWER
+					_show_notification("三份记录已集齐：前往地下维护区恢复电力", 4.0)
 		ObjectiveInteractable.Kind.POWER:
 			if collected_records.size() == TOTAL_RECORDS and not power_restored:
 				power_restored = true
 				mission_phase = MissionPhase.EVACUATE
 				target.mark_complete()
+				boss.activate(player)
+				_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
+				_play_cue(150.0, 0.35)
+				queue_redraw()
 		ObjectiveInteractable.Kind.EXIT:
 			if power_restored:
 				_complete_mission()
@@ -168,11 +189,20 @@ func _on_player_health_changed(current: int, maximum: int) -> void:
 
 
 func _on_inventory_changed(bandages: int, echo_shards: int) -> void:
-	inventory_status.text = "绷带 %d/%d  ·  碎片 %d" % [bandages, player.max_bandages, echo_shards]
+	inventory_status.text = "绷带%d 镇静%d 兴奋%d · 碎片%d" % [bandages, player.sedatives, player.stimulants, echo_shards]
 
 
 func _on_weapon_changed(weapon_name: String, ammo: int) -> void:
-	weapon_status.text = "武器 %s  ·  弹药 %d/%d" % [weapon_name, ammo, player.max_ammo]
+	var supply := "霰弹 %d/%d" % [player.shells, player.max_shells] if player.current_weapon == Player.Weapon.SHOTGUN else "弹药 %d/%d" % [ammo, player.max_ammo]
+	weapon_status.text = "武器 %s  ·  %s" % [weapon_name, supply]
+
+
+func _on_utility_changed(sedatives: int, duration: float) -> void:
+	inventory_status.text = "绷带%d 镇静%d 兴奋%d · 碎片%d" % [player.bandages, sedatives, player.stimulants, player.echo_shards]
+	if duration > 0.0:
+		inventory_status.tooltip_text = "镇静效果 %.0f 秒" % duration
+	else:
+		inventory_status.tooltip_text = "镇静剂 %d/2" % sedatives
 
 
 func _on_player_died() -> void:
@@ -314,6 +344,23 @@ func _create_crawlers() -> void:
 		add_child(crawler)
 
 
+func _create_orderlies() -> void:
+	for spawn_position in [Vector2(1370, 770), Vector2(2080, 1110)]:
+		var orderly := ORDERLY_SCENE.instantiate() as Orderly
+		orderly.position = spawn_position
+		orderly.target = player
+		orderly.tree_exiting.connect(_on_enemy_removed.bind(orderly))
+		add_child(orderly)
+
+
+func _create_boss() -> void:
+	boss = BOSS_SCENE.instantiate() as SanatoriumBoss
+	boss.position = Vector2(720, 1160)
+	boss.target = player
+	boss.tree_exiting.connect(_on_enemy_removed.bind(boss))
+	add_child(boss)
+
+
 func _on_enemy_removed(enemy: Node) -> void:
 	if enemy.get("health") != null and int(enemy.get("health")) <= 0:
 		enemies_defeated += 1
@@ -329,6 +376,11 @@ func _create_pickups() -> void:
 	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(576, 416), 6)
 	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(1344, 608), 8)
 	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(2112, 224), 8)
+	_add_pickup(ResourcePickup.Kind.SHELLS, Vector2(1248, 800), 4)
+	_add_pickup(ResourcePickup.Kind.SHELLS, Vector2(2032, 1056), 3)
+	_add_pickup(ResourcePickup.Kind.SEDATIVE, Vector2(864, 768), 1)
+	_add_pickup(ResourcePickup.Kind.SEDATIVE, Vector2(1792, 704), 1)
+	_add_pickup(ResourcePickup.Kind.STIMULANT, Vector2(1536, 1040), 1)
 
 
 func _create_risk_events() -> void:
@@ -366,8 +418,53 @@ func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: Stri
 	interactables.append(item)
 
 
+func _create_feedback_layer() -> void:
+	notification = Label.new()
+	notification.position = Vector2(365, 96)
+	notification.size = Vector2(550, 72)
+	notification.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notification.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	notification.add_theme_font_override("font", UI_FONT)
+	notification.add_theme_font_size_override("font_size", 18)
+	notification.add_theme_color_override("font_color", Color("8ff0d8"))
+	notification.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+	notification.add_theme_constant_override("shadow_offset_x", 2)
+	notification.add_theme_constant_override("shadow_offset_y", 2)
+	$Interface.add_child(notification)
+	_sound_player = AudioStreamPlayer.new()
+	add_child(_sound_player)
+
+
+func _show_notification(message: String, duration := 3.5) -> void:
+	if notification == null:
+		return
+	notification.text = message
+	notification.visible = true
+	_notification_timer = duration
+
+
+func _play_cue(frequency: float, duration: float) -> void:
+	if _sound_player == null:
+		return
+	var sample_rate := 11025
+	var frames := int(sample_rate * duration)
+	var bytes := PackedByteArray()
+	bytes.resize(frames * 2)
+	for index in range(frames):
+		var envelope := 1.0 - float(index) / frames
+		var sample := int(sin(TAU * frequency * index / sample_rate) * 5000.0 * envelope)
+		bytes[index * 2] = sample & 0xff
+		bytes[index * 2 + 1] = (sample >> 8) & 0xff
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.data = bytes
+	_sound_player.stream = stream
+	_sound_player.play()
+
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("101514"))
+	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("15201c") if power_restored else Color("101514"))
 	_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():

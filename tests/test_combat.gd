@@ -12,7 +12,7 @@ func _run_test() -> void:
 	player.max_health = 100
 	player.health = 100
 	var enemies = get_nodes_in_group("enemies")
-	assert(enemies.size() == 7)
+	assert(enemies.size() == 10)
 	var patient: Patient = enemies[0]
 	patient.set_physics_process(false)
 	patient.global_position = player.global_position + Vector2(60, 0)

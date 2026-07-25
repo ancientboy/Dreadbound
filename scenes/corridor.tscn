@@ -121,9 +121,14 @@ layout_mode = 2
 text = "警戒配置"
 
 [node name="Medic" type="Button" parent="Margin/Layout/Columns/Profile/Loadouts"]
-custom_minimum_size = Vector2(0, 55)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 text = "应急配置"
+
+[node name="Breacher" type="Button" parent="Margin/Layout/Columns/Profile/Loadouts"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "破门配置"
 
 [node name="Upgrades" type="VBoxContainer" parent="Margin/Layout/Columns"]
 custom_minimum_size = Vector2(390, 0)

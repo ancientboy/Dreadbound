@@ -30,8 +30,21 @@ func _run_test() -> void:
 	assert(restored.upgrades.vitality == 1)
 	assert(restored.selected_loadout == "marksman")
 	assert(restored.corridor_unlocked)
+	var legacy_path := "user://test_dreadbound_legacy.json"
+	var legacy := FileAccess.open(legacy_path, FileAccess.WRITE)
+	legacy.store_string(JSON.stringify({"version": 1, "echo_shards": 9, "upgrades": {"vitality": 2}, "selected_loadout": "scavenger", "corridor_unlocked": true}))
+	legacy = null
+	var migrated := GameProgress.new()
+	migrated.save_path = legacy_path
+	migrated.load_progress()
+	assert(migrated.echo_shards == 9)
+	assert(migrated.upgrades.vitality == 2)
+	assert(migrated.corridor_unlocked)
+	assert(migrated.selected_loadout == "scavenger")
+	migrated.reset_progress()
 	restored.reset_progress()
 	state.free()
 	restored.free()
-	print("Progression test passed: settlement, failure loss, upgrade effects, persistence")
+	migrated.free()
+	print("Progression test passed: settlement, failure loss, upgrade effects, persistence, v1 migration")
 	quit()

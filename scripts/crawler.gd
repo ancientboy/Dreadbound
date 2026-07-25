@@ -31,7 +31,7 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		return
 	var distance := global_position.distance_to(target.global_position)
-	if distance > detection_range:
+	if distance > detection_range * target.get_detection_multiplier():
 		velocity = Vector2.ZERO
 	elif distance > attack_range:
 		velocity = global_position.direction_to(target.global_position) * movement_speed

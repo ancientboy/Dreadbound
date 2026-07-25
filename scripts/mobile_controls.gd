@@ -151,7 +151,7 @@ func _draw() -> void:
 	draw_arc(item_center, ACTION_RADIUS - 8.0, 0.0, TAU, 48, Color(0.48, 0.72, 0.49, 0.92), 3.0)
 	if _item_touch != -1:
 		draw_circle(item_center, ACTION_RADIUS - 15.0, Color(0.48, 0.72, 0.49, 0.24))
-	draw_string(UI_FONT, item_center + Vector2(-26, 7), "绷带", HORIZONTAL_ALIGNMENT_CENTER, 52, 17, Color("9bd0a3"))
+	draw_string(UI_FONT, item_center + Vector2(-26, 7), "道具", HORIZONTAL_ALIGNMENT_CENTER, 52, 17, Color("9bd0a3"))
 	draw_circle(switch_center, ACTION_RADIUS - 16.0, Color(0.06, 0.09, 0.12, 0.92))
 	draw_arc(switch_center, ACTION_RADIUS - 16.0, 0.0, TAU, 40, Color(0.38, 0.61, 0.7, 0.9), 3.0)
 	if _switch_touch != -1:

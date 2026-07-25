@@ -25,6 +25,10 @@ func _ready() -> void:
 	deploy_button.pressed.connect(_deploy)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
 	_refresh()
+	if not GameState.corridor_intro_seen:
+		GameState.corridor_intro_seen = true
+		GameState.save_progress()
+		feedback.text = "终末回廊已解锁：在此查看属性、强化身体、选择整备并再次投送。"
 
 
 func _refresh() -> void:

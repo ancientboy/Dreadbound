@@ -5,8 +5,9 @@ signal health_changed(current: int, maximum: int)
 signal died
 signal inventory_changed(bandages: int, echo_shards: int)
 signal weapon_changed(weapon_name: String, ammo: int)
+signal utility_changed(sedatives: int, duration: float)
 
-enum Weapon { MELEE, RANGED }
+enum Weapon { MELEE, RANGED, SHOTGUN }
 
 @export var movement_speed := 210.0
 @export var max_health := 100
@@ -19,6 +20,10 @@ enum Weapon { MELEE, RANGED }
 @export var ranged_range := 430.0
 @export var ranged_cooldown := 0.34
 @export var max_ammo := 24
+@export var shotgun_damage := 28
+@export var shotgun_range := 235.0
+@export var shotgun_cooldown := 0.95
+@export var max_shells := 12
 
 var health := 100
 var facing := Vector2.DOWN
@@ -32,15 +37,24 @@ var echo_shards := 0
 var _heal_flash := 0.0
 var current_weapon := Weapon.MELEE
 var ammo := 6
+var shells := 0
+var sedatives := 0
+var sedative_duration := 0.0
+var stimulants := 0
+var stimulant_duration := 0.0
 var _shot_end := Vector2.ZERO
+var _audio: AudioStreamPlayer
 
 
 func _ready() -> void:
+	_audio = AudioStreamPlayer.new()
+	add_child(_audio)
 	_apply_permanent_upgrades()
 	health = max_health
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
 	weapon_changed.emit(get_weapon_name(), ammo)
+	utility_changed.emit(sedatives, sedative_duration)
 	queue_redraw()
 
 
@@ -57,7 +71,10 @@ func _apply_permanent_upgrades() -> void:
 	var loadout: Dictionary = state.get_selected_loadout()
 	ammo = clampi(int(loadout.ammo), 0, max_ammo)
 	bandages = clampi(int(loadout.bandages), 0, max_bandages)
-	current_weapon = Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE
+	shells = clampi(int(loadout.get("shells", 0)), 0, max_shells)
+	sedatives = clampi(int(loadout.get("sedatives", 0)), 0, 2)
+	stimulants = clampi(int(loadout.get("stimulants", 0)), 0, 2)
+	current_weapon = Weapon.SHOTGUN if loadout.weapon == "shotgun" else (Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE)
 
 
 func _physics_process(delta: float) -> void:
@@ -68,6 +85,8 @@ func _physics_process(delta: float) -> void:
 	_invulnerability_timer = maxf(_invulnerability_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
 	_heal_flash = maxf(_heal_flash - delta, 0.0)
+	sedative_duration = maxf(sedative_duration - delta, 0.0)
+	stimulant_duration = maxf(stimulant_duration - delta, 0.0)
 	if _dead:
 		velocity = Vector2.ZERO
 		return
@@ -84,13 +103,20 @@ func _physics_process(delta: float) -> void:
 		wants_to_use_item = mobile_controls.consume_item() or wants_to_use_item
 		wants_to_switch = mobile_controls.consume_switch_weapon() or wants_to_switch
 
-	velocity = input_direction * movement_speed
+	velocity = input_direction * movement_speed * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
 		facing = input_direction.normalized()
 	if wants_to_attack:
 		try_attack()
 	if wants_to_use_item:
-		use_bandage()
+		if health < max_health and bandages > 0:
+			use_bandage()
+		elif sedatives > 0:
+			use_sedative()
+		elif stimulants > 0:
+			use_stimulant()
+		else:
+			use_bandage()
 	if wants_to_switch:
 		switch_weapon()
 	_collect_nearby_pickups()
@@ -104,7 +130,10 @@ func try_attack() -> bool:
 		return false
 	if current_weapon == Weapon.RANGED:
 		return _try_ranged_attack()
+	if current_weapon == Weapon.SHOTGUN:
+		return _try_shotgun_attack()
 	_attack_timer = attack_cooldown
+	_play_tone(115.0, 0.08)
 	_attack_flash = 0.14
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
@@ -122,6 +151,7 @@ func _try_ranged_attack() -> bool:
 	_attack_timer = ranged_cooldown
 	_attack_flash = 0.11
 	ammo -= 1
+	_play_tone(520.0, 0.07)
 	var best_target: Node2D
 	var best_distance := ranged_range
 	for target in get_tree().get_nodes_in_group("enemies"):
@@ -141,10 +171,30 @@ func _try_ranged_attack() -> bool:
 	return true
 
 
+func _try_shotgun_attack() -> bool:
+	if shells <= 0:
+		return false
+	_attack_timer = shotgun_cooldown
+	_attack_flash = 0.16
+	shells -= 1
+	_play_tone(190.0, 0.14)
+	for target in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(target) or not target.has_method("take_damage"):
+			continue
+		var offset: Vector2 = target.global_position - global_position
+		if offset.length() <= shotgun_range and facing.dot(offset.normalized()) >= 0.72:
+			var falloff := clampf(1.25 - offset.length() / shotgun_range * 0.55, 0.7, 1.0)
+			target.take_damage(int(shotgun_damage * falloff), global_position)
+	weapon_changed.emit(get_weapon_name(), ammo)
+	queue_redraw()
+	return true
+
+
 func take_damage(amount: int, source_position: Vector2) -> bool:
 	if _dead or _invulnerability_timer > 0.0:
 		return false
 	health = maxi(health - amount, 0)
+	_play_tone(82.0, 0.16)
 	_invulnerability_timer = 0.65
 	_hurt_flash = 0.18
 	var knockback := source_position.direction_to(global_position)
@@ -180,13 +230,62 @@ func add_ammo(amount: int) -> bool:
 
 
 func switch_weapon() -> void:
-	current_weapon = Weapon.RANGED if current_weapon == Weapon.MELEE else Weapon.MELEE
+	current_weapon = (int(current_weapon) + 1) % 3 as Weapon
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 
 
 func get_weapon_name() -> String:
-	return "手枪" if current_weapon == Weapon.RANGED else "撬棍"
+	match current_weapon:
+		Weapon.RANGED: return "手枪"
+		Weapon.SHOTGUN: return "霰弹枪"
+	return "撬棍"
+
+
+func add_shells(amount: int) -> bool:
+	if shells >= max_shells:
+		return false
+	shells = mini(shells + amount, max_shells)
+	weapon_changed.emit(get_weapon_name(), ammo)
+	return true
+
+
+func add_sedatives(amount: int) -> bool:
+	if sedatives >= 2:
+		return false
+	sedatives = mini(sedatives + amount, 2)
+	utility_changed.emit(sedatives, sedative_duration)
+	return true
+
+
+func use_sedative() -> bool:
+	if _dead or sedatives <= 0 or sedative_duration > 0.0:
+		return false
+	sedatives -= 1
+	sedative_duration = 12.0
+	utility_changed.emit(sedatives, sedative_duration)
+	return true
+
+
+func get_detection_multiplier() -> float:
+	return 0.38 if sedative_duration > 0.0 else 1.0
+
+
+func add_stimulants(amount: int) -> bool:
+	if stimulants >= 2:
+		return false
+	stimulants = mini(stimulants + amount, 2)
+	utility_changed.emit(sedatives, sedative_duration)
+	return true
+
+
+func use_stimulant() -> bool:
+	if _dead or stimulants <= 0 or stimulant_duration > 0.0:
+		return false
+	stimulants -= 1
+	stimulant_duration = 10.0
+	utility_changed.emit(sedatives, sedative_duration)
+	return true
 
 
 func use_bandage() -> bool:
@@ -195,6 +294,7 @@ func use_bandage() -> bool:
 	bandages -= 1
 	health = mini(health + bandage_heal, max_health)
 	_heal_flash = 0.3
+	_play_tone(690.0, 0.12)
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
 	queue_redraw()
@@ -207,11 +307,36 @@ func _collect_nearby_pickups() -> void:
 			pickup.collect(self)
 
 
+func _play_tone(frequency: float, duration: float) -> void:
+	if _audio == null:
+		return
+	var rate := 8000
+	var frames := int(rate * duration)
+	var bytes := PackedByteArray()
+	bytes.resize(frames * 2)
+	for index in range(frames):
+		var sample := int(sin(TAU * frequency * index / rate) * 3600.0 * (1.0 - float(index) / frames))
+		bytes[index * 2] = sample & 0xff
+		bytes[index * 2 + 1] = (sample >> 8) & 0xff
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = rate
+	stream.data = bytes
+	_audio.stream = stream
+	_audio.play()
+
+
 func _draw() -> void:
+	# A low-cost flashlight wedge gives direction and local contrast without a large WebGL light texture.
+	var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
+	draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
 	if _attack_flash > 0.0:
 		if current_weapon == Weapon.RANGED:
 			draw_line(facing * 18.0, _shot_end, Color(0.45, 0.92, 0.82, 0.85), 3.0)
 			draw_circle(_shot_end, 5.0, Color(0.75, 1.0, 0.9, 0.7))
+		elif current_weapon == Weapon.SHOTGUN:
+			for spread in [-0.28, -0.14, 0.0, 0.14, 0.28]:
+				draw_line(facing.rotated(spread) * 18.0, facing.rotated(spread) * shotgun_range, Color(0.82, 0.71, 0.45, 0.5), 2.0)
 		else:
 			draw_arc(Vector2.ZERO, attack_range, facing.angle() - 0.55, facing.angle() + 0.55, 20, Color(0.82, 0.8, 0.55, 0.72), 8.0)
 

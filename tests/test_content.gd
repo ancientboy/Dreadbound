@@ -39,6 +39,8 @@ func _run_test() -> void:
 	assert(ammo_pickup.collect(player))
 	assert(player.ammo == pickup_amount)
 	player.switch_weapon()
+	assert(player.current_weapon == Player.Weapon.SHOTGUN)
+	player.switch_weapon()
 	assert(player.current_weapon == Player.Weapon.MELEE)
 	print("Content test passed: Crawler roster, ranged hit/ammo, empty weapon, ammo pickup, switching")
 	quit()
