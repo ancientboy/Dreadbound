@@ -6,8 +6,10 @@ signal died
 signal inventory_changed(bandages: int, echo_shards: int)
 signal weapon_changed(weapon_name: String, ammo: int)
 signal utility_changed(sedatives: int, duration: float)
+signal selected_item_changed(item_name: String, count: int)
 
 enum Weapon { MELEE, RANGED, SHOTGUN }
+enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
 
 @export var movement_speed := 210.0
 @export var max_health := 100
@@ -42,6 +44,7 @@ var sedatives := 0
 var sedative_duration := 0.0
 var stimulants := 0
 var stimulant_duration := 0.0
+var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _audio: AudioStreamPlayer
 
@@ -55,6 +58,7 @@ func _ready() -> void:
 	inventory_changed.emit(bandages, echo_shards)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	utility_changed.emit(sedatives, sedative_duration)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	queue_redraw()
 
 
@@ -95,6 +99,7 @@ func _physics_process(delta: float) -> void:
 	var wants_to_attack := Input.is_action_just_pressed("attack")
 	var wants_to_use_item := Input.is_action_just_pressed("use_item")
 	var wants_to_switch := Input.is_action_just_pressed("switch_weapon")
+	var wants_to_switch_item := Input.is_action_just_pressed("switch_item")
 	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
 	if mobile_controls:
 		if mobile_controls.movement_vector != Vector2.ZERO:
@@ -102,6 +107,7 @@ func _physics_process(delta: float) -> void:
 		wants_to_attack = mobile_controls.consume_attack() or wants_to_attack
 		wants_to_use_item = mobile_controls.consume_item() or wants_to_use_item
 		wants_to_switch = mobile_controls.consume_switch_weapon() or wants_to_switch
+		wants_to_switch_item = mobile_controls.consume_switch_item() or wants_to_switch_item
 
 	velocity = input_direction * movement_speed * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
@@ -109,16 +115,11 @@ func _physics_process(delta: float) -> void:
 	if wants_to_attack:
 		try_attack()
 	if wants_to_use_item:
-		if health < max_health and bandages > 0:
-			use_bandage()
-		elif sedatives > 0:
-			use_sedative()
-		elif stimulants > 0:
-			use_stimulant()
-		else:
-			use_bandage()
+		use_selected_item()
 	if wants_to_switch:
 		switch_weapon()
+	if wants_to_switch_item:
+		switch_item()
 	_collect_nearby_pickups()
 	move_and_slide()
 	if had_visual_effect or not facing.is_equal_approx(previous_facing):
@@ -213,6 +214,7 @@ func add_bandages(amount: int) -> bool:
 		return false
 	bandages = mini(bandages + amount, max_bandages)
 	inventory_changed.emit(bandages, echo_shards)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	return true
 
 
@@ -255,6 +257,7 @@ func add_sedatives(amount: int) -> bool:
 		return false
 	sedatives = mini(sedatives + amount, 2)
 	utility_changed.emit(sedatives, sedative_duration)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	return true
 
 
@@ -264,6 +267,7 @@ func use_sedative() -> bool:
 	sedatives -= 1
 	sedative_duration = 12.0
 	utility_changed.emit(sedatives, sedative_duration)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	return true
 
 
@@ -276,6 +280,7 @@ func add_stimulants(amount: int) -> bool:
 		return false
 	stimulants = mini(stimulants + amount, 2)
 	utility_changed.emit(sedatives, sedative_duration)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	return true
 
 
@@ -285,6 +290,7 @@ func use_stimulant() -> bool:
 	stimulants -= 1
 	stimulant_duration = 10.0
 	utility_changed.emit(sedatives, sedative_duration)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	return true
 
 
@@ -297,8 +303,41 @@ func use_bandage() -> bool:
 	_play_tone(690.0, 0.12)
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
 	queue_redraw()
 	return true
+
+
+func switch_item() -> void:
+	selected_item = (int(selected_item) + 1) % 3 as Consumable
+	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
+
+
+func use_selected_item() -> bool:
+	match selected_item:
+		Consumable.SEDATIVE:
+			return use_sedative()
+		Consumable.STIMULANT:
+			return use_stimulant()
+	return use_bandage()
+
+
+func get_selected_item_name() -> String:
+	match selected_item:
+		Consumable.SEDATIVE:
+			return "镇静剂"
+		Consumable.STIMULANT:
+			return "兴奋剂"
+	return "绷带"
+
+
+func get_selected_item_count() -> int:
+	match selected_item:
+		Consumable.SEDATIVE:
+			return sedatives
+		Consumable.STIMULANT:
+			return stimulants
+	return bandages
 
 
 func _collect_nearby_pickups() -> void:

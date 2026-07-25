@@ -69,6 +69,7 @@ func _ready() -> void:
 	player.inventory_changed.connect(_on_inventory_changed)
 	player.weapon_changed.connect(_on_weapon_changed)
 	player.utility_changed.connect(_on_utility_changed)
+	player.selected_item_changed.connect(_on_selected_item_changed)
 	abandon_button.pressed.connect(_on_abandon_pressed)
 	return_button.pressed.connect(_return_to_corridor)
 	event_choice_a.pressed.connect(_resolve_active_event.bind(true))
@@ -76,6 +77,7 @@ func _ready() -> void:
 	_on_player_health_changed(player.health, player.max_health)
 	_on_inventory_changed(player.bandages, player.echo_shards)
 	_on_weapon_changed(player.get_weapon_name(), player.ammo)
+	_on_selected_item_changed(player.get_selected_item_name(), player.get_selected_item_count())
 	_update_mission_ui()
 	_create_feedback_layer()
 	if not GameState.corridor_unlocked:
@@ -203,6 +205,10 @@ func _on_utility_changed(sedatives: int, duration: float) -> void:
 		inventory_status.tooltip_text = "镇静效果 %.0f 秒" % duration
 	else:
 		inventory_status.tooltip_text = "镇静剂 %d/2" % sedatives
+
+
+func _on_selected_item_changed(item_name: String, count: int) -> void:
+	inventory_status.text = "当前 %s×%d · 绷%d 镇%d 兴%d" % [item_name, count, player.bandages, player.sedatives, player.stimulants]
 
 
 func _on_player_died() -> void:

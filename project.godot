@@ -54,6 +54,10 @@ switch_weapon={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":82), Object(InputEventKey,"physical_keycode":4194308)]
 }
+switch_item={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":70)]
+}
 
 [rendering]
 renderer/rendering_method="gl_compatibility"

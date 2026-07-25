@@ -13,10 +13,12 @@ var _action_touch := -1
 var _attack_touch := -1
 var _item_touch := -1
 var _switch_touch := -1
+var _item_switch_touch := -1
 var _interact_queued := false
 var _attack_queued := false
 var _item_queued := false
 var _switch_queued := false
+var _item_switch_queued := false
 
 
 func _ready() -> void:
@@ -60,6 +62,12 @@ func consume_switch_weapon() -> bool:
 	return was_pressed
 
 
+func consume_switch_item() -> bool:
+	var was_pressed := _item_switch_queued
+	_item_switch_queued = false
+	return was_pressed
+
+
 func _handle_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
 		if _move_touch == -1 and event.position.x < size.x * 0.5:
@@ -76,6 +84,10 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		elif _item_touch == -1 and event.position.distance_to(_item_center()) <= ACTION_RADIUS * 1.3:
 			_item_touch = event.index
 			_item_queued = true
+			queue_redraw()
+		elif _item_switch_touch == -1 and event.position.distance_to(_item_switch_center()) <= ACTION_RADIUS:
+			_item_switch_touch = event.index
+			_item_switch_queued = true
 			queue_redraw()
 		elif _switch_touch == -1 and event.position.distance_to(_switch_center()) <= ACTION_RADIUS * 1.15:
 			_switch_touch = event.index
@@ -96,6 +108,9 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		queue_redraw()
 	elif event.index == _switch_touch:
 		_switch_touch = -1
+		queue_redraw()
+	elif event.index == _item_switch_touch:
+		_item_switch_touch = -1
 		queue_redraw()
 
 
@@ -127,12 +142,17 @@ func _switch_center() -> Vector2:
 	return Vector2(size.x - 500.0, size.y - 206.0)
 
 
+func _item_switch_center() -> Vector2:
+	return Vector2(size.x - 520.0, size.y - 104.0)
+
+
 func _draw() -> void:
 	var stick_center := _stick_center()
 	var action_center := _action_center()
 	var attack_center := _attack_center()
 	var item_center := _item_center()
 	var switch_center := _switch_center()
+	var item_switch_center := _item_switch_center()
 	draw_circle(stick_center, STICK_RADIUS, Color(0.04, 0.11, 0.1, 0.68))
 	draw_arc(stick_center, STICK_RADIUS, 0.0, TAU, 48, Color(0.25, 0.58, 0.52, 0.72), 3.0)
 	draw_circle(stick_center + movement_vector * STICK_RADIUS, KNOB_RADIUS, Color(0.27, 0.72, 0.63, 0.82))
@@ -151,9 +171,16 @@ func _draw() -> void:
 	draw_arc(item_center, ACTION_RADIUS - 8.0, 0.0, TAU, 48, Color(0.48, 0.72, 0.49, 0.92), 3.0)
 	if _item_touch != -1:
 		draw_circle(item_center, ACTION_RADIUS - 15.0, Color(0.48, 0.72, 0.49, 0.24))
-	draw_string(UI_FONT, item_center + Vector2(-26, 7), "道具", HORIZONTAL_ALIGNMENT_CENTER, 52, 17, Color("9bd0a3"))
+	var player := get_tree().get_first_node_in_group("player") as Player
+	var item_label := player.get_selected_item_name() if player else "道具"
+	draw_string(UI_FONT, item_center + Vector2(-31, 7), item_label, HORIZONTAL_ALIGNMENT_CENTER, 62, 15, Color("9bd0a3"))
 	draw_circle(switch_center, ACTION_RADIUS - 16.0, Color(0.06, 0.09, 0.12, 0.92))
 	draw_arc(switch_center, ACTION_RADIUS - 16.0, 0.0, TAU, 40, Color(0.38, 0.61, 0.7, 0.9), 3.0)
 	if _switch_touch != -1:
 		draw_circle(switch_center, ACTION_RADIUS - 22.0, Color(0.38, 0.61, 0.7, 0.25))
-	draw_string(UI_FONT, switch_center + Vector2(-23, 6), "切换", HORIZONTAL_ALIGNMENT_CENTER, 46, 15, Color("82b8c8"))
+	draw_string(UI_FONT, switch_center + Vector2(-23, 6), "武器", HORIZONTAL_ALIGNMENT_CENTER, 46, 15, Color("82b8c8"))
+	draw_circle(item_switch_center, 36.0, Color(0.1, 0.08, 0.12, 0.92))
+	draw_arc(item_switch_center, 36.0, 0.0, TAU, 36, Color(0.65, 0.48, 0.72, 0.9), 3.0)
+	if _item_switch_touch != -1:
+		draw_circle(item_switch_center, 29.0, Color(0.65, 0.48, 0.72, 0.25))
+	draw_string(UI_FONT, item_switch_center + Vector2(-23, 6), "道具", HORIZONTAL_ALIGNMENT_CENTER, 46, 14, Color("c39bd0"))

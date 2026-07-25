@@ -6,7 +6,7 @@
 radius = 12.0
 height = 34.0
 
-[node name="Player" type="CharacterBody2D"]
+[node name="Player" type="CharacterBody2D" groups=["player"]]
 z_index = 30
 script = ExtResource("1_player")
 
