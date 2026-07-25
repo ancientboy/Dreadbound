@@ -12,12 +12,25 @@ const UPGRADE_INFO := {
 @onready var stats: Label = $Margin/Layout/Columns/Profile/Stats
 @onready var feedback: Label = $Margin/Layout/Feedback
 @onready var deploy_button: Button = $Margin/Layout/Actions/Deploy
+@onready var world_button: Button = $Margin/Layout/Actions/SelectMetro
 var warehouse_panel: ColorRect
 var warehouse_list: VBoxContainer
 var warehouse_detail: Label
 var equip_button: Button
 var salvage_button: Button
 var selected_equipment_id := ""
+var walker_position := Vector2(350, 438)
+var walker_velocity := Vector2.ZERO
+var walker_facing := Vector2.RIGHT
+var walk_phase := 0.0
+var _move_touch := -1
+var _touch_origin := Vector2.ZERO
+var _touch_direction := Vector2.ZERO
+const WALK_SPEED := 330.0
+const TERMINAL_POSITION := Vector2(640, 285)
+const CURATOR_POSITION := Vector2(640, 416)
+const GATE_POSITION := Vector2(1045, 372)
+const INTERACTION_RANGE := 118.0
 
 
 func _ready() -> void:
@@ -34,12 +47,80 @@ func _ready() -> void:
 	$Margin/Layout/Actions/CloseTerminal.pressed.connect(_close_terminal)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
 	$Margin/Layout/Actions/Warehouse.pressed.connect(_open_warehouse)
+	world_button.pressed.connect(_toggle_world)
 	_create_warehouse_panel()
 	_refresh()
 	if not GameState.corridor_intro_seen:
 		GameState.corridor_intro_seen = true
 		GameState.save_progress()
 		feedback.text = "终末回廊已解锁：在此查看属性、强化身体、选择整备并再次投送。"
+	HubHint.text = "移动靠近司仪、整备终端或投送门；按 E / 点击操作。"
+	$HubActions.visible = false
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if $Margin.visible or warehouse_panel.visible:
+		return
+	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if _move_touch != -1:
+		direction = _touch_direction
+	walker_velocity = direction * WALK_SPEED
+	if direction.length() > 0.08:
+		walker_position += walker_velocity * delta
+		walker_position.x = clampf(walker_position.x, 115.0, size.x - 115.0)
+		walker_position.y = clampf(walker_position.y, 165.0, size.y - 95.0)
+		walker_facing = direction.normalized()
+		walk_phase += delta * 13.0
+		queue_redraw()
+	var target := _nearby_target()
+	$HubActions.visible = not target.is_empty() and target.id != "curator"
+	if target.is_empty():
+		HubHint.text = "探索终末回廊  ·  WASD / 方向键移动  ·  靠近设施后交互"
+	else:
+		HubHint.text = "[E] %s" % target.prompt
+	if Input.is_action_just_pressed("interact") and not target.is_empty():
+		_activate_target(target.id)
+
+
+func _input(event: InputEvent) -> void:
+	if $Margin.visible or (warehouse_panel and warehouse_panel.visible):
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed and event.position.x < size.x * 0.55:
+			_move_touch = event.index
+			_touch_origin = event.position
+			_touch_direction = Vector2.ZERO
+		elif not event.pressed and event.index == _move_touch:
+			_move_touch = -1
+			_touch_direction = Vector2.ZERO
+	elif event is InputEventScreenDrag and event.index == _move_touch:
+		_touch_direction = (event.position - _touch_origin).limit_length(92.0) / 92.0
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var target := _nearby_target()
+		if not target.is_empty() and event.position.distance_to(walker_position) < 170.0:
+			_activate_target(target.id)
+
+
+func _nearby_target() -> Dictionary:
+	var targets := [
+		{"id": "curator", "position": CURATOR_POSITION, "prompt": "与阈值司仪同步行动档案"},
+		{"id": "terminal", "position": TERMINAL_POSITION, "prompt": "接入行者整备终端"},
+		{"id": "gate", "position": GATE_POSITION, "prompt": "进入%s" % _world_name()},
+	]
+	for target in targets:
+		if walker_position.distance_to(target.position) <= INTERACTION_RANGE:
+			return target
+	return {}
+
+
+func _activate_target(id: String) -> void:
+	match id:
+		"curator":
+			feedback.text = "阈值司仪：我只记录已发生的选择。下一次行动前，请决定你的路线。"
+			_open_terminal()
+		"terminal": _open_terminal()
+		"gate": _deploy()
 
 
 func _refresh() -> void:
@@ -56,6 +137,9 @@ func _refresh() -> void:
 		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
 		var button := get_node("Margin/Layout/Columns/Profile/Loadouts/%s" % loadout_id.capitalize()) as Button
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
+	world_button.text = "切换至%s" % ("废弃疗养院" if GameState.selected_world == "metro" else "潮没末班线")
+	deploy_button.text = "投送：%s" % _world_name()
+	$HubActions/Deploy.text = "进入%s" % _world_name()
 	if GameState.last_run.is_empty():
 		report.text = "尚无行动记录。\n疗养院连接等待校准。"
 	else:
@@ -77,9 +161,20 @@ func _select_loadout(loadout_id: String) -> void:
 
 func _deploy() -> void:
 	deploy_button.disabled = true
-	feedback.text = "正在建立疗养院连接……"
+	feedback.text = "正在建立%s连接……" % _world_name()
 	GameState.begin_run()
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	get_tree().change_scene_to_file("res://scenes/metro.tscn" if GameState.selected_world == "metro" else "res://scenes/main.tscn")
+
+
+func _toggle_world() -> void:
+	GameState.selected_world = "metro" if GameState.selected_world == "sanatorium" else "sanatorium"
+	GameState.save_progress()
+	feedback.text = "投送目标已切换：%s" % _world_name()
+	_refresh()
+
+
+func _world_name() -> String:
+	return "潮没末班线" if GameState.selected_world == "metro" else "废弃疗养院"
 
 
 func _reset_progress() -> void:
@@ -88,32 +183,40 @@ func _reset_progress() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("0b1916"))
-	# Monumental corridor silhouette, cyan anomaly core and terminal scan lines.
-	for index in range(7):
-		var inset := 36.0 + index * 54.0
-		var alpha := 0.18 - index * 0.018
-		draw_line(Vector2(inset, 0), Vector2(360 + index * 35, size.y), Color(0.13, 0.34, 0.29, alpha), 3.0)
-		draw_line(Vector2(size.x - inset, 0), Vector2(size.x - 360 - index * 35, size.y), Color(0.13, 0.34, 0.29, alpha), 3.0)
-	var core := Vector2(size.x * 0.5, size.y * 0.42)
-	draw_circle(core, 190.0, Color(0.08, 0.5, 0.42, 0.12))
-	draw_circle(core, 92.0, Color(0.19, 0.9, 0.74, 0.13))
-	draw_arc(core, 128.0, 0.0, TAU, 72, Color(0.32, 0.95, 0.78, 0.42), 3.0)
-	# Raised platform, archive monolith and active deployment gate make the hub read as a place.
-	draw_colored_polygon(PackedVector2Array([Vector2(220, size.y * 0.76), Vector2(size.x - 220, size.y * 0.76), Vector2(size.x - 70, size.y), Vector2(70, size.y)]), Color("132a25"))
-	draw_line(Vector2(70, size.y), Vector2(220, size.y * 0.76), Color("35685c"), 4.0)
-	draw_line(Vector2(size.x - 70, size.y), Vector2(size.x - 220, size.y * 0.76), Color("35685c"), 4.0)
-	draw_rect(Rect2(core.x - 92, core.y - 135, 184, 270), Color(0.025, 0.12, 0.105, 0.72))
-	draw_rect(Rect2(core.x - 92, core.y - 135, 184, 270), Color("46bca5"), false, 3.0)
-	var gate_center := Vector2(size.x * 0.82, size.y * 0.46)
-	draw_arc(gate_center, 112.0, -2.1, 2.1, 48, Color("5ce8cf"), 12.0)
-	draw_circle(gate_center, 82.0, Color(0.16, 0.75, 0.66, 0.12))
-	# The Drifter remains visibly present in the Corridor rather than becoming only a menu.
-	var avatar := Vector2(size.x * 0.28, size.y * 0.61)
-	draw_circle(avatar + Vector2(0, -34), 13.0, Color("77847d"))
-	draw_rect(Rect2(avatar.x - 18, avatar.y - 22, 36, 52), Color("4f655b"))
-	draw_rect(Rect2(avatar.x - 26, avatar.y - 14, 9, 38), Color("594e39"))
-	draw_circle(avatar + Vector2(-17, 7), 5.0, Color("46e5ca"))
+	draw_rect(Rect2(Vector2.ZERO, size), Color("071311"))
+	# A layered, walkable chamber: floor lanes, pillars, the Curator's dais and a live gate.
+	for y in range(140, int(size.y), 58):
+		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.1, 0.27, 0.23, 0.27), 1.0)
+	for x in range(80, int(size.x), 132):
+		draw_line(Vector2(x, 112), Vector2(x, size.y), Color(0.08, 0.22, 0.19, 0.24), 1.0)
+	var floor := PackedVector2Array([Vector2(86, size.y), Vector2(size.x - 86, size.y), Vector2(size.x - 202, 184), Vector2(202, 184)])
+	draw_colored_polygon(floor, Color("102a25"))
+	draw_polyline(floor + PackedVector2Array([floor[0]]), Color("3a8070"), 3.0)
+	for pillar_x in [185.0, size.x - 185.0]:
+		draw_rect(Rect2(pillar_x - 24, 146, 48, size.y - 205), Color("0b211d"))
+		draw_line(Vector2(pillar_x - 24, 146), Vector2(pillar_x - 24, size.y - 58), Color("29594e"), 3.0)
+	# Archive terminal and Curator dais.
+	draw_circle(TERMINAL_POSITION, 88, Color(0.08, 0.34, 0.29, 0.2))
+	draw_rect(Rect2(TERMINAL_POSITION - Vector2(58, 84), Vector2(116, 168)), Color("09231f"))
+	draw_rect(Rect2(TERMINAL_POSITION - Vector2(58, 84), Vector2(116, 168)), Color("4bd3b8"), false, 3.0)
+	draw_line(TERMINAL_POSITION + Vector2(-38, -25), TERMINAL_POSITION + Vector2(38, -25), Color("77f2d8"), 3.0)
+	draw_circle(CURATOR_POSITION, 56, Color(0.23, 0.77, 0.67, 0.14))
+	draw_arc(CURATOR_POSITION, 56, 0, TAU, 48, Color("5de0c5"), 2.0)
+	draw_circle(CURATOR_POSITION + Vector2(0, -14), 13, Color("b3dbd0"))
+	draw_colored_polygon(PackedVector2Array([CURATOR_POSITION + Vector2(-22, 28), CURATOR_POSITION + Vector2(22, 28), CURATOR_POSITION + Vector2(14, -4), CURATOR_POSITION + Vector2(-14, -4)]), Color("355f57"))
+	# Gate changes hue slightly for the flooded world.
+	var gate_color := Color("6098f5") if GameState.selected_world == "metro" else Color("5ce8cf")
+	draw_circle(GATE_POSITION, 102, Color(gate_color, 0.1))
+	draw_arc(GATE_POSITION, 98, -2.05, 2.05, 48, gate_color, 12.0)
+	draw_arc(GATE_POSITION, 68, -2.05, 2.05, 48, Color(gate_color, 0.48), 2.0)
+	# Animated Drifter. The gait reacts to actual movement instead of a static icon.
+	var bob := sin(walk_phase) * 3.0 if walker_velocity.length() > 2.0 else sin(Time.get_ticks_msec() * 0.002) * 1.2
+	draw_circle(walker_position + Vector2(0, -25 + bob), 13, Color("c3d9d1"))
+	draw_colored_polygon(PackedVector2Array([walker_position + Vector2(-18, -10 + bob), walker_position + Vector2(18, -10 + bob), walker_position + Vector2(23, 26), walker_position + Vector2(-23, 26)]), Color("62847b"))
+	var stride := sin(walk_phase) * 9.0 if walker_velocity.length() > 2.0 else 0.0
+	draw_line(walker_position + Vector2(-8, 22), walker_position + Vector2(-12 + stride, 40), Color("2e4a43"), 7.0)
+	draw_line(walker_position + Vector2(8, 22), walker_position + Vector2(12 - stride, 40), Color("2e4a43"), 7.0)
+	draw_circle(walker_position + walker_facing * 23 + Vector2(0, bob), 4, Color("72f1d7"))
 	for y in range(10, int(size.y), 8):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.4, 0.8, 0.7, 0.012), 1.0)
 	if $Margin.visible:
@@ -134,7 +237,7 @@ func _close_terminal() -> void:
 	$Margin.visible = false
 	$HubTitle.visible = true
 	$HubHint.visible = true
-	$HubActions.visible = true
+	$HubActions.visible = false
 	queue_redraw()
 
 

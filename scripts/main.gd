@@ -65,7 +65,7 @@ func _ready() -> void:
 	var run_seed: int = GameState.active_run_seed
 	if run_seed == 0:
 		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
-	run_config = DynamicRunConfig.new(run_seed)
+	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world)
 	assert(run_config.validate())
 	total_records = run_config.objective_count
 	_create_collision_walls()
@@ -103,6 +103,8 @@ func _ready() -> void:
 	if not GameState.corridor_unlocked:
 		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
 	$Interface/TopBar/Title.text = "%s // %s" % [run_config.mission_title, run_config.action_code]
+	if run_config.world_id == "metro":
+		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。", 6.0)
 	queue_redraw()
 
 
@@ -664,7 +666,13 @@ func _play_cue(frequency: float, duration: float) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("15201c") if power_restored else Color("101514"))
+	var metro := run_config != null and run_config.world_id == "metro"
+	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("10223a") if metro else (Color("15201c") if power_restored else Color("101514")))
+	if metro:
+		# Flooded rail-lines and intermittent tide bands make the shared graybox read as a distinct disaster world.
+		for y in range(96, int(MAP_SIZE.y), 168):
+			draw_rect(Rect2(32, y, MAP_SIZE.x - 64, 52), Color(0.05, 0.28, 0.42, 0.48))
+			draw_line(Vector2(32, y + 12), Vector2(MAP_SIZE.x - 32, y + 12), Color(0.28, 0.72, 0.9, 0.35), 2.0)
 	_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():
@@ -682,9 +690,10 @@ func _draw_grid() -> void:
 func _draw_zones() -> void:
 	var room_index := 0
 	for room in SanatoriumLayout.rooms():
-		draw_rect(room.rect, Color("18211f"))
-		draw_rect(room.rect, Color("27332f"), false, 2.0)
-		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
+		var metro := run_config != null and run_config.world_id == "metro"
+		draw_rect(room.rect, Color("142b40") if metro else Color("18211f"))
+		draw_rect(room.rect, Color("3a7090") if metro else Color("27332f"), false, 2.0)
+		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("86b9ce") if metro else Color("617269"))
 		room_index += 1
 
 

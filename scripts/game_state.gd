@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11]
@@ -26,6 +26,7 @@ var equipment_inventory: Array[String] = ["service_crowbar", "medical_tag"]
 var equipped := {"weapon": "", "charm": ""}
 var active_run_seed := 0
 var last_action_code := ""
+var selected_world := "sanatorium"
 
 
 func _ready() -> void:
@@ -46,7 +47,7 @@ func get_player_stats() -> Dictionary:
 
 func begin_run(requested_seed := 0) -> int:
 	active_run_seed = requested_seed if requested_seed != 0 else int(Time.get_unix_time_from_system()) ^ Time.get_ticks_msec()
-	last_action_code = "SAN-%08X" % absi(active_run_seed)
+	last_action_code = ("MET" if selected_world == "metro" else "SAN") + "-%08X" % absi(active_run_seed)
 	save_progress()
 	return active_run_seed
 
@@ -134,7 +135,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world}))
 	return true
 
 
@@ -161,6 +162,9 @@ func load_progress() -> void:
 	corridor_intro_seen = bool(parsed.get("corridor_intro_seen", false))
 	active_run_seed = int(parsed.get("active_run_seed", 0))
 	last_action_code = str(parsed.get("last_action_code", ""))
+	selected_world = str(parsed.get("selected_world", "sanatorium"))
+	if selected_world not in ["sanatorium", "metro"]:
+		selected_world = "sanatorium"
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -188,6 +192,7 @@ func reset_progress() -> void:
 	equipped = {"weapon": "", "charm": ""}
 	active_run_seed = 0
 	last_action_code = ""
+	selected_world = "sanatorium"
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

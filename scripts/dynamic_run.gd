@@ -2,6 +2,7 @@ class_name DynamicRunConfig
 extends RefCounted
 
 const ROOM_MODULES := ["入口大厅", "病房甲区", "护理站", "隔离病房", "实验档案室", "地下维护区", "药品库", "撤离通道"]
+const METRO_ROOM_MODULES := ["检票大厅", "湿闸通道", "东侧站台", "信号机房", "维修走廊", "档案月台", "天桥", "零号层"]
 const CONTENT_SLOTS := [
 	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
 	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),
@@ -11,6 +12,7 @@ const SIDE_CONTRACTS := ["medicine_cabinet", "echo_ward", "archive_whisper", "po
 const CAUSAL_CHAINS := ["spore_bloom", "quiet_signal", "hungry_corridor"]
 
 var seed: int
+var world_id := "sanatorium"
 var action_code: String
 var room_order: Array[String] = []
 var edges: Array[Vector2i] = []
@@ -29,28 +31,35 @@ var side_contracts: Array[String] = []
 var causal_chain := ""
 
 
-func _init(run_seed: int) -> void:
+func _init(run_seed: int, requested_world := "sanatorium") -> void:
 	seed = absi(run_seed) if run_seed != 0 else 1
-	action_code = "SAN-%08X" % seed
+	world_id = requested_world if requested_world in ["sanatorium", "metro"] else "sanatorium"
+	action_code = ("MET" if world_id == "metro" else "SAN") + "-%08X" % seed
 	_generate()
 
 
 func _generate() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
-	room_order.assign(ROOM_MODULES)
+	var modules: Array[String] = METRO_ROOM_MODULES if world_id == "metro" else ROOM_MODULES
+	room_order.assign(modules)
 	# Keep entrance first and extraction last while changing every interior route role.
 	var middle: Array[String] = room_order.slice(1, room_order.size() - 1)
 	_shuffle_with_rng(middle, rng)
-	room_order = [ROOM_MODULES[0]]
+	room_order = [modules[0]]
 	room_order.append_array(middle)
-	room_order.append(ROOM_MODULES[-1])
+	room_order.append(modules[-1])
 	for index in range(room_order.size() - 1):
 		edges.append(Vector2i(index, index + 1))
 	edges.append(Vector2i(1 + rng.randi_range(0, 2), 4 + rng.randi_range(0, 2)))
-	mission_id = "archive_recovery" if rng.randi() % 2 == 0 else "anomaly_severance"
-	mission_title = "档案回收" if mission_id == "archive_recovery" else "异常切除"
-	objective_noun = "实验记录" if mission_id == "archive_recovery" else "异常节点"
+	if world_id == "metro":
+		mission_id = "lost_service" if rng.randi() % 2 == 0 else "switch_zero"
+		mission_title = "失联车次" if mission_id == "lost_service" else "零号道岔"
+		objective_noun = "车次信标" if mission_id == "lost_service" else "道岔锁"
+	else:
+		mission_id = "archive_recovery" if rng.randi() % 2 == 0 else "anomaly_severance"
+		mission_title = "档案回收" if mission_id == "archive_recovery" else "异常切除"
+		objective_noun = "实验记录" if mission_id == "archive_recovery" else "异常节点"
 	objective_count = rng.randi_range(2, 4)
 	var slots: Array[Vector2] = []
 	slots.assign(CONTENT_SLOTS)
@@ -79,7 +88,8 @@ func _generate() -> void:
 
 
 func validate() -> bool:
-	if room_order.size() != ROOM_MODULES.size() or room_order[0] != "入口大厅" or room_order[-1] != "撤离通道":
+	var modules: Array[String] = METRO_ROOM_MODULES if world_id == "metro" else ROOM_MODULES
+	if room_order.size() != modules.size() or room_order[0] != modules[0] or room_order[-1] != modules[-1]:
 		return false
 	if objective_positions.size() != objective_count or objective_count < 2 or objective_count > 4:
 		return false
