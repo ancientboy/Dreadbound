@@ -23,8 +23,8 @@ shape = SubResource("Capsule_player")
 position = Vector2(0, -8)
 limit_left = 0
 limit_top = 0
-limit_right = 1600
-limit_bottom = 960
+limit_right = 2304
+limit_bottom = 1440
 position_smoothing_enabled = true
 position_smoothing_speed = 7.0
 
@@ -54,6 +54,16 @@ offset_bottom = 57.0
 theme_override_colors/font_color = Color(0.64, 0.72, 0.67, 1)
 theme_override_font_sizes/font_size = 14
 text = "OBJECTIVE: Reach the cyan terminal and retrieve the experiment record"
+
+[node name="Progress" type="Label" parent="Interface/TopBar"]
+offset_left = 760.0
+offset_top = 34.0
+offset_right = 1198.0
+offset_bottom = 57.0
+theme_override_colors/font_color = Color(0.42, 0.66, 0.58, 1)
+theme_override_font_sizes/font_size = 14
+text = "RECORDS 0/3  ·  POWER OFFLINE"
+horizontal_alignment = 2
 
 [node name="Controls" type="Label" parent="Interface/TopBar"]
 offset_left = 905.0
@@ -85,6 +95,44 @@ theme_override_font_sizes/font_size = 18
 text = "[E] RETRIEVE EXPERIMENT RECORD"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="CompletePanel" type="ColorRect" parent="Interface"]
+visible = false
+offset_left = 340.0
+offset_top = 222.0
+offset_right = 940.0
+offset_bottom = 498.0
+color = Color(0.02, 0.07, 0.065, 0.97)
+
+[node name="Heading" type="Label" parent="Interface/CompletePanel"]
+offset_left = 32.0
+offset_top = 36.0
+offset_right = 568.0
+offset_bottom = 94.0
+theme_override_colors/font_color = Color(0.3, 0.91, 0.79, 1)
+theme_override_font_sizes/font_size = 34
+text = "EXTRACTION COMPLETE"
+horizontal_alignment = 1
+
+[node name="Summary" type="Label" parent="Interface/CompletePanel"]
+offset_left = 32.0
+offset_top = 112.0
+offset_right = 568.0
+offset_bottom = 175.0
+theme_override_colors/font_color = Color(0.59, 0.7, 0.64, 1)
+theme_override_font_sizes/font_size = 18
+text = "3 records secured\nFacility power restored"
+horizontal_alignment = 1
+
+[node name="Restart" type="Label" parent="Interface/CompletePanel"]
+offset_left = 32.0
+offset_top = 210.0
+offset_right = 568.0
+offset_bottom = 240.0
+theme_override_colors/font_color = Color(0.33, 0.61, 0.55, 1)
+theme_override_font_sizes/font_size = 15
+text = "PRESS E / INTERACT TO RUN AGAIN"
+horizontal_alignment = 1
 
 [node name="MobileControls" type="Control" parent="Interface" groups=["mobile_controls"]]
 layout_mode = 3

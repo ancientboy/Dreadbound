@@ -1,69 +1,150 @@
 extends Node2D
 
-const MAP_SIZE := Vector2(1600.0, 960.0)
-const TERMINAL_POSITION := Vector2(1248.0, 416.0)
-const INTERACTION_DISTANCE := 78.0
+enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE }
 
-@onready var player: CharacterBody2D = $Player
+const MAP_SIZE := Vector2(2304.0, 1440.0)
+const INTERACTION_DISTANCE := 86.0
+const TOTAL_RECORDS := 3
+
+@onready var player: Player = $Player
 @onready var objective: Label = $Interface/TopBar/Objective
+@onready var progress: Label = $Interface/TopBar/Progress
 @onready var prompt_panel: ColorRect = $Interface/PromptPanel
+@onready var prompt: Label = $Interface/PromptPanel/Prompt
+@onready var complete_panel: ColorRect = $Interface/CompletePanel
 
-var record_collected := false
+var mission_phase := MissionPhase.COLLECT_RECORDS
+var collected_records: Dictionary = {}
+var power_restored := false
+var interactables: Array[ObjectiveInteractable] = []
 
 
 func _ready() -> void:
 	_create_collision_walls()
+	_create_mission_interactables()
+	_update_mission_ui()
 	queue_redraw()
 
 
 func _process(_delta: float) -> void:
-	var can_interact := not record_collected and player.global_position.distance_to(TERMINAL_POSITION) <= INTERACTION_DISTANCE
-	prompt_panel.visible = can_interact
-	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
 	var wants_to_interact := Input.is_action_just_pressed("interact")
+	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
 	if mobile_controls:
 		wants_to_interact = mobile_controls.consume_interact() or wants_to_interact
-	if can_interact and wants_to_interact:
-		record_collected = true
-		prompt_panel.visible = false
-		objective.text = "RECORD RETRIEVED (1/3) // INTERACTION TEST COMPLETE"
-		queue_redraw()
+
+	if mission_phase == MissionPhase.COMPLETE:
+		if wants_to_interact:
+			get_tree().reload_current_scene()
+		return
+
+	var target := _nearest_interactable()
+	prompt_panel.visible = target != null
+	if target:
+		prompt.text = target.get_prompt(collected_records.size(), power_restored)
+		if wants_to_interact:
+			_handle_interaction(target)
+
+
+func _handle_interaction(target: ObjectiveInteractable) -> void:
+	match target.kind:
+		ObjectiveInteractable.Kind.RECORD:
+			if not collected_records.has(target.objective_id):
+				collected_records[target.objective_id] = true
+				target.mark_complete()
+				if collected_records.size() == TOTAL_RECORDS:
+					mission_phase = MissionPhase.RESTORE_POWER
+		ObjectiveInteractable.Kind.POWER:
+			if collected_records.size() == TOTAL_RECORDS and not power_restored:
+				power_restored = true
+				mission_phase = MissionPhase.EVACUATE
+				target.mark_complete()
+		ObjectiveInteractable.Kind.EXIT:
+			if power_restored:
+				_complete_mission()
+	_update_mission_ui()
+
+
+func _complete_mission() -> void:
+	mission_phase = MissionPhase.COMPLETE
+	prompt_panel.visible = false
+	complete_panel.visible = true
+	player.velocity = Vector2.ZERO
+	player.set_physics_process(false)
+
+
+func _nearest_interactable() -> ObjectiveInteractable:
+	var nearest: ObjectiveInteractable
+	var nearest_distance := INTERACTION_DISTANCE
+	for item in interactables:
+		if item.completed:
+			continue
+		var distance := player.global_position.distance_to(item.global_position)
+		if distance <= nearest_distance:
+			nearest = item
+			nearest_distance = distance
+	return nearest
+
+
+func _update_mission_ui() -> void:
+	progress.text = "RECORDS %d/%d  ·  POWER %s" % [collected_records.size(), TOTAL_RECORDS, "ONLINE" if power_restored else "OFFLINE"]
+	match mission_phase:
+		MissionPhase.COLLECT_RECORDS:
+			objective.text = "OBJECTIVE: Search the sanatorium for experiment records"
+		MissionPhase.RESTORE_POWER:
+			objective.text = "OBJECTIVE: Restore power in basement maintenance"
+		MissionPhase.EVACUATE:
+			objective.text = "OBJECTIVE: Reach the emergency extraction gate"
+		MissionPhase.COMPLETE:
+			objective.text = "MISSION COMPLETE: Sanatorium route stabilized"
+
+
+func _create_mission_interactables() -> void:
+	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_01", "PATIENT WING RECORD", Vector2(672, 256))
+	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_02", "NURSE STATION RECORD", Vector2(1184, 480))
+	_add_interactable(ObjectiveInteractable.Kind.RECORD, "record_03", "ARCHIVE RECORD", Vector2(1952, 288))
+	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "BASEMENT GENERATOR", Vector2(1760, 1184))
+	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "EXTRACTION GATE", Vector2(224, 1184))
+
+
+func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: String, at: Vector2) -> void:
+	var item := ObjectiveInteractable.new()
+	item.kind = kind
+	item.objective_id = id
+	item.display_name = label
+	item.position = at
+	add_child(item)
+	interactables.append(item)
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("111716"))
+	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("101514"))
 	_draw_grid()
-	_draw_rooms()
-	_draw_terminal()
+	_draw_zones()
+	for wall in _wall_rectangles():
+		draw_rect(wall, Color("39423d"))
+		draw_rect(wall, Color("59635c"), false, 2.0)
 
 
 func _draw_grid() -> void:
 	for x in range(0, int(MAP_SIZE.x) + 1, 32):
-		draw_line(Vector2(x, 0), Vector2(x, MAP_SIZE.y), Color(0.13, 0.17, 0.16, 0.32), 1.0)
+		draw_line(Vector2(x, 0), Vector2(x, MAP_SIZE.y), Color(0.13, 0.17, 0.16, 0.3), 1.0)
 	for y in range(0, int(MAP_SIZE.y) + 1, 32):
-		draw_line(Vector2(0, y), Vector2(MAP_SIZE.x, y), Color(0.13, 0.17, 0.16, 0.32), 1.0)
+		draw_line(Vector2(0, y), Vector2(MAP_SIZE.x, y), Color(0.13, 0.17, 0.16, 0.3), 1.0)
 
 
-func _draw_rooms() -> void:
-	var wall_color := Color("39423d")
-	var edge_color := Color("59635c")
-	for wall in _wall_rectangles():
-		draw_rect(wall, wall_color)
-		draw_rect(wall, edge_color, false, 2.0)
-
-	# Temporary landmarks make navigation and camera motion easy to evaluate.
-	draw_rect(Rect2(128, 256, 192, 224), Color("202a26"))
-	draw_string(ThemeDB.fallback_font, Vector2(160, 300), "ENTRY WARD", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("66756c"))
-	draw_rect(Rect2(1056, 288, 352, 256), Color("182521"))
-	draw_string(ThemeDB.fallback_font, Vector2(1104, 332), "RECORDS STORAGE", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("527269"))
-
-
-func _draw_terminal() -> void:
-	var glow := Color("37d6bd") if not record_collected else Color("47645e")
-	draw_circle(TERMINAL_POSITION, 42.0, Color(glow, 0.09))
-	draw_rect(Rect2(TERMINAL_POSITION - Vector2(18, 26), Vector2(36, 52)), Color("172b28"))
-	draw_rect(Rect2(TERMINAL_POSITION - Vector2(13, 20), Vector2(26, 18)), glow)
-	draw_string(ThemeDB.fallback_font, TERMINAL_POSITION + Vector2(-62, 54), "RECORD 01", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, glow)
+func _draw_zones() -> void:
+	var zones := [
+		[Rect2(96, 160, 320, 320), "ENTRY HALL"],
+		[Rect2(480, 128, 416, 352), "PATIENT WING"],
+		[Rect2(992, 288, 384, 384), "NURSE STATION"],
+		[Rect2(1696, 128, 480, 320), "RECORD ARCHIVE"],
+		[Rect2(1504, 960, 576, 320), "BASEMENT MAINTENANCE"],
+		[Rect2(96, 1024, 352, 256), "EXTRACTION"],
+	]
+	for zone in zones:
+		draw_rect(zone[0], Color("18211f"))
+		draw_rect(zone[0], Color("27332f"), false, 2.0)
+		draw_string(ThemeDB.fallback_font, zone[0].position + Vector2(24, 42), zone[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
 
 
 func _create_collision_walls() -> void:
@@ -82,9 +163,20 @@ func _wall_rectangles() -> Array[Rect2]:
 	return [
 		Rect2(0, 0, MAP_SIZE.x, 32), Rect2(0, MAP_SIZE.y - 32, MAP_SIZE.x, 32),
 		Rect2(0, 0, 32, MAP_SIZE.y), Rect2(MAP_SIZE.x - 32, 0, 32, MAP_SIZE.y),
-		Rect2(416, 32, 32, 256), Rect2(416, 416, 32, 256), Rect2(416, 800, 32, 128),
-		Rect2(800, 160, 32, 288), Rect2(800, 576, 32, 256),
-		Rect2(1056, 256, 384, 32), Rect2(1056, 544, 384, 32),
-		Rect2(1056, 256, 32, 96), Rect2(1056, 480, 32, 96),
-		Rect2(1408, 256, 32, 320), Rect2(448, 672, 224, 32), Rect2(768, 672, 32, 32),
+		# Patient wing partitions, with door-sized gaps.
+		Rect2(448, 32, 32, 256), Rect2(448, 416, 32, 288),
+		Rect2(896, 32, 32, 352), Rect2(896, 512, 32, 320),
+		# Nurse station and central circulation.
+		Rect2(960, 256, 448, 32), Rect2(960, 672, 192, 32), Rect2(1280, 672, 128, 32),
+		Rect2(1408, 256, 32, 192), Rect2(1408, 576, 32, 384),
+		# Archive wing.
+		Rect2(1664, 96, 544, 32), Rect2(1664, 448, 224, 32), Rect2(2016, 448, 192, 32),
+		Rect2(1664, 96, 32, 160), Rect2(1664, 384, 32, 256), Rect2(2208, 96, 32, 544),
+		# Basement corridors.
+		Rect2(1472, 928, 736, 32), Rect2(1472, 1280, 736, 32),
+		Rect2(1472, 928, 32, 160), Rect2(1472, 1216, 32, 96), Rect2(2208, 928, 32, 384),
+		# Extraction approach and lower corridor cover.
+		Rect2(64, 992, 416, 32), Rect2(64, 1280, 416, 32),
+		Rect2(480, 992, 32, 96), Rect2(480, 1216, 32, 96),
+		Rect2(512, 896, 320, 32), Rect2(960, 896, 544, 32),
 	]
