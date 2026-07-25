@@ -17,6 +17,8 @@ const TOTAL_RECORDS := 3
 @onready var health_status: Label = $Interface/TopBar/Health
 @onready var result_heading: Label = $Interface/CompletePanel/Heading
 @onready var result_summary: Label = $Interface/CompletePanel/Summary
+@onready var fog_of_war: FogOfWar = $FogOfWar
+@onready var minimap: SanatoriumMinimap = $Interface/Minimap
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -26,6 +28,10 @@ var interactables: Array[ObjectiveInteractable] = []
 
 func _ready() -> void:
 	_create_collision_walls()
+	fog_of_war.player = player
+	minimap.player = player
+	minimap.fog = fog_of_war
+	minimap.expanded_changed.connect(_on_map_expanded_changed)
 	_create_mission_interactables()
 	_create_patients()
 	player.health_changed.connect(_on_player_health_changed)
@@ -33,6 +39,16 @@ func _ready() -> void:
 	_on_player_health_changed(player.health, player.max_health)
 	_update_mission_ui()
 	queue_redraw()
+
+
+func _on_map_expanded_changed(expanded: bool) -> void:
+	var gameplay_active := mission_phase != MissionPhase.COMPLETE and mission_phase != MissionPhase.FAILED
+	player.set_physics_process(gameplay_active and not expanded)
+	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
+	if mobile_controls:
+		mobile_controls.visible = not expanded
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		enemy.set_physics_process(gameplay_active and not expanded)
 
 
 func _process(_delta: float) -> void:
@@ -138,7 +154,7 @@ func _create_mission_interactables() -> void:
 
 
 func _create_patients() -> void:
-	for spawn_position in [Vector2(736, 560), Vector2(1216, 784), Vector2(1888, 640), Vector2(1696, 1088)]:
+	for spawn_position in [Vector2(736, 400), Vector2(1216, 560), Vector2(1888, 360), Vector2(1696, 1088)]:
 		var patient := Patient.new()
 		patient.position = spawn_position
 		patient.target = player
@@ -172,18 +188,10 @@ func _draw_grid() -> void:
 
 
 func _draw_zones() -> void:
-	var zones := [
-		[Rect2(96, 160, 320, 320), "入口大厅"],
-		[Rect2(480, 128, 416, 352), "病房区"],
-		[Rect2(992, 288, 384, 384), "护理站"],
-		[Rect2(1696, 128, 480, 320), "实验档案室"],
-		[Rect2(1504, 960, 576, 320), "地下维护区"],
-		[Rect2(96, 1024, 352, 256), "撤离区"],
-	]
-	for zone in zones:
-		draw_rect(zone[0], Color("18211f"))
-		draw_rect(zone[0], Color("27332f"), false, 2.0)
-		draw_string(UI_FONT, zone[0].position + Vector2(24, 42), zone[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
+	for room in SanatoriumLayout.rooms():
+		draw_rect(room.rect, Color("18211f"))
+		draw_rect(room.rect, Color("27332f"), false, 2.0)
+		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), room.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
 
 
 func _create_collision_walls() -> void:

@@ -39,6 +39,10 @@ attack={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":32), Object(InputEventKey,"physical_keycode":74)]
 }
+map_toggle={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":77)]
+}
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
