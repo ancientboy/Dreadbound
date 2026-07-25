@@ -40,11 +40,13 @@
 6. **内容扩展（完成）**：The Crawler、基础手枪、近战/远程切换和弹药资源。
 7. **终末回廊闭环（完成）**：撤离结算、局外资源账户、角色属性、4 项永久强化、三套简化整备、存档和再次出发。
 8. **风险事件（完成）**：污染药柜与回响病房，包含补给/伤害和碎片/敌袭的风险收益选择。
-9. **疗养院内容补齐**：The Orderly、简单 Boss、第三种武器和剩余消耗品。
-10. **表现与平衡**：统一像素素材、灯光和音效、终端风格 UI 及 Web 性能优化。
-11. **第二个灾难世界**：仅在首个完整循环稳定后开始，复用已经验证的结算与成长系统。
+9. **疗养院战斗内容（下一步）**：The Orderly、简单 Boss、敌人组合和撤离阶段压力。
+10. **装备内容**：霰弹枪、镇静剂和整备取舍，补齐 3 种武器与 3 种消耗品目标。
+11. **引导与表现**：首局提示、任务反馈、灯光、最小音效、统一占位素材和终端 UI。
+12. **平衡与稳定性**：10～15 分钟节奏、移动端适配、WebGL 性能、存档迁移和完整回归。
+13. **第二个灾难世界**：仅在首个完整循环达到发布门槛后开始，复用已经验证的系统。
 
-详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md) 和 [`docs/progression-roadmap.md`](docs/progression-roadmap.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
+详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md) 和 [`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 
 ## Web 版本
 
@@ -56,3 +58,5 @@ python3 -m http.server 8000 --directory builds/web
 ```
 
 然后访问 `http://localhost:8000`。`.github/workflows/deploy-web.yml` 会在 `main` 分支更新时构建并部署 GitHub Pages；首次使用需要在仓库 **Settings → Pages → Source** 中选择 **GitHub Actions**。
+
+线上试玩固定地址为 <https://ancientboy.github.io/Dreadbound>。后续发布说明始终使用这个地址，不附加提交编号或查询参数。
