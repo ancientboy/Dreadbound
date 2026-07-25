@@ -33,6 +33,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var had_visual_effect := _attack_flash > 0.0 or _hurt_flash > 0.0 or _heal_flash > 0.0
+	var previous_facing := facing
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_attack_flash = maxf(_attack_flash - delta, 0.0)
 	_invulnerability_timer = maxf(_invulnerability_timer - delta, 0.0)
@@ -61,7 +63,8 @@ func _physics_process(delta: float) -> void:
 		use_bandage()
 	_collect_nearby_pickups()
 	move_and_slide()
-	queue_redraw()
+	if had_visual_effect or not facing.is_equal_approx(previous_facing):
+		queue_redraw()
 
 
 func try_attack() -> bool:

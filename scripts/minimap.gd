@@ -9,6 +9,7 @@ const MINI_RADIUS := 68.0
 var player: Player
 var fog: FogOfWar
 var expanded := false
+var _last_player_position := Vector2.INF
 
 
 func _ready() -> void:
@@ -19,7 +20,9 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("map_toggle"):
 		set_expanded(not expanded)
-	queue_redraw()
+	if is_instance_valid(player) and not player.global_position.is_equal_approx(_last_player_position):
+		_last_player_position = player.global_position
+		queue_redraw()
 
 
 func _input(event: InputEvent) -> void:

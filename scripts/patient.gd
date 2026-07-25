@@ -23,6 +23,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var had_hurt_flash := _hurt_flash > 0.0
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
 	if not is_instance_valid(target) or target.health <= 0:
@@ -40,7 +41,8 @@ func _physics_process(delta: float) -> void:
 			_attack_timer = attack_cooldown
 			target.take_damage(attack_damage, global_position)
 	move_and_slide()
-	queue_redraw()
+	if had_hurt_flash:
+		queue_redraw()
 
 
 func take_damage(amount: int, source_position: Vector2) -> void:

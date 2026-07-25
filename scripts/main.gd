@@ -34,6 +34,7 @@ func _ready() -> void:
 	fog_of_war.player = player
 	minimap.player = player
 	minimap.fog = fog_of_war
+	fog_of_war.exploration_changed.connect(minimap.queue_redraw)
 	minimap.expanded_changed.connect(_on_map_expanded_changed)
 	_create_mission_interactables()
 	_create_patients()
