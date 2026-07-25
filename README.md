@@ -50,9 +50,11 @@
 12. **平衡与稳定性（完成首轮）**：敌人分工、移动端安全布局、减少拾取物重绘、WebGL 恢复与 v1→v2 存档迁移。
 13. **完整回归（完成自动化）**：任务、战斗、地图、资源、事件、成长、Boss、三武器和三消耗品均进入部署门禁；真实设备仍需每次发布后持续烟雾测试。
 14. **阶段 G 奖励基础（完成）**：普通怪物掉落、Boss 三选一回收箱、8 件样品装备、4 档品质、仓库、装备、拆解和撤离入库。
-15. **第二个灾难世界（下一步）**：复用已经验证的任务、敌人、迷雾、奖励、装备、结算与存档系统。
+15. **动态副本框架 H1（下一步）**：带种子的房间模块重组、任务插槽、可达性验证、小地图适配与行动代码复现。
+16. **动态任务与 AI 导演 H2–H4**：支线条件、因果链、压力/节奏导演、敌人记忆和 500 种子回归。
+17. **第二个灾难世界**：在动态框架稳定后，以新的房间模块、任务契约和因果链接入。
 
-详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md) 和 [`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
+详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md) 和 [`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md) 和 [`docs/dynamic-director-plan.md`](docs/dynamic-director-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 
 ## Web 版本
 
