@@ -49,7 +49,7 @@
 13. **完整回归（完成自动化）**：任务、战斗、地图、资源、事件、成长、Boss、三武器和三消耗品均进入部署门禁；真实设备仍需每次发布后持续烟雾测试。
 14. **第二个灾难世界（待立项）**：复用已经验证的任务、敌人、迷雾、结算与存档系统。
 
-详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md) 和 [`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
+详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md) 和 [`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 
 ## Web 版本
 
