@@ -65,5 +65,9 @@
 | `art_vfx_world_feedback` | `assets/art/vfx/world_feedback.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 4×2 分格、64×64 拾取物、透明边缘与限色 | review |
 | `art_world_reward_chest` | `assets/art/worlds/global/reward_chest.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 64×64 裁切、透明边缘与限色 | review |
 | `art_vfx_sanatorium_objective_lighting` | `assets/art/vfx/sanatorium_objective_lighting.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 4×2 分格、128×128、紫色键边缘清理与限色 | review |
+| `art_corridor_hub_atlas` | `assets/art/worlds/corridor/corridor_hub_atlas.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 corridor prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 4×4 分格、128×128、色键/浅色分隔线清理与限色 | review |
+| `art_ui_hub_section_icons` | `assets/art/ui/hub_section_icons.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 corridor prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 七格 32×32、透明边缘与限色 | review |
+| `art_icon_o1_remaining_equipment` | `assets/art/icons/equipment/`、`assets/art/icons/unique/` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 补齐 11 件装备图标、32×32、透明边缘与限色 | review |
+| `art_material_o1_metro` | `assets/art/icons/materials/` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 三种地铁材料图标、32×32、透明边缘与限色 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。

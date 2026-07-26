@@ -4,6 +4,8 @@ const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const CORRIDOR_FLOOR_TILE: Texture2D = preload("res://assets/art/worlds/corridor/corridor_floor_tile.png")
 const CORRIDOR_TILESET: Texture2D = preload("res://assets/art/worlds/corridor/corridor_tileset.png")
 const CORRIDOR_PROPS: Texture2D = preload("res://assets/art/worlds/corridor/corridor_props.png")
+const CORRIDOR_HUB_ATLAS: Texture2D = preload("res://assets/art/worlds/corridor/corridor_hub_atlas.png")
+const HUB_SECTION_ICONS: Texture2D = preload("res://assets/art/ui/hub_section_icons.png")
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
 const THRESHOLD_CURATOR_SPRITESHEET: Texture2D = preload("res://assets/art/characters/corridor/threshold_curator_spritesheet.png")
 const EQUIPMENT_ICONS := {
@@ -14,13 +16,29 @@ const EQUIPMENT_ICONS := {
 	"medical_tag": preload("res://assets/art/icons/equipment/medical_tag.png"),
 	"calming_coil": preload("res://assets/art/icons/equipment/calming_coil.png"),
 	"ward_echo": preload("res://assets/art/icons/equipment/ward_echo.png"),
+	"cyan_mark": preload("res://assets/art/icons/equipment/cyan_mark.png"),
+	"waterproof_pulse": preload("res://assets/art/icons/equipment/waterproof_pulse.png"),
+	"station_whistle": preload("res://assets/art/icons/equipment/station_whistle.png"),
+	"insulated_crowbar": preload("res://assets/art/icons/equipment/insulated_crowbar.png"),
+	"last_ticket": preload("res://assets/art/icons/equipment/last_ticket.png"),
+	"nullpoint_sidearm": preload("res://assets/art/icons/equipment/nullpoint_sidearm.png"),
+	"siege_core": preload("res://assets/art/icons/equipment/siege_core.png"),
+	"volatile_edge": preload("res://assets/art/icons/equipment/volatile_edge.png"),
+	"archive_lens": preload("res://assets/art/icons/equipment/archive_lens.png"),
+	"linye_pass": preload("res://assets/art/icons/unique/linye_pass.png"),
 	"director_reaper": preload("res://assets/art/icons/unique/director_reaper.png"),
+	"conductor_railgun": preload("res://assets/art/icons/unique/conductor_railgun.png"),
 }
 const MATERIAL_ICONS := {
 	"tissue_sample": preload("res://assets/art/icons/materials/tissue_sample.png"),
 	"medical_record": preload("res://assets/art/icons/materials/medical_record.png"),
 	"stitch_core": preload("res://assets/art/icons/materials/stitch_core.png"),
+	"flooded_circuit": preload("res://assets/art/icons/materials/flooded_circuit.png"),
+	"ticket_stub": preload("res://assets/art/icons/materials/ticket_stub.png"),
+	"conductor_coil": preload("res://assets/art/icons/materials/conductor_coil.png"),
 }
+const UNKNOWN_EQUIPMENT_ICON: Texture2D = preload("res://assets/art/icons/ui/unknown_equipment.png")
+const UNKNOWN_MATERIAL_ICON: Texture2D = preload("res://assets/art/icons/ui/unknown_material.png")
 
 const UPGRADE_INFO := {
 	"vitality": ["耐受训练", "生命上限 +10"],
@@ -45,7 +63,9 @@ const PATH_BUTTONS := {
 @onready var world_button: Button = $Margin/Layout/Actions/SelectMetro
 var warehouse_panel: ColorRect
 var warehouse_scroll: ScrollContainer
-var warehouse_list: VBoxContainer
+var warehouse_list: GridContainer
+var warehouse_status: Label
+var warehouse_preview: TextureRect
 var warehouse_detail: Label
 var equip_button: Button
 var salvage_button: Button
@@ -74,6 +94,8 @@ var hub_navigation: GridContainer
 var section_panel: ColorRect
 var section_title: Label
 var section_content: VBoxContainer
+var material_detail_icon: TextureRect
+var material_detail: Label
 var narrative_catalog := ContentCatalog.new()
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
@@ -231,18 +253,26 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	var title := warehouse_panel.get_child(0) as Label
 	title.position = Vector2(24, 18)
 	title.size = Vector2(panel_width - 48, 48)
-	var list_width := (panel_width - 92.0) * 0.5
+	var list_width := minf(590.0, panel_width * 0.58)
+	warehouse_status.position = Vector2(28, 70)
+	warehouse_status.size = Vector2(list_width, 42)
 	var scroll := warehouse_scroll
-	scroll.position = Vector2(28, 82)
-	scroll.size = Vector2(list_width, warehouse_panel.size.y - 160)
+	scroll.position = Vector2(28, 112)
+	scroll.size = Vector2(list_width, warehouse_panel.size.y - 192)
+	var card_width := 112.0
+	warehouse_list.columns = maxi(2, floori((list_width - 22.0) / card_width))
 	warehouse_list.custom_minimum_size = Vector2(list_width - 20, 0)
-	warehouse_detail.position = Vector2(52 + list_width, 92)
-	warehouse_detail.size = Vector2(list_width - 24, warehouse_panel.size.y - 260)
-	equip_button.position = Vector2(52 + list_width, warehouse_panel.size.y - 154)
-	equip_button.size = Vector2((list_width - 52) / 3.0, 58)
-	progress_button.position = Vector2(62 + list_width + equip_button.size.x, warehouse_panel.size.y - 154)
+	var detail_x := 52 + list_width
+	var detail_width := panel_width - detail_x - 26
+	warehouse_preview.position = Vector2(detail_x, 88)
+	warehouse_preview.size = Vector2(112, 112)
+	warehouse_detail.position = Vector2(detail_x, 212)
+	warehouse_detail.size = Vector2(detail_width, warehouse_panel.size.y - 360)
+	equip_button.position = Vector2(detail_x, warehouse_panel.size.y - 138)
+	equip_button.size = Vector2((detail_width - 20) / 3.0, 52)
+	progress_button.position = Vector2(detail_x + equip_button.size.x + 10, warehouse_panel.size.y - 138)
 	progress_button.size = equip_button.size
-	salvage_button.position = Vector2(72 + list_width + equip_button.size.x * 2.0, warehouse_panel.size.y - 154)
+	salvage_button.position = Vector2(detail_x + (equip_button.size.x + 10) * 2.0, warehouse_panel.size.y - 138)
 	salvage_button.size = equip_button.size
 	var close := warehouse_panel.get_node("ReturnWarehouse") as Button
 	close.position = Vector2((panel_width - 250) * 0.5, warehouse_panel.size.y - 72)
@@ -509,8 +539,9 @@ func _reset_progress() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("071311"))
 	draw_texture_rect(CORRIDOR_FLOOR_TILE, Rect2(0, 112, size.x, size.y - 112), true, Color(0.42, 0.55, 0.52, 0.34))
-	# The first atlas row forms a stable architectural cap instead of leaving the
-	# playable chamber floating in black space.
+	# Build the chamber from atlas modules. The old polygon-and-line graybox is
+	# retained only as a dark underlay so every visible architectural edge now
+	# comes from the corridor art set.
 	if CORRIDOR_TILESET != null and CORRIDOR_TILESET.get_size() == Vector2(256, 256):
 		for x in range(0, int(size.x) + 32, 32):
 			var tile_column := floori(float(x) / 32.0) % 8
@@ -520,28 +551,25 @@ func _draw() -> void:
 				Rect2(tile_column * 32, 0, 32, 32),
 				Color(0.72, 0.78, 0.76, 1.0)
 			)
-	# A layered, walkable chamber: floor lanes, pillars, the Curator's dais and a live gate.
-	for y in range(140, int(size.y), 58):
-		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.1, 0.27, 0.23, 0.27), 1.0)
-	for x in range(80, int(size.x), 132):
-		draw_line(Vector2(x, 112), Vector2(x, size.y), Color(0.08, 0.22, 0.19, 0.24), 1.0)
-	var floor := PackedVector2Array([Vector2(86, size.y), Vector2(size.x - 86, size.y), Vector2(size.x - 202, 184), Vector2(202, 184)])
-	draw_colored_polygon(floor, Color("102a25"))
-	draw_polyline(floor + PackedVector2Array([floor[0]]), Color("3a8070"), 3.0)
-	for pillar_x in [185.0, size.x - 185.0]:
-		draw_rect(Rect2(pillar_x - 24, 146, 48, size.y - 205), Color("0b211d"))
-		draw_line(Vector2(pillar_x - 24, 146), Vector2(pillar_x - 24, size.y - 58), Color("29594e"), 3.0)
-	_draw_corridor_prop(2, Vector2(185, 254), 128.0, Color(0.7, 0.78, 0.76, 0.82))
-	_draw_corridor_prop(3, Vector2(size.x - 185, 510), 128.0, Color(0.72, 0.78, 0.76, 0.84))
+	for y in range(196, int(size.y) - 80, 124):
+		for x in range(116, int(size.x) - 80, 124):
+			_draw_hub_asset(0, Vector2(x, y), 132.0, Color(0.58, 0.67, 0.64, 0.5))
+	for x in range(128, int(size.x), 230):
+		_draw_hub_asset(1, Vector2(x, 164), 192.0, Color(0.76, 0.81, 0.78, 0.92))
+	_draw_hub_asset(3, Vector2(size.x - 150, size.y - 192), 192.0, Color(0.72, 0.82, 0.78, 0.9))
+	_draw_hub_asset(4, Vector2(150, size.y - 192), 192.0, Color(0.72, 0.82, 0.78, 0.9))
+	_draw_hub_asset(5, Vector2(160, 270), 128.0)
+	_draw_hub_asset(11, Vector2(size.x - 156, 270), 128.0)
+	_draw_hub_asset(6, Vector2(size.x * 0.5, size.y - 126), 128.0, Color(0.64, 0.72, 0.69, 0.74))
 	# Archive terminal and Curator dais.
 	draw_circle(TERMINAL_POSITION, 88, Color(0.08, 0.34, 0.29, 0.2))
-	_draw_corridor_prop(1, TERMINAL_POSITION, 128.0)
+	_draw_hub_asset(10, TERMINAL_POSITION, 150.0)
 	draw_circle(CURATOR_POSITION, 56, Color(0.23, 0.77, 0.67, 0.14))
-	_draw_corridor_prop(4, CURATOR_POSITION + Vector2(0, 20), 128.0, Color(0.82, 0.9, 0.86, 0.88))
+	_draw_hub_asset(7, CURATOR_POSITION + Vector2(0, 24), 142.0, Color(0.88, 0.93, 0.9, 0.96))
 	_draw_threshold_curator()
 	# Each unlocked disaster world has a permanent, visible legendary gate.
-	_draw_legend_gate(SANATORIUM_GATE_POSITION, Color("5ce8cf"), "废弃疗养院", "医疗异化 · 供电撤离")
-	_draw_legend_gate(METRO_GATE_POSITION, Color("6098f5"), "潮没末班线", "涨潮迷失 · 末班撤离")
+	_draw_legend_gate(SANATORIUM_GATE_POSITION, Color("5ce8cf"), "废弃疗养院", "医疗异化 · 供电撤离", 8)
+	_draw_legend_gate(METRO_GATE_POSITION, Color("6098f5"), "潮没末班线", "涨潮迷失 · 末班撤离", 9)
 	# The same O1 review slice is used in the hub and mission.
 	var bob := sin(walk_phase) * 3.0 if walker_velocity.length() > 2.0 else sin(Time.get_ticks_msec() * 0.002) * 1.2
 	var walker_row := 0
@@ -568,15 +596,28 @@ func _draw() -> void:
 		_draw_mobile_hub_controls()
 
 
-func _draw_legend_gate(position: Vector2, color: Color, title: String, subtitle: String) -> void:
+func _draw_legend_gate(position: Vector2, color: Color, title: String, subtitle: String, asset_index: int) -> void:
 	var is_near := walker_position.distance_to(position) <= INTERACTION_RANGE
 	draw_circle(position, 116, Color(color, 0.17 if is_near else 0.09))
-	_draw_corridor_prop(0, position + Vector2(0, -7), 128.0, Color(color, 1.0))
-	draw_arc(position, 100, -2.12, 2.12, 48, color, 14.0 if is_near else 10.0)
-	draw_arc(position, 70, -2.12, 2.12, 48, Color(color, 0.55), 2.0)
+	_draw_hub_asset(asset_index, position + Vector2(0, -10), 190.0, Color(color, 1.0))
+	draw_arc(position, 104, -2.12, 2.12, 48, Color(color, 0.8), 5.0 if is_near else 2.0)
 	draw_line(position + Vector2(-83, 92), position + Vector2(83, 92), Color(color, 0.62), 2.0)
 	draw_string(UI_FONT, position + Vector2(-112, 138), title, HORIZONTAL_ALIGNMENT_CENTER, 224, 24, Color("d6f6ed"))
 	draw_string(UI_FONT, position + Vector2(-130, 166), subtitle, HORIZONTAL_ALIGNMENT_CENTER, 260, 15, Color(color, 0.88))
+
+
+func _draw_hub_asset(index: int, center: Vector2, draw_size: float, modulate := Color.WHITE) -> void:
+	if CORRIDOR_HUB_ATLAS == null or CORRIDOR_HUB_ATLAS.get_size() != Vector2(512, 512):
+		_draw_corridor_prop(index % 6, center, draw_size, modulate)
+		return
+	var column := index % 4
+	var row := floori(float(index) / 4.0)
+	draw_texture_rect_region(
+		CORRIDOR_HUB_ATLAS,
+		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
+		Rect2(column * 128, row * 128, 128, 128),
+		modulate
+	)
 
 
 func _draw_corridor_prop(index: int, center: Vector2, draw_size: float, modulate := Color.WHITE) -> void:
@@ -666,52 +707,40 @@ func _create_warehouse_panel() -> void:
 	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", Color("62dec6"))
 	warehouse_panel.add_child(title)
+	warehouse_status = Label.new()
+	warehouse_status.add_theme_font_size_override("font_size", 15)
+	warehouse_status.add_theme_color_override("font_color", Color("8fc8bb"))
+	warehouse_panel.add_child(warehouse_status)
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(35, 88)
-	scroll.size = Vector2(480, 410)
 	warehouse_panel.add_child(scroll)
 	warehouse_scroll = scroll
-	var up := Button.new()
-	up.name = "WarehouseScrollUp"
-	up.text = "▲"
-	up.position = Vector2(6, 92)
-	up.size = Vector2(28, 52)
-	up.pressed.connect(_scroll_warehouse.bind(-180))
-	warehouse_panel.add_child(up)
-	var down := Button.new()
-	down.name = "WarehouseScrollDown"
-	down.text = "▼"
-	down.position = Vector2(6, 440)
-	down.size = Vector2(28, 52)
-	down.pressed.connect(_scroll_warehouse.bind(180))
-	warehouse_panel.add_child(down)
-	warehouse_list = VBoxContainer.new()
-	warehouse_list.custom_minimum_size = Vector2(455, 0)
-	warehouse_list.add_theme_constant_override("separation", 7)
+	warehouse_list = GridContainer.new()
+	warehouse_list.columns = 4
+	warehouse_list.custom_minimum_size = Vector2(560, 0)
+	warehouse_list.add_theme_constant_override("h_separation", 8)
+	warehouse_list.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(warehouse_list)
+	warehouse_preview = TextureRect.new()
+	warehouse_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	warehouse_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	warehouse_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	warehouse_preview.texture = UNKNOWN_EQUIPMENT_ICON
+	warehouse_panel.add_child(warehouse_preview)
 	warehouse_detail = Label.new()
-	warehouse_detail.position = Vector2(550, 105)
-	warehouse_detail.size = Vector2(455, 265)
-	warehouse_detail.text = "选择一件装备查看评级与属性。"
-	warehouse_detail.add_theme_font_size_override("font_size", 19)
+	warehouse_detail.text = "点击左侧装备格查看大图、评级、属性与成长路线。"
+	warehouse_detail.add_theme_font_size_override("font_size", 16)
 	warehouse_detail.add_theme_color_override("font_color", Color("a7bbb4"))
 	warehouse_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	warehouse_panel.add_child(warehouse_detail)
 	equip_button = Button.new()
-	equip_button.position = Vector2(550, 390)
-	equip_button.size = Vector2(215, 62)
 	equip_button.text = "装备"
 	equip_button.pressed.connect(_equip_selected)
 	warehouse_panel.add_child(equip_button)
 	salvage_button = Button.new()
-	salvage_button.position = Vector2(790, 390)
-	salvage_button.size = Vector2(215, 62)
 	salvage_button.text = "拆解"
 	salvage_button.pressed.connect(_salvage_selected)
 	warehouse_panel.add_child(salvage_button)
 	progress_button = Button.new()
-	progress_button.position = Vector2(710, 390)
-	progress_button.size = Vector2(135, 62)
 	progress_button.text = "升级 / 进化"
 	progress_button.pressed.connect(_progress_selected)
 	warehouse_panel.add_child(progress_button)
@@ -1422,13 +1451,25 @@ func _create_hub_navigation() -> void:
 		["dungeons", "副本"],
 		["terminal", "终端"],
 	]
-	for entry in entries:
+	for index in range(entries.size()):
+		var entry: Array = entries[index]
 		var button := Button.new()
 		button.name = "Hub%s" % str(entry[0]).capitalize()
 		button.text = str(entry[1])
 		button.add_theme_font_size_override("font_size", 15)
+		button.icon = _hub_section_icon(index)
+		button.expand_icon = false
 		button.pressed.connect(_open_hub_section.bind(str(entry[0])))
 		hub_navigation.add_child(button)
+
+
+func _hub_section_icon(index: int) -> Texture2D:
+	if HUB_SECTION_ICONS == null or HUB_SECTION_ICONS.get_size() != Vector2(224, 32):
+		return null
+	var icon := AtlasTexture.new()
+	icon.atlas = HUB_SECTION_ICONS
+	icon.region = Rect2(index * 32, 0, 32, 32)
+	return icon
 
 
 func _create_section_panel() -> void:
@@ -1503,45 +1544,98 @@ func _section_heading(text: String, body := "") -> void:
 		section_content.add_child(detail)
 
 
+func _create_icon_card(icon_texture: Texture2D, title_text: String, subtitle_text: String, action: Callable) -> Button:
+	var card := Button.new()
+	card.custom_minimum_size = Vector2(116, 112)
+	card.focus_mode = Control.FOCUS_NONE
+	card.tooltip_text = "%s · %s" % [title_text, subtitle_text]
+	card.pressed.connect(action)
+	var icon := TextureRect.new()
+	icon.position = Vector2(32, 8)
+	icon.size = Vector2(52, 52)
+	icon.texture = icon_texture
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(icon)
+	var title := Label.new()
+	title.position = Vector2(5, 64)
+	title.size = Vector2(106, 24)
+	title.text = title_text
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 13)
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(title)
+	var subtitle := Label.new()
+	subtitle.position = Vector2(5, 87)
+	subtitle.size = Vector2(106, 18)
+	subtitle.text = subtitle_text
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 11)
+	subtitle.add_theme_color_override("font_color", Color("87b7ad"))
+	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(subtitle)
+	return card
+
+
 func _build_material_section() -> void:
 	section_title.text = "材料背包 // MATERIAL VAULT"
 	_section_heading("独立容量", "材料不占用装备仓库格位；每种材料上限 %d。副本中拾取的材料只有成功撤离后才会入库。" % GameProgress.MAX_MATERIAL_STACK)
+	var grid := GridContainer.new()
+	grid.name = "MaterialGrid"
+	grid.columns = 6 if get_viewport_rect().size.x >= 800.0 else 3
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	section_content.add_child(grid)
 	for world_id in ["sanatorium", "metro"]:
-		_section_heading("废弃疗养院" if world_id == "sanatorium" else "潮没末班线")
 		for material_id in ExchangeEvolution.MATERIALS:
 			var material: Dictionary = ExchangeEvolution.MATERIALS[material_id]
 			if str(material.world) != world_id:
 				continue
-			_add_material_card(str(material_id), material)
+			var icon_texture: Texture2D = MATERIAL_ICONS.get(material_id, UNKNOWN_MATERIAL_ICON)
+			var amount := int(GameState.world_materials.get(material_id, 0))
+			grid.add_child(_create_icon_card(
+				icon_texture,
+				str(material.name),
+				"×%d · %s" % [amount, str(material.rarity)],
+				_select_material.bind(str(material_id))
+			))
+	var detail_row := HBoxContainer.new()
+	detail_row.name = "MaterialDetail"
+	detail_row.custom_minimum_size = Vector2(0, 145)
+	detail_row.add_theme_constant_override("separation", 20)
+	section_content.add_child(detail_row)
+	material_detail_icon = TextureRect.new()
+	material_detail_icon.custom_minimum_size = Vector2(112, 112)
+	material_detail_icon.texture = UNKNOWN_MATERIAL_ICON
+	material_detail_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	material_detail_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	material_detail_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	detail_row.add_child(material_detail_icon)
+	material_detail = Label.new()
+	material_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	material_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	material_detail.add_theme_font_size_override("font_size", 16)
+	material_detail.add_theme_color_override("font_color", Color("c2dbd3"))
+	detail_row.add_child(material_detail)
+	_select_material("tissue_sample")
 
 
-func _add_material_card(material_id: String, material: Dictionary) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	row.custom_minimum_size = Vector2(0, 70)
-	if MATERIAL_ICONS.has(material_id):
-		var icon := TextureRect.new()
-		icon.texture = MATERIAL_ICONS[material_id]
-		icon.custom_minimum_size = Vector2(54, 54)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		row.add_child(icon)
-	var copy := VBoxContainer.new()
-	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var title := Label.new()
-	title.text = "%s  ×%d  ·  %s / %s" % [str(material.name), int(GameState.world_materials.get(material_id, 0)), str(material.rarity), str(material.category)]
-	title.add_theme_font_size_override("font_size", 18)
-	title.add_theme_color_override("font_color", Color("76dcc5"))
-	copy.add_child(title)
-	var detail := Label.new()
-	detail.text = "来源：%s\n用途：%s\n叙事：%s" % [str(material.source), str(material.use), str(narrative_catalog.material(material_id).get("meaning", "尚无归档解释。"))]
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.add_theme_font_size_override("font_size", 14)
-	detail.add_theme_color_override("font_color", Color("b8cec6"))
-	copy.add_child(detail)
-	row.add_child(copy)
-	section_content.add_child(row)
+func _select_material(material_id: String) -> void:
+	if material_detail == null or material_detail_icon == null:
+		return
+	var material: Dictionary = ExchangeEvolution.MATERIALS.get(material_id, {})
+	if material.is_empty():
+		return
+	var amount := int(GameState.world_materials.get(material_id, 0))
+	var world_name := "废弃疗养院" if str(material.world) == "sanatorium" else "潮没末班线"
+	material_detail_icon.texture = MATERIAL_ICONS.get(material_id, UNKNOWN_MATERIAL_ICON)
+	material_detail.text = "%s  ×%d\n%s · %s · %s\n\n来源：%s\n用途：%s\n叙事：%s" % [
+		str(material.name), amount, world_name, str(material.rarity), str(material.category),
+		str(material.source), str(material.use),
+		str(narrative_catalog.material(material_id).get("meaning", "尚无归档解释。")),
+	]
 
 
 func _build_collection_section() -> void:
@@ -1885,32 +1979,33 @@ func _open_warehouse() -> void:
 func _refresh_warehouse() -> void:
 	for child in warehouse_list.get_children():
 		child.queue_free()
-	var inventory_title := Label.new()
-	inventory_title.text = "装备背包 · %d/%d（材料与唯一藏品使用独立入口）" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT]
-	inventory_title.add_theme_color_override("font_color", Color("6cd7c0"))
-	warehouse_list.add_child(inventory_title)
+	warehouse_status.text = "装备 %d/%d · 合成余烬 %d · 点击格子查看详情" % [
+		GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT, GameState.synthesis_embers,
+	]
 	if not GameState.pending_synthesis.is_empty():
-		var synthesis_title := Label.new()
-		synthesis_title.text = "合成结果已锁定 · 选择一项"
-		synthesis_title.add_theme_color_override("font_color", Color("d6b968"))
-		warehouse_list.add_child(synthesis_title)
+		warehouse_status.text = "合成结果已锁定 · 从候选格中选择一项"
 		var candidates: Array = GameState.pending_synthesis.get("candidates", [])
 		for index in range(candidates.size()):
 			var candidate: Dictionary = candidates[index]
 			var candidate_item := EquipmentDatabase.get_item(str(candidate.item_id))
 			var candidate_affix: Dictionary = ExchangeEvolution.AFFIXES.get(str(candidate.affix_id), {})
-			var candidate_button := Button.new()
-			candidate_button.text = "%s · 词条「%s」" % [str(candidate_item.name), str(candidate_affix.get("name", "未知"))]
-			_apply_equipment_icon(candidate_button, str(candidate.item_id))
-			candidate_button.pressed.connect(_choose_synthesis.bind(index))
-			warehouse_list.add_child(candidate_button)
+			warehouse_list.add_child(_create_icon_card(
+				EQUIPMENT_ICONS.get(str(candidate.item_id), UNKNOWN_EQUIPMENT_ICON),
+				str(candidate_item.name),
+				"候选 · %s" % str(candidate_affix.get("name", "未知")),
+				_choose_synthesis.bind(index)
+			))
 		var reject := Button.new()
-		reject.text = "放弃结果并转化为合成余烬"
+		reject.custom_minimum_size = Vector2(116, 112)
+		reject.text = "放弃结果\n转为余烬"
+		reject.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		reject.pressed.connect(_reject_synthesis)
 		warehouse_list.add_child(reject)
 	else:
 		var synthesize := Button.new()
-		synthesize.text = "自动装填可用配方 · 三件同槽同品质 → 三选一"
+		synthesize.custom_minimum_size = Vector2(116, 112)
+		synthesize.text = "自动合成\n三件 → 三选一"
+		synthesize.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		synthesize.pressed.connect(_auto_synthesis)
 		warehouse_list.add_child(synthesize)
 	var counts := {}
@@ -1918,19 +2013,19 @@ func _refresh_warehouse() -> void:
 		counts[item_id] = int(counts.get(item_id, 0)) + 1
 	for item_id in counts:
 		var item := EquipmentDatabase.get_item(item_id)
-		var button := Button.new()
 		var equipped_mark := "◆ " if GameState.equipped.values().has(item_id) else ""
-		button.text = "%s[%s] %s  ×%d  ·  评级 %d" % [equipped_mark, item.quality, item.name, counts[item_id], item.rating]
-		_apply_equipment_icon(button, str(item_id))
-		button.custom_minimum_size = Vector2(450, 62)
-		button.focus_mode = Control.FOCUS_NONE
-		button.pressed.connect(_select_equipment.bind(item_id))
-		warehouse_list.add_child(button)
+		warehouse_list.add_child(_create_icon_card(
+			EQUIPMENT_ICONS.get(str(item_id), UNKNOWN_EQUIPMENT_ICON),
+			"%s%s" % [equipped_mark, str(item.name)],
+			"×%d · %s" % [counts[item_id], str(item.quality)],
+			_select_equipment.bind(str(item_id))
+		))
 	equip_button.disabled = true
 	salvage_button.disabled = true
 	progress_button.disabled = true
 	progress_button.text = "升级 / 进化"
-	warehouse_detail.text = "仓库容量 %d/%d\n合成余烬 %d\n\n选择一件装备查看评级、升级与进化。" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT, GameState.synthesis_embers]
+	warehouse_preview.texture = UNKNOWN_EQUIPMENT_ICON
+	warehouse_detail.text = "点击装备格查看大图、评级、属性、强化与进化说明。"
 
 
 func _apply_equipment_icon(button: Button, item_id: String) -> void:
@@ -1943,6 +2038,7 @@ func _apply_equipment_icon(button: Button, item_id: String) -> void:
 func _select_equipment(item_id: String) -> void:
 	selected_equipment_id = item_id
 	var item := EquipmentDatabase.get_item(item_id)
+	warehouse_preview.texture = EQUIPMENT_ICONS.get(item_id, UNKNOWN_EQUIPMENT_ICON)
 	var equipped_mark := "\n\n当前已装备" if GameState.equipped.get(item.slot, "") == item_id else ""
 	var level := GameState.get_relic_growth(item_id)
 	var growth := "\n成长：Lv.%d/%d（击败对应首领可提升）\n当前形态：%s" % [level, int(item.get("growth_max", 0)), EquipmentDatabase.relic_growth_description(item_id, level)] if item.has("series") else ""
