@@ -12,6 +12,7 @@ const LAST_TRAIN_SCENE: PackedScene = preload("res://scenes/entities/last_train_
 const SIGNAL_ANCHOR_SCENE: PackedScene = preload("res://scenes/entities/signal_anchor.tscn")
 const SANATORIUM_TILESET: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_tileset.png")
 const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_props.png")
+const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -366,6 +367,9 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 					power_restored = true
 					mission_phase = MissionPhase.EVACUATE
 					target.mark_complete()
+					for item in interactables:
+						if item.kind == ObjectiveInteractable.Kind.EXIT:
+							item.mark_active()
 					boss.activate(player)
 					_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
 				_play_cue(150.0, 0.35)
@@ -1145,6 +1149,7 @@ func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: Stri
 	item.kind = kind
 	item.objective_id = id
 	item.display_name = label
+	item.world_id = run_config.world_id
 	item.position = at
 	add_child(item)
 	interactables.append(item)
@@ -1454,6 +1459,8 @@ func _draw() -> void:
 			draw_rect(secret_rect, Color(0.18, 0.09, 0.25, 0.42), true)
 			draw_rect(secret_rect, Color("b88be2"), false, 4.0)
 			draw_string(UI_FONT, secret_rect.position + Vector2(24, 72), "失踪乘客维护层 // 副本记忆已显现", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 20, Color("d9b8ef"))
+	if not metro:
+		_draw_sanatorium_passages()
 	_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():
@@ -1464,6 +1471,7 @@ func _draw() -> void:
 			_draw_sanatorium_wall(wall)
 	if not metro:
 		_draw_sanatorium_props()
+		_draw_sanatorium_lights()
 	if metro and player and GameState.has_equipment_trait("noise_lure") and whistle_cooldown <= 0.0:
 		draw_arc(player.global_position, 280.0, 0.0, TAU, 72, Color(0.91, 0.7, 0.3, 0.22), 2.0)
 
@@ -1473,6 +1481,20 @@ func _draw_grid() -> void:
 		draw_line(Vector2(x, 0), Vector2(x, MAP_SIZE.y), Color(0.13, 0.17, 0.16, 0.3), 1.0)
 	for y in range(0, int(MAP_SIZE.y) + 1, 32):
 		draw_line(Vector2(0, y), Vector2(MAP_SIZE.x, y), Color(0.13, 0.17, 0.16, 0.3), 1.0)
+
+
+func _draw_sanatorium_passages() -> void:
+	if SANATORIUM_TILESET == null or SANATORIUM_TILESET.get_size() != Vector2(256, 256):
+		return
+	for y in range(0, int(MAP_SIZE.y), 32):
+		for x in range(0, int(MAP_SIZE.x), 32):
+			var variant := posmod(floori(float(x) / 32.0) + floori(float(y) / 32.0), 3)
+			draw_texture_rect_region(
+				SANATORIUM_TILESET,
+				Rect2(x, y, minf(32.0, MAP_SIZE.x - x), minf(32.0, MAP_SIZE.y - y)),
+				Rect2(variant * 32, 0, 32, 32),
+				Color(0.48, 0.52, 0.48, 0.58),
+			)
 
 
 func _draw_zones() -> void:
@@ -1531,6 +1553,23 @@ func _draw_sanatorium_props() -> void:
 	]
 	for placement in placements:
 		_draw_sanatorium_prop(int(placement[0]), placement[1], float(placement[2]))
+
+
+func _draw_sanatorium_lights() -> void:
+	if SANATORIUM_OBJECTIVE_LIGHTING == null or SANATORIUM_OBJECTIVE_LIGHTING.get_size() != Vector2(512, 256):
+		return
+	var placements := [
+		Vector2(520, 520), Vector2(920, 520), Vector2(1310, 520),
+		Vector2(1560, 720), Vector2(1900, 720), Vector2(1110, 960),
+		Vector2(660, 1120), Vector2(1650, 1180),
+	]
+	for center in placements:
+		draw_texture_rect_region(
+			SANATORIUM_OBJECTIVE_LIGHTING,
+			Rect2(center - Vector2(96, 40), Vector2(192, 80)),
+			Rect2(128, 128, 128, 128),
+			Color(0.72, 0.78, 0.68, 0.46),
+		)
 
 
 func _draw_sanatorium_prop(index: int, center: Vector2, draw_size: float) -> void:

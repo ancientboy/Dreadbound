@@ -10,6 +10,16 @@ const EQUIPMENT_ICONS := {
 	"service_crowbar": preload("res://assets/art/icons/equipment/service_crowbar.png"),
 	"balanced_pistol": preload("res://assets/art/icons/equipment/balanced_pistol.png"),
 	"breach_shotgun": preload("res://assets/art/icons/equipment/breach_shotgun.png"),
+	"echo_edge": preload("res://assets/art/icons/equipment/echo_edge.png"),
+	"medical_tag": preload("res://assets/art/icons/equipment/medical_tag.png"),
+	"calming_coil": preload("res://assets/art/icons/equipment/calming_coil.png"),
+	"ward_echo": preload("res://assets/art/icons/equipment/ward_echo.png"),
+	"director_reaper": preload("res://assets/art/icons/unique/director_reaper.png"),
+}
+const MATERIAL_ICONS := {
+	"tissue_sample": preload("res://assets/art/icons/materials/tissue_sample.png"),
+	"medical_record": preload("res://assets/art/icons/materials/medical_record.png"),
+	"stitch_core": preload("res://assets/art/icons/materials/stitch_core.png"),
 }
 
 const UPGRADE_INFO := {
@@ -1502,10 +1512,36 @@ func _build_material_section() -> void:
 			var material: Dictionary = ExchangeEvolution.MATERIALS[material_id]
 			if str(material.world) != world_id:
 				continue
-				_section_heading(
-					"%s  ×%d  ·  %s / %s" % [str(material.name), int(GameState.world_materials.get(material_id, 0)), str(material.rarity), str(material.category)],
-					"来源：%s\n用途：%s\n叙事：%s" % [str(material.source), str(material.use), str(narrative_catalog.material(str(material_id)).get("meaning", "尚无归档解释。"))],
-				)
+			_add_material_card(str(material_id), material)
+
+
+func _add_material_card(material_id: String, material: Dictionary) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.custom_minimum_size = Vector2(0, 70)
+	if MATERIAL_ICONS.has(material_id):
+		var icon := TextureRect.new()
+		icon.texture = MATERIAL_ICONS[material_id]
+		icon.custom_minimum_size = Vector2(54, 54)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		row.add_child(icon)
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var title := Label.new()
+	title.text = "%s  ×%d  ·  %s / %s" % [str(material.name), int(GameState.world_materials.get(material_id, 0)), str(material.rarity), str(material.category)]
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color("76dcc5"))
+	copy.add_child(title)
+	var detail := Label.new()
+	detail.text = "来源：%s\n用途：%s\n叙事：%s" % [str(material.source), str(material.use), str(narrative_catalog.material(material_id).get("meaning", "尚无归档解释。"))]
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_font_size_override("font_size", 14)
+	detail.add_theme_color_override("font_color", Color("b8cec6"))
+	copy.add_child(detail)
+	row.add_child(copy)
+	section_content.add_child(row)
 
 
 func _build_collection_section() -> void:

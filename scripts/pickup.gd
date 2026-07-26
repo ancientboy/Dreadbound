@@ -2,6 +2,7 @@ class_name ResourcePickup
 extends Node2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+const WORLD_FEEDBACK: Texture2D = preload("res://assets/art/vfx/world_feedback.png")
 
 signal material_collected(material_id: String, amount: int)
 
@@ -59,7 +60,15 @@ func _draw() -> void:
 	var colors := [Color("8fc6a1"), Color("45d8c3"), Color("d0a75a"), Color("c77b52"), Color("8ca7c7"), Color("d18b9f"), Color("c892ff")]
 	var color: Color = colors[int(kind)]
 	draw_circle(Vector2(0, bob), 18.0 + sin(_pulse * 3.0) * 2.0, Color(color, 0.1))
-	if kind == Kind.BANDAGE:
+	var atlas_index := _atlas_index()
+	if atlas_index >= 0 and WORLD_FEEDBACK != null and WORLD_FEEDBACK.get_size() == Vector2(256, 128):
+		draw_texture_rect_region(
+			WORLD_FEEDBACK,
+			Rect2(-24, -24 + bob, 48, 48),
+			Rect2((atlas_index % 4) * 64, (atlas_index / 4) * 64, 64, 64),
+			Color(1.12, 1.12, 1.12, 1.0),
+		)
+	elif kind == Kind.BANDAGE:
 		draw_rect(Rect2(-13, -9 + bob, 26, 18), Color("d1cbb5"))
 		draw_rect(Rect2(-3, -9 + bob, 6, 18), Color("758f78"))
 	elif kind == Kind.ECHO_SHARD or kind == Kind.MATERIAL:
@@ -75,3 +84,19 @@ func _draw() -> void:
 	var labels := ["绷带", "回响碎片", "手枪弹药", "霰弹", "镇静剂", "兴奋剂", "材料"]
 	var label: String = str(ExchangeEvolution.MATERIALS.get(material_id, {}).get("name", "未知材料")) if kind == Kind.MATERIAL else labels[int(kind)]
 	draw_string(UI_FONT, Vector2(-42, 38), label, HORIZONTAL_ALIGNMENT_CENTER, 84, 12, color)
+
+
+func _atlas_index() -> int:
+	match kind:
+		Kind.BANDAGE: return 0
+		Kind.ECHO_SHARD: return 1
+		Kind.AMMO: return 2
+		Kind.SHELLS: return 3
+		Kind.SEDATIVE: return 4
+		Kind.STIMULANT: return 5
+		Kind.MATERIAL:
+			if material_id == "tissue_sample":
+				return 6
+			if material_id == "medical_record":
+				return 7
+	return -1

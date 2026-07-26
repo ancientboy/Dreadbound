@@ -3,6 +3,8 @@ extends CharacterBody2D
 
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
+const DIRECTOR_REAPER_GROWTH: Texture2D = preload("res://assets/art/weapons/director_reaper_growth.png")
+const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
 
 signal health_changed(current: int, maximum: int)
 signal died
@@ -555,16 +557,16 @@ func _emit_pathway_movement_echo() -> void:
 	if _movement_echo_timer > 0.0 or combat_fx == null:
 		return
 	var visual := _pathway_visual()
-	if visual.id.is_empty():
+	# Residual silhouettes are a deliberate Resonant-path identity, not a
+	# baseline movement effect. Other paths must keep the body visually stable.
+	if visual.id != "resonant":
 		return
-	_movement_echo_timer = 0.09 if visual.id == "resonant" else 0.18
-	combat_fx.movement_echo(global_position, facing, visual.accent, visual.id == "resonant")
+	_movement_echo_timer = 0.14
+	combat_fx.movement_echo(global_position, facing, visual.accent, true)
 
 
 func _draw() -> void:
-	# A low-cost flashlight wedge gives direction and local contrast without a large WebGL light texture.
-	var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
-	draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
+	_draw_flashlight()
 	var visual := _pathway_visual()
 	var pathway_id := str(visual.id)
 	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
@@ -593,8 +595,7 @@ func _draw() -> void:
 	var growth := int(weapon_visual.get("growth", 0))
 	# Equipment owns the silhouette while loadouts still select the attack mode.
 	if str(weapon_visual.shape) == "reaper":
-		draw_line(facing * 7.0, facing * (41.0 * weapon_scale), weapon_color.darkened(0.35), 6.0 + growth * 0.5)
-		draw_arc(facing * (42.0 * weapon_scale), 15.0 * weapon_scale, facing.angle() - 1.35, facing.angle() + 0.55, 10, weapon_color, 5.0 + growth * 0.45)
+		_draw_director_reaper(growth, weapon_scale, weapon_color)
 		if growth >= 3:
 			draw_arc(Vector2.ZERO, 30.0 + growth * 3.0, facing.angle() - 0.8, facing.angle() + 0.55, 18, Color(weapon_color, 0.2), 2.0)
 	elif str(weapon_visual.shape) == "blade":
@@ -621,6 +622,21 @@ func _draw() -> void:
 	draw_rect(Rect2(bar_rect.position, Vector2(bar_rect.size.x * health_ratio, bar_rect.size.y)), health_color, true)
 
 
+func _draw_flashlight() -> void:
+	if SANATORIUM_OBJECTIVE_LIGHTING == null or SANATORIUM_OBJECTIVE_LIGHTING.get_size() != Vector2(512, 256):
+		var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
+		draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
+		return
+	draw_set_transform(Vector2(0, -24) + facing * 4.0, facing.angle(), Vector2.ONE)
+	draw_texture_rect_region(
+		SANATORIUM_OBJECTIVE_LIGHTING,
+		Rect2(0, -54, 210, 108),
+		Rect2(0, 128, 128, 128),
+		Color(0.86, 0.9, 0.76, 0.36),
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 func _draw_basic_weapon(atlas_index: int) -> void:
 	if BASIC_WEAPONS == null or BASIC_WEAPONS.get_size() != Vector2(96, 32):
 		draw_line(facing * 7.0 + Vector2(0, -22), facing * 34.0 + Vector2(0, -22), Color("8a5147"), 6.0)
@@ -632,6 +648,23 @@ func _draw_basic_weapon(atlas_index: int) -> void:
 		Rect2(-16, -16, 32, 32),
 		Rect2(atlas_index * 32, 0, 32, 32),
 		Color(1.15, 1.15, 1.15, 1.0) if _attack_flash > 0.0 else Color.WHITE
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_director_reaper(growth: int, scale: float, fallback_color: Color) -> void:
+	if DIRECTOR_REAPER_GROWTH == null or DIRECTOR_REAPER_GROWTH.get_size() != Vector2(384, 64):
+		draw_line(facing * 7.0, facing * (41.0 * scale), fallback_color.darkened(0.35), 6.0 + growth * 0.5)
+		draw_arc(facing * (42.0 * scale), 15.0 * scale, facing.angle() - 1.35, facing.angle() + 0.55, 10, fallback_color, 5.0 + growth * 0.45)
+		return
+	var frame := clampi(growth, 0, 5)
+	var hand_position := Vector2(0, -24) + facing * (22.0 + growth * 1.5)
+	draw_set_transform(hand_position, facing.angle() + PI * 0.5, Vector2.ONE * scale)
+	draw_texture_rect_region(
+		DIRECTOR_REAPER_GROWTH,
+		Rect2(-32, -32, 64, 64),
+		Rect2(frame * 64, 0, 64, 64),
+		Color(1.18, 1.1, 1.08, 1.0) if _attack_flash > 0.0 else Color.WHITE
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

@@ -52,5 +52,18 @@
 | `art_enemy_crawler` | `assets/art/characters/sanatorium/crawler_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、64×48 Nearest | review |
 | `art_enemy_orderly` | `assets/art/characters/sanatorium/orderly_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
 | `art_npc_threshold_curator` | `assets/art/characters/corridor/threshold_curator_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、96×96 Boss 级 NPC | review |
+| `art_boss_stitch_director` | `assets/art/characters/sanatorium/stitch_director_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 色键移除、4×6 帧格、96×96 Boss | review |
+| `art_weapon_director_reaper_growth` | `assets/art/weapons/director_reaper_growth.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 六级分格、64×64、透明边缘与限色 | review |
+| `art_icon_echo_edge` | `assets/art/icons/equipment/echo_edge.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_icon_medical_tag` | `assets/art/icons/equipment/medical_tag.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_icon_calming_coil` | `assets/art/icons/equipment/calming_coil.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_icon_ward_echo` | `assets/art/icons/equipment/ward_echo.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_icon_director_reaper` | `assets/art/icons/unique/director_reaper.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_material_tissue_sample` | `assets/art/icons/materials/tissue_sample.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_material_medical_record` | `assets/art/icons/materials/medical_record.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_material_stitch_core` | `assets/art/icons/materials/stitch_core.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_vfx_world_feedback` | `assets/art/vfx/world_feedback.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 4×2 分格、64×64 拾取物、透明边缘与限色 | review |
+| `art_world_reward_chest` | `assets/art/worlds/global/reward_chest.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 64×64 裁切、透明边缘与限色 | review |
+| `art_vfx_sanatorium_objective_lighting` | `assets/art/vfx/sanatorium_objective_lighting.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 4 prompt | `docs/o1-sanatorium-boss-items.md` | 商业生成与修改权 | 4×2 分格、128×128、紫色键边缘清理与限色 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。
