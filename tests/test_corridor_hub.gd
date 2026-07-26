@@ -15,7 +15,7 @@ func _run_test() -> void:
 	assert(corridor.get_node("HubActions").visible)
 	assert(corridor.get_node("HubActions/OpenTerminal").visible)
 	corridor._open_terminal()
-	assert(corridor.get_node("Margin").visible)
+	assert(corridor.get_node("Margin").visible or corridor.mobile_terminal_panel.visible)
 	assert(not corridor.get_node("HubActions").visible)
 	corridor._open_warehouse()
 	assert(corridor.warehouse_panel.visible)

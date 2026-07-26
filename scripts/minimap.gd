@@ -65,7 +65,7 @@ func _draw_minimap() -> void:
 	var center := _mini_center()
 	draw_circle(center, MINI_RADIUS + 5.0, Color(0.01, 0.035, 0.032, 0.94))
 	draw_arc(center, MINI_RADIUS + 5.0, 0.0, TAU, 64, Color(0.23, 0.78, 0.68, 0.85), 3.0)
-	var map_rect := Rect2(center - Vector2(54, 34), Vector2(108, 68))
+	var map_rect := Rect2(center - Vector2(58, 39), Vector2(116, 78))
 	_draw_map_contents(map_rect, false)
 	draw_string(UI_FONT, center + Vector2(-25, 91), "点击地图", HORIZONTAL_ALIGNMENT_CENTER, 50, 12, Color(0.4, 0.7, 0.64, 0.9))
 
@@ -94,9 +94,10 @@ func _draw_map_contents(target_rect: Rect2, show_labels: bool) -> void:
 		var region_rect: Rect2 = region.rect
 		var room_rect := Rect2(origin + region_rect.position * scale_factor, region_rect.size * scale_factor)
 		var reveal := fog.get_world_reveal_at(region_rect.get_center()) if is_instance_valid(fog) else 0.0
-		var fill := Color(0.11, 0.28, 0.24, 0.88) if reveal > 0.0 else Color(0.035, 0.065, 0.06, 0.92)
+		var metro := run_config != null and run_config.world_id == "metro"
+		var fill := (Color(0.12, 0.34, 0.48, 0.98) if metro else Color(0.11, 0.4, 0.32, 0.98)) if reveal > 0.0 else Color(0.055, 0.09, 0.105, 0.98)
 		draw_rect(room_rect, fill)
-		draw_rect(room_rect, Color(0.29, 0.55, 0.48, 0.8 if reveal > 0.0 else 0.3), false, 2.0 if show_labels else 1.0)
+		draw_rect(room_rect, Color(0.34, 0.72, 0.75, 0.95 if reveal > 0.0 else 0.58), false, 2.0 if show_labels else 1.4)
 		if show_labels:
 			var name: String = str(region.name) if reveal > 0.0 else "未探索"
 			draw_string(UI_FONT, room_rect.position + Vector2(6, 18), name, HORIZONTAL_ALIGNMENT_LEFT, room_rect.size.x - 12, 13, Color(0.54, 0.72, 0.66, 0.9))

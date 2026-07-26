@@ -37,6 +37,11 @@ func _run_test() -> void:
 		var warehouse: Control = corridor.warehouse_panel
 		assert(warehouse.position.x >= 23.0)
 		assert(warehouse.position.x + warehouse.size.x <= viewport_width - 23.0)
+	corridor.size = Vector2(1280, 1200)
+	assert(corridor._is_portrait())
+	corridor._open_terminal()
+	assert(not corridor.get_node("Margin").visible)
+	assert(corridor.mobile_terminal_panel.visible)
 	corridor.queue_free()
 	print("Responsive UI tests passed")
 	quit()

@@ -111,7 +111,33 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$Margin/Layout/Header/Currency.add_theme_font_size_override("font_size", 15 if compact else 18)
 	$HubTitle.position = Vector2(inset, 24)
 	$HubTitle.size = Vector2(viewport_size.x - inset * 2.0, 48)
+	_layout_warehouse(viewport_size)
 	queue_redraw()
+
+
+func _layout_warehouse(viewport_size: Vector2) -> void:
+	if warehouse_panel == null:
+		return
+	var panel_width := minf(1050.0, viewport_size.x - 48.0)
+	warehouse_panel.position = Vector2((viewport_size.x - panel_width) * 0.5, 48)
+	warehouse_panel.size = Vector2(panel_width, minf(590.0, viewport_size.y - 82.0))
+	var title := warehouse_panel.get_child(0) as Label
+	title.position = Vector2(24, 18)
+	title.size = Vector2(panel_width - 48, 48)
+	var list_width := (panel_width - 92.0) * 0.5
+	var scroll := warehouse_panel.get_child(1) as ScrollContainer
+	scroll.position = Vector2(28, 82)
+	scroll.size = Vector2(list_width, warehouse_panel.size.y - 160)
+	warehouse_list.custom_minimum_size = Vector2(list_width - 20, 0)
+	warehouse_detail.position = Vector2(52 + list_width, 92)
+	warehouse_detail.size = Vector2(list_width - 24, warehouse_panel.size.y - 260)
+	equip_button.position = Vector2(52 + list_width, warehouse_panel.size.y - 154)
+	equip_button.size = Vector2((list_width - 36) * 0.5, 58)
+	salvage_button.position = Vector2(70 + list_width + equip_button.size.x, warehouse_panel.size.y - 154)
+	salvage_button.size = equip_button.size
+	var close := warehouse_panel.get_child(warehouse_panel.get_child_count() - 1) as Button
+	close.position = Vector2((panel_width - 250) * 0.5, warehouse_panel.size.y - 72)
+	close.size = Vector2(250, 52)
 
 
 func _process(delta: float) -> void:
@@ -418,7 +444,9 @@ func _create_warehouse_panel() -> void:
 
 
 func _is_portrait() -> bool:
-	return size.y > size.x * 1.12
+	# Mobile browser chrome often leaves a nearly-square game canvas even while
+	# the physical device is landscape. Use the scrollable terminal there too.
+	return size.y > size.x * 0.72 or size.x < 1180.0
 
 
 func _terminal_is_open() -> bool:
