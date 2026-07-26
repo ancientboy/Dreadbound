@@ -50,6 +50,10 @@ var _hub_action_touch := -1
 var mobile_terminal_panel: ColorRect
 var curator_offer_box: VBoxContainer
 var style_buttons := {}
+var hub_navigation: GridContainer
+var section_panel: ColorRect
+var section_title: Label
+var section_content: VBoxContainer
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
 const CURATOR_POSITION := Vector2(640, 416)
@@ -90,6 +94,8 @@ func _ready() -> void:
 	_create_respec_control()
 	_create_style_controls()
 	_create_difficulty_control()
+	_create_hub_navigation()
+	_create_section_panel()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
@@ -160,7 +166,39 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	_layout_warehouse(viewport_size)
 	_layout_salvage_reward(viewport_size)
 	_layout_run_archive(viewport_size)
+	_layout_hub_navigation(viewport_size)
+	_layout_section_panel(viewport_size)
 	queue_redraw()
+
+
+func _layout_hub_navigation(viewport_size: Vector2) -> void:
+	if hub_navigation == null:
+		return
+	var portrait := viewport_size.x < 720.0
+	hub_navigation.columns = 4 if portrait else 7
+	hub_navigation.position = Vector2(12, viewport_size.y - (104 if portrait else 58))
+	hub_navigation.size = Vector2(viewport_size.x - 24, 92 if portrait else 48)
+	for button in hub_navigation.get_children():
+		if button is Button:
+			button.custom_minimum_size = Vector2(0, 42)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+
+func _layout_section_panel(viewport_size: Vector2) -> void:
+	if section_panel == null:
+		return
+	var panel_size := Vector2(minf(920.0, viewport_size.x - 28.0), minf(620.0, viewport_size.y - 126.0))
+	section_panel.size = panel_size
+	section_panel.position = Vector2((viewport_size.x - panel_size.x) * 0.5, maxf(18.0, (viewport_size.y - panel_size.y) * 0.42))
+	section_title.position = Vector2(24, 18)
+	section_title.size = Vector2(panel_size.x - 48, 42)
+	var scroll := section_panel.get_node("Scroll") as ScrollContainer
+	scroll.position = Vector2(24, 70)
+	scroll.size = Vector2(panel_size.x - 48, panel_size.y - 138)
+	section_content.custom_minimum_size = Vector2(panel_size.x - 76, 0)
+	var close := section_panel.get_node("Close") as Button
+	close.position = Vector2((panel_size.x - 220) * 0.5, panel_size.y - 58)
+	close.size = Vector2(220, 44)
 
 
 func _layout_warehouse(viewport_size: Vector2) -> void:
@@ -226,7 +264,7 @@ func _layout_run_archive(viewport_size: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
-	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible or (mirror_panel and mirror_panel.visible):
+	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible):
 		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if _move_touch != -1:
@@ -250,7 +288,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible) or (mirror_panel and mirror_panel.visible):
+	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible) or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible):
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.distance_to(_hub_action_center()) <= 76.0:
@@ -595,7 +633,7 @@ func _create_warehouse_panel() -> void:
 	close.name = "ReturnWarehouse"
 	close.position = Vector2(390, 515)
 	close.size = Vector2(270, 55)
-	close.text = "返回整备终端"
+	close.text = "返回回廊"
 	close.pressed.connect(func(): warehouse_panel.visible = false)
 	warehouse_panel.add_child(close)
 
@@ -1283,6 +1321,215 @@ func _draw_mobile_hub_controls() -> void:
 	draw_string(UI_FONT, action + Vector2(-27, 84), "交互", HORIZONTAL_ALIGNMENT_CENTER, 54, 14, Color("8db8ad"))
 
 
+func _create_hub_navigation() -> void:
+	hub_navigation = GridContainer.new()
+	hub_navigation.name = "IndependentHubNavigation"
+	hub_navigation.columns = 7
+	hub_navigation.z_index = 190
+	add_child(hub_navigation)
+	var entries := [
+		["equipment", "装备"],
+		["materials", "材料"],
+		["collection", "唯一藏品"],
+		["archive", "档案"],
+		["career", "职业"],
+		["dungeons", "副本"],
+		["terminal", "终端"],
+	]
+	for entry in entries:
+		var button := Button.new()
+		button.name = "Hub%s" % str(entry[0]).capitalize()
+		button.text = str(entry[1])
+		button.add_theme_font_size_override("font_size", 15)
+		button.pressed.connect(_open_hub_section.bind(str(entry[0])))
+		hub_navigation.add_child(button)
+
+
+func _create_section_panel() -> void:
+	section_panel = ColorRect.new()
+	section_panel.name = "IndependentSection"
+	section_panel.color = Color(0.007, 0.032, 0.029, 0.995)
+	section_panel.visible = false
+	section_panel.z_index = 240
+	add_child(section_panel)
+	section_title = Label.new()
+	section_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	section_title.add_theme_font_size_override("font_size", 27)
+	section_title.add_theme_color_override("font_color", Color("62dec6"))
+	section_panel.add_child(section_title)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	section_panel.add_child(scroll)
+	section_content = VBoxContainer.new()
+	section_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(section_content)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "返回回廊"
+	close.pressed.connect(func(): section_panel.visible = false)
+	section_panel.add_child(close)
+
+
+func _close_hub_surfaces() -> void:
+	if warehouse_panel:
+		warehouse_panel.visible = false
+	if run_archive_panel:
+		run_archive_panel.visible = false
+	if mirror_panel:
+		mirror_panel.visible = false
+	if section_panel:
+		section_panel.visible = false
+	if _terminal_is_open():
+		_close_terminal()
+
+
+func _open_hub_section(section: String) -> void:
+	_close_hub_surfaces()
+	match section:
+		"equipment":
+			_open_warehouse()
+			return
+		"archive":
+			_open_run_archive()
+			return
+	for child in section_content.get_children():
+		child.queue_free()
+	match section:
+		"materials": _build_material_section()
+		"collection": _build_collection_section()
+		"career": _build_career_section()
+		"dungeons": _build_dungeon_section()
+		"terminal": _build_exchange_section()
+	section_panel.visible = true
+	_layout_section_panel(get_viewport_rect().size)
+
+
+func _section_heading(text: String, body := "") -> void:
+	var heading := Label.new()
+	heading.text = text
+	heading.add_theme_font_size_override("font_size", 20)
+	heading.add_theme_color_override("font_color", Color("76dcc5"))
+	section_content.add_child(heading)
+	if not body.is_empty():
+		var detail := Label.new()
+		detail.text = body
+		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		detail.add_theme_font_size_override("font_size", 15)
+		detail.add_theme_color_override("font_color", Color("b8cec6"))
+		section_content.add_child(detail)
+
+
+func _build_material_section() -> void:
+	section_title.text = "材料背包 // MATERIAL VAULT"
+	_section_heading("独立容量", "材料不占用装备仓库格位；每种材料上限 %d。副本中拾取的材料只有成功撤离后才会入库。" % GameProgress.MAX_MATERIAL_STACK)
+	for world_id in ["sanatorium", "metro"]:
+		_section_heading("废弃疗养院" if world_id == "sanatorium" else "潮没末班线")
+		for material_id in ExchangeEvolution.MATERIALS:
+			var material: Dictionary = ExchangeEvolution.MATERIALS[material_id]
+			if str(material.world) != world_id:
+				continue
+			_section_heading(
+				"%s  ×%d  ·  %s / %s" % [str(material.name), int(GameState.world_materials.get(material_id, 0)), str(material.rarity), str(material.category)],
+				"来源：%s\n用途：%s" % [str(material.source), str(material.use)],
+			)
+
+
+func _build_collection_section() -> void:
+	section_title.text = "唯一藏品与成长遗物 // UNIQUE COLLECTION"
+	var acquired := 0
+	for item_id in EquipmentDatabase.ITEMS:
+		var item: Dictionary = EquipmentDatabase.ITEMS[item_id]
+		if not bool(item.get("unique", false)):
+			continue
+		var owned := GameState.equipment_inventory.has(item_id)
+		acquired += 1 if owned else 0
+		var state_text := "已收容" if owned else "未发现"
+		var growth := ""
+		if item.has("series"):
+			growth = " · 成长 Lv.%d/%d" % [GameState.get_relic_growth(item_id), int(item.growth_max)]
+		_section_heading("%s  [%s]%s" % [str(item.name), state_text, growth], str(item.description) if owned else "世界唯一物品；发现前不显示完整取得条件。")
+	_section_heading("收集进度", "%d / %d。唯一物品不会进入合成输入，也不会因仓库溢出而产生复制品。" % [acquired, EquipmentDatabase.ITEMS.values().filter(func(item): return bool(item.get("unique", false))).size()])
+
+
+func _build_career_section() -> void:
+	section_title.text = "职业锚点与战斗流派 // CAREER"
+	_section_heading("当前职业", "%s · 当前流派：%s" % [GameState.get_pathway_name(), str(ExchangeEvolution.COMBAT_STYLES.get(GameState.active_combat_style, {}).get("name", "未选择"))])
+	for node_id in GameProgress.PATH_NODES:
+		var node: Dictionary = GameProgress.PATH_NODES[node_id]
+		if (GameState.selected_pathway.is_empty() and not str(node.get("requires", "")).is_empty()) or (not GameState.selected_pathway.is_empty() and str(node.path) != GameState.selected_pathway):
+			continue
+		var button := Button.new()
+		var unlocked := GameState.unlocked_path_nodes.has(node_id)
+		button.text = "%s%s\n%s" % ["✓ " if unlocked else "", str(node.name), "已锚定" if unlocked else str(node.description)]
+		button.disabled = unlocked
+		button.pressed.connect(func():
+			_unlock_path_node(node_id)
+			_open_hub_section("career")
+		)
+		section_content.add_child(button)
+	if not GameState.selected_pathway.is_empty():
+		_section_heading("战斗流派", "职业决定身份；流派可在已解锁项目之间切换。")
+		for style_id in ExchangeEvolution.COMBAT_STYLES:
+			var style: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
+			if str(style.path) != GameState.selected_pathway:
+				continue
+			var style_button := Button.new()
+			var unlocked_style := GameState.unlocked_combat_styles.has(style_id)
+			style_button.text = "%s%s\n%s" % ["▶ " if GameState.active_combat_style == style_id else ("✓ " if unlocked_style else ""), str(style.name), "点击切换" if unlocked_style else "%s · 5 回响" % str(style.description)]
+			style_button.disabled = not unlocked_style and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
+			style_button.pressed.connect(func():
+				_toggle_combat_style(style_id)
+				_open_hub_section("career")
+			)
+			section_content.add_child(style_button)
+
+
+func _build_dungeon_section() -> void:
+	section_title.text = "灾难副本与投送 // DUNGEONS"
+	_section_heading("当前投送", "%s · %s\n副本选择、难度和出发集中在此入口。" % [_world_name(), str(GameState.get_difficulty().name)])
+	for world_id in ["sanatorium", "metro"]:
+		var world_button_entry := Button.new()
+		world_button_entry.text = "%s%s" % ["▶ " if GameState.selected_world == world_id else "", "废弃疗养院" if world_id == "sanatorium" else "潮没末班线"]
+		world_button_entry.pressed.connect(func():
+			GameState.selected_world = world_id
+			GameState.save_progress()
+			_open_hub_section("dungeons")
+		)
+		section_content.add_child(world_button_entry)
+	var difficulty := Button.new()
+	difficulty.text = "切换难度：%s\n%s" % [str(GameState.get_difficulty().name), str(GameState.get_difficulty().description)]
+	difficulty.pressed.connect(func():
+		_cycle_difficulty()
+		_open_hub_section("dungeons")
+	)
+	section_content.add_child(difficulty)
+	var deploy := Button.new()
+	deploy.text = "建立连接并进入%s" % _world_name()
+	deploy.pressed.connect(_deploy)
+	section_content.add_child(deploy)
+
+
+func _build_exchange_section() -> void:
+	section_title.text = "异常兑换与合成终端 // EXCHANGE"
+	_section_heading("轮换 %d" % GameState.exchange_cycle, "终端只处理兑换与合成；装备管理、材料查看、职业成长和副本投送均已拆分到独立入口。")
+	for offer in GameState.get_exchange_offers():
+		var offer_button := Button.new()
+		offer_button.text = "兑换 %s · %d 回响" % [str(offer.name), int(offer.echo_cost)]
+		offer_button.disabled = GameState.echo_shards < int(offer.echo_cost) or GameState.exchange_purchases.has("%d:%s" % [GameState.exchange_cycle, str(offer.id)])
+		offer_button.pressed.connect(func():
+			_purchase_exchange(str(offer.id))
+			_open_hub_section("terminal")
+		)
+		section_content.add_child(offer_button)
+	var synthesis := Button.new()
+	synthesis.text = "自动选择安全合成输入\n三件同槽同品质装备 → 锁定三选一结果"
+	synthesis.pressed.connect(func():
+		_auto_synthesis()
+		_open_warehouse()
+	)
+	section_content.add_child(synthesis)
+
+
 func _open_warehouse() -> void:
 	selected_equipment_id = ""
 	_refresh_warehouse()
@@ -1292,16 +1539,10 @@ func _open_warehouse() -> void:
 func _refresh_warehouse() -> void:
 	for child in warehouse_list.get_children():
 		child.queue_free()
-	var exchange_title := Label.new()
-	exchange_title.text = "终末回廊异常兑换所 · 轮换 %d" % GameState.exchange_cycle
-	exchange_title.add_theme_color_override("font_color", Color("6cd7c0"))
-	warehouse_list.add_child(exchange_title)
-	for offer in GameState.get_exchange_offers():
-		var offer_button := Button.new()
-		offer_button.text = "兑换 %s · %d 回响" % [str(offer.name), int(offer.echo_cost)]
-		offer_button.disabled = GameState.echo_shards < int(offer.echo_cost) or GameState.exchange_purchases.has("%d:%s" % [GameState.exchange_cycle, str(offer.id)])
-		offer_button.pressed.connect(_purchase_exchange.bind(str(offer.id)))
-		warehouse_list.add_child(offer_button)
+	var inventory_title := Label.new()
+	inventory_title.text = "装备背包 · %d/%d（材料与唯一藏品使用独立入口）" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT]
+	inventory_title.add_theme_color_override("font_color", Color("6cd7c0"))
+	warehouse_list.add_child(inventory_title)
 	if not GameState.pending_synthesis.is_empty():
 		var synthesis_title := Label.new()
 		synthesis_title.text = "合成结果已锁定 · 选择一项"
