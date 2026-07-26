@@ -62,6 +62,9 @@ var _notification_timer := 0.0
 var _sound_player: AudioStreamPlayer
 var reward_chests: Array[RewardChest] = []
 var run_equipment_rewards: Array[String] = []
+var run_material_rewards := {}
+var run_loot_log: Array[Dictionary] = []
+var _rare_material_pity := 0
 var active_chest: RewardChest
 var reward_panel: ColorRect
 var reward_buttons: Array[Button] = []
@@ -403,7 +406,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "difficulty": run_config.difficulty_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used, "enemy_affixes": encountered_affixes}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "difficulty": run_config.difficulty_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used, "enemy_affixes": encountered_affixes, "material_rewards": run_material_rewards.duplicate(true), "loot_log": run_loot_log.duplicate(true)}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -749,8 +752,13 @@ func _resolve_persistent_narrative(choose_a: bool) -> void:
 		_show_notification("这段记忆没有回应当前选择。", 3.0)
 	else:
 		event_results.append("剧情：%s" % str(result.get("summary", "")))
+		var resolved_target_id := str(active_narrative_target.objective_id) if active_narrative_target else ""
 		if active_narrative_target:
 			active_narrative_target.mark_complete()
+		if resolved_target_id in ["metro_hidden_archive", "sanatorium_archive"]:
+			var hidden_loot := LootDatabase.source_reward(run_config.world_id, "hidden")
+			for material_id in hidden_loot:
+				_collect_run_material(str(material_id), int(hidden_loot[material_id]), "hidden")
 		if bool(result.get("hidden_opened", false)):
 			_open_hidden_gate()
 			_add_hidden_archive_interaction()
@@ -921,33 +929,48 @@ func _on_enemy_removed(enemy: Node) -> void:
 		enemies_defeated += 1
 		if enemy is SanatoriumBoss:
 			boss_defeated = true
+			var boss_loot := LootDatabase.boss_reward(run_config.world_id)
+			var material_id := str(boss_loot.get("material", ""))
+			if not material_id.is_empty():
+				_collect_run_material(material_id, int(boss_loot.get("amount", 1)), "boss")
+				_show_notification("首领核心已暂存：%s ×%d\n成功撤离后转入材料库" % [str(ExchangeEvolution.MATERIALS[material_id].name), int(boss_loot.get("amount", 1))], 4.5)
 			_spawn_reward_chest(enemy.global_position)
 		else:
 			_drop_for_enemy(enemy, _loot_rng.randf())
 
 
 func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
-	var kind := ResourcePickup.Kind.ECHO_SHARD
-	var amount := 1
-	var threshold := 0.38
-	if enemy is Crawler:
-		kind = ResourcePickup.Kind.AMMO
-		amount = 3
-		threshold = 0.52
-	elif enemy is Orderly:
-		kind = ResourcePickup.Kind.SHELLS if roll < 0.24 else ResourcePickup.Kind.SEDATIVE
-		amount = 2 if kind == ResourcePickup.Kind.SHELLS else 1
-		threshold = 0.34
-	elif enemy is Patient:
-		kind = ResourcePickup.Kind.BANDAGE if roll < 0.16 else ResourcePickup.Kind.ECHO_SHARD
-		threshold = 0.42
-	threshold += float(GameState.get_difficulty().loot_bonus)
-	threshold += float(enemy.get_meta("dreadbound_drop_bonus", 0.0))
-	if roll > threshold:
+	var family := LootDatabase.enemy_family(enemy, run_config.world_id)
+	var result := LootDatabase.roll_enemy(
+		run_config.world_id,
+		family,
+		roll,
+		float(GameState.get_difficulty().loot_bonus),
+		float(enemy.get_meta("dreadbound_drop_bonus", 0.0)),
+		_rare_material_pity,
+	)
+	if result.is_empty():
+		_rare_material_pity += 1
 		return null
+	var kind_names := {
+		"bandage": ResourcePickup.Kind.BANDAGE,
+		"echo_shard": ResourcePickup.Kind.ECHO_SHARD,
+		"ammo": ResourcePickup.Kind.AMMO,
+		"shells": ResourcePickup.Kind.SHELLS,
+		"sedative": ResourcePickup.Kind.SEDATIVE,
+		"stimulant": ResourcePickup.Kind.STIMULANT,
+		"material": ResourcePickup.Kind.MATERIAL,
+	}
+	var kind := int(kind_names.get(str(result.kind), ResourcePickup.Kind.ECHO_SHARD))
 	var pickup := PICKUP_SCENE.instantiate() as ResourcePickup
 	pickup.kind = kind
-	pickup.amount = amount
+	pickup.amount = int(result.get("amount", 1))
+	if kind == ResourcePickup.Kind.MATERIAL:
+		pickup.material_id = str(result.get("id", ""))
+		pickup.material_collected.connect(_collect_run_material)
+		_rare_material_pity = 0 if bool(result.get("rare", false)) or str(result.get("source", "")) == "rare_pity" else _rare_material_pity + 1
+	else:
+		_rare_material_pity += 1
 	pickup.position = enemy.global_position
 	player.combat_fx.loot_burst(pickup.position, _pickup_color(kind))
 	add_child.call_deferred(pickup)
@@ -955,8 +978,17 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 
 
 func _pickup_color(kind: int) -> Color:
-	var colors := [Color("8fc6a1"), Color("45d8c3"), Color("d0a75a"), Color("c77b52"), Color("8ca7c7"), Color("d18b9f")]
+	var colors := [Color("8fc6a1"), Color("45d8c3"), Color("d0a75a"), Color("c77b52"), Color("8ca7c7"), Color("d18b9f"), Color("c892ff")]
 	return colors[int(kind)]
+
+
+func _collect_run_material(material_id: String, amount: int, source := "enemy") -> void:
+	if not ExchangeEvolution.MATERIALS.has(material_id) or amount <= 0:
+		return
+	run_material_rewards[material_id] = int(run_material_rewards.get(material_id, 0)) + amount
+	run_loot_log.append({"kind": "material", "id": material_id, "amount": amount, "source": source})
+	var name := str(ExchangeEvolution.MATERIALS[material_id].name)
+	_show_notification("材料暂存：%s ×%d\n撤离成功后入库" % [name, amount], 2.5)
 
 
 func _spawn_reward_chest(at: Vector2) -> RewardChest:
