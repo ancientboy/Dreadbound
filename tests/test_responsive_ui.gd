@@ -28,6 +28,21 @@ func _run_test() -> void:
 				if child is Control:
 					assert(child.position.x >= 0.0)
 					assert(child.position.x + child.size.x <= panel.size.x + 0.1)
+		var reward_panel: Control = main.reward_panel
+		assert(reward_panel.position.x >= 23.0)
+		assert(reward_panel.position.x + reward_panel.size.x <= viewport_width - 23.0)
+		var previous_bottom := 0.0
+		for button in main.reward_buttons:
+			assert(button.position.x >= 0.0)
+			assert(button.position.x + button.size.x <= reward_panel.size.x + 0.1)
+			assert(button.position.y >= previous_bottom)
+			previous_bottom = button.position.y + button.size.y
+		assert(previous_bottom <= reward_panel.size.y - 52.0 + 0.1)
+	main._apply_responsive_ui(Vector2(720, 420))
+	var short_reward_panel: Control = main.reward_panel
+	var short_note: Control = short_reward_panel.get_child(short_reward_panel.get_child_count() - 1)
+	for button in main.reward_buttons:
+		assert(button.position.y + button.size.y <= short_note.position.y + 0.1)
 	main.queue_free()
 	var corridor = load("res://scenes/corridor.tscn").instantiate()
 	root.add_child(corridor)
@@ -43,6 +58,9 @@ func _run_test() -> void:
 		var warehouse: Control = corridor.warehouse_panel
 		assert(warehouse.position.x >= 23.0)
 		assert(warehouse.position.x + warehouse.size.x <= viewport_width - 23.0)
+		var archive: Control = corridor.run_archive_panel
+		assert(archive.position.x >= 15.0)
+		assert(archive.position.x + archive.size.x <= viewport_width - 15.0)
 	corridor.size = Vector2(1280, 1200)
 	assert(corridor._is_portrait())
 	corridor._open_terminal()

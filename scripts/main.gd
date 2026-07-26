@@ -191,7 +191,7 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 		pathway_status_label.position = Vector2((viewport_size.x - minf(720.0, viewport_size.x - 64.0)) * 0.5, 178)
 		pathway_status_label.size = Vector2(minf(720.0, viewport_size.x - 64.0), 28)
 	if reward_panel:
-		_layout_centered_panel(reward_panel, viewport_size, Vector2(940, 410), Vector2(32, 140))
+		_layout_centered_panel(reward_panel, viewport_size, Vector2(720, 610), Vector2(24, 48))
 		_layout_reward_contents()
 
 
@@ -232,16 +232,19 @@ func _layout_complete_contents() -> void:
 
 func _layout_reward_contents() -> void:
 	var width := reward_panel.size.x
+	var height := reward_panel.size.y
 	var title := reward_panel.get_child(0) as Label
 	title.position = Vector2(28, 22)
 	title.size = Vector2(width - 56, 56)
-	var gap := 18.0
-	var card_width := (width - 70 - gap * 2.0) / 3.0
+	var gap := 10.0
+	var card_height := maxf(56.0, (height - 176.0 - gap * 2.0) / 3.0)
 	for index in range(reward_buttons.size()):
-		reward_buttons[index].position = Vector2(35 + index * (card_width + gap), 102)
-		reward_buttons[index].size = Vector2(card_width, 228)
+		reward_buttons[index].position = Vector2(35, 88 + index * (card_height + gap))
+		reward_buttons[index].size = Vector2(width - 70, card_height)
+		reward_buttons[index].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		reward_buttons[index].add_theme_font_size_override("font_size", 13 if card_height < 100.0 else 16)
 	var note := reward_panel.get_child(reward_panel.get_child_count() - 1) as Label
-	note.position = Vector2(32, 350)
+	note.position = Vector2(32, height - 52)
 	note.size = Vector2(width - 64, 36)
 
 
@@ -1100,10 +1103,11 @@ func _create_reward_panel() -> void:
 	reward_panel.add_child(title)
 	for index in range(3):
 		var button := Button.new()
-		button.position = Vector2(35 + index * 300, 105)
-		button.size = Vector2(270, 225)
+		button.position = Vector2(35, 88 + index * 145)
+		button.size = Vector2(650, 135)
 		button.add_theme_font_override("font", UI_FONT)
-		button.add_theme_font_size_override("font_size", 17)
+		button.add_theme_font_size_override("font_size", 16)
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.pressed.connect(_choose_reward.bind(index))
 		reward_panel.add_child(button)
 		reward_buttons.append(button)

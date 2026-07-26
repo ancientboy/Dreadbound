@@ -32,6 +32,9 @@ var salvage_button: Button
 var selected_equipment_id := ""
 var salvage_reward_panel: ColorRect
 var salvage_reward_detail: Label
+var run_archive_panel: ColorRect
+var run_archive_scroll: ScrollContainer
+var run_archive_detail: Label
 var walker_position := Vector2(640, 585)
 var walker_velocity := Vector2.ZERO
 var walker_facing := Vector2.RIGHT
@@ -69,11 +72,13 @@ func _ready() -> void:
 	$Margin/Layout/Actions/CloseTerminal.pressed.connect(_close_terminal)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
 	$Margin/Layout/Actions/Warehouse.pressed.connect(_open_warehouse)
+	$OpenArchive.pressed.connect(_open_run_archive)
 	# World selection lives at the physical legendary gates, never inside the terminal.
 	world_button.visible = false
 	deploy_button.visible = false
 	_create_warehouse_panel()
 	_create_salvage_reward_panel()
+	_create_run_archive_panel()
 	_create_mobile_terminal_panel()
 	_create_curator_controls()
 	_create_respec_control()
@@ -88,6 +93,8 @@ func _ready() -> void:
 	$HubHint.text = "两扇传说门已开启：左侧疗养院，右侧潮没末班线。靠近后按 E / 点击进入。"
 	$HubActions.visible = false
 	_apply_responsive_ui()
+	if not GameState.last_run.is_empty():
+		call_deferred("_open_run_archive")
 	queue_redraw()
 
 
@@ -127,9 +134,12 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$Margin/Layout/Header/Title.add_theme_font_size_override("font_size", 24 if compact else 30)
 	$Margin/Layout/Header/Currency.add_theme_font_size_override("font_size", 15 if compact else 18)
 	$HubTitle.position = Vector2(inset, 24)
-	$HubTitle.size = Vector2(viewport_size.x - inset * 2.0, 48)
+	$HubTitle.size = Vector2(maxf(260.0, viewport_size.x - inset * 2.0 - 224.0), 48)
+	$OpenArchive.position = Vector2(viewport_size.x - inset - 202.0, 24)
+	$OpenArchive.size = Vector2(202, 48)
 	_layout_warehouse(viewport_size)
 	_layout_salvage_reward(viewport_size)
+	_layout_run_archive(viewport_size)
 	queue_redraw()
 
 
@@ -175,8 +185,26 @@ func _layout_salvage_reward(viewport_size: Vector2) -> void:
 	close.size = Vector2(230, 48)
 
 
+func _layout_run_archive(viewport_size: Vector2) -> void:
+	if run_archive_panel == null:
+		return
+	var panel_width := minf(820.0, viewport_size.x - 32.0)
+	var panel_height := minf(650.0, viewport_size.y - 36.0)
+	run_archive_panel.position = Vector2((viewport_size.x - panel_width) * 0.5, (viewport_size.y - panel_height) * 0.5)
+	run_archive_panel.size = Vector2(panel_width, panel_height)
+	var title := run_archive_panel.get_node("Title") as Label
+	title.position = Vector2(24, 18)
+	title.size = Vector2(panel_width - 48, 44)
+	run_archive_scroll.position = Vector2(28, 76)
+	run_archive_scroll.size = Vector2(panel_width - 56, panel_height - 154)
+	run_archive_detail.custom_minimum_size = Vector2(panel_width - 82, 0)
+	var close := run_archive_panel.get_node("Close") as Button
+	close.position = Vector2((panel_width - 230) * 0.5, panel_height - 66)
+	close.size = Vector2(230, 48)
+
+
 func _process(delta: float) -> void:
-	if _terminal_is_open() or warehouse_panel.visible:
+	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible:
 		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if _move_touch != -1:
@@ -200,7 +228,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible):
+	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible):
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.distance_to(_hub_action_center()) <= 76.0:
@@ -542,6 +570,160 @@ func _create_salvage_reward_panel() -> void:
 	close.add_theme_font_size_override("font_size", 18)
 	close.pressed.connect(func(): salvage_reward_panel.visible = false)
 	salvage_reward_panel.add_child(close)
+
+
+func _create_run_archive_panel() -> void:
+	run_archive_panel = ColorRect.new()
+	run_archive_panel.name = "RunArchive"
+	run_archive_panel.color = Color(0.007, 0.032, 0.029, 0.995)
+	run_archive_panel.visible = false
+	run_archive_panel.z_index = 280
+	add_child(run_archive_panel)
+	var title := Label.new()
+	title.name = "Title"
+	title.text = "行动结算与人性档案"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color("79ead2"))
+	run_archive_panel.add_child(title)
+	run_archive_scroll = ScrollContainer.new()
+	run_archive_panel.add_child(run_archive_scroll)
+	run_archive_detail = Label.new()
+	run_archive_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	run_archive_detail.add_theme_font_size_override("font_size", 17)
+	run_archive_detail.add_theme_color_override("font_color", Color("c5ded6"))
+	run_archive_scroll.add_child(run_archive_detail)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "确认并返回回廊"
+	close.add_theme_font_size_override("font_size", 17)
+	close.pressed.connect(func(): run_archive_panel.visible = false)
+	run_archive_panel.add_child(close)
+
+
+func _open_run_archive() -> void:
+	if GameState.last_run.is_empty():
+		feedback.text = "行动档案尚未形成；完成一次副本后，结算、收获与人性洞察会保存在这里。"
+		return
+	run_archive_detail.text = _build_run_archive_text(GameState.last_run)
+	run_archive_scroll.scroll_vertical = 0
+	run_archive_panel.visible = true
+	$HubActions.visible = false
+	_layout_run_archive(get_viewport_rect().size)
+
+
+func _build_run_archive_text(run: Dictionary) -> String:
+	var dynamic: Dictionary = run.get("dynamic_run", {})
+	var lines: Array[String] = []
+	lines.append("【%s】  %s" % ["撤离成功" if bool(run.get("success", false)) else "行动失败", str(dynamic.get("mission", "未知契约"))])
+	lines.append("行动代码  %s  ·  世界  %s  ·  难度  %s" % [
+		str(dynamic.get("action_code", "旧版行动")),
+		"潮没末班线" if str(dynamic.get("world", "")) == "metro" else "废弃疗养院",
+		str(GameProgress.DIFFICULTIES.get(str(run.get("difficulty", "standard")), GameProgress.DIFFICULTIES.standard).name),
+	])
+	lines.append("")
+	lines.append("【本次收获】")
+	lines.append("现场碎片  %d  +  任务奖励  %d  =  入库碎片  %d" % [
+		int(run.get("carried_shards", 0)), int(run.get("mission_reward", 0)), int(run.get("banked_shards", 0)),
+	])
+	lines.append("目标完成  %d  ·  风险事件  %d/2  ·  清除威胁  %d" % [
+		int(run.get("records", 0)), int(run.get("events_resolved", 0)), int(run.get("enemies_defeated", 0)),
+	])
+	var equipment_names: Array[String] = []
+	for item_id in run.get("equipment_rewards", []):
+		equipment_names.append(str(EquipmentDatabase.get_item(str(item_id)).get("name", item_id)))
+	lines.append("装备入库  %s" % ("、".join(equipment_names) if not equipment_names.is_empty() else "无"))
+	if int(run.get("overflow_shards", 0)) > 0:
+		lines.append("仓库溢出自动转化  +%d 回响碎片" % int(run.get("overflow_shards", 0)))
+	for reward in run.get("milestone_rewards", []):
+		lines.append("因果里程碑  %s  ·  +%d 因果残片" % [str(reward.get("title", "")), int(reward.get("causality_fragments", 0))])
+	for reward in run.get("trial_rewards", []):
+		lines.append("司仪试炼  %s  ·  +%d 因果残片" % [str(reward.get("title", "")), int(reward.get("causality_fragments", 0))])
+	var relic: Dictionary = run.get("relic_growth", {})
+	if not relic.is_empty():
+		lines.append("Boss 遗物成长  %s  ·  Lv.%d" % [str(relic.get("name", "未知遗物")), int(relic.get("level", 0))])
+	lines.append("")
+	lines.append("【人性洞察】")
+	var assessment: Dictionary = run.get("humanity_reflection", {})
+	if assessment.is_empty():
+		assessment = GameState.humanity_reflection()
+	lines.append(_format_humanity_archive(assessment))
+	lines.append("")
+	lines.append("【世界留下的变化】")
+	var consequences: Array = run.get("world_consequences", [])
+	if consequences.is_empty():
+		lines.append("本次行动未形成可确认的长期世界变化。")
+	else:
+		for consequence in consequences:
+			lines.append("· %s" % _world_change_text(consequence))
+	var faction_turn: Dictionary = run.get("faction_turn", {})
+	for change in faction_turn.get("changes", []):
+		lines.append("· %s" % _world_change_text(change))
+	var trailer := str(assessment.get("trailer", ""))
+	if not trailer.is_empty():
+		lines.append("")
+		lines.append("【下一集预告】")
+		lines.append(trailer)
+	return "\n".join(lines)
+
+
+func _format_humanity_archive(assessment: Dictionary) -> String:
+	var profile: Dictionary = assessment.get("profile", {})
+	var echo: Dictionary = assessment.get("echo", {})
+	if str(echo.get("id", "")) == "unformed_echo":
+		return "人性回声尚未成形：有效选择样本不足，系统不会据此判断人格。\n继续经历不同情境后，这里会显示证据、相反证据与置信度。"
+	var lines: Array[String] = []
+	lines.append("人性回声  %s" % str(echo.get("name", "未成形的回声")))
+	var dimensions: Dictionary = profile.get("dimensions", {})
+	for dimension_id in HumanityProfile.DIMENSIONS:
+		var result: Dictionary = dimensions.get(dimension_id, {})
+		if int(result.get("sample_size", 0)) <= 0:
+			continue
+		var positive_score := int(result.get("score", 0)) > 0
+		var evidence: Array = result.get("evidence", []) if positive_score else result.get("counter_evidence", [])
+		var contrary: Array = result.get("counter_evidence", []) if positive_score else result.get("evidence", [])
+		var evidence_text := "暂无可展示证据"
+		if not evidence.is_empty():
+			evidence_text = "%s / %s" % [str(evidence[-1].get("event_type", "")), str(evidence[-1].get("world_id", ""))]
+		var contrary_text := "尚未观察到"
+		if not contrary.is_empty():
+			contrary_text = "%s / %s" % [str(contrary[-1].get("event_type", "")), str(contrary[-1].get("world_id", ""))]
+		var knowledge: Array = result.get("knowledge", [])
+		var knowledge_text := "知识条目待补充"
+		if not knowledge.is_empty():
+			knowledge_text = "%s（%s）" % [str(knowledge[0].get("title", "")), str(knowledge[0].get("source", ""))]
+		var poles: Dictionary = HumanityProfile.DIMENSIONS[dimension_id]
+		lines.append("· %s ↔ %s：%s（置信度 %d%%）" % [
+			str(poles.negative), str(poles.positive), str(result.get("interpretation", "样本不足")),
+			int(round(float(result.get("confidence", 0.0)) * 100.0)),
+		])
+		lines.append("  行为依据：%s" % evidence_text)
+		lines.append("  相反证据：%s" % contrary_text)
+		lines.append("  知识依据：%s" % knowledge_text)
+	lines.append("仅反映游戏高压情境中的选择模式，不是现实人格或心理健康诊断。")
+	return "\n".join(lines)
+
+
+func _world_change_text(change: Dictionary) -> String:
+	var names := {
+		"sanatorium": "废弃疗养院", "metro": "潮没末班线",
+		"order_authority": "秩序署", "sunken_cult": "沉潮教团",
+		"resonance": "共鸣体", "drifters": "漂泊者",
+		"safety": "安全度", "corruption": "污染度", "resources": "资源",
+		"influence": "势力", "supplies": "补给", "player_trust": "信任",
+	}
+	var target := str(change.get("target", change.get("region_id", change.get("faction_id", "世界"))))
+	var field := str(change.get("field", "状态"))
+	if field == "controller":
+		return "%s 控制权：%s → %s" % [
+			str(names.get(target, target)),
+			str(names.get(str(change.get("from", "")), change.get("from", ""))),
+			str(names.get(str(change.get("to", "")), change.get("to", ""))),
+		]
+	return "%s · %s %s%d" % [
+		str(names.get(target, target)), str(names.get(field, field)),
+		"+" if int(change.get("amount", 0)) >= 0 else "", int(change.get("amount", 0)),
+	]
 
 
 func _is_portrait() -> bool:
