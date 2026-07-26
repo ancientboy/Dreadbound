@@ -2,12 +2,12 @@ class_name ExchangeEvolution
 extends RefCounted
 
 const MATERIALS := {
-	"tissue_sample": {"name": "组织样本", "world": "sanatorium"},
-	"medical_record": {"name": "病历残页", "world": "sanatorium"},
-	"stitch_core": {"name": "缝合核心", "world": "sanatorium"},
-	"flooded_circuit": {"name": "浸水电路", "world": "metro"},
-	"ticket_stub": {"name": "失效票根", "world": "metro"},
-	"conductor_coil": {"name": "车长线圈", "world": "metro"},
+	"tissue_sample": {"name": "组织样本", "world": "sanatorium", "rarity": "常见", "category": "生体", "source": "病患、爬行者、撤离勘探", "use": "疗养院装备合成与低阶强化"},
+	"medical_record": {"name": "病历残页", "world": "sanatorium", "rarity": "稀有", "category": "档案", "source": "护理员、隐藏档案室", "use": "治疗/感知词条与定向进化"},
+	"stitch_core": {"name": "缝合核心", "world": "sanatorium", "rarity": "首领", "category": "进化核心", "source": "缝合主任", "use": "缝合遗物进化与高阶配方"},
+	"flooded_circuit": {"name": "浸水电路", "world": "metro", "rarity": "常见", "category": "机械", "source": "溺行者、危险个体、撤离勘探", "use": "末班线装备合成与低阶强化"},
+	"ticket_stub": {"name": "失效票根", "world": "metro", "rarity": "稀有", "category": "因果凭证", "source": "检票员、隐藏维护层", "use": "路线/弱点词条与定向进化"},
+	"conductor_coil": {"name": "车长线圈", "world": "metro", "rarity": "首领", "category": "进化核心", "source": "车长回声", "use": "末班遗物进化与高阶配方"},
 }
 
 const AFFIXES := {
