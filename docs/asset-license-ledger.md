@@ -107,3 +107,10 @@
 | `art_vfx_milestone_feedback` | `assets/art/vfx/milestone_feedback.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 full-visual P2 prompt | `docs/o1-full-visual-materialization.md` | 商业生成与修改权 | 四格 192×192 成长反馈 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。
+
+| Asset ID | 路径 | 来源 | 生成记录 | 权利 | 备注 | 状态 |
+|---|---|---|---|---|---|---|
+| `audio_runtime_o2` | `scripts/audio_director.gd` | 原创程序系统 | `tools/generate_o2_audio.py`，2026-07-26 | 项目原创 | Music/Ambience/Combat/Creature/World/UI/Voice 总线、Web 首次输入解锁、24 声部池与音量持久化 | review |
+| `audio_music_o2` | `assets/audio/music/*.ogg` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | 六首循环：首页、回廊、疗养院探索/Boss、地铁探索/Boss | review |
+| `audio_ambience_o2` | `assets/audio/ambience/*.ogg` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | 五条环境循环：结构、病区、地下室、站台、洪水 | review |
+| `audio_sfx_o2_core` | `assets/audio/sfx/**/*.wav` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | UI、玩家、世界、敌人及十二流派技能；高频脚步/命中/拾取含四个变体 | review |

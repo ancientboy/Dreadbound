@@ -9,6 +9,7 @@ run/main_scene="res://scenes/startup.tscn"
 ProfileManager="*res://scripts/profile_manager.gd"
 GameState="*res://scripts/game_state.gd"
 CloudSync="*res://scripts/cloud_save_service.gd"
+AudioDirector="*res://scripts/audio_director.gd"
 
 [cloud]
 api_url=""

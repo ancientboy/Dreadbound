@@ -65,10 +65,12 @@ func _physics_process(delta: float) -> void:
 			_attack_windup = maxf(_attack_windup - delta, 0.0)
 			if _attack_windup <= 0.0 and global_position.distance_to(target.global_position) <= attack_range + 10.0:
 				_attack_timer = attack_cooldown
+				AudioDirector.play_at("crawler_attack", global_position, 0.035)
 				_get_combat_fx().sanatorium_enemy_skill("crawler_tear", global_position, _facing, 94.0, 0.24)
 				target.take_damage(attack_damage, global_position)
 		elif _attack_timer <= 0.0:
 			_attack_windup = 0.2
+			AudioDirector.play_at("crawler_windup", global_position, 0.035)
 			_get_combat_fx().attack_telegraph(global_position, attack_range + 14.0, _attack_windup, Color("c77b62"))
 			_get_combat_fx().sanatorium_enemy_skill("crawler_lunge", global_position, _facing, 88.0, _attack_windup)
 		if _attack_timer <= 0.0 and _attack_windup <= 0.0:

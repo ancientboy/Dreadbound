@@ -60,10 +60,12 @@ func _physics_process(delta: float) -> void:
 		if _windup <= 0.0:
 			_cooldown = attack_cooldown
 			if global_position.distance_to(target.global_position) <= attack_range + 18.0:
+				AudioDirector.play_at("orderly_attack", global_position, 0.025)
 				_get_combat_fx().sanatorium_enemy_skill("orderly_heavy", global_position, _facing, 108.0, 0.34)
 				target.take_damage(attack_damage, global_position)
 	elif distance <= attack_range and _cooldown <= 0.0:
 		_windup = windup_duration
+		AudioDirector.play_at("director_windup", global_position, 0.02)
 		_get_combat_fx().attack_telegraph(global_position, attack_range, windup_duration, Color("ed875c"))
 		queue_redraw()
 	elif distance <= effective_detection:

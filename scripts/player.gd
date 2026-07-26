@@ -68,7 +68,7 @@ var environment_water_depth := 0
 var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _movement_echo_timer := 0.0
-var _audio: AudioStreamPlayer
+var _footstep_timer := 0.0
 var pathway_effects: PathwayEffects
 var combat_fx: CombatFX
 var relic_profile := {}
@@ -80,8 +80,6 @@ var _body_sprite: Sprite2D
 
 func _ready() -> void:
 	_setup_body_sprite()
-	_audio = AudioStreamPlayer.new()
-	add_child(_audio)
 	_apply_permanent_upgrades()
 	pathway_effects = PathwayEffects.new()
 	pathway_effects.setup(self, get_node_or_null("/root/GameState") as GameProgress)
@@ -178,8 +176,13 @@ func _physics_process(delta: float) -> void:
 		facing = input_direction.normalized()
 		_walk_animation_time += delta
 		_emit_pathway_movement_echo()
+		_footstep_timer = maxf(_footstep_timer - delta, 0.0)
+		if _footstep_timer <= 0.0:
+			AudioDirector.play("player_step_water" if environment_water_depth > 0 else "player_step", 0.035)
+			_footstep_timer = 0.34 if environment_water_depth > 0 else 0.27
 	else:
 		_walk_animation_time = 0.0
+		_footstep_timer = 0.0
 	_sync_body_sprite()
 	if wants_to_attack:
 		try_attack()
@@ -239,7 +242,7 @@ func try_attack() -> bool:
 	_play_attack_style_vfx("melee")
 	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
 	_attack_timer = attack_cooldown + (0.12 if insulated else 0.0)
-	_play_tone(115.0, 0.08)
+	AudioDirector.play("player_melee", 0.035)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
 	combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
@@ -273,7 +276,7 @@ func _try_ranged_attack() -> bool:
 	_attack_timer = ranged_cooldown
 	_attack_flash = 0.11
 	ammo -= 1
-	_play_tone(520.0, 0.07)
+	AudioDirector.play("player_pistol", 0.025)
 	noise_generated.emit(3)
 	var candidates: Array[Dictionary] = []
 	for target in get_tree().get_nodes_in_group("enemies"):
@@ -315,7 +318,7 @@ func _try_shotgun_attack() -> bool:
 	_attack_timer = shotgun_cooldown
 	_attack_flash = 0.16
 	shells -= 1
-	_play_tone(190.0, 0.14)
+	AudioDirector.play("player_shotgun", 0.02)
 	noise_generated.emit(4)
 	var visual := _pathway_visual()
 	_play_attack_style_vfx("shotgun")
@@ -352,7 +355,7 @@ func take_damage(amount: int, source_position: Vector2) -> bool:
 		return false
 	amount = maxi(1, int(amount * pathway_effects.incoming_damage_multiplier()))
 	health = maxi(health - amount, 0)
-	_play_tone(82.0, 0.16)
+	AudioDirector.play("player_hit", 0.04)
 	_invulnerability_timer = 0.65
 	_hurt_flash = 0.18
 	var knockback := source_position.direction_to(global_position)
@@ -363,6 +366,7 @@ func take_damage(amount: int, source_position: Vector2) -> bool:
 	if health == 0:
 		_dead = true
 		velocity = Vector2.ZERO
+		AudioDirector.play("player_death")
 		died.emit()
 	queue_redraw()
 	return true
@@ -394,6 +398,7 @@ func switch_weapon() -> void:
 	current_weapon = (int(current_weapon) + 1) % 3 as Weapon
 	_sync_active_weapon_equipment()
 	pathway_effects.on_weapon_switched()
+	AudioDirector.play("player_switch", 0.025)
 	if _active_combat_style() == "relic_engineer":
 		combat_fx.profession_skill("relic_engineer", global_position, facing, 92.0, 0.44)
 	weapon_changed.emit(get_weapon_name(), ammo)
@@ -482,6 +487,7 @@ func use_sedative() -> bool:
 	sedative_duration = 12.0
 	utility_changed.emit(sedatives, sedative_duration)
 	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
+	AudioDirector.play("player_heal", 0.02)
 	return true
 
 
@@ -505,6 +511,7 @@ func use_stimulant() -> bool:
 	stimulant_duration = 10.0
 	utility_changed.emit(sedatives, sedative_duration)
 	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
+	AudioDirector.play("player_heal", 0.025)
 	return true
 
 
@@ -519,7 +526,7 @@ func use_bandage() -> bool:
 	if style in ["barrier_counter", "sacrifice_medic", "echo_summoner"]:
 		combat_fx.profession_skill(style, global_position, facing, 104.0, 0.52)
 	_heal_flash = 0.3
-	_play_tone(690.0, 0.12)
+	AudioDirector.play("player_heal", 0.02)
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
 	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
@@ -563,25 +570,6 @@ func _collect_nearby_pickups() -> void:
 	for pickup in get_tree().get_nodes_in_group("pickups"):
 		if is_instance_valid(pickup) and global_position.distance_to(pickup.global_position) <= 32.0:
 			pickup.collect(self)
-
-
-func _play_tone(frequency: float, duration: float) -> void:
-	if _audio == null:
-		return
-	var rate := 8000
-	var frames := int(rate * duration)
-	var bytes := PackedByteArray()
-	bytes.resize(frames * 2)
-	for index in range(frames):
-		var sample := int(sin(TAU * frequency * index / rate) * 3600.0 * (1.0 - float(index) / frames))
-		bytes[index * 2] = sample & 0xff
-		bytes[index * 2 + 1] = (sample >> 8) & 0xff
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = rate
-	stream.data = bytes
-	_audio.stream = stream
-	_audio.play()
 
 
 func _pathway_visual() -> Dictionary:

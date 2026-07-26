@@ -115,6 +115,7 @@ var _shown_heart_id := ""
 
 
 func _ready() -> void:
+	AudioDirector.set_world("corridor")
 	get_viewport().size_changed.connect(_apply_responsive_ui)
 	GameState.progress_changed.connect(_refresh)
 	for upgrade_id in UPGRADE_INFO:
@@ -1620,6 +1621,7 @@ func _create_milestone_feedback() -> void:
 
 
 func _show_milestone(index: int, caption: String) -> void:
+	AudioDirector.play("success")
 	if milestone_feedback == null or MILESTONE_FEEDBACK == null or MILESTONE_FEEDBACK.get_size() != Vector2(768, 192):
 		return
 	var texture := AtlasTexture.new()

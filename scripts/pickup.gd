@@ -52,6 +52,7 @@ func collect(player: Player) -> bool:
 			if accepted:
 				material_collected.emit(material_id, amount)
 	if accepted:
+		AudioDirector.play_at("pickup", global_position, 0.04)
 		queue_free()
 	return accepted
 

@@ -69,7 +69,6 @@ var event_results: Array[String] = []
 var boss: SanatoriumBoss
 var notification: Label
 var _notification_timer := 0.0
-var _sound_player: AudioStreamPlayer
 var reward_chests: Array[RewardChest] = []
 var run_equipment_rewards: Array[String] = []
 var run_material_rewards := {}
@@ -123,6 +122,7 @@ var _enemy_ordinal := 0
 
 
 func _ready() -> void:
+	AudioDirector.set_world(GameState.selected_world)
 	get_viewport().size_changed.connect(_apply_responsive_ui)
 	var run_seed: int = GameState.active_run_seed
 	if run_seed == 0:
@@ -388,8 +388,10 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 						if item.kind == ObjectiveInteractable.Kind.EXIT:
 							item.mark_active()
 					boss.activate(player)
+					AudioDirector.play("director_windup")
+					AudioDirector.set_world(run_config.world_id, true, metro_tide_level > 0)
 					_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
-				_play_cue(150.0, 0.35)
+				AudioDirector.play("objective")
 				if run_config.causal_chain == "spore_bloom" and event_results.any(func(result): return "污染药柜：强行开启" in result):
 					_spawn_crawler_wave()
 					_show_notification("因果回响：孢子污染沿供电管线扩散，额外威胁苏醒", 4.5)
@@ -411,6 +413,7 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 
 
 func _complete_mission() -> void:
+	AudioDirector.play("extract")
 	mission_phase = MissionPhase.COMPLETE
 	prompt_panel.visible = false
 	complete_panel.visible = true
@@ -424,6 +427,7 @@ func _complete_mission() -> void:
 
 
 func _return_to_corridor(abandoned := false) -> void:
+	AudioDirector.set_world("corridor")
 	if _run_settled:
 		return
 	_run_settled = true
@@ -514,6 +518,7 @@ func _nearest_risk_event() -> RiskEvent:
 
 
 func _open_risk_event(risk_event: RiskEvent) -> void:
+	AudioDirector.play("warning")
 	active_event = risk_event
 	if narrative_portrait:
 		narrative_portrait.visible = false
@@ -533,6 +538,7 @@ func _resolve_active_event(take_risk: bool) -> void:
 		return
 	if active_event == null:
 		return
+	AudioDirector.play("interact")
 	var resolved_event_id := active_event.event_id
 	var behavior_data: Dictionary = active_event.behavior_data
 	var pathway_bonus := player.pathway_effects.on_risk_event(take_risk)
@@ -1223,6 +1229,8 @@ func _activate_metro_route(target: ObjectiveInteractable) -> void:
 		if item.kind == ObjectiveInteractable.Kind.POWER and item != target:
 			item.mark_complete()
 	boss.activate(player)
+	AudioDirector.play("conductor_windup")
+	AudioDirector.set_world(run_config.world_id, true, metro_tide_level > 0)
 	_spawn_signal_anchors()
 	metro_train_window = world_rules.train_window(metro_route, false)
 	if run_config.mission_id == "switch_zero":
@@ -1403,8 +1411,6 @@ func _create_feedback_layer() -> void:
 	milestone_caption.add_theme_font_size_override("font_size", 22)
 	milestone_caption.add_theme_color_override("font_color", Color("e4eee9"))
 	milestone_feedback.add_child(milestone_caption)
-	_sound_player = AudioStreamPlayer.new()
-	add_child(_sound_player)
 
 
 func _update_pathway_status() -> void:
@@ -1540,26 +1546,6 @@ func _show_notification(message: String, duration := 3.5) -> void:
 	notification.text = message
 	notification.visible = true
 	_notification_timer = duration
-
-
-func _play_cue(frequency: float, duration: float) -> void:
-	if _sound_player == null:
-		return
-	var sample_rate := 11025
-	var frames := int(sample_rate * duration)
-	var bytes := PackedByteArray()
-	bytes.resize(frames * 2)
-	for index in range(frames):
-		var envelope := 1.0 - float(index) / frames
-		var sample := int(sin(TAU * frequency * index / sample_rate) * 5000.0 * envelope)
-		bytes[index * 2] = sample & 0xff
-		bytes[index * 2 + 1] = (sample >> 8) & 0xff
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = sample_rate
-	stream.data = bytes
-	_sound_player.stream = stream
-	_sound_player.play()
 
 
 func _draw() -> void:

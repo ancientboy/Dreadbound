@@ -34,6 +34,7 @@ func _physics_process(delta: float) -> void:
 func _execute_attack() -> void:
 	if not is_instance_valid(target):
 		return
+	AudioDirector.play_at("conductor_attack", global_position, 0.02)
 	var distance := global_position.distance_to(target.global_position)
 	match train_phase:
 		TrainPhase.ARRIVAL:
