@@ -54,6 +54,7 @@ var hub_navigation: GridContainer
 var section_panel: ColorRect
 var section_title: Label
 var section_content: VBoxContainer
+var narrative_catalog := ContentCatalog.new()
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
 const CURATOR_POSITION := Vector2(640, 416)
@@ -1389,14 +1390,12 @@ func _open_hub_section(section: String) -> void:
 		"equipment":
 			_open_warehouse()
 			return
-		"archive":
-			_open_run_archive()
-			return
 	for child in section_content.get_children():
 		child.queue_free()
 	match section:
 		"materials": _build_material_section()
 		"collection": _build_collection_section()
+		"archive": _build_world_archive_section()
 		"career": _build_career_section()
 		"dungeons": _build_dungeon_section()
 		"terminal": _build_exchange_section()
@@ -1428,10 +1427,10 @@ func _build_material_section() -> void:
 			var material: Dictionary = ExchangeEvolution.MATERIALS[material_id]
 			if str(material.world) != world_id:
 				continue
-			_section_heading(
-				"%s  ×%d  ·  %s / %s" % [str(material.name), int(GameState.world_materials.get(material_id, 0)), str(material.rarity), str(material.category)],
-				"来源：%s\n用途：%s" % [str(material.source), str(material.use)],
-			)
+				_section_heading(
+					"%s  ×%d  ·  %s / %s" % [str(material.name), int(GameState.world_materials.get(material_id, 0)), str(material.rarity), str(material.category)],
+					"来源：%s\n用途：%s\n叙事：%s" % [str(material.source), str(material.use), str(narrative_catalog.material(str(material_id)).get("meaning", "尚无归档解释。"))],
+				)
 
 
 func _build_collection_section() -> void:
@@ -1447,8 +1446,158 @@ func _build_collection_section() -> void:
 		var growth := ""
 		if item.has("series"):
 			growth = " · 成长 Lv.%d/%d" % [GameState.get_relic_growth(item_id), int(item.growth_max)]
-		_section_heading("%s  [%s]%s" % [str(item.name), state_text, growth], str(item.description) if owned else "世界唯一物品；发现前不显示完整取得条件。")
+		var lore := narrative_catalog.unique_item(str(item_id))
+		var body := "世界唯一物品；发现前只显示编号 %s 与来源世界。" % str(lore.get("serial", "UNKNOWN"))
+		if owned:
+			var growth_stages: Array[String] = []
+			for stage in lore.get("growth", []):
+				growth_stages.append("· %s" % str(stage))
+			var evolution_lines: Array[String] = []
+			for evolution_id in lore.get("evolutions", {}):
+				evolution_lines.append("· %s" % str(lore.evolutions[evolution_id]))
+			body = "%s\n\n编号：%s\n起源：%s\n唯一性：%s\n取得：%s\n选择绑定：%s\n能力代价：%s\n\n成长阶段：\n%s\n\n进化含义：\n%s\n\nNPC 反应：%s\n遗失后果：%s\n重复首领：%s" % [
+				str(item.description), str(lore.get("serial", "")),
+				str(lore.get("origin", "")), str(lore.get("uniqueness", "")),
+				str(lore.get("acquisition", "")), str(lore.get("choice_binding", "")),
+				str(lore.get("cost", "")), "\n".join(growth_stages), "\n".join(evolution_lines),
+				str(lore.get("npc_reactions", "")), str(lore.get("loss", "")),
+				str(lore.get("repeat_defeat", "")),
+			]
+		_section_heading("%s  [%s]%s" % [str(item.name), state_text, growth], body)
 	_section_heading("收集进度", "%d / %d。唯一物品不会进入合成输入，也不会因仓库溢出而产生复制品。" % [acquired, EquipmentDatabase.ITEMS.values().filter(func(item): return bool(item.get("unique", false))).size()])
+
+
+func _build_world_archive_section() -> void:
+	section_title.text = "世界与叙事档案 // WORLD CODEX"
+	var identity := narrative_catalog.identity()
+	_section_heading(str(identity.get("title", "Dreadbound")), "%s\n\n%s" % [str(identity.get("genre", "")), str(identity.get("positioning", ""))])
+	_add_codex_button("世界底层法则 · %d 条" % narrative_catalog.data.get("world_rules", {}).size(), "rules")
+	_add_codex_button("四大阵营 · 信条与代价", "factions")
+	_add_codex_button("行者编组 · 职责、资源与失联", "squad")
+	_add_codex_button("全局主线 · 当前可知部分", "main_story")
+	for world_id in ["sanatorium", "metro"]:
+		var world := narrative_catalog.dungeon(world_id)
+		var state: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
+		var progress := "未进入" if int(state.get("visits", 0)) <= 0 else "进入 %d 次 · 撤离 %d 次 · 首领击败 %d 次" % [
+			int(state.get("visits", 0)), int(state.get("completed_runs", 0)), int(state.get("boss_state", {}).get("defeats", 0)),
+		]
+		_add_codex_button("%s / %s\n%s" % [str(world.get("name", world_id)), str(world.get("english_name", "")), progress], "dungeon:%s" % world_id)
+	_section_heading("行动结算档案", "右上角“行动档案”继续保存最近一次行动、人性洞察与世界变化；本入口只呈现正式世界观与逐步解锁的真相。")
+
+
+func _add_codex_button(text: String, entry_id: String) -> void:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(0, 58)
+	button.text = text
+	button.pressed.connect(_open_codex_entry.bind(entry_id))
+	section_content.add_child(button)
+
+
+func _open_codex_entry(entry_id: String) -> void:
+	for child in section_content.get_children():
+		child.queue_free()
+	var back := Button.new()
+	back.text = "← 返回世界档案目录"
+	back.pressed.connect(_open_hub_section.bind("archive"))
+	section_content.add_child(back)
+	match entry_id:
+		"rules":
+			section_title.text = "终末回廊底层法则"
+			for rule_id in narrative_catalog.data.get("world_rules", {}):
+				var rule := narrative_catalog.world_rule(str(rule_id))
+				_section_heading(str(rule.get("title", rule_id)), "%s\n未决问题：%s" % [str(rule.get("rule", "")), str(rule.get("uncertainty", ""))])
+		"factions":
+			section_title.text = "四大阵营"
+			for faction_id in narrative_catalog.data.get("factions", {}):
+				var faction := narrative_catalog.faction(str(faction_id))
+				_section_heading(str(faction.get("name", faction_id)), "信条：%s\n方式：%s\n提供：%s\n代价：%s\n核心冲突：%s" % [
+					str(faction.get("creed", "")), str(faction.get("method", "")), str(faction.get("offer", "")),
+					str(faction.get("price", "")), str(faction.get("conflict", "")),
+				])
+		"squad":
+			section_title.text = "行者编组"
+			var squad_data := narrative_catalog.squad()
+			var formation: Dictionary = squad_data.get("formation", {})
+			_section_heading(str(squad_data.get("name", "行者编组")), "%s · %s\n%s" % [str(formation.get("size", "")), str(formation.get("principle", "")), str(formation.get("leadership", ""))])
+			for role_id in squad_data.get("roles", {}):
+				var role: Dictionary = squad_data.roles[role_id]
+				_section_heading(str(role.get("name", role_id)), "职责：%s\n失责：%s" % [str(role.get("duty", "")), str(role.get("failure", ""))])
+			_section_heading("资源归属", "\n".join(squad_data.get("resource_rules", [])))
+			_section_heading("失联与背叛", "%s\n\n%s" % ["\n".join(squad_data.get("loss_rules", [])), "\n".join(squad_data.get("betrayal_rules", []))])
+		"main_story":
+			section_title.text = "全局主线"
+			var story := narrative_catalog.main_story()
+			_section_heading("核心问题", str(story.get("question", "")))
+			for act in story.get("acts", []):
+				_section_heading(str(act.get("title", "")), "解锁条件：%s\n已知揭示：%s" % [str(act.get("condition", "")), str(act.get("reveal", ""))])
+			_section_heading("阈值司仪", str(story.get("curator_position", "")))
+		_:
+			if entry_id.begins_with("dungeon:"):
+				_build_dungeon_codex(entry_id.trim_prefix("dungeon:"))
+	_layout_section_panel(get_viewport_rect().size)
+
+
+func _build_dungeon_codex(world_id: String) -> void:
+	var world := narrative_catalog.dungeon(world_id)
+	var dungeon_state: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
+	section_title.text = "%s // %s" % [str(world.get("name", world_id)), str(world.get("english_name", ""))]
+	_section_heading("投送简介", str(world.get("short_intro", "")))
+	_section_heading("完整故事", str(world.get("full_story", "")))
+	_section_heading("核心恐惧", str(world.get("core_fear", "")))
+	_section_heading("异常法则", str(world.get("anomaly_law", "")))
+	_section_heading("投送目标", str(world.get("mission", "")))
+	_section_heading("Boss 真相", str(world.get("boss_truth", "")))
+	_section_heading("隐藏区域与结局", "%s\n\n可能结局：%s" % [str(world.get("hidden_area", "")), " / ".join(world.get("possible_endings", []))])
+	var current_chapter_id := str(dungeon_state.get("chapter", "first_arrival"))
+	var current_chapter: Dictionary = world.get("chapters", {}).get(current_chapter_id, {})
+	_section_heading("当前剧情走向", "当前章节：%s\n%s\n\n进入 %d 次 · 成功撤离 %d 次" % [
+		str(current_chapter.get("title", current_chapter_id)), str(current_chapter.get("briefing", "")),
+		int(dungeon_state.get("visits", 0)), int(dungeon_state.get("completed_runs", 0)),
+	])
+	for chapter_id in world.get("chapters", {}):
+		var chapter: Dictionary = world.chapters[chapter_id]
+		var known: bool = chapter_id == "first_arrival" or chapter_id == current_chapter_id or dungeon_state.get("completed_events", []).any(func(event_id): return str(event_id).begins_with("%s:" % chapter_id))
+		var choice_labels: Array[String] = []
+		for choice in chapter.get("choices", []):
+			choice_labels.append(str(choice.get("label", "")))
+		_section_heading("%s%s" % ["▶ " if chapter_id == current_chapter_id else "", str(chapter.get("title", chapter_id)) if known else "未解锁章节"], "%s\n选择：%s" % [
+			str(chapter.get("briefing", "")) if known else "由前一章的承诺、背叛、救援或阵营归属决定。",
+			" / ".join(choice_labels) if known else "尚未显现",
+		])
+	if not dungeon_state.get("history", []).is_empty():
+		var history_lines: Array[String] = []
+		for entry in dungeon_state.get("history", []).slice(0, 8):
+			if str(entry.get("choice", "")) not in ["extracted", "lost"]:
+				history_lines.append("第 %d 次 · %s" % [int(entry.get("visit", 0)), str(entry.get("summary", ""))])
+		_section_heading("已经发生的选择", "\n".join(history_lines) if not history_lines.is_empty() else "尚无关键剧情选择。")
+	_section_heading("逐步解锁的真相档案", "正式事实不会由随机叙事改写；未解锁条目只显示来源。")
+	for record in world.get("truth_records", []):
+		var unlocked := _truth_record_unlocked(world_id, record)
+		_section_heading("%s  [%s]" % [str(record.get("title", "")), "已解锁" if unlocked else "未解锁"], "%s\n%s" % [
+			str(record.get("perspective", "")),
+			str(record.get("text", "")) if unlocked else _truth_unlock_hint(record.get("unlock", {})),
+		])
+	_section_heading("回廊主线线索", str(world.get("main_story_clue", "")) if int(GameState.persistent_dungeons.dungeons.get(world_id, {}).get("visits", 0)) >= 2 else "需要至少两次进入该世界。")
+
+
+func _truth_record_unlocked(world_id: String, record: Dictionary) -> bool:
+	var unlock: Dictionary = record.get("unlock", {})
+	var dungeon: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
+	match str(unlock.get("kind", "")):
+		"visit": return int(dungeon.get("visits", 0)) >= int(unlock.get("count", 1))
+		"completed_run": return int(dungeon.get("completed_runs", 0)) >= int(unlock.get("count", 1))
+		"boss_defeat": return int(dungeon.get("boss_state", {}).get("defeats", 0)) >= int(unlock.get("count", 1))
+		"area": return dungeon.get("opened_areas", []).has(str(unlock.get("id", "")))
+	return false
+
+
+func _truth_unlock_hint(unlock: Dictionary) -> String:
+	match str(unlock.get("kind", "")):
+		"visit": return "进入该世界 %d 次后解锁。" % int(unlock.get("count", 1))
+		"completed_run": return "成功撤离该世界 %d 次后解锁。" % int(unlock.get("count", 1))
+		"boss_defeat": return "击败该世界首领 %d 次后解锁。" % int(unlock.get("count", 1))
+		"area": return "发现对应隐藏区域后解锁。"
+	return "继续探索以解锁。"
 
 
 func _build_career_section() -> void:
@@ -1488,8 +1637,20 @@ func _build_dungeon_section() -> void:
 	section_title.text = "灾难副本与投送 // DUNGEONS"
 	_section_heading("当前投送", "%s · %s\n副本选择、难度和出发集中在此入口。" % [_world_name(), str(GameState.get_difficulty().name)])
 	for world_id in ["sanatorium", "metro"]:
+		var world := narrative_catalog.dungeon(world_id)
+		var state: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
+		var chapter_id := str(state.get("chapter", "first_arrival"))
+		var chapter: Dictionary = world.get("chapters", {}).get(chapter_id, {})
+		_section_heading(str(world.get("name", world_id)), "%s\n核心恐惧：%s\n当前剧情：%s · %s" % [
+			str(world.get("short_intro", "")), str(world.get("core_fear", "")),
+			str(chapter.get("title", chapter_id)), str(chapter.get("briefing", "")),
+		])
+		var story_button := Button.new()
+		story_button.text = "查看完整故事、章节走向与真相档案"
+		story_button.pressed.connect(_open_codex_entry.bind("dungeon:%s" % world_id))
+		section_content.add_child(story_button)
 		var world_button_entry := Button.new()
-		world_button_entry.text = "%s%s" % ["▶ " if GameState.selected_world == world_id else "", "废弃疗养院" if world_id == "sanatorium" else "潮没末班线"]
+		world_button_entry.text = "%s选择 %s" % ["▶ " if GameState.selected_world == world_id else "", str(world.get("name", world_id))]
 		world_button_entry.pressed.connect(func():
 			GameState.selected_world = world_id
 			GameState.save_progress()
@@ -1521,13 +1682,87 @@ func _build_exchange_section() -> void:
 			_open_hub_section("terminal")
 		)
 		section_content.add_child(offer_button)
-	var synthesis := Button.new()
-	synthesis.text = "自动选择安全合成输入\n三件同槽同品质装备 → 锁定三选一结果"
-	synthesis.pressed.connect(func():
-		_auto_synthesis()
-		_open_warehouse()
-	)
-	section_content.add_child(synthesis)
+	_section_heading("装备合成路径", "成本：消耗 3 件同槽位、同品质且未被保护的装备，不额外消耗回响。\n结果：品质提升 1 阶并锁定三个候选；放弃结果可获得余烬并提高该槽位保底。\n催化：额外消耗 1 份世界材料，使首个候选偏向该世界词条；锁定指定词条另需 1 因果残片。")
+	var quality_names := ["制式", "改装", "回响", "异常"]
+	var groups := _synthesis_groups()
+	if groups.is_empty():
+		_section_heading("当前没有可合成组合", "至少收集 3 件同槽同品质装备。已装备的唯一一件会保留，唯一物品和异常品质不能作为输入。")
+	for key in groups:
+		var group: Dictionary = groups[key]
+		var source_rank := int(group.get("rank", 0))
+		var candidates: Array = ExchangeEvolution.SYNTHESIS_POOLS.get("%s:%d" % [str(group.slot), source_rank + 1], [])
+		var candidate_names: Array[String] = []
+		for item_id in candidates:
+			candidate_names.append(str(EquipmentDatabase.get_item(str(item_id)).get("name", item_id)))
+		_section_heading("%s · %s → %s  [%d/3]" % [
+			"武器" if str(group.slot) == "weapon" else "护符",
+			quality_names[source_rank], quality_names[source_rank + 1], int(group.usable),
+		], "候选池：%s" % " / ".join(candidate_names))
+		if int(group.usable) < 3:
+			continue
+		var basic := Button.new()
+		basic.text = "消耗 3 件开始合成 · 不使用催化"
+		basic.pressed.connect(_run_synthesis_group.bind(str(key), ""))
+		section_content.add_child(basic)
+		for material_id in ExchangeEvolution.MATERIALS:
+			var material: Dictionary = ExchangeEvolution.MATERIALS[material_id]
+			if str(material.world) != GameState.selected_world or int(GameState.world_materials.get(material_id, 0)) <= 0:
+				continue
+			var catalyst := Button.new()
+			catalyst.text = "消耗 3 件 + %s ×1（持有 %d）" % [str(material.name), int(GameState.world_materials.get(material_id, 0))]
+			catalyst.pressed.connect(_run_synthesis_group.bind(str(key), str(material_id)))
+			section_content.add_child(catalyst)
+	_section_heading("当前保底", "武器 %d/3 · 护符 %d/3 · 合成余烬 %d\n每次放弃三选一结果，获得余烬并提高对应槽位保底。" % [
+		int(GameState.synthesis_pity.get("weapon", 0)), int(GameState.synthesis_pity.get("charm", 0)), GameState.synthesis_embers,
+	])
+
+
+func _synthesis_groups() -> Dictionary:
+	var groups := {}
+	for item_id in GameState.equipment_inventory:
+		var item := EquipmentDatabase.get_item(str(item_id))
+		if item.is_empty() or bool(item.get("unique", false)) or int(item.get("quality_rank", -1)) >= 3:
+			continue
+		var key := "%s:%d" % [str(item.slot), int(item.quality_rank)]
+		if not groups.has(key):
+			groups[key] = {"slot": str(item.slot), "rank": int(item.quality_rank), "items": [], "usable": 0}
+		groups[key].items.append(str(item_id))
+	for key in groups:
+		var preserved := {}
+		var usable := 0
+		for item_id in groups[key].items:
+			if GameState.equipped.values().has(item_id) and not bool(preserved.get(item_id, false)):
+				preserved[item_id] = true
+			else:
+				usable += 1
+		groups[key].usable = usable
+	return groups
+
+
+func _safe_synthesis_inputs(key: String) -> Array[String]:
+	var group: Dictionary = _synthesis_groups().get(key, {})
+	var result: Array[String] = []
+	var preserved := {}
+	for item_id in group.get("items", []):
+		if GameState.equipped.values().has(item_id) and not bool(preserved.get(item_id, false)):
+			preserved[item_id] = true
+			continue
+		result.append(str(item_id))
+		if result.size() == 3:
+			break
+	return result
+
+
+func _run_synthesis_group(key: String, catalyst_id: String) -> void:
+	var inputs := _safe_synthesis_inputs(key)
+	if inputs.size() != 3:
+		feedback.text = "合成输入不足：需要 3 件同槽同品质、且未被装备保护的物品。"
+		return
+	if GameState.begin_synthesis(inputs, catalyst_id).is_empty():
+		feedback.text = "合成失败：检查材料数量、仓库状态或是否已有待选结果。"
+		return
+	feedback.text = "合成结果已锁定：请在装备入口查看三个候选并选择。"
+	_open_warehouse()
 
 
 func _open_warehouse() -> void:
@@ -1581,6 +1816,7 @@ func _refresh_warehouse() -> void:
 	equip_button.disabled = true
 	salvage_button.disabled = true
 	progress_button.disabled = true
+	progress_button.text = "升级 / 进化"
 	warehouse_detail.text = "仓库容量 %d/%d\n合成余烬 %d\n\n选择一件装备查看评级、升级与进化。" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT, GameState.synthesis_embers]
 
 
@@ -1595,10 +1831,44 @@ func _select_equipment(item_id: String) -> void:
 	var affix_name := str(ExchangeEvolution.AFFIXES.get(affix_id, {}).get("name", "无"))
 	var evolution := GameState.current_equipment_evolution(item_id)
 	var evolution_name := str(evolution.get("name", "尚未进化"))
-	warehouse_detail.text = "%s // %s\n评级 %d · 强化 Lv.%d/5\n词条：%s · 进化：%s\n槽位：%s\n\n%s%s%s" % [item.quality, item.name, item.rating, upgrade_level, affix_name, evolution_name, "武器" if item.slot == "weapon" else "护符", item.description, growth, equipped_mark]
+	warehouse_detail.text = "%s // %s\n评级 %d · 强化 Lv.%d/5\n词条：%s · 进化：%s\n槽位：%s\n\n%s\n\n%s%s%s" % [
+		item.quality, item.name, item.rating, upgrade_level, affix_name, evolution_name,
+		"武器" if item.slot == "weapon" else "护符", item.description,
+		_equipment_progression_guide(item_id), growth, equipped_mark,
+	]
 	equip_button.disabled = false
 	salvage_button.disabled = GameState.equipped.values().has(item_id) and GameState.equipment_inventory.count(item_id) <= 1
 	progress_button.disabled = false
+	if upgrade_level < 5:
+		var cost := GameState.equipment_upgrade_cost(item_id)
+		progress_button.text = "强化至 Lv.%d\n%d 回响 + %d 余烬" % [upgrade_level + 1, int(cost.get("echo_shards", 0)), int(cost.get("synthesis_embers", 0))]
+	else:
+		progress_button.text = "查看 / 选择进化路径" if ExchangeEvolution.EVOLUTIONS.has(item_id) else "已满级 · 无进化分支"
+		progress_button.disabled = not ExchangeEvolution.EVOLUTIONS.has(item_id)
+
+
+func _equipment_progression_guide(item_id: String) -> String:
+	var level := int(GameState.equipment_levels.get(item_id, 0))
+	var lines: Array[String] = ["【成长路径】"]
+	if level < 5:
+		var cost := GameState.equipment_upgrade_cost(item_id)
+		lines.append("下一步：强化 Lv.%d → Lv.%d" % [level, level + 1])
+		lines.append("成本：%d 回响碎片 + %d 合成余烬（持有 %d / %d）" % [
+			int(cost.get("echo_shards", 0)), int(cost.get("synthesis_embers", 0)),
+			GameState.echo_shards, GameState.synthesis_embers,
+		])
+	else:
+		lines.append("五级强化已完成。")
+	if not ExchangeEvolution.EVOLUTIONS.has(item_id):
+		lines.append("该装备没有独立进化分支；可通过合成获得更高品质与词条。")
+		return "\n".join(lines)
+	lines.append("进化前置：强化 Lv.5 + 对应行为熟练度 + 1 因果残片。")
+	var mastery: Dictionary = GameState.equipment_mastery.get(item_id, {})
+	for evolution_id in ExchangeEvolution.EVOLUTIONS[item_id]:
+		var branch: Dictionary = ExchangeEvolution.EVOLUTIONS[item_id][evolution_id]
+		var progress := int(mastery.get(str(branch.mastery), 0))
+		lines.append("· %s：%s [%d/%d]" % [str(branch.name), str(branch.description), progress, int(branch.required)])
+	return "\n".join(lines)
 
 
 func _purchase_exchange(offer_id: String) -> void:
@@ -1655,18 +1925,65 @@ func _progress_selected() -> void:
 	if int(GameState.equipment_levels.get(selected_equipment_id, 0)) < 5:
 		feedback.text = "装备强化完成。" if GameState.upgrade_equipment(selected_equipment_id) else "强化失败：回响或合成余烬不足。"
 	else:
-		var choices := GameState.available_evolutions(selected_equipment_id)
-		var evolved := false
-		for evolution in choices:
-			if bool(evolution.available):
-				evolved = GameState.evolve_equipment(selected_equipment_id, str(evolution.id))
-				if evolved:
-					feedback.text = "装备已进化为「%s」。" % str(evolution.name)
-					break
-		if not evolved:
-			feedback.text = "尚未满足进化行为条件，或缺少 1 因果残片。"
+		_show_evolution_paths(selected_equipment_id)
+		return
 	_refresh_warehouse()
 	_refresh()
+	if not selected_equipment_id.is_empty():
+		_select_equipment(selected_equipment_id)
+
+
+func _show_evolution_paths(item_id: String) -> void:
+	if not ExchangeEvolution.EVOLUTIONS.has(item_id):
+		feedback.text = "该装备已满级，但没有独立进化分支。"
+		return
+	for child in section_content.get_children():
+		child.queue_free()
+	var item := EquipmentDatabase.get_item(item_id)
+	section_title.text = "%s // 三条进化路径" % str(item.get("name", item_id))
+	_section_heading("进化规则", "路径由玩家明确选择，不再自动采用第一条。每次进化消耗 1 因果残片；当前持有 %d。行为进度来自装备实际战斗记录。" % GameState.causality_fragments)
+	var available_map := {}
+	for branch in GameState.available_evolutions(item_id):
+		available_map[str(branch.id)] = branch
+	for evolution_id in ExchangeEvolution.EVOLUTIONS[item_id]:
+		var evolution: Dictionary = ExchangeEvolution.EVOLUTIONS[item_id][evolution_id]
+		var state: Dictionary = available_map.get(evolution_id, {})
+		var progress := int(GameState.equipment_mastery.get(item_id, {}).get(str(evolution.mastery), 0))
+		var ready := bool(state.get("available", false)) and GameState.causality_fragments >= 1
+		_section_heading(str(evolution.name), "%s\n行为条件：%s %d/%d\n能力：%s\n叙事含义：%s" % [
+			str(evolution.description), str(evolution.mastery), progress, int(evolution.required),
+			_format_bonus_map(evolution.get("bonuses", {})),
+			str(narrative_catalog.unique_item(item_id).get("evolutions", {}).get(evolution_id, "该路径尚无独立叙事。")),
+		])
+		var choose := Button.new()
+		choose.text = "选择「%s」· 消耗 1 因果残片%s" % [str(evolution.name), "" if ready else "（条件未满足）"]
+		choose.disabled = not ready
+		choose.pressed.connect(_choose_evolution.bind(item_id, str(evolution_id)))
+		section_content.add_child(choose)
+	section_panel.visible = true
+	_layout_section_panel(get_viewport_rect().size)
+
+
+func _choose_evolution(item_id: String, evolution_id: String) -> void:
+	var name := str(ExchangeEvolution.EVOLUTIONS.get(item_id, {}).get(evolution_id, {}).get("name", evolution_id))
+	feedback.text = "装备已进化为「%s」。" % name if GameState.evolve_equipment(item_id, evolution_id) else "进化失败：检查行为条件与因果残片。"
+	section_panel.visible = false
+	_refresh_warehouse()
+	_refresh()
+	_select_equipment(item_id)
+
+
+func _format_bonus_map(bonuses: Dictionary) -> String:
+	var names := {
+		"max_health": "生命", "movement_speed": "移速", "melee_damage": "近战",
+		"ranged_damage": "手枪", "shotgun_damage": "霰弹", "bandage_heal": "治疗",
+		"attack_range": "近战范围", "ranged_range": "远程范围", "shotgun_range": "霰弹范围",
+	}
+	var lines: Array[String] = []
+	for key in bonuses:
+		var value: Variant = bonuses[key]
+		lines.append("%s %s%s" % [str(names.get(key, key)), "+" if float(value) >= 0.0 else "", str(value)])
+	return " · ".join(lines)
 
 
 func _equip_selected() -> void:

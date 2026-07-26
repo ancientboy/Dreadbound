@@ -35,6 +35,11 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color("62dec6"))
 	panel.add_child(title)
+	var home := Button.new()
+	home.text = "← 返回游戏首页"
+	home.custom_minimum_size.y = 42
+	home.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/startup.tscn"))
+	panel.add_child(home)
 	var note := Label.new()
 	note.text = "每个昵称拥有独立本地存档。游客档案保存在当前浏览器；登录后可选择同步到云端。"
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
