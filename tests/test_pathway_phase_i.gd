@@ -47,12 +47,12 @@ func _run_test() -> void:
 	# of that investment, then charges its fixed one-fragment fee.
 	assert(state.echo_shards == shards_before + 24)
 	assert(state.causality_fragments == fragments_before + 1)
-	assert(not state.respec_pathway())
+	assert(not state.respec_pathway()) # no selected profession remains to reset
 	state.save_progress()
 	var restored := GameProgress.new()
 	restored.save_path = state.save_path
 	restored.load_progress()
-	assert(restored.pathway_respec_used)
+	assert(not restored.pathway_respec_used)
 	var legacy_path := "user://test_dreadbound_phase_i_v9.json"
 	var legacy_file := FileAccess.open(legacy_path, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify({"version": 9, "echo_shards": 7, "causality_fragments": 1, "selected_pathway": "armorer", "unlocked_path_nodes": ["armorer_calibration"]}))
@@ -83,5 +83,5 @@ func _run_test() -> void:
 	state.free()
 	restored.free()
 	migrated.free()
-	print("Phase I pathway test passed: three mechanics, status expiry, one-time respec, migration and 500-seed balance")
+	print("Phase I pathway test passed: three mechanics, status expiry, repeatable respec, migration and 500-seed balance")
 	quit()

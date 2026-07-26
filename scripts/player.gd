@@ -474,11 +474,25 @@ func _draw() -> void:
 			draw_circle(Vector2(-5, -21), 2.5, visual.accent)
 			draw_circle(Vector2(4, -16), 2.0, Color("7ce7ff"))
 			draw_line(Vector2(-9, -9), Vector2(8, 9), Color(visual.accent, 0.72), 2.0)
-	draw_line(facing * 8.0, facing * 29.0, Color("d5d0a3"), 5.0)
-	if current_weapon == Weapon.RANGED:
-		draw_line(facing * 10.0, facing * 34.0, visual.tracer.darkened(0.42), 7.0)
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	var weapon_item := str(state.equipped.get("weapon", "")) if state else ""
+	var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item)
+	var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
+	# Equipment owns the silhouette while loadouts still select the attack mode.
+	if str(weapon_visual.shape) == "reaper":
+		draw_line(facing * 7.0, facing * 41.0, weapon_color.darkened(0.35), 6.0)
+		draw_arc(facing * 42.0, 15.0, facing.angle() - 1.35, facing.angle() + 0.55, 10, weapon_color, 5.0)
+	elif str(weapon_visual.shape) == "blade":
+		draw_line(facing * 8.0, facing * 40.0, weapon_color, 5.0)
+	elif str(weapon_visual.shape) == "railgun":
+		draw_line(facing * 8.0, facing * 43.0, weapon_color.darkened(0.35), 11.0)
+		draw_line(facing * 12.0, facing * 47.0, weapon_color, 3.0)
+	elif current_weapon == Weapon.RANGED:
+		draw_line(facing * 10.0, facing * 34.0, weapon_color.darkened(0.42), 7.0)
 	elif current_weapon == Weapon.SHOTGUN:
-		draw_line(facing * 9.0, facing * 37.0, visual.tracer.darkened(0.32), 9.0)
+		draw_line(facing * 9.0, facing * 37.0, weapon_color.darkened(0.32), 9.0)
+	else:
+		draw_line(facing * 7.0, facing * 34.0, weapon_color.darkened(0.25), 6.0)
 	draw_circle(Vector2(-12, 3), 3.5, visual.accent)
 	draw_circle(Vector2(-12, 3), 7.0, Color(visual.accent, 0.13))
 	# Keep combat readability close to the character while the top HUD remains the detailed status view.

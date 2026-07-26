@@ -14,9 +14,25 @@ const ITEMS := {
 	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "trait": "noise_lure", "description": "T / 吹哨主动诱引附近敌人 · 冷却 12 秒 · 武器伤害 +3", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
 	"insulated_crowbar": {"name": "绝缘撬棍", "quality": "回响", "quality_rank": 2, "slot": "weapon", "rating": 158, "trait": "signal_anchor_damage", "description": "对检票员/车长近战伤害 +35% · 冷却 +0.12 秒 · 生命上限 -4", "melee_damage": 11, "max_health": -4},
 	"last_ticket": {"name": "末班票根", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 182, "trait": "missed_train_recovery", "description": "首次错过车次时补救窗口延长 15 秒 · 生命上限 +6", "max_health": 6},
+	"director_reaper": {"name": "主任的缝合镰", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "rating": 218, "series": "缝合遗物", "growth_max": 5, "melee_damage": 14, "description": "成长武器 · 近战伤害 +14；击败疗养院首领可获得成长层数，强化重击范围。"},
+	"conductor_railgun": {"name": "末班导轨枪", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "rating": 224, "series": "末班遗物", "growth_max": 5, "ranged_damage": 11, "shotgun_damage": 5, "description": "成长武器 · 手枪伤害 +11、霰弹伤害 +5；击败车长回声可获得成长层数，增强弹道。"},
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
+
+
+static func weapon_visual(item_id: String) -> Dictionary:
+	var item := get_item(item_id)
+	match item_id:
+		"director_reaper": return {"shape": "reaper", "color": Color("c9786a"), "name": "缝合镰"}
+		"conductor_railgun": return {"shape": "railgun", "color": Color("79d8e8"), "name": "导轨枪"}
+		"insulated_crowbar": return {"shape": "crowbar", "color": Color("8dc5d4"), "name": "绝缘撬棍"}
+		"echo_edge": return {"shape": "blade", "color": Color("66d9c6"), "name": "回响切割器"}
+	return {"shape": "standard", "color": QUALITY_COLORS[clampi(int(item.get("quality_rank", 0)), 0, QUALITY_COLORS.size() - 1)], "name": str(item.get("name", "制式武器"))}
+
+
+static func boss_growth_item(world_id: String) -> String:
+	return "conductor_railgun" if world_id == "metro" else "director_reaper"
 
 
 static func get_item(item_id: String) -> Dictionary:

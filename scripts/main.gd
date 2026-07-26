@@ -98,7 +98,7 @@ func _ready() -> void:
 	var run_seed: int = GameState.active_run_seed
 	if run_seed == 0:
 		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
-	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world)
+	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world, GameState.selected_difficulty)
 	curator_contract = GameState.get_curator_trial()
 	curator_effects = GameState.get_active_contract_effects()
 	world_rules = WorldRules.new(run_config.world_id)
@@ -371,7 +371,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "difficulty": run_config.difficulty_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -647,6 +647,7 @@ func _create_patients() -> void:
 		var patient := (DROWNED_SCENE.instantiate() if run_config.world_id == "metro" else PATIENT_SCENE.instantiate()) as Patient
 		patient.position = spawn_position
 		patient.target = player
+		_apply_difficulty_to_enemy(patient)
 		if patient is Drowned:
 			patient.water_depth_provider = _metro_water_depth_at
 		patient.tree_exiting.connect(_on_enemy_removed.bind(patient))
@@ -658,6 +659,7 @@ func _create_crawlers() -> void:
 		var crawler := CRAWLER_SCENE.instantiate() as Crawler
 		crawler.position = spawn_position
 		crawler.target = player
+		_apply_difficulty_to_enemy(crawler)
 		crawler.tree_exiting.connect(_on_enemy_removed.bind(crawler))
 		add_child(crawler)
 
@@ -667,6 +669,7 @@ func _create_orderlies() -> void:
 		var orderly := (CONDUCTOR_SCENE.instantiate() if run_config.world_id == "metro" else ORDERLY_SCENE.instantiate()) as Orderly
 		orderly.position = spawn_position
 		orderly.target = player
+		_apply_difficulty_to_enemy(orderly)
 		if orderly is Conductor:
 			orderly.noise_provider = func(): return metro_noise
 			orderly.route_provider = _metro_intercept_candidates
@@ -678,10 +681,23 @@ func _create_boss() -> void:
 	boss = (LAST_TRAIN_SCENE.instantiate() if run_config.world_id == "metro" else BOSS_SCENE.instantiate()) as SanatoriumBoss
 	boss.position = run_config.boss_position
 	boss.target = player
+	var difficulty := GameState.get_difficulty()
+	boss.max_health = int(round(boss.max_health * float(difficulty.enemy_health)))
+	boss.health = boss.max_health
 	if boss is LastTrainBoss:
 		boss.encounter_provider = func(): return {"anchors": get_tree().get_nodes_in_group("signal_anchors").size(), "tide": metro_tide_level, "window": metro_train_window}
 	boss.tree_exiting.connect(_on_enemy_removed.bind(boss))
 	add_child(boss)
+
+
+func _apply_difficulty_to_enemy(enemy: Node) -> void:
+	var difficulty := GameState.get_difficulty()
+	if enemy.get("max_health") != null:
+		enemy.max_health = int(round(int(enemy.max_health) * float(difficulty.enemy_health)))
+		if enemy.get("health") != null:
+			enemy.health = enemy.max_health
+	if enemy.get("attack_damage") != null:
+		enemy.attack_damage = int(round(int(enemy.attack_damage) * float(difficulty.enemy_damage)))
 
 
 func _on_enemy_removed(enemy: Node) -> void:
@@ -709,6 +725,7 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 	elif enemy is Patient:
 		kind = ResourcePickup.Kind.BANDAGE if roll < 0.16 else ResourcePickup.Kind.ECHO_SHARD
 		threshold = 0.42
+	threshold += float(GameState.get_difficulty().loot_bonus)
 	if roll > threshold:
 		return null
 	var pickup := PICKUP_SCENE.instantiate() as ResourcePickup
@@ -731,6 +748,9 @@ func _spawn_reward_chest(at: Vector2) -> RewardChest:
 	var pool := world_rules.reward_pool()
 	pool.shuffle()
 	chest.candidates.assign(pool.slice(0, 3))
+	var difficulty := GameState.get_difficulty()
+	if _loot_rng.randf() <= float(difficulty.boss_drop):
+		chest.candidates[0] = EquipmentDatabase.boss_growth_item(run_config.world_id)
 	add_child.call_deferred(chest)
 	reward_chests.append(chest)
 	_show_notification("主要威胁已清除：异常回收箱已生成\n可选择一件装备，成功撤离后入库", 5.0)

@@ -30,6 +30,7 @@ const CAUSAL_CHAINS := ["spore_bloom", "quiet_signal", "hungry_corridor"]
 
 var seed: int
 var world_id := "sanatorium"
+var difficulty_id := "standard"
 var action_code: String
 var room_order: Array[String] = []
 var edges: Array[Vector2i] = []
@@ -51,9 +52,10 @@ var metro_switch_order: Array[int] = []
 var metro_switch_route := "north"
 
 
-func _init(run_seed: int, requested_world := "sanatorium") -> void:
+func _init(run_seed: int, requested_world := "sanatorium", requested_difficulty := "standard") -> void:
 	seed = absi(run_seed) if run_seed != 0 else 1
 	world_id = requested_world if requested_world in ["sanatorium", "metro"] else "sanatorium"
+	difficulty_id = requested_difficulty if GameProgress.DIFFICULTIES.has(requested_difficulty) else "standard"
 	action_code = ("MET" if world_id == "metro" else "SAN") + "-%08X" % seed
 	_generate()
 
@@ -130,6 +132,9 @@ func _populate_enemy_spawns(rng: RandomNumberGenerator) -> void:
 		crawler_spawns.append(_jitter(enemy_slots[(index + 4) % enemy_slots.size()], rng, 68.0))
 	for index in range(2):
 		orderly_spawns.append(_jitter(enemy_slots[(index + 7) % enemy_slots.size()], rng, 42.0))
+	var extra := int(GameProgress.DIFFICULTIES[difficulty_id].spawn_bonus)
+	for index in range(extra):
+		patient_spawns.append(_jitter(enemy_slots[(index + 9) % enemy_slots.size()], rng, 44.0))
 
 
 func _populate_contracts(rng: RandomNumberGenerator) -> void:

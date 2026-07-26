@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 14
+const SAVE_VERSION := 15
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -26,6 +26,11 @@ const PATH_NODES := {
 	"resonant_ingestion": {"path": "resonant", "name": "共鸣者：异常摄取", "cost": 3, "fragment_cost": 1, "requires": "resonant_bargain", "description": "高风险事件 +2 碎片并累积异化"},
 }
 const PATHWAY_NAMES := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}
+const DIFFICULTIES := {
+	"standard": {"name": "标准行动", "description": "推荐首次探索。敌人与掉落保持基准。", "enemy_health": 1.0, "enemy_damage": 1.0, "spawn_bonus": 0, "loot_bonus": 0.0, "boss_drop": 0.18, "reward_multiplier": 1.0},
+	"hazard": {"name": "危险行动", "description": "敌人更密集、更强；首领遗物掉率与结算碎片提高。", "enemy_health": 1.28, "enemy_damage": 1.18, "spawn_bonus": 2, "loot_bonus": 0.10, "boss_drop": 0.34, "reward_multiplier": 1.25},
+	"nightmare": {"name": "深渊行动", "description": "为熟练玩家准备。敌人高压、精英强化，首领遗物概率最高。", "enemy_health": 1.62, "enemy_damage": 1.36, "spawn_bonus": 4, "loot_bonus": 0.20, "boss_drop": 0.55, "reward_multiplier": 1.55},
+}
 const CURATOR_TRIALS := {
 	"sanatorium_restraint": {"world": "sanatorium", "kind": "world", "title": "病区克制", "description": "在废弃疗养院清除不超过 4 个威胁并成功撤离。", "rule_text": "司仪会标记非必要交战；完成后获得因果残片。", "reward": 1, "effects": {"restraint": true}},
 	"sanatorium_director": {"world": "sanatorium", "kind": "world", "title": "终止主任", "description": "击败缝合主任并从废弃疗养院成功撤离。", "rule_text": "主任被标记为裁决目标；撤离条件不改变。", "reward": 1, "effects": {"boss_mark": true}},
@@ -49,6 +54,8 @@ var equipped := {"weapon": "", "charm": ""}
 var active_run_seed := 0
 var last_action_code := ""
 var selected_world := "sanatorium"
+var selected_difficulty := "standard"
+var relic_growth := {}
 var player_profile := _default_player_profile()
 var unlocked_path_nodes: Array[String] = []
 var selected_pathway := ""
@@ -66,6 +73,12 @@ func _ready() -> void:
 
 func get_player_stats() -> Dictionary:
 	var gear := EquipmentDatabase.get_bonuses(equipped)
+	var relic := EquipmentDatabase.get_item(str(equipped.get("weapon", "")))
+	if not relic.is_empty() and relic.has("series"):
+		var level := get_relic_growth(str(equipped.get("weapon", "")))
+		gear.melee_damage += level * 2 if relic.has("melee_damage") else 0
+		gear.ranged_damage += level * 2 if relic.has("ranged_damage") else 0
+		gear.shotgun_damage += level if relic.has("shotgun_damage") else 0
 	var path := get_path_bonuses()
 	return {
 		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health) + int(path.max_health),
@@ -75,6 +88,36 @@ func get_player_stats() -> Dictionary:
 		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage),
 		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal),
 	}
+
+
+func get_difficulty() -> Dictionary:
+	return DIFFICULTIES.get(selected_difficulty, DIFFICULTIES.standard).duplicate(true)
+
+
+func set_difficulty(difficulty_id: String) -> bool:
+	if not DIFFICULTIES.has(difficulty_id):
+		return false
+	selected_difficulty = difficulty_id
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func get_relic_growth(item_id: String) -> int:
+	return maxi(int(relic_growth.get(item_id, 0)), 0)
+
+
+func award_boss_growth(world_id: String) -> Dictionary:
+	var item_id := EquipmentDatabase.boss_growth_item(world_id)
+	if not equipment_inventory.has(item_id):
+		return {}
+	var item := EquipmentDatabase.get_item(item_id)
+	var current := get_relic_growth(item_id)
+	var maximum := int(item.get("growth_max", 0))
+	if current >= maximum:
+		return {}
+	relic_growth[item_id] = current + 1
+	return {"item_id": item_id, "name": str(item.name), "level": current + 1, "maximum": maximum}
 
 
 static func _default_player_profile() -> Dictionary:
@@ -284,10 +327,10 @@ func unlock_path_node(node_id: String) -> bool:
 
 
 func respec_pathway() -> bool:
-	if pathway_respec_used or selected_pathway.is_empty() or causality_fragments < 1:
+	if selected_pathway.is_empty() or causality_fragments < 1:
 		return false
-	# A respec is intentionally limited to once per profile and still costs one
-	# causality fragment. It must, however, return every resource invested in the
+	# A respec remains paid but is no longer limited by profile. It must return
+	# every resource invested in the
 	# pathway: the initial anchor, each node's shards, and node fragment costs.
 	# Returning only half the shard cost made changing profession permanently
 	# punitive and silently destroyed the anchor/material investment.
@@ -304,7 +347,9 @@ func respec_pathway() -> bool:
 	causality_fragments += fragment_refund
 	unlocked_path_nodes.clear()
 	selected_pathway = ""
-	pathway_respec_used = true
+	# Profession reconstruction is intentionally unlimited.  The one fragment fee
+	# keeps it a meaningful preparation choice without trapping a player forever.
+	pathway_respec_used = false
 	save_progress()
 	progress_changed.emit()
 	return true
@@ -322,7 +367,9 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	var settled_codes: Array = player_profile.get("settled_action_codes", [])
 	if not action_code.is_empty() and settled_codes.has(action_code):
 		return 0
-	var mission_reward := records * 2 + (3 if success else 0)
+	var difficulty := str(run_summary.get("difficulty", selected_difficulty))
+	var difficulty_data: Dictionary = DIFFICULTIES.get(difficulty, DIFFICULTIES.standard)
+	var mission_reward := int(round((records * 2 + (3 if success else 0)) * float(difficulty_data.reward_multiplier)))
 	var banked := carried_shards + mission_reward if success else 0
 	var banked_equipment: Array[String] = []
 	var overflow_shards := 0
@@ -337,7 +384,8 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	banked += overflow_shards
 	var milestone_rewards := _claim_run_milestones(success, run_summary)
 	var trial_rewards := _complete_curator_trial_if_eligible(success, enemies_defeated, events_resolved, run_summary)
-	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "milestone_rewards": milestone_rewards, "trial_rewards": trial_rewards, "dynamic_run": run_summary}
+	var relic_reward := award_boss_growth(str(run_summary.get("world", ""))) if success and bool(run_summary.get("boss_defeated", false)) else {}
+	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "milestone_rewards": milestone_rewards, "trial_rewards": trial_rewards, "relic_growth": relic_reward, "difficulty": difficulty, "dynamic_run": run_summary}
 	player_profile.runs = int(player_profile.get("runs", 0)) + 1
 	player_profile.successful_runs = int(player_profile.get("successful_runs", 0)) + (1 if success else 0)
 	player_profile.metro_runs = int(player_profile.get("metro_runs", 0)) + (1 if str(run_summary.get("world", "")) == "metro" else 0)
@@ -517,7 +565,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones}))
 	return true
 
 
@@ -547,6 +595,11 @@ func load_progress() -> void:
 	selected_world = str(parsed.get("selected_world", "sanatorium"))
 	if selected_world not in ["sanatorium", "metro"]:
 		selected_world = "sanatorium"
+	selected_difficulty = str(parsed.get("selected_difficulty", "standard"))
+	if not DIFFICULTIES.has(selected_difficulty):
+		selected_difficulty = "standard"
+	var saved_relic_growth := parsed.get("relic_growth", {})
+	relic_growth = saved_relic_growth.duplicate(true) if saved_relic_growth is Dictionary else {}
 	var saved_profile = parsed.get("player_profile", {})
 	if saved_profile is Dictionary:
 		for key in player_profile:
@@ -609,6 +662,8 @@ func _clear_runtime_progress() -> void:
 	active_run_seed = 0
 	last_action_code = ""
 	selected_world = "sanatorium"
+	selected_difficulty = "standard"
+	relic_growth = {}
 	player_profile = _default_player_profile()
 	unlocked_path_nodes.clear()
 	selected_pathway = ""

@@ -24,6 +24,7 @@ const PATH_BUTTONS := {
 @onready var deploy_button: Button = $Margin/Layout/Actions/Deploy
 @onready var world_button: Button = $Margin/Layout/Actions/SelectMetro
 var warehouse_panel: ColorRect
+var warehouse_scroll: ScrollContainer
 var warehouse_list: VBoxContainer
 var warehouse_detail: Label
 var equip_button: Button
@@ -76,6 +77,7 @@ func _ready() -> void:
 	_create_mobile_terminal_panel()
 	_create_curator_controls()
 	_create_respec_control()
+	_create_difficulty_control()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
@@ -141,7 +143,7 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	title.position = Vector2(24, 18)
 	title.size = Vector2(panel_width - 48, 48)
 	var list_width := (panel_width - 92.0) * 0.5
-	var scroll := warehouse_panel.get_child(1) as ScrollContainer
+	var scroll := warehouse_scroll
 	scroll.position = Vector2(28, 82)
 	scroll.size = Vector2(list_width, warehouse_panel.size.y - 160)
 	warehouse_list.custom_minimum_size = Vector2(list_width - 20, 0)
@@ -151,7 +153,7 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	equip_button.size = Vector2((list_width - 36) * 0.5, 58)
 	salvage_button.position = Vector2(70 + list_width + equip_button.size.x, warehouse_panel.size.y - 154)
 	salvage_button.size = equip_button.size
-	var close := warehouse_panel.get_child(warehouse_panel.get_child_count() - 1) as Button
+	var close := warehouse_panel.get_node("ReturnWarehouse") as Button
 	close.position = Vector2((panel_width - 250) * 0.5, warehouse_panel.size.y - 72)
 	close.size = Vector2(250, 52)
 
@@ -292,7 +294,12 @@ func _refresh() -> void:
 		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards) if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments) if anchor_needed else 0)
 	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
 	if respec:
-		respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
+		respec.text = "重构职业 · 1 因果残片（可无限次）"
+		respec.disabled = GameState.selected_pathway.is_empty()
+	var difficulty_button := get_node_or_null("Margin/Layout/Columns/Profile/DifficultySelector") as Button
+	if difficulty_button:
+		var difficulty := GameState.get_difficulty()
+		difficulty_button.text = "副本难度：%s\n%s" % [str(difficulty.name), str(difficulty.description)]
 	world_button.text = "传说门选择副本"
 	deploy_button.text = "请在回廊进入传说门"
 	$HubActions/Deploy.text = "进入%s" % _world_name()
@@ -459,6 +466,21 @@ func _create_warehouse_panel() -> void:
 	scroll.position = Vector2(35, 88)
 	scroll.size = Vector2(480, 410)
 	warehouse_panel.add_child(scroll)
+	warehouse_scroll = scroll
+	var up := Button.new()
+	up.name = "WarehouseScrollUp"
+	up.text = "▲"
+	up.position = Vector2(6, 92)
+	up.size = Vector2(28, 52)
+	up.pressed.connect(_scroll_warehouse.bind(-180))
+	warehouse_panel.add_child(up)
+	var down := Button.new()
+	down.name = "WarehouseScrollDown"
+	down.text = "▼"
+	down.position = Vector2(6, 440)
+	down.size = Vector2(28, 52)
+	down.pressed.connect(_scroll_warehouse.bind(180))
+	warehouse_panel.add_child(down)
 	warehouse_list = VBoxContainer.new()
 	warehouse_list.custom_minimum_size = Vector2(455, 0)
 	warehouse_list.add_theme_constant_override("separation", 7)
@@ -484,6 +506,7 @@ func _create_warehouse_panel() -> void:
 	salvage_button.pressed.connect(_salvage_selected)
 	warehouse_panel.add_child(salvage_button)
 	var close := Button.new()
+	close.name = "ReturnWarehouse"
 	close.position = Vector2(390, 515)
 	close.size = Vector2(270, 55)
 	close.text = "返回整备终端"
@@ -562,10 +585,31 @@ func _create_respec_control() -> void:
 	var button := Button.new()
 	button.name = "RespecPathway"
 	button.custom_minimum_size = Vector2(0, 44)
-	button.text = "有限重构职业 · 1 因果残片（仅一次）"
-	button.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
+	button.text = "重构职业 · 1 因果残片（可无限次）"
+	button.disabled = GameState.selected_pathway.is_empty()
 	button.pressed.connect(_respec_pathway)
 	$Margin/Layout/Columns/Paths.add_child(button)
+
+
+func _create_difficulty_control() -> void:
+	var button := Button.new()
+	button.name = "DifficultySelector"
+	button.custom_minimum_size = Vector2(0, 58)
+	button.pressed.connect(_cycle_difficulty)
+	$Margin/Layout/Columns/Profile.add_child(button)
+
+
+func _cycle_difficulty() -> void:
+	var ids := ["standard", "hazard", "nightmare"]
+	var index := (ids.find(GameState.selected_difficulty) + 1) % ids.size()
+	GameState.set_difficulty(ids[index])
+	feedback.text = "副本难度已设为%s：会同步改变敌人、掉落和首领遗物概率。" % GameState.get_difficulty().name
+	_refresh()
+
+
+func _scroll_warehouse(amount: int) -> void:
+	if warehouse_scroll:
+		warehouse_scroll.scroll_vertical = maxi(warehouse_scroll.scroll_vertical + amount, 0)
 
 
 func _refresh_curator_offers() -> void:
@@ -660,6 +704,12 @@ func _refresh_mobile_terminal() -> void:
 	reset_profile.pressed.connect(_reset_curator_profile)
 	content.add_child(reset_profile)
 	_mobile_terminal_section(content, "出发整备", "在这里调整配置；副本入口请返回回廊使用对应传说门。")
+	var mobile_difficulty := Button.new()
+	var difficulty := GameState.get_difficulty()
+	mobile_difficulty.custom_minimum_size = Vector2(0, 62)
+	mobile_difficulty.text = "副本难度：%s\n%s（点击切换）" % [str(difficulty.name), str(difficulty.description)]
+	mobile_difficulty.pressed.connect(_cycle_difficulty)
+	content.add_child(mobile_difficulty)
 	for loadout_id in GameProgress.LOADOUTS:
 		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
 		var button := Button.new()
@@ -703,8 +753,8 @@ func _refresh_mobile_terminal() -> void:
 		content.add_child(button)
 	var respec := Button.new()
 	respec.custom_minimum_size = Vector2(0, 52)
-	respec.text = "有限重构职业 · 1 因果残片（仅一次）"
-	respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
+	respec.text = "重构职业 · 1 因果残片（可无限次）"
+	respec.disabled = GameState.selected_pathway.is_empty()
 	respec.pressed.connect(_respec_pathway)
 	content.add_child(respec)
 	var actions := HBoxContainer.new()
@@ -814,7 +864,8 @@ func _refresh_warehouse() -> void:
 		var button := Button.new()
 		var equipped_mark := "◆ " if GameState.equipped.values().has(item_id) else ""
 		button.text = "%s[%s] %s  ×%d  ·  评级 %d" % [equipped_mark, item.quality, item.name, counts[item_id], item.rating]
-		button.custom_minimum_size = Vector2(450, 54)
+		button.custom_minimum_size = Vector2(450, 62)
+		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_equipment.bind(item_id))
 		warehouse_list.add_child(button)
 	equip_button.disabled = true
@@ -826,7 +877,8 @@ func _select_equipment(item_id: String) -> void:
 	selected_equipment_id = item_id
 	var item := EquipmentDatabase.get_item(item_id)
 	var equipped_mark := "\n\n当前已装备" if GameState.equipped.get(item.slot, "") == item_id else ""
-	warehouse_detail.text = "%s // %s\n评级 %d\n槽位：%s\n\n%s%s" % [item.quality, item.name, item.rating, "武器" if item.slot == "weapon" else "护符", item.description, equipped_mark]
+	var growth := "\n成长：Lv.%d/%d（击败对应首领可提升）" % [GameState.get_relic_growth(item_id), int(item.get("growth_max", 0))] if item.has("series") else ""
+	warehouse_detail.text = "%s // %s\n评级 %d\n槽位：%s\n\n%s%s%s" % [item.quality, item.name, item.rating, "武器" if item.slot == "weapon" else "护符", item.description, growth, equipped_mark]
 	equip_button.disabled = false
 	salvage_button.disabled = GameState.equipped.values().has(item_id) and GameState.equipment_inventory.count(item_id) <= 1
 
