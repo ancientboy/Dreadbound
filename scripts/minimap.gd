@@ -3,7 +3,7 @@ extends Control
 
 signal expanded_changed(expanded: bool)
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
 const MINI_RADIUS := 68.0
 
 var player: Player

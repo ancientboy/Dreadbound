@@ -1,5 +1,7 @@
 extends Control
 
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+
 const UPGRADE_INFO := {
 	"vitality": ["耐受训练", "生命上限 +10"],
 	"mobility": ["神经校准", "移动速度 +8"],
@@ -24,7 +26,7 @@ var warehouse_detail: Label
 var equip_button: Button
 var salvage_button: Button
 var selected_equipment_id := ""
-var walker_position := Vector2(350, 438)
+var walker_position := Vector2(640, 585)
 var walker_velocity := Vector2.ZERO
 var walker_facing := Vector2.RIGHT
 var walk_phase := 0.0
@@ -34,8 +36,10 @@ var _touch_direction := Vector2.ZERO
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
 const CURATOR_POSITION := Vector2(640, 416)
-const GATE_POSITION := Vector2(1045, 372)
+const SANATORIUM_GATE_POSITION := Vector2(250, 372)
+const METRO_GATE_POSITION := Vector2(1030, 372)
 const INTERACTION_RANGE := 118.0
+var active_gate_world := "sanatorium"
 
 
 func _ready() -> void:
@@ -50,7 +54,7 @@ func _ready() -> void:
 		var button := get_node("Margin/Layout/Columns/Paths/%s" % PATH_BUTTONS[node_id]) as Button
 		button.pressed.connect(_unlock_path_node.bind(node_id))
 	deploy_button.pressed.connect(_deploy)
-	$HubActions/Deploy.pressed.connect(_deploy)
+	$HubActions/Deploy.pressed.connect(_deploy_selected_gate)
 	$HubActions/OpenTerminal.pressed.connect(_open_terminal)
 	$Margin/Layout/Actions/CloseTerminal.pressed.connect(_close_terminal)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
@@ -62,7 +66,7 @@ func _ready() -> void:
 		GameState.corridor_intro_seen = true
 		GameState.save_progress()
 		feedback.text = "终末回廊已解锁：在此查看属性、强化身体、选择整备并再次投送。"
-	$HubHint.text = "移动靠近司仪、整备终端或投送门；按 E / 点击操作。"
+	$HubHint.text = "两扇传说门已开启：左侧疗养院，右侧潮没末班线。靠近后按 E / 点击进入。"
 	$HubActions.visible = false
 	queue_redraw()
 
@@ -82,7 +86,7 @@ func _process(delta: float) -> void:
 		walk_phase += delta * 13.0
 		queue_redraw()
 	var target := _nearby_target()
-	$HubActions.visible = not target.is_empty() and target.id != "curator"
+	_update_hub_actions(target)
 	if target.is_empty():
 		$HubHint.text = "探索终末回廊  ·  WASD / 方向键移动  ·  靠近设施后交互"
 	else:
@@ -114,7 +118,8 @@ func _nearby_target() -> Dictionary:
 	var targets := [
 		{"id": "curator", "position": CURATOR_POSITION, "prompt": "与阈值司仪同步行动档案"},
 		{"id": "terminal", "position": TERMINAL_POSITION, "prompt": "接入行者整备终端"},
-		{"id": "gate", "position": GATE_POSITION, "prompt": "进入%s" % _world_name()},
+		{"id": "sanatorium_gate", "position": SANATORIUM_GATE_POSITION, "prompt": "进入废弃疗养院", "world": "sanatorium"},
+		{"id": "metro_gate", "position": METRO_GATE_POSITION, "prompt": "进入潮没末班线", "world": "metro"},
 	]
 	for target in targets:
 		if walker_position.distance_to(target.position) <= INTERACTION_RANGE:
@@ -128,7 +133,21 @@ func _activate_target(id: String) -> void:
 			feedback.text = "阈值司仪：%s\n建议：%s" % [str(GameState.player_profile.get("last_observation", "尚无足够行动数据。")), "完成一次低噪声撤离试炼。" if int(GameState.player_profile.get("noise_actions", 0)) >= 4 else "继续选择可解释的风险，而非盲目深入。"]
 			_open_terminal()
 		"terminal": _open_terminal()
-		"gate": _deploy()
+		"sanatorium_gate": _deploy_world("sanatorium")
+		"metro_gate": _deploy_world("metro")
+
+
+func _update_hub_actions(target: Dictionary) -> void:
+	var has_target := not target.is_empty() and target.id != "curator"
+	$HubActions.visible = has_target
+	if not has_target:
+		return
+	var is_gate := str(target.id).ends_with("_gate")
+	$HubActions/OpenTerminal.visible = not is_gate
+	$HubActions/Deploy.visible = is_gate
+	if is_gate:
+		active_gate_world = str(target.world)
+		$HubActions/Deploy.text = str(target.prompt)
 
 
 func _refresh() -> void:
@@ -180,6 +199,16 @@ func _unlock_path_node(node_id: String) -> void:
 
 
 func _deploy() -> void:
+	_deploy_world(GameState.selected_world)
+
+
+func _deploy_selected_gate() -> void:
+	_deploy_world(active_gate_world)
+
+
+func _deploy_world(world: String) -> void:
+	GameState.selected_world = world
+	GameState.save_progress()
 	deploy_button.disabled = true
 	feedback.text = "正在建立%s连接……" % _world_name()
 	GameState.begin_run()
@@ -224,11 +253,9 @@ func _draw() -> void:
 	draw_arc(CURATOR_POSITION, 56, 0, TAU, 48, Color("5de0c5"), 2.0)
 	draw_circle(CURATOR_POSITION + Vector2(0, -14), 13, Color("b3dbd0"))
 	draw_colored_polygon(PackedVector2Array([CURATOR_POSITION + Vector2(-22, 28), CURATOR_POSITION + Vector2(22, 28), CURATOR_POSITION + Vector2(14, -4), CURATOR_POSITION + Vector2(-14, -4)]), Color("355f57"))
-	# Gate changes hue slightly for the flooded world.
-	var gate_color := Color("6098f5") if GameState.selected_world == "metro" else Color("5ce8cf")
-	draw_circle(GATE_POSITION, 102, Color(gate_color, 0.1))
-	draw_arc(GATE_POSITION, 98, -2.05, 2.05, 48, gate_color, 12.0)
-	draw_arc(GATE_POSITION, 68, -2.05, 2.05, 48, Color(gate_color, 0.48), 2.0)
+	# Each unlocked disaster world has a permanent, visible legendary gate.
+	_draw_legend_gate(SANATORIUM_GATE_POSITION, Color("5ce8cf"), "废弃疗养院", "医疗异化 · 供电撤离")
+	_draw_legend_gate(METRO_GATE_POSITION, Color("6098f5"), "潮没末班线", "涨潮迷失 · 末班撤离")
 	# Animated Drifter. The gait reacts to actual movement instead of a static icon.
 	var bob := sin(walk_phase) * 3.0 if walker_velocity.length() > 2.0 else sin(Time.get_ticks_msec() * 0.002) * 1.2
 	draw_circle(walker_position + Vector2(0, -25 + bob), 13, Color("c3d9d1"))
@@ -243,6 +270,16 @@ func _draw() -> void:
 		draw_rect(Rect2(30, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
 		draw_rect(Rect2(378, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
 		draw_rect(Rect2(726, 112, size.x - 756, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
+
+
+func _draw_legend_gate(position: Vector2, color: Color, title: String, subtitle: String) -> void:
+	var is_near := walker_position.distance_to(position) <= INTERACTION_RANGE
+	draw_circle(position, 116, Color(color, 0.17 if is_near else 0.09))
+	draw_arc(position, 100, -2.12, 2.12, 48, color, 14.0 if is_near else 10.0)
+	draw_arc(position, 70, -2.12, 2.12, 48, Color(color, 0.55), 2.0)
+	draw_line(position + Vector2(-83, 92), position + Vector2(83, 92), Color(color, 0.62), 2.0)
+	draw_string(UI_FONT, position + Vector2(-112, 138), title, HORIZONTAL_ALIGNMENT_CENTER, 224, 24, Color("d6f6ed"))
+	draw_string(UI_FONT, position + Vector2(-130, 166), subtitle, HORIZONTAL_ALIGNMENT_CENTER, 260, 15, Color(color, 0.88))
 
 
 func _open_terminal() -> void:

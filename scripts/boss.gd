@@ -1,7 +1,7 @@
 class_name SanatoriumBoss
 extends CharacterBody2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
 
 @export var max_health := 420
 var health := 420

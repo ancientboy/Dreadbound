@@ -1,7 +1,7 @@
 class_name Orderly
 extends CharacterBody2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
 
 @export var movement_speed := 58.0
 @export var max_health := 150

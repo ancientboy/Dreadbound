@@ -1,7 +1,7 @@
 class_name Patient
 extends CharacterBody2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
 
 @export var movement_speed := 82.0
 @export var max_health := 70
