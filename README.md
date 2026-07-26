@@ -30,9 +30,13 @@ L0–L5 Human Mirror Loop 已接入：回廊新增独立“人性镜鉴”，知
 
 完整实现边界见 [`docs/human-mirror-loop-l0-l5.md`](docs/human-mirror-loop-l0-l5.md)。
 
-M0–M6 Exchange & Evolution Loop 已接入：终末回廊开放异常兑换、六种世界材料、确定性轮换、三件合成三选一、结果锁定、合成余烬与保底；三职业扩展为十二战斗流派，装备支持五级强化与行为条件进化，人性行为会进一步形成不可购买的个人心相。存档版本升级为 v20。
+M0–M6 Exchange & Evolution Loop 已接入：终末回廊开放异常兑换、六种世界材料、确定性轮换、三件合成三选一、结果锁定、合成余烬与保底；三职业扩展为十二战斗流派，装备支持五级强化与行为条件进化，人性行为会进一步形成不可购买的个人心相。
+
+V21 Loot & Hub 已接入：普通怪、精英、Boss、隐藏来源与撤离奖励统一使用数据化掉落目录；材料先局内暂存、成功撤离后进入独立材料背包，稀有材料有击杀保底，唯一藏品继续受世界唯一注册保护。回廊已拆成装备、材料、唯一藏品、档案、职业、副本、终端七个同级入口。存档版本升级为 v21，并兼容 v20 及更早版本。
 
 完整实现边界见 [`docs/exchange-evolution-loop-m0-m6.md`](docs/exchange-evolution-loop-m0-m6.md)。
+
+掉落表、分类背包与回廊信息架构见 [`docs/loot-inventory-hub-v21.md`](docs/loot-inventory-hub-v21.md)。
 
 详细设计与扩展边界见 [`docs/persistent-narrative-dungeon.md`](docs/persistent-narrative-dungeon.md)。
 
