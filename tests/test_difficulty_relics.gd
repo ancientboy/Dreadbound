@@ -18,7 +18,7 @@ func _run_test() -> void:
 	assert(EquipmentDatabase.boss_growth_item("metro") == "conductor_railgun")
 	state.equipment_inventory.append("director_reaper")
 	assert(state.equip_item("director_reaper"))
-	var before := state.get_player_stats().melee_damage
+	var before: int = int(state.get_player_stats().melee_damage)
 	assert(state.award_boss_growth("sanatorium").level == 1)
 	assert(state.get_relic_growth("director_reaper") == 1)
 	assert(state.get_player_stats().melee_damage == before + 2)

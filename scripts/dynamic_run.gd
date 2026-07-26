@@ -79,7 +79,12 @@ func _generate() -> void:
 		mission_id = "lost_service" if rng.randi() % 2 == 0 else "switch_zero"
 		# A selected Zero Priority contract is a declared rule, never a hidden
 		# reroll: it guarantees the compatible authored mission for this action.
-		var active_contract := GameState.get_curator_trial()
+		# DynamicRunConfig is also constructed by standalone regression scripts,
+		# where autoload identifiers are not registered at script-parse time.
+		# Resolve the optional runtime singleton through the scene tree instead.
+		var scene_tree := Engine.get_main_loop() as SceneTree
+		var global_state := scene_tree.root.get_node_or_null("GameState") as GameProgress if scene_tree != null else null
+		var active_contract: Dictionary = global_state.get_curator_trial() if global_state != null else {}
 		if str(active_contract.get("id", "")) == "metro_zero_priority":
 			mission_id = "switch_zero"
 		mission_title = "失联车次" if mission_id == "lost_service" else "零号道岔"

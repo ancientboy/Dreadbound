@@ -33,6 +33,10 @@ func _draw() -> void:
 
 
 func _get_combat_fx() -> CombatFX:
+	# Unit tests can damage an anchor before it enters a scene tree.
+	# In that case there is no player-owned effect pool to query.
+	if not is_inside_tree():
+		return CombatFX.new()
 	var player := get_tree().get_first_node_in_group("player") as Player
 	if player != null and player.combat_fx != null:
 		return player.combat_fx
