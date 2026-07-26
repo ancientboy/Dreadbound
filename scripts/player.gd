@@ -51,6 +51,7 @@ var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _audio: AudioStreamPlayer
 var pathway_effects: PathwayEffects
+var combat_fx: CombatFX
 
 
 func _ready() -> void:
@@ -60,6 +61,8 @@ func _ready() -> void:
 	pathway_effects = PathwayEffects.new()
 	pathway_effects.setup(self, get_node_or_null("/root/GameState") as GameProgress)
 	add_child(pathway_effects)
+	combat_fx = CombatFX.new()
+	add_child(combat_fx)
 	health = max_health
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
@@ -153,6 +156,7 @@ func try_attack() -> bool:
 	_play_tone(115.0, 0.08)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
+	combat_fx.melee_swing(global_position, facing, attack_range)
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
@@ -160,6 +164,7 @@ func try_attack() -> bool:
 		if offset.length() <= attack_range and facing.dot(offset.normalized()) >= 0.25:
 			var damage := int(attack_damage * pathway_multiplier * (1.35 if insulated and (target is Conductor or target is LastTrainBoss or target is SignalAnchor) else 1.0))
 			target.take_damage(damage, global_position)
+			combat_fx.impact(target.global_position, offset, true)
 	queue_redraw()
 	return true
 
@@ -194,8 +199,10 @@ func _try_ranged_attack() -> bool:
 	if best_target:
 		_shot_end = best_target.global_position - global_position
 		best_target.take_damage(int(ranged_damage * pathway_effects.consume_attack_multiplier()), global_position)
+		combat_fx.impact(best_target.global_position, _shot_end)
 	else:
 		pathway_effects.consume_attack_multiplier()
+	combat_fx.pistol_shot(global_position + facing * 18.0, global_position + _shot_end)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -209,6 +216,7 @@ func _try_shotgun_attack() -> bool:
 	shells -= 1
 	_play_tone(190.0, 0.14)
 	noise_generated.emit(4)
+	combat_fx.shotgun_blast(global_position + facing * 18.0, facing, shotgun_range)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
@@ -217,6 +225,7 @@ func _try_shotgun_attack() -> bool:
 		if offset.length() <= shotgun_range and facing.dot(offset.normalized()) >= 0.72:
 			var falloff := clampf(1.25 - offset.length() / shotgun_range * 0.55, 0.7, 1.0)
 			target.take_damage(int(shotgun_damage * falloff * pathway_multiplier), global_position)
+			combat_fx.impact(target.global_position, offset, true)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -404,16 +413,6 @@ func _draw() -> void:
 	# A low-cost flashlight wedge gives direction and local contrast without a large WebGL light texture.
 	var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
 	draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
-	if _attack_flash > 0.0:
-		if current_weapon == Weapon.RANGED:
-			draw_line(facing * 18.0, _shot_end, Color(0.45, 0.92, 0.82, 0.85), 3.0)
-			draw_circle(_shot_end, 5.0, Color(0.75, 1.0, 0.9, 0.7))
-		elif current_weapon == Weapon.SHOTGUN:
-			for spread in [-0.28, -0.14, 0.0, 0.14, 0.28]:
-				draw_line(facing.rotated(spread) * 18.0, facing.rotated(spread) * shotgun_range, Color(0.82, 0.71, 0.45, 0.5), 2.0)
-		else:
-			draw_arc(Vector2.ZERO, attack_range, facing.angle() - 0.55, facing.angle() + 0.55, 20, Color(0.82, 0.8, 0.55, 0.72), 8.0)
-
 	var coat_color := Color("75a783") if _heal_flash > 0.0 else (Color("8a514d") if _hurt_flash > 0.0 else Color("56665b"))
 	# Layered graybox silhouette: backpack, coat, head, flashlight and anomaly mark.
 	draw_rect(Rect2(-15, -8, 30, 30), Color("35443d"), true)
