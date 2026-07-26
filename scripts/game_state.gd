@@ -60,7 +60,7 @@ func get_player_stats() -> Dictionary:
 
 
 static func _default_player_profile() -> Dictionary:
-	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": []}
+	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "north_routes": 0, "south_routes": 0, "missed_trains": 0, "whistle_uses": 0, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": []}
 
 
 func has_equipment_trait(trait_id: String) -> bool:
@@ -105,6 +105,21 @@ func reset_curator_profile() -> void:
 	player_profile = _default_player_profile()
 	save_progress()
 	progress_changed.emit()
+
+
+func curator_evidence() -> Array[String]:
+	var evidence: Array[String] = []
+	var recent: Array = player_profile.get("recent_runs", [])
+	var noisy := recent.filter(func(run): return int(run.get("noise", 0)) >= 4).size()
+	if noisy > 0:
+		evidence.append("最近 %d 局中有 %d 局属于高噪音行动" % [recent.size(), noisy])
+	if int(player_profile.get("missed_trains", 0)) > 0:
+		evidence.append("累计错过车次 %d 次" % int(player_profile.missed_trains))
+	if int(player_profile.get("events_taken", 0)) > 0:
+		evidence.append("已处理风险事件 %d 次" % int(player_profile.events_taken))
+	if evidence.is_empty():
+		evidence.append("行动样本不足，建议继续完成一次撤离")
+	return evidence
 
 
 func get_path_bonuses() -> Dictionary:
@@ -183,11 +198,16 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	player_profile.noise_actions = int(player_profile.get("noise_actions", 0)) + int(run_summary.get("noise", 0))
 	player_profile.events_taken = int(player_profile.get("events_taken", 0)) + events_resolved
 	player_profile.threats_cleared = int(player_profile.get("threats_cleared", 0)) + enemies_defeated
+	var route := str(run_summary.get("metro_route", ""))
+	if route == "north": player_profile.north_routes = int(player_profile.get("north_routes", 0)) + 1
+	if route == "south": player_profile.south_routes = int(player_profile.get("south_routes", 0)) + 1
+	player_profile.missed_trains = int(player_profile.get("missed_trains", 0)) + (1 if bool(run_summary.get("missed_train", false)) else 0)
+	player_profile.whistle_uses = int(player_profile.get("whistle_uses", 0)) + int(run_summary.get("whistle_uses", 0))
 	if success and int(run_summary.get("noise", 0)) <= 3:
 		player_profile.quiet_successes = int(player_profile.get("quiet_successes", 0)) + 1
 	player_profile.last_observation = _build_observation(success, enemies_defeated, events_resolved, run_summary)
 	var recent: Array = player_profile.get("recent_runs", [])
-	recent.push_front({"world": str(run_summary.get("world", "sanatorium")), "success": success, "noise": int(run_summary.get("noise", 0)), "events": events_resolved, "threats": enemies_defeated, "action_code": str(run_summary.get("action_code", ""))})
+	recent.push_front({"world": str(run_summary.get("world", "sanatorium")), "success": success, "noise": int(run_summary.get("noise", 0)), "events": events_resolved, "threats": enemies_defeated, "route": route, "missed_train": bool(run_summary.get("missed_train", false)), "action_code": str(run_summary.get("action_code", ""))})
 	if recent.size() > 5:
 		recent.resize(5)
 	player_profile.recent_runs = recent

@@ -8,6 +8,7 @@ signal weapon_changed(weapon_name: String, ammo: int)
 signal utility_changed(sedatives: int, duration: float)
 signal selected_item_changed(item_name: String, count: int)
 signal noise_generated(amount: int)
+signal equipment_trait_used(trait_id: String)
 
 enum Weapon { MELEE, RANGED, SHOTGUN }
 enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
@@ -103,6 +104,7 @@ func _physics_process(delta: float) -> void:
 	var wants_to_use_item := Input.is_action_just_pressed("use_item")
 	var wants_to_switch := Input.is_action_just_pressed("switch_weapon")
 	var wants_to_switch_item := Input.is_action_just_pressed("switch_item")
+	var wants_to_use_trait := Input.is_action_just_pressed("use_trait")
 	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
 	if mobile_controls:
 		if mobile_controls.movement_vector != Vector2.ZERO:
@@ -111,6 +113,7 @@ func _physics_process(delta: float) -> void:
 		wants_to_use_item = mobile_controls.consume_item() or wants_to_use_item
 		wants_to_switch = mobile_controls.consume_switch_weapon() or wants_to_switch
 		wants_to_switch_item = mobile_controls.consume_switch_item() or wants_to_switch_item
+		wants_to_use_trait = mobile_controls.consume_trait() or wants_to_use_trait
 
 	velocity = input_direction * movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
@@ -123,6 +126,8 @@ func _physics_process(delta: float) -> void:
 		switch_weapon()
 	if wants_to_switch_item:
 		switch_item()
+	if wants_to_use_trait:
+		use_equipment_trait()
 	_collect_nearby_pickups()
 	move_and_slide()
 	if had_visual_effect or not facing.is_equal_approx(previous_facing):
@@ -147,9 +152,17 @@ func try_attack() -> bool:
 			continue
 		var offset: Vector2 = target.global_position - global_position
 		if offset.length() <= attack_range and facing.dot(offset.normalized()) >= 0.25:
-			var damage := int(attack_damage * 1.35) if insulated and (target is Conductor or target is LastTrainBoss) else attack_damage
+			var damage := int(attack_damage * 1.35) if insulated and (target is Conductor or target is LastTrainBoss or target is SignalAnchor) else attack_damage
 			target.take_damage(damage, global_position)
 	queue_redraw()
+	return true
+
+
+func use_equipment_trait() -> bool:
+	var state := get_node_or_null("/root/GameState")
+	if state == null or not state.has_equipment_trait("noise_lure"):
+		return false
+	equipment_trait_used.emit("noise_lure")
 	return true
 
 

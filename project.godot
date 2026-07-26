@@ -58,6 +58,10 @@ switch_item={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":70)]
 }
+use_trait={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":84)]
+}
 
 [rendering]
 renderer/rendering_method="gl_compatibility"

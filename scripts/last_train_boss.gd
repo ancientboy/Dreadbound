@@ -4,6 +4,7 @@ extends SanatoriumBoss
 enum TrainPhase { ARRIVAL, INSPECTION, DEPARTURE }
 
 var train_phase := TrainPhase.ARRIVAL
+var encounter_provider: Callable
 
 
 func _ready() -> void:
@@ -14,9 +15,13 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if health <= max_health / 3:
+	var context: Dictionary = encounter_provider.call() if encounter_provider.is_valid() else {}
+	var anchors := int(context.get("anchors", 2))
+	var tide := int(context.get("tide", 0))
+	var window := float(context.get("window", 999.0))
+	if health <= max_health / 3 or tide >= 2 or window <= 25.0:
 		train_phase = TrainPhase.DEPARTURE
-	elif health <= max_health * 2 / 3:
+	elif health <= max_health * 2 / 3 or anchors <= 1:
 		train_phase = TrainPhase.INSPECTION
 	else:
 		train_phase = TrainPhase.ARRIVAL

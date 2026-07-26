@@ -9,6 +9,7 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss.tscn")
 const DROWNED_SCENE: PackedScene = preload("res://scenes/entities/drowned.tscn")
 const CONDUCTOR_SCENE: PackedScene = preload("res://scenes/entities/conductor.tscn")
 const LAST_TRAIN_SCENE: PackedScene = preload("res://scenes/entities/last_train_boss.tscn")
+const SIGNAL_ANCHOR_SCENE: PackedScene = preload("res://scenes/entities/signal_anchor.tscn")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -73,6 +74,10 @@ var metro_water_damage_timer := 0.0
 var metro_water_state := 0
 var world_rules: WorldRules
 var ticket_recovery_used := false
+var signal_anchors: Array[SignalAnchor] = []
+var whistle_cooldown := 0.0
+var whistle_uses := 0
+var metro_missed_train := false
 
 
 func _ready() -> void:
@@ -105,6 +110,7 @@ func _ready() -> void:
 	player.utility_changed.connect(_on_utility_changed)
 	player.selected_item_changed.connect(_on_selected_item_changed)
 	player.noise_generated.connect(_on_player_noise_generated)
+	player.equipment_trait_used.connect(_on_equipment_trait_used)
 	abandon_button.pressed.connect(_on_abandon_pressed)
 	return_button.pressed.connect(_return_to_corridor)
 	event_choice_a.pressed.connect(_resolve_active_event.bind(true))
@@ -230,6 +236,7 @@ func _on_map_expanded_changed(expanded: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	whistle_cooldown = maxf(whistle_cooldown - delta, 0.0)
 	if _notification_timer > 0.0:
 		_notification_timer -= delta
 		if _notification_timer <= 0.0 and notification:
@@ -338,7 +345,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -585,7 +592,7 @@ func _create_orderlies() -> void:
 		orderly.target = player
 		if orderly is Conductor:
 			orderly.noise_provider = func(): return metro_noise
-			orderly.route_provider = func(): return metro_route
+			orderly.route_provider = _metro_intercept_candidates
 		orderly.tree_exiting.connect(_on_enemy_removed.bind(orderly))
 		add_child(orderly)
 
@@ -594,6 +601,8 @@ func _create_boss() -> void:
 	boss = (LAST_TRAIN_SCENE.instantiate() if run_config.world_id == "metro" else BOSS_SCENE.instantiate()) as SanatoriumBoss
 	boss.position = run_config.boss_position
 	boss.target = player
+	if boss is LastTrainBoss:
+		boss.encounter_provider = func(): return {"anchors": get_tree().get_nodes_in_group("signal_anchors").size(), "tide": metro_tide_level, "window": metro_train_window}
 	boss.tree_exiting.connect(_on_enemy_removed.bind(boss))
 	add_child(boss)
 
@@ -769,6 +778,7 @@ func _update_metro_pressure(delta: float) -> void:
 	if metro_train_window > 0.0:
 		metro_train_window -= delta
 		if metro_train_window <= 0.0:
+			metro_missed_train = true
 			var has_ticket := GameState.has_equipment_trait("missed_train_recovery") and not ticket_recovery_used
 			ticket_recovery_used = ticket_recovery_used or has_ticket
 			metro_train_window = world_rules.train_window(metro_route, has_ticket, true)
@@ -787,6 +797,7 @@ func _activate_metro_route(target: ObjectiveInteractable) -> void:
 		if item.kind == ObjectiveInteractable.Kind.POWER and item != target:
 			item.mark_complete()
 	boss.activate(player)
+	_spawn_signal_anchors()
 	metro_train_window = world_rules.train_window(metro_route, false)
 	if metro_route == "north":
 		metro_noise += 1
@@ -834,12 +845,51 @@ func _on_player_noise_generated(amount: int) -> void:
 	if run_config.world_id != "metro":
 		return
 	metro_noise += amount
-	if GameState.has_equipment_trait("noise_lure"):
-		metro_noise += 1
-		for enemy in get_tree().get_nodes_in_group("metro_enemies"):
-			if enemy is Conductor:
-				enemy._last_seen_position = player.global_position
-				enemy._memory_timer = 8.0
+
+
+func _metro_intercept_candidates() -> Array[Vector2]:
+	var candidates: Array[Vector2] = [Vector2(1376, 608), Vector2(1504, 832)]
+	# The active station exit is deliberately absent: interception may pressure a
+	# connector, never the sole extraction point.
+	if metro_route == "north":
+		candidates.append(Vector2(1664, 512))
+	elif metro_route == "south":
+		candidates.append(Vector2(1472, 992))
+	return candidates
+
+
+func _spawn_signal_anchors() -> void:
+	if run_config.world_id != "metro" or not signal_anchors.is_empty():
+		return
+	var offsets := [Vector2(-120, -72), Vector2(126, 76)]
+	for offset in offsets:
+		var anchor := SIGNAL_ANCHOR_SCENE.instantiate() as SignalAnchor
+		anchor.position = boss.position + offset
+		anchor.tree_exiting.connect(_on_signal_anchor_removed.bind(anchor))
+		add_child(anchor)
+		signal_anchors.append(anchor)
+	_show_notification("车长回声已接入 2 个信号锚：破坏它们可提前进入验票弱化阶段。", 5.0)
+
+
+func _on_signal_anchor_removed(anchor: SignalAnchor) -> void:
+	signal_anchors.erase(anchor)
+	_show_notification("信号锚已切断：剩余 %d。" % signal_anchors.size(), 2.5)
+
+
+func _on_equipment_trait_used(trait_id: String) -> void:
+	if trait_id != "noise_lure" or run_config.world_id != "metro":
+		return
+	if whistle_cooldown > 0.0:
+		_show_notification("站务员哨冷却中：%d 秒" % ceili(whistle_cooldown), 1.5)
+		return
+	whistle_cooldown = 12.0
+	whistle_uses += 1
+	metro_noise += 4
+	for enemy in get_tree().get_nodes_in_group("metro_enemies"):
+		if enemy is Patient or enemy is Orderly:
+			enemy._last_seen_position = player.global_position
+			enemy._memory_timer = 9.0
+	_show_notification("站务员哨已鸣响：附近威胁正在调查你发声的位置。", 3.0)
 
 
 func _create_feedback_layer() -> void:

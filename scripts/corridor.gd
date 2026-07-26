@@ -612,6 +612,7 @@ func _curator_profile_text() -> String:
 	var profile: Dictionary = GameState.player_profile
 	var trial := GameState.get_curator_trial()
 	var lines := [str(profile.get("last_observation", "尚无足够行动数据。")), "行动 %d · 成功 %d · 静默撤离 %d · 风险选择 %d · 清除威胁 %d" % [int(profile.get("runs", 0)), int(profile.get("successful_runs", 0)), int(profile.get("quiet_successes", 0)), int(profile.get("events_taken", 0)), int(profile.get("threats_cleared", 0))]]
+	lines.append("依据：%s" % "；".join(GameState.curator_evidence()))
 	if not trial.is_empty():
 		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward])
 	var recent: Array = profile.get("recent_runs", [])
