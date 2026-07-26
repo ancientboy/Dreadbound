@@ -29,6 +29,8 @@ var warehouse_detail: Label
 var equip_button: Button
 var salvage_button: Button
 var selected_equipment_id := ""
+var salvage_reward_panel: ColorRect
+var salvage_reward_detail: Label
 var walker_position := Vector2(640, 585)
 var walker_velocity := Vector2.ZERO
 var walker_facing := Vector2.RIGHT
@@ -69,6 +71,7 @@ func _ready() -> void:
 	world_button.visible = false
 	deploy_button.visible = false
 	_create_warehouse_panel()
+	_create_salvage_reward_panel()
 	_create_mobile_terminal_panel()
 	_create_curator_controls()
 	_create_respec_control()
@@ -123,6 +126,7 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$HubTitle.position = Vector2(inset, 24)
 	$HubTitle.size = Vector2(viewport_size.x - inset * 2.0, 48)
 	_layout_warehouse(viewport_size)
+	_layout_salvage_reward(viewport_size)
 	queue_redraw()
 
 
@@ -149,6 +153,23 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	var close := warehouse_panel.get_child(warehouse_panel.get_child_count() - 1) as Button
 	close.position = Vector2((panel_width - 250) * 0.5, warehouse_panel.size.y - 72)
 	close.size = Vector2(250, 52)
+
+
+func _layout_salvage_reward(viewport_size: Vector2) -> void:
+	if salvage_reward_panel == null:
+		return
+	var panel_width := minf(560.0, viewport_size.x - 48.0)
+	var panel_height := minf(370.0, viewport_size.y - 72.0)
+	salvage_reward_panel.position = Vector2((viewport_size.x - panel_width) * 0.5, (viewport_size.y - panel_height) * 0.5)
+	salvage_reward_panel.size = Vector2(panel_width, panel_height)
+	var title := salvage_reward_panel.get_child(0) as Label
+	title.position = Vector2(28, 26)
+	title.size = Vector2(panel_width - 56, 42)
+	salvage_reward_detail.position = Vector2(42, 98)
+	salvage_reward_detail.size = Vector2(panel_width - 84, panel_height - 190)
+	var close := salvage_reward_panel.get_child(salvage_reward_panel.get_child_count() - 1) as Button
+	close.position = Vector2((panel_width - 230) * 0.5, panel_height - 76)
+	close.size = Vector2(230, 48)
 
 
 func _process(delta: float) -> void:
@@ -468,6 +489,36 @@ func _create_warehouse_panel() -> void:
 	warehouse_panel.add_child(close)
 
 
+func _create_salvage_reward_panel() -> void:
+	salvage_reward_panel = ColorRect.new()
+	salvage_reward_panel.name = "SalvageReward"
+	salvage_reward_panel.color = Color(0.008, 0.04, 0.035, 0.995)
+	salvage_reward_panel.visible = false
+	# This is the final feedback surface: it must sit above the warehouse and
+	# the terminal on both desktop and mobile, so a successful dismantle is never
+	# mistaken for a silent loss of equipment.
+	salvage_reward_panel.z_index = 260
+	add_child(salvage_reward_panel)
+	var title := Label.new()
+	title.text = "回收结算完成"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color("79ead2"))
+	salvage_reward_panel.add_child(title)
+	salvage_reward_detail = Label.new()
+	salvage_reward_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	salvage_reward_detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	salvage_reward_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	salvage_reward_detail.add_theme_font_size_override("font_size", 20)
+	salvage_reward_detail.add_theme_color_override("font_color", Color("d5f4ea"))
+	salvage_reward_panel.add_child(salvage_reward_detail)
+	var close := Button.new()
+	close.text = "确认收取"
+	close.add_theme_font_size_override("font_size", 18)
+	close.pressed.connect(func(): salvage_reward_panel.visible = false)
+	salvage_reward_panel.add_child(close)
+
+
 func _is_portrait() -> bool:
 	# Mobile browser chrome often leaves a nearly-square game canvas even while
 	# the physical device is landscape. Use the scrollable terminal there too.
@@ -751,7 +802,11 @@ func _salvage_selected() -> void:
 	var item := EquipmentDatabase.get_item(selected_equipment_id)
 	var rewards := GameState.get_disassembly_rewards(item)
 	if GameState.disassemble_item(selected_equipment_id):
+		var fragment_text := "\n因果残片  +%d" % int(rewards.causality_fragments) if int(rewards.causality_fragments) > 0 else ""
 		feedback.text = "已拆解 %s：+%d 回响碎片%s" % [str(item.name), int(rewards.echo_shards), " · +%d 因果残片" % int(rewards.causality_fragments) if int(rewards.causality_fragments) > 0 else ""]
+		salvage_reward_detail.text = "已分解\n%s · %s\n\n获得\n回响碎片  +%d%s" % [str(item.quality), str(item.name), int(rewards.echo_shards), fragment_text]
+		_layout_salvage_reward(get_viewport_rect().size)
+		salvage_reward_panel.visible = true
 		selected_equipment_id = ""
 		_refresh_warehouse()
 		_refresh()

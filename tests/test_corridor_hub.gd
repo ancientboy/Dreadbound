@@ -20,6 +20,10 @@ func _run_test() -> void:
 	corridor._open_warehouse()
 	assert(corridor.warehouse_panel.visible)
 	assert(corridor.warehouse_panel.z_index > corridor.mobile_terminal_panel.z_index)
+	assert(corridor.salvage_reward_panel.z_index > corridor.warehouse_panel.z_index)
+	corridor._layout_salvage_reward(Vector2(720, 420))
+	assert(corridor.salvage_reward_panel.size.x <= 672)
+	assert(corridor.salvage_reward_panel.size.y <= 348)
 	corridor.warehouse_panel.visible = false
 	corridor._close_terminal()
 	assert(not corridor.get_node("Margin").visible)
