@@ -3,12 +3,13 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 21
+const SAVE_VERSION := 22
 const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const MAX_MATERIAL_STACK := 999
 const MAX_LOOT_HISTORY := 40
+const EQUIPMENT_SLOTS := ["weapon_melee", "weapon_ranged", "weapon_shotgun", "charm"]
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
 const PATHWAY_ANCHOR_COST := {"echo_shards": 8, "causality_fragments": 1}
 const LOADOUTS := {
@@ -53,7 +54,7 @@ var selected_loadout := "scavenger"
 var corridor_unlocked := false
 var corridor_intro_seen := false
 var equipment_inventory: Array[String] = ["service_crowbar", "medical_tag"]
-var equipped := {"weapon": "", "charm": ""}
+var equipped := {"weapon_melee": "", "weapon_ranged": "", "weapon_shotgun": "", "charm": ""}
 var active_run_seed := 0
 var last_action_code := ""
 var selected_world := "sanatorium"
@@ -105,28 +106,44 @@ func _ready() -> void:
 
 func get_player_stats() -> Dictionary:
 	var gear := EquipmentDatabase.get_bonuses(equipped)
-	var relic := EquipmentDatabase.get_item(str(equipped.get("weapon", "")))
-	var relic_profile := {}
-	if not relic.is_empty() and relic.has("series"):
-		var level := get_relic_growth(str(equipped.get("weapon", "")))
-		relic_profile = EquipmentDatabase.relic_growth_profile(str(equipped.get("weapon", "")), level)
-		gear.melee_damage += level * 2 if relic.has("melee_damage") else 0
-		gear.ranged_damage += level * 2 if relic.has("ranged_damage") else 0
-		gear.shotgun_damage += level if relic.has("shotgun_damage") else 0
 	var path := get_path_bonuses()
-	var equipped_weapon := str(equipped.get("weapon", ""))
-	var equipped_charm := str(equipped.get("charm", ""))
-	for item_id in [equipped_weapon, equipped_charm]:
+	var equipped_items := equipped_item_ids()
+	for item_id in equipped_items:
+		var relic := EquipmentDatabase.get_item(item_id)
+		if not relic.is_empty() and relic.has("series"):
+			var level := get_relic_growth(item_id)
+			gear.melee_damage += level * 2 if relic.has("melee_damage") else 0
+			gear.ranged_damage += level * 2 if relic.has("ranged_damage") else 0
+			gear.shotgun_damage += level if relic.has("shotgun_damage") else 0
 		var upgraded := EquipmentDatabase.upgraded_bonuses(item_id, int(equipment_levels.get(item_id, 0)))
 		for stat in upgraded:
 			gear[stat] += upgraded[stat]
-	var evolution := current_equipment_evolution(equipped_weapon)
 	var progression := ExchangeEvolution.combined_bonuses(
 		active_combat_style,
-		str(equipment_affixes.get(equipped_weapon, equipment_affixes.get(equipped_charm, ""))),
-		evolution,
+		"",
+		{},
 		heart_aspect,
 	)
+	for item_id in equipped_items:
+		var item_progression := ExchangeEvolution.combined_bonuses(
+			"",
+			str(equipment_affixes.get(item_id, "")),
+			current_equipment_evolution(item_id),
+			{},
+		)
+		for stat in progression:
+			progression[stat] += item_progression[stat]
+	var relic_profiles := {}
+	for attack_type in ["melee", "ranged", "shotgun"]:
+		var weapon_id := get_equipped_weapon_for_attack(attack_type)
+		relic_profiles[attack_type] = EquipmentDatabase.relic_growth_profile(weapon_id, get_relic_growth(weapon_id))
+	var selected_attack_type := str(get_selected_loadout().get("weapon", "melee"))
+	var legacy_relic_profile: Dictionary = relic_profiles.get(selected_attack_type, {})
+	if legacy_relic_profile.is_empty():
+		for attack_type in ["melee", "ranged", "shotgun"]:
+			if not relic_profiles[attack_type].is_empty():
+				legacy_relic_profile = relic_profiles[attack_type]
+				break
 	return {
 		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health) + int(path.max_health) + int(progression.max_health),
 		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0 + float(gear.movement_speed) + float(path.movement_speed) + float(progression.movement_speed),
@@ -134,10 +151,12 @@ func get_player_stats() -> Dictionary:
 		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage) + int(path.ranged_damage) + int(progression.ranged_damage),
 		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage) + int(progression.shotgun_damage),
 		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal) + int(progression.bandage_heal),
-		"attack_range": 76.0 + float(relic_profile.get("melee_range", 0.0)) + float(progression.attack_range),
-		"ranged_range": 430.0 + float(relic_profile.get("ranged_range", 0.0)) + float(progression.ranged_range),
-		"shotgun_range": 235.0 + float(relic_profile.get("shotgun_range", 0.0)) + float(progression.shotgun_range),
-		"relic_profile": relic_profile,
+		"attack_range": 76.0 + float(relic_profiles.melee.get("melee_range", 0.0)) + float(progression.attack_range),
+		"ranged_range": 430.0 + float(relic_profiles.ranged.get("ranged_range", 0.0)) + float(progression.ranged_range),
+		"shotgun_range": 235.0 + float(relic_profiles.shotgun.get("shotgun_range", 0.0)) + float(progression.shotgun_range),
+		"relic_profiles": relic_profiles,
+		# Kept for older callers while v22 transitions runtime use to typed profiles.
+		"relic_profile": legacy_relic_profile,
 	}
 
 
@@ -508,7 +527,7 @@ func record_human_choice(event_type: String, target := "", choice := "", context
 		return {}
 	var event := record_action(event_type, "player", target, choice, context, result)
 	if not event.is_empty():
-		var weapon_id := str(equipped.get("weapon", ""))
+		var weapon_id := get_equipped_weapon_for_attack(str(get_selected_loadout().get("weapon", "melee")))
 		if event_type in ["costly_rescue", "forgive_rescue", "promise_kept"]:
 			record_equipment_use(weapon_id, "rescues", 1)
 		if event_type in ["risk_choice", "anonymous_exploitation", "accept_memory"]:
@@ -790,10 +809,37 @@ func equip_item(item_id: String) -> bool:
 	var item := EquipmentDatabase.get_item(item_id)
 	if item.is_empty():
 		return false
-	equipped[item.slot] = item_id
+	var equipment_slot := EquipmentDatabase.equipment_slot(item_id)
+	if equipment_slot not in EQUIPMENT_SLOTS:
+		return false
+	equipped[equipment_slot] = item_id
 	save_progress()
 	progress_changed.emit()
 	return true
+
+
+func equipped_item_ids() -> Array[String]:
+	var result: Array[String] = []
+	for item_id in equipped.values():
+		var equipped_id := str(item_id)
+		if not equipped_id.is_empty() and not result.has(equipped_id):
+			result.append(equipped_id)
+	return result
+
+
+func is_item_equipped(item_id: String) -> bool:
+	return equipped_item_ids().has(item_id)
+
+
+func get_equipped_weapon_for_attack(attack_type: String) -> String:
+	var exact := str(equipped.get("weapon_%s" % attack_type, ""))
+	if not exact.is_empty():
+		return exact
+	for slot in ["weapon_melee", "weapon_ranged", "weapon_shotgun"]:
+		var item_id := str(equipped.get(slot, ""))
+		if not item_id.is_empty() and EquipmentDatabase.supports_attack(item_id, attack_type):
+			return item_id
+	return ""
 
 
 func disassemble_item(item_id: String) -> bool:
@@ -1040,6 +1086,8 @@ func load_progress() -> void:
 		migrations.append("v20：兑换、材料、合成、十二流派、装备进化与心相")
 	if loaded_version < 21:
 		migrations.append("v21：怪物掉落池、材料背包、唯一藏品与掉落档案")
+	if loaded_version < 22:
+		migrations.append("v22：近战、精确与重型武器独立装备槽")
 	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
@@ -1148,10 +1196,16 @@ func load_progress() -> void:
 		equipment_inventory.assign(["service_crowbar", "medical_tag"])
 	persistent_dungeons.reconcile_inventory(equipment_inventory)
 	var saved_equipped = parsed.get("equipped", {})
+	equipped = {"weapon_melee": "", "weapon_ranged": "", "weapon_shotgun": "", "charm": ""}
 	if saved_equipped is Dictionary:
-		for slot in ["weapon", "charm"]:
-			var item_id := str(saved_equipped.get(slot, equipped[slot]))
-			if equipment_inventory.has(item_id) and EquipmentDatabase.get_item(item_id).get("slot", "") == slot:
+		var legacy_weapon := str(saved_equipped.get("weapon", ""))
+		if equipment_inventory.has(legacy_weapon):
+			var migrated_slot := EquipmentDatabase.equipment_slot(legacy_weapon)
+			if migrated_slot in EQUIPMENT_SLOTS:
+				equipped[migrated_slot] = legacy_weapon
+		for slot in EQUIPMENT_SLOTS:
+			var item_id := str(saved_equipped.get(slot, ""))
+			if equipment_inventory.has(item_id) and EquipmentDatabase.equipment_slot(item_id) == slot:
 				equipped[slot] = item_id
 
 
@@ -1182,7 +1236,7 @@ func _clear_runtime_progress() -> void:
 	corridor_unlocked = false
 	corridor_intro_seen = false
 	equipment_inventory.assign(["service_crowbar", "medical_tag"])
-	equipped = {"weapon": "", "charm": ""}
+	equipped = {"weapon_melee": "", "weapon_ranged": "", "weapon_shotgun": "", "charm": ""}
 	active_run_seed = 0
 	last_action_code = ""
 	selected_world = "sanatorium"

@@ -95,6 +95,8 @@ func _apply_permanent_upgrades() -> void:
 	var state := get_node_or_null("/root/GameState")
 	if state == null:
 		return
+	var loadout: Dictionary = state.get_selected_loadout()
+	current_weapon = Weapon.SHOTGUN if loadout.weapon == "shotgun" else (Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE)
 	var stats: Dictionary = state.get_player_stats()
 	max_health = int(stats.max_health)
 	movement_speed = float(stats.movement_speed)
@@ -105,15 +107,32 @@ func _apply_permanent_upgrades() -> void:
 	attack_range = float(stats.get("attack_range", attack_range))
 	ranged_range = float(stats.get("ranged_range", ranged_range))
 	shotgun_range = float(stats.get("shotgun_range", shotgun_range))
-	relic_profile = stats.get("relic_profile", {}).duplicate(true)
-	equipped_weapon_item = str(state.equipped.get("weapon", ""))
-	var loadout: Dictionary = state.get_selected_loadout()
+	_sync_active_weapon_equipment()
 	ammo = clampi(int(loadout.ammo), 0, max_ammo)
 	bandages = clampi(int(loadout.bandages), 0, max_bandages)
 	shells = clampi(int(loadout.get("shells", 0)), 0, max_shells)
 	sedatives = clampi(int(loadout.get("sedatives", 0)), 0, 2)
 	stimulants = clampi(int(loadout.get("stimulants", 0)), 0, 2)
-	current_weapon = Weapon.SHOTGUN if loadout.weapon == "shotgun" else (Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE)
+
+
+func _weapon_attack_type() -> String:
+	match current_weapon:
+		Weapon.RANGED: return "ranged"
+		Weapon.SHOTGUN: return "shotgun"
+	return "melee"
+
+
+func _sync_active_weapon_equipment() -> void:
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if state == null:
+		equipped_weapon_item = ""
+		relic_profile = {}
+		return
+	equipped_weapon_item = state.get_equipped_weapon_for_attack(_weapon_attack_type())
+	relic_profile = EquipmentDatabase.relic_growth_profile(
+		equipped_weapon_item,
+		state.get_relic_growth(equipped_weapon_item),
+	)
 
 
 func _physics_process(delta: float) -> void:
@@ -367,6 +386,7 @@ func add_ammo(amount: int) -> bool:
 
 func switch_weapon() -> void:
 	current_weapon = (int(current_weapon) + 1) % 3 as Weapon
+	_sync_active_weapon_equipment()
 	pathway_effects.on_weapon_switched()
 	if _active_combat_style() == "relic_engineer":
 		combat_fx.profession_skill("relic_engineer", global_position, facing, 92.0, 0.44)
@@ -376,10 +396,10 @@ func switch_weapon() -> void:
 
 func get_weapon_name() -> String:
 	var relic_level := int(relic_profile.get("level", 0))
-	if equipped_weapon_item == "director_reaper" and current_weapon == Weapon.MELEE:
-		return "主任的缝合镰 · Lv.%d" % relic_level
-	if equipped_weapon_item == "conductor_railgun" and current_weapon in [Weapon.RANGED, Weapon.SHOTGUN]:
-		return "末班导轨枪 · Lv.%d" % relic_level
+	if not equipped_weapon_item.is_empty():
+		var equipped_name := str(EquipmentDatabase.get_item(equipped_weapon_item).get("name", ""))
+		if not equipped_name.is_empty():
+			return "%s · Lv.%d" % [equipped_name, relic_level] if EquipmentDatabase.get_item(equipped_weapon_item).has("series") else equipped_name
 	match current_weapon:
 		Weapon.RANGED: return "手枪"
 		Weapon.SHOTGUN: return "霰弹枪"
@@ -634,11 +654,7 @@ func _draw() -> void:
 	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
 		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
 	var state := get_node_or_null("/root/GameState") as GameProgress
-	var weapon_item := str(state.equipped.get("weapon", "")) if state else ""
-	if weapon_item == "director_reaper" and current_weapon != Weapon.MELEE:
-		weapon_item = ""
-	elif weapon_item == "conductor_railgun" and current_weapon == Weapon.MELEE:
-		weapon_item = ""
+	var weapon_item := state.get_equipped_weapon_for_attack(_weapon_attack_type()) if state else ""
 	var growth_level := state.get_relic_growth(weapon_item) if state else 0
 	var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item, growth_level)
 	var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer

@@ -2061,7 +2061,7 @@ func _select_equipment(item_id: String) -> void:
 	selected_equipment_id = item_id
 	var item := EquipmentDatabase.get_item(item_id)
 	warehouse_preview.texture = EQUIPMENT_ICONS.get(item_id, UNKNOWN_EQUIPMENT_ICON)
-	var equipped_mark := "\n\n当前已装备" if GameState.equipped.get(item.slot, "") == item_id else ""
+	var equipped_mark := "\n\n当前已装备" if GameState.is_item_equipped(item_id) else ""
 	var level := GameState.get_relic_growth(item_id)
 	var growth := "\n成长：Lv.%d/%d（击败对应首领可提升）\n当前形态：%s" % [level, int(item.get("growth_max", 0)), EquipmentDatabase.relic_growth_description(item_id, level)] if item.has("series") else ""
 	var upgrade_level := int(GameState.equipment_levels.get(item_id, 0))
@@ -2071,7 +2071,7 @@ func _select_equipment(item_id: String) -> void:
 	var evolution_name := str(evolution.get("name", "尚未进化"))
 	warehouse_detail.text = "%s // %s\n评级 %d · 强化 Lv.%d/5\n词条：%s · 进化：%s\n槽位：%s\n\n%s\n\n%s%s%s" % [
 		item.quality, item.name, item.rating, upgrade_level, affix_name, evolution_name,
-		"武器" if item.slot == "weapon" else "护符", item.description,
+		EquipmentDatabase.slot_label(item_id), item.description,
 		_equipment_progression_guide(item_id), growth, equipped_mark,
 	]
 	equip_button.disabled = false
