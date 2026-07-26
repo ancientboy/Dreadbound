@@ -22,14 +22,68 @@ const ITEMS := {
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
 
 
-static func weapon_visual(item_id: String) -> Dictionary:
+static func weapon_visual(item_id: String, growth_level := 0) -> Dictionary:
 	var item := get_item(item_id)
+	var growth := relic_growth_profile(item_id, growth_level)
+	var scale := float(growth.get("visual_scale", 1.0))
 	match item_id:
-		"director_reaper": return {"shape": "reaper", "color": Color("c9786a"), "name": "缝合镰"}
-		"conductor_railgun": return {"shape": "railgun", "color": Color("79d8e8"), "name": "导轨枪"}
+		"director_reaper": return {"shape": "reaper", "color": Color("c9786a").lerp(Color("9fe6ff"), float(growth_level) * 0.055), "name": "缝合镰", "scale": scale, "growth": growth_level}
+		"conductor_railgun": return {"shape": "railgun", "color": Color("79d8e8").lerp(Color("d7b1ff"), float(growth_level) * 0.06), "name": "导轨枪", "scale": scale, "growth": growth_level}
 		"insulated_crowbar": return {"shape": "crowbar", "color": Color("8dc5d4"), "name": "绝缘撬棍"}
 		"echo_edge": return {"shape": "blade", "color": Color("66d9c6"), "name": "回响切割器"}
 	return {"shape": "standard", "color": QUALITY_COLORS[clampi(int(item.get("quality_rank", 0)), 0, QUALITY_COLORS.size() - 1)], "name": str(item.get("name", "制式武器"))}
+
+
+static func relic_growth_profile(item_id: String, level: int) -> Dictionary:
+	level = clampi(level, 0, int(get_item(item_id).get("growth_max", 0)))
+	if item_id == "director_reaper":
+		return {
+			"item_id": item_id,
+			"level": level,
+			"melee_range": level * 8.0,
+			"knockback": 0.0 if level < 2 else 14.0 + level * 5.0,
+			"status": "" if level < 3 else "freeze",
+			"status_every": 0 if level < 3 else (2 if level >= 5 else 3),
+			"status_duration": 0.0 if level < 3 else 0.55 + float(level - 3) * 0.18,
+			"visual_scale": 1.0 + float(level) * 0.09,
+		}
+	if item_id == "conductor_railgun":
+		return {
+			"item_id": item_id,
+			"level": level,
+			"ranged_range": level * 45.0,
+			"shotgun_range": level * 15.0,
+			"pierce_targets": 1 + int(level / 2),
+			"knockback": 0.0 if level < 3 else 12.0 + level * 5.0,
+			"status": "" if level < 4 else "paralyze",
+			"status_every": 0 if level < 4 else (2 if level >= 5 else 3),
+			"status_duration": 0.0 if level < 4 else 0.62 + float(level - 4) * 0.22,
+			"visual_scale": 1.0 + float(level) * 0.08,
+		}
+	return {}
+
+
+static func relic_growth_description(item_id: String, level: int) -> String:
+	var profile := relic_growth_profile(item_id, level)
+	if profile.is_empty() or level <= 0:
+		return "尚未觉醒：再次击败对应首领可解锁范围、控制与外形变化。"
+	var effects: Array[String] = []
+	if item_id == "director_reaper":
+		effects.append("近战范围 +%d" % int(profile.melee_range))
+		if float(profile.knockback) > 0.0:
+			effects.append("命中击退 %d" % int(profile.knockback))
+		if not str(profile.status).is_empty():
+			effects.append("每 %d 次命中寒霜定身 %.2f 秒" % [int(profile.status_every), float(profile.status_duration)])
+	elif item_id == "conductor_railgun":
+		effects.append("手枪射程 +%d" % int(profile.ranged_range))
+		effects.append("霰弹射程 +%d" % int(profile.shotgun_range))
+		if int(profile.pierce_targets) > 1:
+			effects.append("贯穿 %d 个目标" % int(profile.pierce_targets))
+		if float(profile.knockback) > 0.0:
+			effects.append("命中击退 %d" % int(profile.knockback))
+		if not str(profile.status).is_empty():
+			effects.append("每 %d 次命中电磁麻痹 %.2f 秒" % [int(profile.status_every), float(profile.status_duration)])
+	return " · ".join(effects)
 
 
 static func boss_growth_item(world_id: String) -> String:

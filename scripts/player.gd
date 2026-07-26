@@ -53,6 +53,9 @@ var _movement_echo_timer := 0.0
 var _audio: AudioStreamPlayer
 var pathway_effects: PathwayEffects
 var combat_fx: CombatFX
+var relic_profile := {}
+var equipped_weapon_item := ""
+var _relic_hit_counter := 0
 
 
 func _ready() -> void:
@@ -84,6 +87,11 @@ func _apply_permanent_upgrades() -> void:
 	ranged_damage = int(stats.ranged_damage)
 	shotgun_damage = int(stats.get("shotgun_damage", shotgun_damage))
 	bandage_heal = int(stats.bandage_heal)
+	attack_range = float(stats.get("attack_range", attack_range))
+	ranged_range = float(stats.get("ranged_range", ranged_range))
+	shotgun_range = float(stats.get("shotgun_range", shotgun_range))
+	relic_profile = stats.get("relic_profile", {}).duplicate(true)
+	equipped_weapon_item = str(state.equipped.get("weapon", ""))
 	var loadout: Dictionary = state.get_selected_loadout()
 	ammo = clampi(int(loadout.ammo), 0, max_ammo)
 	bandages = clampi(int(loadout.bandages), 0, max_bandages)
@@ -167,6 +175,7 @@ func try_attack() -> bool:
 		if offset.length() <= attack_range and facing.dot(offset.normalized()) >= 0.25:
 			var damage := int(attack_damage * pathway_multiplier * (1.35 if insulated and (target is Conductor or target is LastTrainBoss or target is SignalAnchor) else 1.0))
 			target.take_damage(damage, global_position)
+			_apply_relic_hit_effect(target, "melee", offset)
 			combat_fx.impact(target.global_position, offset, true)
 	queue_redraw()
 	return true
@@ -188,21 +197,27 @@ func _try_ranged_attack() -> bool:
 	ammo -= 1
 	_play_tone(520.0, 0.07)
 	noise_generated.emit(3)
-	var best_target: Node2D
-	var best_distance := ranged_range
+	var candidates: Array[Dictionary] = []
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
 		var offset: Vector2 = target.global_position - global_position
 		var distance := offset.length()
-		if distance <= best_distance and facing.dot(offset.normalized()) >= 0.94:
-			best_target = target
-			best_distance = distance
+		if distance <= ranged_range and facing.dot(offset.normalized()) >= 0.94:
+			candidates.append({"target": target, "distance": distance, "offset": offset})
 	_shot_end = facing * ranged_range
-	if best_target:
-		_shot_end = best_target.global_position - global_position
-		best_target.take_damage(int(ranged_damage * pathway_effects.consume_attack_multiplier()), global_position)
-		combat_fx.impact(best_target.global_position, _shot_end)
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary): return float(a.distance) < float(b.distance))
+	if not candidates.is_empty():
+		var multiplier := pathway_effects.consume_attack_multiplier()
+		var target_limit := maxi(1, int(relic_profile.get("pierce_targets", 1)) if equipped_weapon_item == "conductor_railgun" else 1)
+		for index in range(mini(target_limit, candidates.size())):
+			var hit: Dictionary = candidates[index]
+			var hit_target: Node2D = hit.target
+			var hit_offset: Vector2 = hit.offset
+			_shot_end = hit_offset
+			hit_target.take_damage(int(ranged_damage * multiplier), global_position)
+			_apply_relic_hit_effect(hit_target, "ranged", hit_offset)
+			combat_fx.impact(hit_target.global_position, hit_offset, index > 0)
 	else:
 		pathway_effects.consume_attack_multiplier()
 	var visual := _pathway_visual()
@@ -230,6 +245,7 @@ func _try_shotgun_attack() -> bool:
 		if offset.length() <= shotgun_range and facing.dot(offset.normalized()) >= 0.72:
 			var falloff := clampf(1.25 - offset.length() / shotgun_range * 0.55, 0.7, 1.0)
 			target.take_damage(int(shotgun_damage * falloff * pathway_multiplier), global_position)
+			_apply_relic_hit_effect(target, "shotgun", offset)
 			combat_fx.impact(target.global_position, offset, true)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
@@ -285,10 +301,61 @@ func switch_weapon() -> void:
 
 
 func get_weapon_name() -> String:
+	var relic_level := int(relic_profile.get("level", 0))
+	if equipped_weapon_item == "director_reaper" and current_weapon == Weapon.MELEE:
+		return "主任的缝合镰 · Lv.%d" % relic_level
+	if equipped_weapon_item == "conductor_railgun" and current_weapon in [Weapon.RANGED, Weapon.SHOTGUN]:
+		return "末班导轨枪 · Lv.%d" % relic_level
 	match current_weapon:
 		Weapon.RANGED: return "手枪"
 		Weapon.SHOTGUN: return "霰弹枪"
 	return "撬棍"
+
+
+func _apply_relic_hit_effect(target: Node, attack_kind: String, hit_offset: Vector2) -> void:
+	if relic_profile.is_empty():
+		return
+	var compatible := equipped_weapon_item == "director_reaper" and attack_kind == "melee"
+	compatible = compatible or (equipped_weapon_item == "conductor_railgun" and attack_kind in ["ranged", "shotgun"])
+	if not compatible or not is_instance_valid(target):
+		return
+	_relic_hit_counter += 1
+	var knockback := float(relic_profile.get("knockback", 0.0))
+	if knockback > 0.0 and target is Node2D:
+		var resistance := 0.35 if target.is_in_group("bosses") else 1.0
+		(target as Node2D).global_position += hit_offset.normalized() * knockback * resistance
+	var status := str(relic_profile.get("status", ""))
+	var every := int(relic_profile.get("status_every", 0))
+	if status.is_empty() or every <= 0 or _relic_hit_counter % every != 0:
+		return
+	var duration := float(relic_profile.get("status_duration", 0.0))
+	if target.is_in_group("bosses"):
+		duration *= 0.45
+	_apply_control_status(target, status, duration)
+
+
+func _apply_control_status(target: Node, status: String, duration: float) -> void:
+	if duration <= 0.0 or not is_instance_valid(target):
+		return
+	var token := "%s:%d:%d" % [status, Time.get_ticks_msec(), _relic_hit_counter]
+	if not target.has_meta("dreadbound_original_physics_processing"):
+		target.set_meta("dreadbound_original_physics_processing", target.is_physics_processing())
+	target.set_meta("dreadbound_control_token", token)
+	target.set_meta("dreadbound_control_status", status)
+	target.set_physics_process(false)
+	if target is Node2D:
+		combat_fx.status_burst((target as Node2D).global_position, status)
+	var target_id := target.get_instance_id()
+	get_tree().create_timer(duration).timeout.connect(func():
+		var controlled := instance_from_id(target_id)
+		if controlled == null or str(controlled.get_meta("dreadbound_control_token", "")) != token:
+			return
+		var resume_physics := bool(controlled.get_meta("dreadbound_original_physics_processing", true))
+		controlled.remove_meta("dreadbound_control_token")
+		controlled.remove_meta("dreadbound_control_status")
+		controlled.remove_meta("dreadbound_original_physics_processing")
+		controlled.set_physics_process(resume_physics)
+	)
 
 
 func add_shells(amount: int) -> bool:
@@ -476,17 +543,28 @@ func _draw() -> void:
 			draw_line(Vector2(-9, -9), Vector2(8, 9), Color(visual.accent, 0.72), 2.0)
 	var state := get_node_or_null("/root/GameState") as GameProgress
 	var weapon_item := str(state.equipped.get("weapon", "")) if state else ""
-	var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item)
+	if weapon_item == "director_reaper" and current_weapon != Weapon.MELEE:
+		weapon_item = ""
+	elif weapon_item == "conductor_railgun" and current_weapon == Weapon.MELEE:
+		weapon_item = ""
+	var growth_level := state.get_relic_growth(weapon_item) if state else 0
+	var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item, growth_level)
 	var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
+	var weapon_scale := float(weapon_visual.get("scale", 1.0))
+	var growth := int(weapon_visual.get("growth", 0))
 	# Equipment owns the silhouette while loadouts still select the attack mode.
 	if str(weapon_visual.shape) == "reaper":
-		draw_line(facing * 7.0, facing * 41.0, weapon_color.darkened(0.35), 6.0)
-		draw_arc(facing * 42.0, 15.0, facing.angle() - 1.35, facing.angle() + 0.55, 10, weapon_color, 5.0)
+		draw_line(facing * 7.0, facing * (41.0 * weapon_scale), weapon_color.darkened(0.35), 6.0 + growth * 0.5)
+		draw_arc(facing * (42.0 * weapon_scale), 15.0 * weapon_scale, facing.angle() - 1.35, facing.angle() + 0.55, 10, weapon_color, 5.0 + growth * 0.45)
+		if growth >= 3:
+			draw_arc(Vector2.ZERO, 30.0 + growth * 3.0, facing.angle() - 0.8, facing.angle() + 0.55, 18, Color(weapon_color, 0.2), 2.0)
 	elif str(weapon_visual.shape) == "blade":
 		draw_line(facing * 8.0, facing * 40.0, weapon_color, 5.0)
 	elif str(weapon_visual.shape) == "railgun":
-		draw_line(facing * 8.0, facing * 43.0, weapon_color.darkened(0.35), 11.0)
-		draw_line(facing * 12.0, facing * 47.0, weapon_color, 3.0)
+		draw_line(facing * 8.0, facing * (43.0 * weapon_scale), weapon_color.darkened(0.35), 11.0 + growth * 0.7)
+		draw_line(facing * 12.0, facing * (47.0 * weapon_scale), weapon_color, 3.0 + growth * 0.35)
+		for rail in range(1, 1 + int(growth / 2)):
+			draw_line(facing * 15.0 + facing.orthogonal() * rail * 3.0, facing * (43.0 * weapon_scale) + facing.orthogonal() * rail * 3.0, Color(weapon_color, 0.55), 1.5)
 	elif current_weapon == Weapon.RANGED:
 		draw_line(facing * 10.0, facing * 34.0, weapon_color.darkened(0.42), 7.0)
 	elif current_weapon == Weapon.SHOTGUN:

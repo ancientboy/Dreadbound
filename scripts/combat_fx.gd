@@ -86,6 +86,12 @@ func impact(position: Vector2, direction: Vector2, heavy := false) -> void:
 	_spawn("impact", position, direction, 0.0, 0.14 if heavy else 0.10, Color("f2dca1") if heavy else Color("9fe2d0"))
 
 
+func status_burst(position: Vector2, status: String) -> void:
+	var color := Color("a4eaff") if status == "freeze" else Color("c59cff")
+	_spawn("status", position, Vector2.ZERO, 26.0, 0.42, color)
+	_kick_camera(2.4)
+
+
 func _spawn(kind: String, origin: Vector2, payload: Vector2, radius: float, duration: float, color: Color) -> void:
 	for event in _events:
 		if event.active:
@@ -161,3 +167,10 @@ func _draw() -> void:
 					var end: Vector2 = event.origin + Vector2.from_angle(angle) * (18.0 + progress * 34.0)
 					draw_line(start, end, color, 2.0 * fade)
 				draw_circle(event.origin + Vector2(0, -progress * 20.0), 8.0 * fade + 2.0, color)
+			"status":
+				var ring_radius: float = float(event.radius) * (0.55 + progress * 0.8)
+				draw_arc(event.origin, ring_radius, 0.0, TAU, 32, color, 3.5 * fade)
+				for index in range(6):
+					var angle := TAU * float(index) / 6.0 + progress
+					var tip: Vector2 = Vector2(event.origin) + Vector2.from_angle(angle) * ring_radius
+					draw_line(tip - Vector2.from_angle(angle) * 7.0, tip, color, 2.4 * fade)

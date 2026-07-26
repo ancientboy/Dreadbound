@@ -83,8 +83,10 @@ func _ready() -> void:
 func get_player_stats() -> Dictionary:
 	var gear := EquipmentDatabase.get_bonuses(equipped)
 	var relic := EquipmentDatabase.get_item(str(equipped.get("weapon", "")))
+	var relic_profile := {}
 	if not relic.is_empty() and relic.has("series"):
 		var level := get_relic_growth(str(equipped.get("weapon", "")))
+		relic_profile = EquipmentDatabase.relic_growth_profile(str(equipped.get("weapon", "")), level)
 		gear.melee_damage += level * 2 if relic.has("melee_damage") else 0
 		gear.ranged_damage += level * 2 if relic.has("ranged_damage") else 0
 		gear.shotgun_damage += level if relic.has("shotgun_damage") else 0
@@ -96,6 +98,10 @@ func get_player_stats() -> Dictionary:
 		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage) + int(path.ranged_damage),
 		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage),
 		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal),
+		"attack_range": 76.0 + float(relic_profile.get("melee_range", 0.0)),
+		"ranged_range": 430.0 + float(relic_profile.get("ranged_range", 0.0)),
+		"shotgun_range": 235.0 + float(relic_profile.get("shotgun_range", 0.0)),
+		"relic_profile": relic_profile,
 	}
 
 

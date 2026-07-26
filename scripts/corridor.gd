@@ -642,6 +642,7 @@ func _build_run_archive_text(run: Dictionary) -> String:
 	var relic: Dictionary = run.get("relic_growth", {})
 	if not relic.is_empty():
 		lines.append("Boss 遗物成长  %s  ·  Lv.%d" % [str(relic.get("name", "未知遗物")), int(relic.get("level", 0))])
+		lines.append("新形态效果  %s" % EquipmentDatabase.relic_growth_description(str(relic.get("item_id", "")), int(relic.get("level", 0))))
 	lines.append("")
 	lines.append("【人性洞察】")
 	var assessment: Dictionary = run.get("humanity_reflection", {})
@@ -1103,7 +1104,8 @@ func _select_equipment(item_id: String) -> void:
 	selected_equipment_id = item_id
 	var item := EquipmentDatabase.get_item(item_id)
 	var equipped_mark := "\n\n当前已装备" if GameState.equipped.get(item.slot, "") == item_id else ""
-	var growth := "\n成长：Lv.%d/%d（击败对应首领可提升）" % [GameState.get_relic_growth(item_id), int(item.get("growth_max", 0))] if item.has("series") else ""
+	var level := GameState.get_relic_growth(item_id)
+	var growth := "\n成长：Lv.%d/%d（击败对应首领可提升）\n当前形态：%s" % [level, int(item.get("growth_max", 0)), EquipmentDatabase.relic_growth_description(item_id, level)] if item.has("series") else ""
 	warehouse_detail.text = "%s // %s\n评级 %d\n槽位：%s\n\n%s%s%s" % [item.quality, item.name, item.rating, "武器" if item.slot == "weapon" else "护符", item.description, growth, equipped_mark]
 	equip_button.disabled = false
 	salvage_button.disabled = GameState.equipped.values().has(item_id) and GameState.equipment_inventory.count(item_id) <= 1
