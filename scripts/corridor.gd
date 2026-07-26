@@ -397,7 +397,10 @@ func _create_warehouse_panel() -> void:
 	warehouse_panel.size = Vector2(1050, 590)
 	warehouse_panel.color = Color(0.008, 0.035, 0.032, 0.985)
 	warehouse_panel.visible = false
-	warehouse_panel.z_index = 100
+	# The warehouse is opened from inside the terminal.  It must sit above both
+	# terminal variants (desktop Margin and the mobile terminal at z=140),
+	# otherwise its controls are visible but unreachable on phone canvases.
+	warehouse_panel.z_index = 200
 	add_child(warehouse_panel)
 	var title := Label.new()
 	title.position = Vector2(30, 22)
