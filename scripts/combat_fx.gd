@@ -120,8 +120,8 @@ func _draw() -> void:
 		match String(event.kind):
 			"arc":
 				var direction: Vector2 = event.payload
-				var start := direction.angle() - 0.9 + progress * 0.55
-				var finish := direction.angle() - 0.35 + progress * 0.55
+				var start: float = direction.angle() - 0.9 + progress * 0.55
+				var finish: float = direction.angle() - 0.35 + progress * 0.55
 				draw_arc(event.origin, event.radius * (0.82 + progress * 0.2), start, finish, 18, color, 5.0 * fade)
 			"tracer", "pellet":
 				var start_pos: Vector2 = event.origin.lerp(event.payload, progress * 0.24)
@@ -157,7 +157,7 @@ func _draw() -> void:
 			"loot":
 				for index in range(6):
 					var angle := TAU * float(index) / 6.0 - PI * 0.5
-					var start := event.origin + Vector2.from_angle(angle) * (6.0 + progress * 12.0)
-					var end := event.origin + Vector2.from_angle(angle) * (18.0 + progress * 34.0)
+					var start: Vector2 = event.origin + Vector2.from_angle(angle) * (6.0 + progress * 12.0)
+					var end: Vector2 = event.origin + Vector2.from_angle(angle) * (18.0 + progress * 34.0)
 					draw_line(start, end, color, 2.0 * fade)
 				draw_circle(event.origin + Vector2(0, -progress * 20.0), 8.0 * fade + 2.0, color)

@@ -598,7 +598,7 @@ func load_progress() -> void:
 	selected_difficulty = str(parsed.get("selected_difficulty", "standard"))
 	if not DIFFICULTIES.has(selected_difficulty):
 		selected_difficulty = "standard"
-	var saved_relic_growth := parsed.get("relic_growth", {})
+	var saved_relic_growth: Variant = parsed.get("relic_growth", {})
 	relic_growth = saved_relic_growth.duplicate(true) if saved_relic_growth is Dictionary else {}
 	var saved_profile = parsed.get("player_profile", {})
 	if saved_profile is Dictionary:
