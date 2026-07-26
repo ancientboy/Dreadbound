@@ -152,11 +152,14 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	abandon_button.size = Vector2(142, 40)
 	_layout_centered_panel(complete_panel, viewport_size, Vector2(600, 276), Vector2(32, 150))
 	_layout_centered_panel(event_panel, viewport_size, Vector2(680, 380), Vector2(32, 150))
+	_layout_complete_contents()
+	_layout_event_contents()
 	if notification:
 		notification.position = Vector2((viewport_size.x - minf(720.0, viewport_size.x - 64.0)) * 0.5, 104)
 		notification.size = Vector2(minf(720.0, viewport_size.x - 64.0), 76)
 	if reward_panel:
 		_layout_centered_panel(reward_panel, viewport_size, Vector2(940, 410), Vector2(32, 140))
+		_layout_reward_contents()
 
 
 func _layout_centered_panel(panel: Control, viewport_size: Vector2, preferred: Vector2, padding: Vector2) -> void:
@@ -165,6 +168,48 @@ func _layout_centered_panel(panel: Control, viewport_size: Vector2, preferred: V
 	var panel_size := Vector2(minf(preferred.x, viewport_size.x - padding.x * 2.0), minf(preferred.y, viewport_size.y - padding.y))
 	panel.size = panel_size
 	panel.position = Vector2((viewport_size.x - panel_size.x) * 0.5, maxf(108.0, (viewport_size.y - panel_size.y) * 0.5))
+
+
+func _layout_event_contents() -> void:
+	var width := event_panel.size.x
+	event_title.position = Vector2(28, 24)
+	event_title.size = Vector2(width - 56, 48)
+	event_description.position = Vector2(42, 84)
+	event_description.size = Vector2(width - 84, 118)
+	var button_width := (width - 126) * 0.5
+	event_choice_a.position = Vector2(42, 232)
+	event_choice_a.size = Vector2(button_width, 92)
+	event_choice_b.position = Vector2(84 + button_width, 232)
+	event_choice_b.size = Vector2(button_width, 92)
+	event_choice_a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	event_choice_b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+
+func _layout_complete_contents() -> void:
+	var width := complete_panel.size.x
+	result_heading.position = Vector2(28, 28)
+	result_heading.size = Vector2(width - 56, 58)
+	result_summary.position = Vector2(34, 94)
+	result_summary.size = Vector2(width - 68, 86)
+	$Interface/CompletePanel/Restart.position = Vector2(30, 184)
+	$Interface/CompletePanel/Restart.size = Vector2(width - 60, 30)
+	return_button.position = Vector2((width - 260) * 0.5, 210)
+	return_button.size = Vector2(260, 54)
+
+
+func _layout_reward_contents() -> void:
+	var width := reward_panel.size.x
+	var title := reward_panel.get_child(0) as Label
+	title.position = Vector2(28, 22)
+	title.size = Vector2(width - 56, 56)
+	var gap := 18.0
+	var card_width := (width - 70 - gap * 2.0) / 3.0
+	for index in range(reward_buttons.size()):
+		reward_buttons[index].position = Vector2(35 + index * (card_width + gap), 102)
+		reward_buttons[index].size = Vector2(card_width, 228)
+	var note := reward_panel.get_child(reward_panel.get_child_count() - 1) as Label
+	note.position = Vector2(32, 350)
+	note.size = Vector2(width - 64, 36)
 
 
 func _on_map_expanded_changed(expanded: bool) -> void:

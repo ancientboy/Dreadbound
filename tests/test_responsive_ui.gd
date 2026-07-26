@@ -18,6 +18,10 @@ func _run_test() -> void:
 			var panel: Control = main.get_node(panel_path)
 			assert(panel.position.x >= 31.0)
 			assert(panel.position.x + panel.size.x <= viewport_width - 31.0)
+			for child in panel.get_children():
+				if child is Control:
+					assert(child.position.x >= 0.0)
+					assert(child.position.x + child.size.x <= panel.size.x + 0.1)
 	main.queue_free()
 	var corridor = load("res://scenes/corridor.tscn").instantiate()
 	root.add_child(corridor)
@@ -30,6 +34,9 @@ func _run_test() -> void:
 			required_width += action.custom_minimum_size.x
 		required_width += actions.get_theme_constant("separation") * (actions.get_child_count() - 1)
 		assert(required_width <= viewport_width - 40.0)
+		var warehouse: Control = corridor.warehouse_panel
+		assert(warehouse.position.x >= 23.0)
+		assert(warehouse.position.x + warehouse.size.x <= viewport_width - 23.0)
 	corridor.queue_free()
 	print("Responsive UI tests passed")
 	quit()
