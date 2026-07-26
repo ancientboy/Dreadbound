@@ -3,10 +3,12 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 20
+const SAVE_VERSION := 21
 const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
+const MAX_MATERIAL_STACK := 999
+const MAX_LOOT_HISTORY := 40
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
 const PATHWAY_ANCHOR_COST := {"echo_shards": 8, "causality_fragments": 1}
 const LOADOUTS := {
@@ -78,6 +80,7 @@ var persistent_dungeons := PersistentDungeonState.new()
 var active_dungeon_chapter := {}
 var synthesis_embers := 0
 var world_materials := _default_world_materials()
+var loot_history: Array[Dictionary] = []
 var known_recipes: Array[String] = ["basic_weapon_fusion", "basic_charm_fusion"]
 var exchange_cycle := 0
 var exchange_purchases: Array[String] = []
@@ -642,10 +645,36 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	)
 	last_run.dungeon_history = persistent_dungeons.history_for(world_id).slice(0, 4)
 	if success:
-		var material_rewards := ExchangeEvolution.material_rewards(world_id, bool(run_summary.get("boss_defeated", false)), active_run_seed)
+		var material_rewards := {}
+		var carried_materials: Variant = run_summary.get("material_rewards", {})
+		if carried_materials is Dictionary:
+			for material_id in carried_materials:
+				if ExchangeEvolution.MATERIALS.has(str(material_id)):
+					material_rewards[str(material_id)] = maxi(int(carried_materials[material_id]), 0)
+		# Every successful extraction includes one common exploration sample.
+		# Boss cores are guaranteed, but are added here only for legacy callers
+		# that do not yet pass the run's material manifest.
+		var extraction := LootDatabase.source_reward(world_id, "extraction")
+		for material_id in extraction:
+			material_rewards[material_id] = int(material_rewards.get(material_id, 0)) + int(extraction[material_id])
+		if bool(run_summary.get("boss_defeated", false)):
+			var boss_loot := LootDatabase.boss_reward(world_id)
+			var core_id := str(boss_loot.get("material", ""))
+			if not core_id.is_empty() and int(material_rewards.get(core_id, 0)) <= 0:
+				material_rewards[core_id] = int(boss_loot.get("amount", 1))
 		for material_id in material_rewards:
-			world_materials[material_id] = int(world_materials.get(material_id, 0)) + int(material_rewards[material_id])
+			world_materials[material_id] = mini(int(world_materials.get(material_id, 0)) + int(material_rewards[material_id]), MAX_MATERIAL_STACK)
 		last_run.world_materials = material_rewards
+		var run_loot: Variant = run_summary.get("loot_log", [])
+		if run_loot is Array:
+			for entry in run_loot:
+				if entry is Dictionary:
+					var archived: Dictionary = entry.duplicate(true)
+					archived.action_code = action_code
+					archived.world = world_id
+					loot_history.push_front(archived)
+		if loot_history.size() > MAX_LOOT_HISTORY:
+			loot_history.resize(MAX_LOOT_HISTORY)
 		exchange_cycle += 1
 	_append_reflection_snapshot(action_code, world_id, success)
 	active_run_seed = 0
@@ -988,7 +1017,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "synthesis_embers": synthesis_embers, "world_materials": world_materials, "known_recipes": known_recipes, "exchange_cycle": exchange_cycle, "exchange_purchases": exchange_purchases, "pending_synthesis": pending_synthesis, "synthesis_counter": synthesis_counter, "synthesis_pity": synthesis_pity, "equipment_levels": equipment_levels, "equipment_affixes": equipment_affixes, "equipment_evolutions": equipment_evolutions, "equipment_mastery": equipment_mastery, "unlocked_combat_styles": unlocked_combat_styles, "active_combat_style": active_combat_style, "heart_aspect": heart_aspect, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "synthesis_embers": synthesis_embers, "world_materials": world_materials, "loot_history": loot_history, "known_recipes": known_recipes, "exchange_cycle": exchange_cycle, "exchange_purchases": exchange_purchases, "pending_synthesis": pending_synthesis, "synthesis_counter": synthesis_counter, "synthesis_pity": synthesis_pity, "equipment_levels": equipment_levels, "equipment_affixes": equipment_affixes, "equipment_evolutions": equipment_evolutions, "equipment_mastery": equipment_mastery, "unlocked_combat_styles": unlocked_combat_styles, "active_combat_style": active_combat_style, "heart_aspect": heart_aspect, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
 	last_save_health = {"status": "saved", "loaded_version": SAVE_VERSION, "current_version": SAVE_VERSION, "migrations": []}
 	return true
 
@@ -1009,6 +1038,8 @@ func load_progress() -> void:
 		migrations.append("v19：人性镜鉴时间线、异议与反证契约")
 	if loaded_version < 20:
 		migrations.append("v20：兑换、材料、合成、十二流派、装备进化与心相")
+	if loaded_version < 21:
+		migrations.append("v21：怪物掉落池、材料背包、唯一藏品与掉落档案")
 	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
@@ -1034,7 +1065,13 @@ func load_progress() -> void:
 	var saved_materials: Variant = parsed.get("world_materials", {})
 	if saved_materials is Dictionary:
 		for material_id in world_materials:
-			world_materials[material_id] = maxi(int(saved_materials.get(material_id, 0)), 0)
+			world_materials[material_id] = clampi(int(saved_materials.get(material_id, 0)), 0, MAX_MATERIAL_STACK)
+	loot_history.clear()
+	for entry in parsed.get("loot_history", []):
+		if entry is Dictionary:
+			loot_history.append(entry.duplicate(true))
+	if loot_history.size() > MAX_LOOT_HISTORY:
+		loot_history.resize(MAX_LOOT_HISTORY)
 	known_recipes.assign([])
 	for recipe_id in parsed.get("known_recipes", ["basic_weapon_fusion", "basic_charm_fusion"]):
 		known_recipes.append(str(recipe_id))
@@ -1167,6 +1204,7 @@ func _clear_runtime_progress() -> void:
 	active_counter_contract = {}
 	synthesis_embers = 0
 	world_materials = _default_world_materials()
+	loot_history.clear()
 	known_recipes.assign(["basic_weapon_fusion", "basic_charm_fusion"])
 	exchange_cycle = 0
 	exchange_purchases.clear()
