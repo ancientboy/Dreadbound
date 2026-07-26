@@ -6,6 +6,7 @@ extends Node2D
 const MAX_EVENTS := 48
 const COMBAT_ATLAS: Texture2D = preload("res://assets/art/vfx/combat_core.png")
 const METRO_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/metro_enemy_skills.png")
+const PROFESSION_SKILLS: Texture2D = preload("res://assets/art/vfx/profession_skills.png")
 
 var _events: Array[Dictionary] = []
 var _camera: Camera2D
@@ -114,6 +115,26 @@ func metro_enemy_skill(kind: String, position: Vector2, direction := Vector2.DOW
 	_spawn("metro_skill_%d" % int(skill_index), position, direction, size, duration, Color.WHITE)
 
 
+func profession_skill(kind: String, position: Vector2, direction := Vector2.DOWN, size := 96.0, duration := 0.36) -> void:
+	var skill_index: int = int({
+		"barrier_counter": 0,
+		"last_stand": 1,
+		"sacrifice_medic": 2,
+		"choke_control": 3,
+		"weakpoint_sniper": 4,
+		"heavy_suppression": 5,
+		"demolition_traps": 6,
+		"relic_engineer": 7,
+		"psychic_sense": 8,
+		"anomaly_ingestion": 9,
+		"echo_summoner": 10,
+		"aberrant_form": 11,
+	}.get(kind, -1))
+	if skill_index < 0:
+		return
+	_spawn("profession_skill_%d" % skill_index, position, direction, size, duration, Color.WHITE)
+
+
 func _spawn(kind: String, origin: Vector2, payload: Vector2, radius: float, duration: float, color: Color) -> void:
 	for event in _events:
 		if event.active:
@@ -202,6 +223,18 @@ func _draw() -> void:
 						rotation,
 						Color(1.0, 1.0, 1.0, fade),
 					)
+				elif String(event.kind).begins_with("profession_skill_"):
+					var index := int(String(event.kind).trim_prefix("profession_skill_"))
+					var direction: Vector2 = event.payload
+					var rotation := direction.angle() + PI * 0.5 if index in [3, 4, 5] else 0.0
+					var scale_pulse := 0.82 + sin(progress * PI) * 0.24
+					_draw_profession_fx_cell(
+						index,
+						event.origin + (direction * float(event.radius) * 0.12 if index in [3, 4, 5] else Vector2.ZERO),
+						float(event.radius) * scale_pulse,
+						rotation,
+						Color(1.0, 1.0, 1.0, fade),
+					)
 
 
 func _draw_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
@@ -229,6 +262,22 @@ func _draw_metro_fx_cell(index: int, center: Vector2, draw_size: float, rotation
 	draw_set_transform(center, rotation, Vector2.ONE)
 	draw_texture_rect_region(
 		METRO_ENEMY_SKILLS,
+		Rect2(Vector2(-draw_size, -draw_size) * 0.5, Vector2(draw_size, draw_size)),
+		Rect2(column * 128, row * 128, 128, 128),
+		modulate,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_profession_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
+	if PROFESSION_SKILLS == null or PROFESSION_SKILLS.get_size() != Vector2(512, 384):
+		draw_arc(center, draw_size * 0.4, 0.0, TAU, 24, modulate, 3.0)
+		return
+	var column := index % 4
+	var row := floori(float(index) / 4.0)
+	draw_set_transform(center, rotation, Vector2.ONE)
+	draw_texture_rect_region(
+		PROFESSION_SKILLS,
 		Rect2(Vector2(-draw_size, -draw_size) * 0.5, Vector2(draw_size, draw_size)),
 		Rect2(column * 128, row * 128, 128, 128),
 		modulate,

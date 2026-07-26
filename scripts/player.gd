@@ -2,6 +2,10 @@ class_name Player
 extends CharacterBody2D
 
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+const STEADFAST_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/steadfast_spritesheet.png")
+const ARMORER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/armorer_spritesheet.png")
+const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/resonant_spritesheet.png")
+const COMBAT_STYLE_FORMS: Texture2D = preload("res://assets/art/characters/professions/combat_style_forms.png")
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 const DIRECTOR_REAPER_GROWTH: Texture2D = preload("res://assets/art/weapons/director_reaper_growth.png")
 const CONDUCTOR_RAILGUN_GROWTH: Texture2D = preload("res://assets/art/weapons/conductor_railgun_growth.png")
@@ -169,12 +173,13 @@ func _physics_process(delta: float) -> void:
 
 
 func _setup_body_sprite() -> void:
-	if DRIFTER_SPRITESHEET == null or DRIFTER_SPRITESHEET.get_size() != Vector2(288, 256):
+	var body_texture := _profession_body_texture()
+	if body_texture == null or body_texture.get_size() != Vector2(288, 256):
 		push_warning("Drifter sprite sheet unavailable or invalid; using visible fallback silhouette.")
 		return
 	_body_sprite = Sprite2D.new()
 	_body_sprite.name = "BodySprite"
-	_body_sprite.texture = DRIFTER_SPRITESHEET
+	_body_sprite.texture = body_texture
 	_body_sprite.hframes = 6
 	_body_sprite.vframes = 4
 	_body_sprite.position = Vector2(0, -26)
@@ -206,6 +211,7 @@ func try_attack() -> bool:
 		return _try_shotgun_attack()
 	var state := get_node_or_null("/root/GameState")
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
+	_play_attack_style_vfx("melee")
 	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
 	_attack_timer = attack_cooldown + (0.12 if insulated else 0.0)
 	_play_tone(115.0, 0.08)
@@ -271,6 +277,7 @@ func _try_ranged_attack() -> bool:
 	else:
 		pathway_effects.consume_attack_multiplier()
 	var visual := _pathway_visual()
+	_play_attack_style_vfx("ranged")
 	combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, visual.tracer, visual.muzzle)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
@@ -286,6 +293,7 @@ func _try_shotgun_attack() -> bool:
 	_play_tone(190.0, 0.14)
 	noise_generated.emit(4)
 	var visual := _pathway_visual()
+	_play_attack_style_vfx("shotgun")
 	combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, shotgun_range, visual.tracer, visual.muzzle)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	var hit_count := 0
@@ -325,6 +333,8 @@ func take_damage(amount: int, source_position: Vector2) -> bool:
 	var knockback := source_position.direction_to(global_position)
 	global_position += knockback * 12.0
 	health_changed.emit(health, max_health)
+	if _active_combat_style() == "last_stand" and health > 0 and health <= int(max_health * 0.3):
+		combat_fx.profession_skill("last_stand", global_position, facing, 104.0, 0.48)
 	if health == 0:
 		_dead = true
 		velocity = Vector2.ZERO
@@ -358,6 +368,8 @@ func add_ammo(amount: int) -> bool:
 func switch_weapon() -> void:
 	current_weapon = (int(current_weapon) + 1) % 3 as Weapon
 	pathway_effects.on_weapon_switched()
+	if _active_combat_style() == "relic_engineer":
+		combat_fx.profession_skill("relic_engineer", global_position, facing, 92.0, 0.44)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 
@@ -477,6 +489,9 @@ func use_bandage() -> bool:
 	bandages -= 1
 	health = mini(health + int(bandage_heal * pathway_effects.healing_multiplier()), max_health)
 	pathway_effects.on_bandage_used(health_before, max_health)
+	var style := _active_combat_style()
+	if style in ["barrier_counter", "sacrifice_medic", "echo_summoner"]:
+		combat_fx.profession_skill(style, global_position, facing, 104.0, 0.52)
 	_heal_flash = 0.3
 	_play_tone(690.0, 0.12)
 	health_changed.emit(health, max_health)
@@ -556,6 +571,47 @@ func _pathway_visual() -> Dictionary:
 	return {"id": "", "accent": Color("36dbc0"), "tracer": Color("6fe8c8"), "muzzle": Color("f5e6b2")}
 
 
+func _profession_body_texture() -> Texture2D:
+	var state := get_node_or_null("/root/GameState")
+	var pathway := str(state.selected_pathway) if state != null else ""
+	match pathway:
+		"steadfast":
+			return STEADFAST_SPRITESHEET
+		"armorer":
+			return ARMORER_SPRITESHEET
+		"resonant":
+			return RESONANT_SPRITESHEET
+	return DRIFTER_SPRITESHEET
+
+
+func _active_combat_style() -> String:
+	var state := get_node_or_null("/root/GameState")
+	return str(state.active_combat_style) if state != null else ""
+
+
+func play_profession_skill(style_id: String) -> void:
+	if combat_fx == null:
+		return
+	combat_fx.profession_skill(style_id, global_position, facing, 108.0, 0.52)
+
+
+func _play_attack_style_vfx(attack_kind: String) -> void:
+	if combat_fx == null:
+		return
+	var style := _active_combat_style()
+	var should_play := (
+		(style == "barrier_counter" and attack_kind == "melee")
+		or (style == "choke_control" and attack_kind == "melee")
+		or (style == "weakpoint_sniper" and attack_kind == "ranged")
+		or (style == "heavy_suppression" and attack_kind == "shotgun")
+		or (style == "demolition_traps")
+		or (style == "aberrant_form")
+	)
+	if should_play:
+		var size := 116.0 if style in ["choke_control", "heavy_suppression", "demolition_traps"] else 92.0
+		combat_fx.profession_skill(style, global_position + facing * 24.0, facing, size, 0.34)
+
+
 func _emit_pathway_movement_echo() -> void:
 	if _movement_echo_timer > 0.0 or combat_fx == null:
 		return
@@ -566,10 +622,13 @@ func _emit_pathway_movement_echo() -> void:
 		return
 	_movement_echo_timer = 0.14
 	combat_fx.movement_echo(global_position, facing, visual.accent, true)
+	if _active_combat_style() == "psychic_sense" and int(_walk_animation_time * 10.0) % 5 == 0:
+		combat_fx.profession_skill("psychic_sense", global_position, facing, 84.0, 0.34)
 
 
 func _draw() -> void:
 	_draw_flashlight()
+	_draw_combat_style_form()
 	_draw_pathway_state_vfx()
 	var visual := _pathway_visual()
 	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
@@ -627,6 +686,26 @@ func _draw_flashlight() -> void:
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_player_state_cell(0, chest, 25.0, facing.angle(), Color(0.9, 0.9, 0.8, 0.9))
+
+
+func _draw_combat_style_form() -> void:
+	var style_order := [
+		"barrier_counter", "last_stand", "sacrifice_medic", "choke_control",
+		"weakpoint_sniper", "heavy_suppression", "demolition_traps", "relic_engineer",
+		"psychic_sense", "anomaly_ingestion", "echo_summoner", "aberrant_form",
+	]
+	var style_index := style_order.find(_active_combat_style())
+	if style_index < 0 or COMBAT_STYLE_FORMS == null or COMBAT_STYLE_FORMS.get_size() != Vector2(512, 384):
+		return
+	var tint := Color(1.0, 1.0, 1.0, 0.76)
+	if style_index in [9, 11] and pathway_effects != null:
+		tint.a = 0.64 + minf(float(pathway_effects.anomaly_pressure) * 0.05, 0.24)
+	draw_texture_rect_region(
+		COMBAT_STYLE_FORMS,
+		Rect2(-64, -91, 128, 128),
+		Rect2((style_index % 4) * 128, floori(float(style_index) / 4.0) * 128, 128, 128),
+		tint,
+	)
 
 
 func _draw_pathway_state_vfx() -> void:

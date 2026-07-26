@@ -5,6 +5,7 @@ const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_props.png")
 const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
 const METRO_PROPS: Texture2D = preload("res://assets/art/worlds/metro/metro_props.png")
+const STORY_NPCS_IDLE: Texture2D = preload("res://assets/art/characters/npcs/story_npcs_idle.png")
 
 enum Kind { RECORD, POWER, EXIT, FLOODGATE, NPC, SECRET }
 
@@ -15,9 +16,17 @@ enum Kind { RECORD, POWER, EXIT, FLOODGATE, NPC, SECRET }
 
 var completed := false
 var active := false
+var _idle_time := 0.0
 
 
 func _ready() -> void:
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if kind != Kind.NPC:
+		return
+	_idle_time += delta
 	queue_redraw()
 
 
@@ -55,6 +64,10 @@ func mark_active() -> void:
 func _draw() -> void:
 	var color := _display_color()
 	draw_circle(Vector2.ZERO, 44.0, Color(color, 0.06))
+	var npc_row := _story_npc_row()
+	if npc_row >= 0 and STORY_NPCS_IDLE != null and STORY_NPCS_IDLE.get_size() == Vector2(384, 480):
+		_draw_story_npc(npc_row, color)
+		return
 	var metro_prop_index := _metro_prop_index()
 	if metro_prop_index >= 0 and METRO_PROPS != null and METRO_PROPS.get_size() == Vector2(512, 384):
 		var draw_size := Vector2(112, 112) if kind in [Kind.EXIT, Kind.FLOODGATE] else Vector2(92, 92)
@@ -134,9 +147,42 @@ func _metro_prop_index() -> int:
 		Kind.POWER: return 5
 		Kind.EXIT: return 10
 		Kind.FLOODGATE: return 6
-		Kind.NPC: return 2
+		# Narrative people use STORY_NPCS_IDLE. A chapter interaction that has
+		# become a manifest/archive keeps an authored terminal instead.
+		Kind.NPC: return 4
 		Kind.SECRET: return 11
 	return -1
+
+
+func _story_npc_row() -> int:
+	if kind != Kind.NPC:
+		return -1
+	if objective_id == "sanatorium_memory":
+		return 1 if display_name.contains("周衡") else 0
+	if objective_id == "sanatorium_archive" or display_name.contains("周衡"):
+		return 1
+	if objective_id in ["linye_story", "metro_hidden_archive"] and display_name.contains("林雾"):
+		return 2
+	if objective_id == "xuzhao_memory":
+		return 3
+	if objective_id == "ticket_echo_memory":
+		return 4
+	return -1
+
+
+func _draw_story_npc(row: int, color: Color) -> void:
+	var frame := int(_idle_time * 4.5) % 6
+	var modulate := Color(0.58, 0.62, 0.64, 0.74) if completed else Color.WHITE
+	if row == 4:
+		modulate = Color(0.82, 0.94, 1.0, 0.78 if not completed else 0.48)
+	draw_texture_rect_region(
+		STORY_NPCS_IDLE,
+		Rect2(-40, -80, 80, 120),
+		Rect2(frame * 64, row * 96, 64, 96),
+		modulate,
+	)
+	_draw_objective_halo(color)
+	draw_string(UI_FONT, Vector2(-110, 56), display_name, HORIZONTAL_ALIGNMENT_CENTER, 220, 12, color)
 
 
 func _display_color() -> Color:

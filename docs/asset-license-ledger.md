@@ -84,5 +84,11 @@
 | `art_ui_unknown_equipment` | `assets/art/icons/ui/unknown_equipment.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 32×32 锁定装备占位图标 | review |
 | `art_ui_unknown_material` | `assets/art/icons/ui/unknown_material.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 32×32 锁定材料占位图标 | review |
 | `art_corridor_floor_tile` | `assets/art/worlds/corridor/corridor_floor_tile.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 corridor prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 128×128 回廊重复地板模块 | review |
+| `art_player_profession_steadfast` | `assets/art/characters/professions/steadfast_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 profession prompt | `docs/o1-professions-npcs.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest、限色 | review |
+| `art_player_profession_armorer` | `assets/art/characters/professions/armorer_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 profession prompt | `docs/o1-professions-npcs.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest、限色 | review |
+| `art_player_profession_resonant` | `assets/art/characters/professions/resonant_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 profession prompt | `docs/o1-professions-npcs.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest、限色 | review |
+| `art_player_combat_style_forms` | `assets/art/characters/professions/combat_style_forms.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 profession-form prompt | `docs/o1-professions-npcs.md` | 商业生成与修改权 | 4×3 分格、128×128、透明边缘与限色 | review |
+| `art_vfx_profession_skills` | `assets/art/vfx/profession_skills.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 profession-skill prompt | `docs/o1-professions-npcs.md` | 商业生成与修改权 | 4×3 分格、128×128、透明边缘与限色 | review |
+| `art_npc_story_cast` | `assets/art/characters/npcs/story_npcs_idle.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 narrative-NPC prompt | `docs/o1-professions-npcs.md` | 商业生成与修改权 | 五行六帧、64×96、色键与透明边缘清理 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。

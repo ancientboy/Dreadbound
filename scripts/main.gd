@@ -521,6 +521,7 @@ func _resolve_active_event(take_risk: bool) -> void:
 	var pathway_bonus := player.pathway_effects.on_risk_event(take_risk)
 	if pathway_bonus > 0:
 		player.add_echo_shards(pathway_bonus)
+		player.play_profession_skill("anomaly_ingestion")
 		_show_notification("异常摄取：额外获得 %d 碎片，异化压力升至 %d。" % [pathway_bonus, player.pathway_effects.anomaly_pressure], 3.0)
 	match active_event.event_id:
 		"medicine_cabinet":
