@@ -11,6 +11,9 @@ var pending_cloud_payload: Dictionary = {}
 
 
 func _ready() -> void:
+	var profile_theme := Theme.new()
+	profile_theme.default_font = UI_FONT
+	theme = profile_theme
 	_build_ui()
 	CloudSync.auth_completed.connect(_on_cloud_result)
 	CloudSync.sync_completed.connect(_on_cloud_result)
