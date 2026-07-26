@@ -2,6 +2,7 @@ class_name Player
 extends CharacterBody2D
 
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 
 signal health_changed(current: int, maximum: int)
 signal died
@@ -59,9 +60,11 @@ var relic_profile := {}
 var equipped_weapon_item := ""
 var _relic_hit_counter := 0
 var _walk_animation_time := 0.0
+var _body_sprite: Sprite2D
 
 
 func _ready() -> void:
+	_setup_body_sprite()
 	_audio = AudioStreamPlayer.new()
 	add_child(_audio)
 	_apply_permanent_upgrades()
@@ -143,6 +146,7 @@ func _physics_process(delta: float) -> void:
 		_emit_pathway_movement_echo()
 	else:
 		_walk_animation_time = 0.0
+	_sync_body_sprite()
 	if wants_to_attack:
 		try_attack()
 	if wants_to_use_item:
@@ -157,6 +161,35 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if had_visual_effect or velocity.length() > 2.0 or not facing.is_equal_approx(previous_facing):
 		queue_redraw()
+
+
+func _setup_body_sprite() -> void:
+	if DRIFTER_SPRITESHEET == null or DRIFTER_SPRITESHEET.get_size() != Vector2(288, 256):
+		push_warning("Drifter sprite sheet unavailable or invalid; using visible fallback silhouette.")
+		return
+	_body_sprite = Sprite2D.new()
+	_body_sprite.name = "BodySprite"
+	_body_sprite.texture = DRIFTER_SPRITESHEET
+	_body_sprite.hframes = 6
+	_body_sprite.vframes = 4
+	_body_sprite.position = Vector2(0, -26)
+	_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_body_sprite.z_index = 1
+	add_child(_body_sprite)
+	_sync_body_sprite()
+
+
+func _sync_body_sprite() -> void:
+	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+		return
+	var row := 0
+	if absf(facing.x) > absf(facing.y):
+		row = 2 if facing.x > 0.0 else 1
+	elif facing.y < 0.0:
+		row = 3
+	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
+	_body_sprite.frame_coords = Vector2i(frame, row)
+	_body_sprite.modulate = Color("ffb5ad") if _hurt_flash > 0.0 else (Color("c8ffdc") if _heal_flash > 0.0 else Color.WHITE)
 
 
 func try_attack() -> bool:
@@ -534,19 +567,8 @@ func _draw() -> void:
 	draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
 	var visual := _pathway_visual()
 	var pathway_id := str(visual.id)
-	var row := 0
-	if absf(facing.x) > absf(facing.y):
-		row = 2 if facing.x > 0.0 else 1
-	elif facing.y < 0.0:
-		row = 3
-	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
-	var sprite_modulate := Color("ffb5ad") if _hurt_flash > 0.0 else (Color("c8ffdc") if _heal_flash > 0.0 else Color.WHITE)
-	draw_texture_rect_region(
-		DRIFTER_SPRITESHEET,
-		Rect2(-24, -58, 48, 64),
-		Rect2(frame * 48, row * 64, 48, 64),
-		sprite_modulate
-	)
+	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
 	match pathway_id:
 		"steadfast":
 			draw_arc(Vector2(0, 1), 23.0, -2.5, 0.4, 12, Color(visual.accent, 0.62), 2.0)
@@ -583,11 +605,11 @@ func _draw() -> void:
 		for rail in range(1, 1 + int(growth / 2)):
 			draw_line(facing * 15.0 + facing.orthogonal() * rail * 3.0, facing * (43.0 * weapon_scale) + facing.orthogonal() * rail * 3.0, Color(weapon_color, 0.55), 1.5)
 	elif current_weapon == Weapon.RANGED:
-		draw_line(facing * 10.0, facing * 34.0, weapon_color.darkened(0.42), 7.0)
+		_draw_basic_weapon(1)
 	elif current_weapon == Weapon.SHOTGUN:
-		draw_line(facing * 9.0, facing * 37.0, weapon_color.darkened(0.32), 9.0)
+		_draw_basic_weapon(2)
 	else:
-		draw_line(facing * 7.0, facing * 34.0, weapon_color.darkened(0.25), 6.0)
+		_draw_basic_weapon(0)
 	draw_circle(Vector2(-12, 3), 3.5, visual.accent)
 	draw_circle(Vector2(-12, 3), 7.0, Color(visual.accent, 0.13))
 	# Keep combat readability close to the character while the top HUD remains the detailed status view.
@@ -597,3 +619,26 @@ func _draw() -> void:
 	draw_rect(bar_rect, Color("283832"), true)
 	var health_color := Color("5edb9b").lerp(Color("e56e66"), 1.0 - health_ratio)
 	draw_rect(Rect2(bar_rect.position, Vector2(bar_rect.size.x * health_ratio, bar_rect.size.y)), health_color, true)
+
+
+func _draw_basic_weapon(atlas_index: int) -> void:
+	if BASIC_WEAPONS == null or BASIC_WEAPONS.get_size() != Vector2(96, 32):
+		draw_line(facing * 7.0 + Vector2(0, -22), facing * 34.0 + Vector2(0, -22), Color("8a5147"), 6.0)
+		return
+	var hand_position := Vector2(0, -24) + facing * 14.0
+	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
+	draw_texture_rect_region(
+		BASIC_WEAPONS,
+		Rect2(-16, -16, 32, 32),
+		Rect2(atlas_index * 32, 0, 32, 32),
+		Color(1.15, 1.15, 1.15, 1.0) if _attack_flash > 0.0 else Color.WHITE
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_visible_body_fallback(color: Color) -> void:
+	draw_circle(Vector2(0, -42), 9.0, Color("c9c2ae"))
+	draw_rect(Rect2(-13, -34, 26, 31), color)
+	draw_line(Vector2(-8, -4), Vector2(-10, 8), Color("2b343b"), 7.0)
+	draw_line(Vector2(8, -4), Vector2(10, 8), Color("2b343b"), 7.0)
+	draw_circle(Vector2(-12, -25), 3.0, Color("59e1e6"))

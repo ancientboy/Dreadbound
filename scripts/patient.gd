@@ -22,11 +22,13 @@ var _memory_timer := 0.0
 var enemy_label := "病患"
 var facing := Vector2.DOWN
 var _walk_animation_time := 0.0
+var _body_sprite: Sprite2D
 
 
 func _ready() -> void:
 	add_to_group("enemies")
 	health = max_health
+	_setup_body_sprite()
 	queue_redraw()
 
 
@@ -73,6 +75,7 @@ func _physics_process(delta: float) -> void:
 	elif is_instance_valid(target):
 		facing = global_position.direction_to(target.global_position)
 		_walk_animation_time = 0.0
+	_sync_body_sprite()
 	move_and_slide()
 	if had_hurt_flash or velocity.length() > 2.0:
 		queue_redraw()
@@ -91,19 +94,43 @@ func take_damage(amount: int, source_position: Vector2) -> void:
 		queue_redraw()
 
 
-func _draw() -> void:
+func _setup_body_sprite() -> void:
+	if PATIENT_SPRITESHEET == null or PATIENT_SPRITESHEET.get_size() != Vector2(288, 256):
+		push_warning("Patient sprite sheet unavailable or invalid; using visible fallback silhouette.")
+		return
+	_body_sprite = Sprite2D.new()
+	_body_sprite.name = "BodySprite"
+	_body_sprite.texture = PATIENT_SPRITESHEET
+	_body_sprite.hframes = 6
+	_body_sprite.vframes = 4
+	_body_sprite.position = Vector2(0, -26)
+	_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_body_sprite.z_index = 1
+	add_child(_body_sprite)
+	_sync_body_sprite()
+
+
+func _sync_body_sprite() -> void:
+	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+		return
 	var row := 0
 	if absf(facing.x) > absf(facing.y):
 		row = 2 if facing.x > 0.0 else 1
 	elif facing.y < 0.0:
 		row = 3
 	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
-	draw_texture_rect_region(
-		PATIENT_SPRITESHEET,
-		Rect2(-24, -58, 48, 64),
-		Rect2(frame * 48, row * 64, 48, 64),
-		Color("ffafa6") if _hurt_flash > 0.0 else Color.WHITE
-	)
+	_body_sprite.frame_coords = Vector2i(frame, row)
+	_body_sprite.modulate = Color("ffafa6") if _hurt_flash > 0.0 else Color.WHITE
+
+
+func _draw() -> void:
+	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+		var body_color := Color("9f3e38") if _hurt_flash > 0.0 else Color("7d9b76")
+		draw_circle(Vector2(0, -42), 9.0, Color("c9c2ae"))
+		draw_rect(Rect2(-13, -34, 26, 34), body_color)
+		draw_line(Vector2(-8, -2), Vector2(-11, 8), Color("2b343b"), 7.0)
+		draw_line(Vector2(8, -2), Vector2(11, 8), Color("2b343b"), 7.0)
+		draw_circle(Vector2(12, -25), 3.0, Color("d0845a"))
 	if health < max_health:
 		draw_rect(Rect2(-24, -68, 48, 5), Color("261b1a"))
 		draw_rect(Rect2(-24, -68, 48.0 * float(health) / max_health, 5), Color("9f3e38"))

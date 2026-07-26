@@ -2,7 +2,14 @@ extends Control
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const CORRIDOR_FLOOR_TILE: Texture2D = preload("res://assets/art/worlds/corridor/corridor_floor_tile.png")
+const CORRIDOR_TILESET: Texture2D = preload("res://assets/art/worlds/corridor/corridor_tileset.png")
+const CORRIDOR_PROPS: Texture2D = preload("res://assets/art/worlds/corridor/corridor_props.png")
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+const EQUIPMENT_ICONS := {
+	"service_crowbar": preload("res://assets/art/icons/equipment/service_crowbar.png"),
+	"balanced_pistol": preload("res://assets/art/icons/equipment/balanced_pistol.png"),
+	"breach_shotgun": preload("res://assets/art/icons/equipment/breach_shotgun.png"),
+}
 
 const UPGRADE_INFO := {
 	"vitality": ["耐受训练", "生命上限 +10"],
@@ -491,6 +498,17 @@ func _reset_progress() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("071311"))
 	draw_texture_rect(CORRIDOR_FLOOR_TILE, Rect2(0, 112, size.x, size.y - 112), true, Color(0.42, 0.55, 0.52, 0.34))
+	# The first atlas row forms a stable architectural cap instead of leaving the
+	# playable chamber floating in black space.
+	if CORRIDOR_TILESET != null and CORRIDOR_TILESET.get_size() == Vector2(256, 256):
+		for x in range(0, int(size.x) + 32, 32):
+			var tile_column := floori(float(x) / 32.0) % 8
+			draw_texture_rect_region(
+				CORRIDOR_TILESET,
+				Rect2(x, 112, 32, 32),
+				Rect2(tile_column * 32, 0, 32, 32),
+				Color(0.72, 0.78, 0.76, 1.0)
+			)
 	# A layered, walkable chamber: floor lanes, pillars, the Curator's dais and a live gate.
 	for y in range(140, int(size.y), 58):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.1, 0.27, 0.23, 0.27), 1.0)
@@ -502,13 +520,13 @@ func _draw() -> void:
 	for pillar_x in [185.0, size.x - 185.0]:
 		draw_rect(Rect2(pillar_x - 24, 146, 48, size.y - 205), Color("0b211d"))
 		draw_line(Vector2(pillar_x - 24, 146), Vector2(pillar_x - 24, size.y - 58), Color("29594e"), 3.0)
+	_draw_corridor_prop(2, Vector2(185, 254), 128.0, Color(0.7, 0.78, 0.76, 0.82))
+	_draw_corridor_prop(3, Vector2(size.x - 185, 510), 128.0, Color(0.72, 0.78, 0.76, 0.84))
 	# Archive terminal and Curator dais.
 	draw_circle(TERMINAL_POSITION, 88, Color(0.08, 0.34, 0.29, 0.2))
-	draw_rect(Rect2(TERMINAL_POSITION - Vector2(58, 84), Vector2(116, 168)), Color("09231f"))
-	draw_rect(Rect2(TERMINAL_POSITION - Vector2(58, 84), Vector2(116, 168)), Color("4bd3b8"), false, 3.0)
-	draw_line(TERMINAL_POSITION + Vector2(-38, -25), TERMINAL_POSITION + Vector2(38, -25), Color("77f2d8"), 3.0)
+	_draw_corridor_prop(1, TERMINAL_POSITION, 128.0)
 	draw_circle(CURATOR_POSITION, 56, Color(0.23, 0.77, 0.67, 0.14))
-	draw_arc(CURATOR_POSITION, 56, 0, TAU, 48, Color("5de0c5"), 2.0)
+	_draw_corridor_prop(4, CURATOR_POSITION + Vector2(0, 20), 128.0, Color(0.82, 0.9, 0.86, 0.88))
 	draw_circle(CURATOR_POSITION + Vector2(0, -14), 13, Color("b3dbd0"))
 	draw_colored_polygon(PackedVector2Array([CURATOR_POSITION + Vector2(-22, 28), CURATOR_POSITION + Vector2(22, 28), CURATOR_POSITION + Vector2(14, -4), CURATOR_POSITION + Vector2(-14, -4)]), Color("355f57"))
 	# Each unlocked disaster world has a permanent, visible legendary gate.
@@ -522,11 +540,14 @@ func _draw() -> void:
 	elif walker_facing.y < 0.0:
 		walker_row = 3
 	var walker_frame := int(walk_phase / TAU * 6.0) % 6 if walker_velocity.length() > 2.0 else 0
-	draw_texture_rect_region(
-		DRIFTER_SPRITESHEET,
-		Rect2(walker_position + Vector2(-24, -58 + bob), Vector2(48, 64)),
-		Rect2(walker_frame * 48, walker_row * 64, 48, 64)
-	)
+	if DRIFTER_SPRITESHEET != null and DRIFTER_SPRITESHEET.get_size() == Vector2(288, 256):
+		draw_texture_rect_region(
+			DRIFTER_SPRITESHEET,
+			Rect2(walker_position + Vector2(-24, -58 + bob), Vector2(48, 64)),
+			Rect2(walker_frame * 48, walker_row * 64, 48, 64)
+		)
+	else:
+		_draw_walker_fallback(walker_position + Vector2(0, bob))
 	for y in range(10, int(size.y), 8):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.4, 0.8, 0.7, 0.012), 1.0)
 	if _terminal_is_open():
@@ -540,11 +561,34 @@ func _draw() -> void:
 func _draw_legend_gate(position: Vector2, color: Color, title: String, subtitle: String) -> void:
 	var is_near := walker_position.distance_to(position) <= INTERACTION_RANGE
 	draw_circle(position, 116, Color(color, 0.17 if is_near else 0.09))
+	_draw_corridor_prop(0, position + Vector2(0, -7), 128.0, Color(color, 1.0))
 	draw_arc(position, 100, -2.12, 2.12, 48, color, 14.0 if is_near else 10.0)
 	draw_arc(position, 70, -2.12, 2.12, 48, Color(color, 0.55), 2.0)
 	draw_line(position + Vector2(-83, 92), position + Vector2(83, 92), Color(color, 0.62), 2.0)
 	draw_string(UI_FONT, position + Vector2(-112, 138), title, HORIZONTAL_ALIGNMENT_CENTER, 224, 24, Color("d6f6ed"))
 	draw_string(UI_FONT, position + Vector2(-130, 166), subtitle, HORIZONTAL_ALIGNMENT_CENTER, 260, 15, Color(color, 0.88))
+
+
+func _draw_corridor_prop(index: int, center: Vector2, draw_size: float, modulate := Color.WHITE) -> void:
+	if CORRIDOR_PROPS == null or CORRIDOR_PROPS.get_size() != Vector2(384, 256):
+		draw_rect(Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size), Color("182129"))
+		return
+	var column := index % 3
+	var row := floori(float(index) / 3.0)
+	draw_texture_rect_region(
+		CORRIDOR_PROPS,
+		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
+		Rect2(column * 128, row * 128, 128, 128),
+		modulate
+	)
+
+
+func _draw_walker_fallback(position: Vector2) -> void:
+	draw_circle(position + Vector2(0, -42), 9.0, Color("c9c2ae"))
+	draw_rect(Rect2(position + Vector2(-13, -34), Vector2(26, 34)), Color("7d9b76"))
+	draw_line(position + Vector2(-8, -2), position + Vector2(-11, 8), Color("2b343b"), 7.0)
+	draw_line(position + Vector2(8, -2), position + Vector2(11, 8), Color("2b343b"), 7.0)
+	draw_circle(position + Vector2(-12, -25), 3.0, Color("59e1e6"))
 
 
 func _open_terminal() -> void:
@@ -1798,6 +1842,7 @@ func _refresh_warehouse() -> void:
 			var candidate_affix: Dictionary = ExchangeEvolution.AFFIXES.get(str(candidate.affix_id), {})
 			var candidate_button := Button.new()
 			candidate_button.text = "%s · 词条「%s」" % [str(candidate_item.name), str(candidate_affix.get("name", "未知"))]
+			_apply_equipment_icon(candidate_button, str(candidate.item_id))
 			candidate_button.pressed.connect(_choose_synthesis.bind(index))
 			warehouse_list.add_child(candidate_button)
 		var reject := Button.new()
@@ -1817,6 +1862,7 @@ func _refresh_warehouse() -> void:
 		var button := Button.new()
 		var equipped_mark := "◆ " if GameState.equipped.values().has(item_id) else ""
 		button.text = "%s[%s] %s  ×%d  ·  评级 %d" % [equipped_mark, item.quality, item.name, counts[item_id], item.rating]
+		_apply_equipment_icon(button, str(item_id))
 		button.custom_minimum_size = Vector2(450, 62)
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_equipment.bind(item_id))
@@ -1826,6 +1872,13 @@ func _refresh_warehouse() -> void:
 	progress_button.disabled = true
 	progress_button.text = "升级 / 进化"
 	warehouse_detail.text = "仓库容量 %d/%d\n合成余烬 %d\n\n选择一件装备查看评级、升级与进化。" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT, GameState.synthesis_embers]
+
+
+func _apply_equipment_icon(button: Button, item_id: String) -> void:
+	if not EQUIPMENT_ICONS.has(item_id):
+		return
+	button.icon = EQUIPMENT_ICONS[item_id]
+	button.expand_icon = false
 
 
 func _select_equipment(item_id: String) -> void:

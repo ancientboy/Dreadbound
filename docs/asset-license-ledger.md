@@ -41,5 +41,11 @@
 | `art_player_drifter` | `assets/art/characters/drifter/drifter_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
 | `art_enemy_patient` | `assets/art/characters/sanatorium/patient_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
 | `art_sanatorium_room_benchmark` | `assets/art/worlds/sanatorium/sanatorium_room_benchmark.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 1280×720 裁切、128 色索引、Nearest 整理 | review |
+| `art_corridor_props` | `assets/art/worlds/corridor/corridor_props.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、六件分格、128×128 Nearest | review |
+| `art_weapon_world_basic` | `assets/art/weapons/basic_weapons.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、三件分格、32×32 Nearest | review |
+| `art_icon_service_crowbar` | `assets/art/icons/equipment/service_crowbar.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_icon_balanced_pistol` | `assets/art/icons/equipment/balanced_pistol.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_icon_breach_shotgun` | `assets/art/icons/equipment/breach_shotgun.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
+| `art_vfx_combat_core` | `assets/art/vfx/combat_core.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、八格 64×64、透明边缘与限色 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。
