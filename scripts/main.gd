@@ -469,6 +469,7 @@ func _open_risk_event(risk_event: RiskEvent) -> void:
 func _resolve_active_event(take_risk: bool) -> void:
 	if active_event == null:
 		return
+	var resolved_event_id := active_event.event_id
 	var pathway_bonus := player.pathway_effects.on_risk_event(take_risk)
 	if pathway_bonus > 0:
 		player.add_echo_shards(pathway_bonus)
@@ -537,6 +538,7 @@ func _resolve_active_event(take_risk: bool) -> void:
 				player.add_stimulants(1)
 				event_results.append("断路器旁路：保守")
 	active_event.mark_resolved()
+	GameState.record_action("risk_choice", "player", resolved_event_id, "risk" if take_risk else "safe", {"took_risk": take_risk}, {"summary": event_results[-1]})
 	active_event = null
 	event_panel.visible = false
 	_set_gameplay_paused(false)
