@@ -20,6 +20,7 @@ const METRO_MAP_REGIONS := [
 	{"id": "south_platform", "name": "南站台", "rect": Rect2(1536, 960, 672, 352)},
 	{"id": "transfer", "name": "换乘天桥", "rect": Rect2(64, 992, 640, 288)},
 ]
+const METRO_SECRET_REGION := {"id": "lost_passenger_level", "name": "失踪乘客维护层", "rect": Rect2(1504, 960, 704, 320), "secret": true}
 const CONTENT_SLOTS := [
 	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
 	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),
@@ -50,6 +51,7 @@ var causal_chain := ""
 var metro_route_positions := {}
 var metro_switch_order: Array[int] = []
 var metro_switch_route := "north"
+var revealed_secret_regions: Array[String] = []
 
 
 func _init(run_seed: int, requested_world := "sanatorium", requested_difficulty := "standard") -> void:
@@ -185,6 +187,8 @@ func map_regions() -> Array[Dictionary]:
 	if world_id == "metro":
 		var metro_regions: Array[Dictionary] = []
 		metro_regions.assign(METRO_MAP_REGIONS.duplicate(true))
+		if revealed_secret_regions.has("lost_passenger_level"):
+			metro_regions.append(METRO_SECRET_REGION.duplicate(true))
 		return metro_regions
 	var regions: Array[Dictionary] = []
 	var index := 0

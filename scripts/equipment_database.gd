@@ -14,8 +14,9 @@ const ITEMS := {
 	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "trait": "noise_lure", "description": "T / 吹哨主动诱引附近敌人 · 冷却 12 秒 · 武器伤害 +3", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
 	"insulated_crowbar": {"name": "绝缘撬棍", "quality": "回响", "quality_rank": 2, "slot": "weapon", "rating": 158, "trait": "signal_anchor_damage", "description": "对检票员/车长近战伤害 +35% · 冷却 +0.12 秒 · 生命上限 -4", "melee_damage": 11, "max_health": -4},
 	"last_ticket": {"name": "末班票根", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 182, "trait": "missed_train_recovery", "description": "首次错过车次时补救窗口延长 15 秒 · 生命上限 +6", "max_health": 6},
-	"director_reaper": {"name": "主任的缝合镰", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "rating": 218, "series": "缝合遗物", "growth_max": 5, "melee_damage": 14, "description": "成长武器 · 近战伤害 +14；击败疗养院首领可获得成长层数，强化重击范围。"},
-	"conductor_railgun": {"name": "末班导轨枪", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "rating": 224, "series": "末班遗物", "growth_max": 5, "ranged_damage": 11, "shotgun_damage": 5, "description": "成长武器 · 手枪伤害 +11、霰弹伤害 +5；击败车长回声可获得成长层数，增强弹道。"},
+	"linye_pass": {"name": "林雾的失踪乘客通行牌", "quality": "剧情唯一", "quality_rank": 4, "slot": "charm", "rating": 205, "trait": "lost_passenger_guide", "unique": true, "max_health": 8, "movement_speed": 5.0, "description": "世界唯一 · 维护层向导留下的通行牌；生命上限 +8、移动速度 +5。再次进入末班线时会唤起林雾的记忆。"},
+	"director_reaper": {"name": "主任的缝合镰", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "rating": 218, "series": "缝合遗物", "unique": true, "growth_max": 5, "melee_damage": 14, "description": "成长武器 · 世界唯一 · 近战伤害 +14；再次击败疗养院首领只提供成长层数。"},
+	"conductor_railgun": {"name": "末班导轨枪", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "rating": 224, "series": "末班遗物", "unique": true, "growth_max": 5, "ranged_damage": 11, "shotgun_damage": 5, "description": "成长武器 · 世界唯一 · 手枪伤害 +11、霰弹伤害 +5；再次击败车长回声只提供成长层数。"},
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]

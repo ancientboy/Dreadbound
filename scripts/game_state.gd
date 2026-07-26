@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 17
+const SAVE_VERSION := 18
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -69,6 +69,8 @@ var faction_simulator := FactionSimulator.new()
 var humanity_profiler := HumanityProfile.new()
 var curator_v2 := CuratorV2.new()
 var last_reflection := {}
+var persistent_dungeons := PersistentDungeonState.new()
+var active_dungeon_chapter := {}
 
 
 func _ready() -> void:
@@ -365,9 +367,49 @@ func respec_pathway() -> bool:
 func begin_run(requested_seed := 0) -> int:
 	active_run_seed = requested_seed if requested_seed != 0 else int(Time.get_unix_time_from_system()) ^ Time.get_ticks_msec()
 	last_action_code = ("MET" if selected_world == "metro" else "SAN") + "-%08X" % absi(active_run_seed)
+	active_dungeon_chapter = persistent_dungeons.begin_visit(selected_world, last_action_code, world_state)
 	record_action("run_started", "system", selected_world, "", {"seed": active_run_seed, "difficulty": selected_difficulty})
+	record_action("dungeon_chapter_loaded", "system", selected_world, str(active_dungeon_chapter.get("chapter", "")), {
+		"visit": int(active_dungeon_chapter.get("visit", 0)),
+		"cause": str(active_dungeon_chapter.get("cause", "")),
+	})
 	save_progress()
 	return active_run_seed
+
+
+func dungeon_chapter(world_id := "") -> Dictionary:
+	var target_world := selected_world if world_id.is_empty() else world_id
+	if target_world == selected_world and not active_dungeon_chapter.is_empty():
+		return active_dungeon_chapter.duplicate(true)
+	return persistent_dungeons.chapter_snapshot(target_world, world_state)
+
+
+func resolve_metro_narrative(choice: String) -> Dictionary:
+	if selected_world != "metro" or last_action_code.is_empty():
+		return {}
+	var result := persistent_dungeons.resolve_metro_choice(choice, world_state, last_action_code)
+	if not bool(result.get("accepted", false)):
+		return result
+	var context := {
+		"chapter": str(result.get("chapter", "")),
+		"hidden_opened": bool(result.get("hidden_opened", false)),
+	}
+	if str(result.get("event_type", "")) in HumanityProfile.EVENT_WEIGHTS or str(result.get("event_type", "")) == "promise_made":
+		record_human_choice(str(result.event_type), "linye", choice, context, {"summary": str(result.summary)})
+	else:
+		record_action(str(result.event_type), "player", "linye", choice, context, {"summary": str(result.summary)})
+	active_dungeon_chapter = persistent_dungeons.chapter_snapshot("metro", world_state)
+	save_progress()
+	progress_changed.emit()
+	return result
+
+
+func dungeon_hidden_open(world_id: String, area_id: String) -> bool:
+	return persistent_dungeons.has_opened_area(world_id, area_id)
+
+
+func dungeon_reward_pool(pool: Array[String]) -> Array[String]:
+	return persistent_dungeons.filter_reward_pool(pool)
 
 
 func record_action(event_type: String, actor := "player", target := "", choice := "", context := {}, result := {}) -> Dictionary:
@@ -420,9 +462,14 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	if success:
 		for item_id in equipment_rewards:
 			if EquipmentDatabase.ITEMS.has(item_id):
+				if persistent_dungeons.is_unique(item_id) and persistent_dungeons.is_claimed(item_id):
+					overflow_shards += 3 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
+					continue
 				if equipment_inventory.size() < MAX_EQUIPMENT:
 					equipment_inventory.append(item_id)
 					banked_equipment.append(item_id)
+					if persistent_dungeons.is_unique(item_id):
+						persistent_dungeons.claim_unique(item_id, action_code, str(run_summary.get("world", selected_world)))
 				else:
 					overflow_shards += 1 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
 	banked += overflow_shards
@@ -476,7 +523,15 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	last_run.humanity_reflection = last_reflection
 	last_run.action_events = action_ledger.events_for_run(action_code)
 	last_run.world_consequences = settlement_event.get("consequences", [])
+	last_run.dungeon_memory = persistent_dungeons.settle_visit(
+		world_id,
+		success,
+		action_code,
+		bool(run_summary.get("boss_defeated", false)),
+	)
+	last_run.dungeon_history = persistent_dungeons.history_for(world_id).slice(0, 4)
 	active_run_seed = 0
+	active_dungeon_chapter = {}
 	save_progress()
 	progress_changed.emit()
 	return banked
@@ -617,7 +672,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
 	return true
 
 
@@ -632,8 +687,11 @@ func load_progress() -> void:
 		return
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
+	persistent_dungeons.load_dict(parsed.get("persistent_dungeons", {}))
 	var saved_reflection: Variant = parsed.get("last_reflection", {})
 	last_reflection = saved_reflection.duplicate(true) if saved_reflection is Dictionary else {}
+	var saved_chapter: Variant = parsed.get("active_dungeon_chapter", {})
+	active_dungeon_chapter = saved_chapter.duplicate(true) if saved_chapter is Dictionary else {}
 	echo_shards = maxi(int(parsed.get("echo_shards", 0)), 0)
 	causality_fragments = maxi(int(parsed.get("causality_fragments", 0)), 0)
 	var saved_upgrades = parsed.get("upgrades", {})
@@ -679,6 +737,7 @@ func load_progress() -> void:
 			equipment_inventory.append(str(item_id))
 	if equipment_inventory.is_empty():
 		equipment_inventory.assign(["service_crowbar", "medical_tag"])
+	persistent_dungeons.reconcile_inventory(equipment_inventory)
 	var saved_equipped = parsed.get("equipped", {})
 	if saved_equipped is Dictionary:
 		for slot in ["weapon", "charm"]:
@@ -718,6 +777,10 @@ func _clear_runtime_progress() -> void:
 	active_run_seed = 0
 	last_action_code = ""
 	selected_world = "sanatorium"
+	active_dungeon_chapter = {}
+	persistent_dungeons.reset()
+	action_ledger.clear()
+	world_state.reset()
 	selected_difficulty = "standard"
 	relic_growth = {}
 	player_profile = _default_player_profile()
@@ -726,8 +789,6 @@ func _clear_runtime_progress() -> void:
 	pathway_respec_used = false
 	claimed_milestones.clear()
 	pathway_migration_refund = 0
-	action_ledger.clear()
-	world_state.reset()
 	last_reflection = {}
 
 

@@ -21,6 +21,9 @@ const METRO_FLOODGATE_POSITION := Vector2(1456, 864)
 const METRO_DRAINED_ZONE := Rect2(960, 704, 480, 192)
 const METRO_FLOODGATE_DURATION := 28.0
 const METRO_ZERO_ROUTE_DURATION := 42.0
+const METRO_HIDDEN_GATE_RECT := Rect2(1472, 1088, 32, 128)
+const METRO_NPC_POSITION := Vector2(1344, 1136)
+const METRO_HIDDEN_ARCHIVE_POSITION := Vector2(1888, 1136)
 
 @onready var player: Player = $Player
 @onready var objective: Label = $Interface/TopBar/Objective
@@ -91,6 +94,10 @@ var metro_switch_failures := 0
 var curator_contract := {}
 var curator_effects := {}
 var curator_floodgate_used := false
+var narrative_chapter := {}
+var active_narrative := {}
+var active_narrative_target: ObjectiveInteractable
+var hidden_gate: StaticBody2D
 
 
 func _ready() -> void:
@@ -99,6 +106,9 @@ func _ready() -> void:
 	if run_seed == 0:
 		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
 	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world, GameState.selected_difficulty)
+	narrative_chapter = GameState.dungeon_chapter(run_config.world_id)
+	if bool(narrative_chapter.get("hidden_open", false)):
+		run_config.revealed_secret_regions.append("lost_passenger_level")
 	curator_contract = GameState.get_curator_trial()
 	curator_effects = GameState.get_active_contract_effects()
 	world_rules = WorldRules.new(run_config.world_id)
@@ -113,6 +123,7 @@ func _ready() -> void:
 	fog_of_war.exploration_changed.connect(minimap.queue_redraw)
 	minimap.expanded_changed.connect(_on_map_expanded_changed)
 	_create_mission_interactables()
+	_create_persistent_narrative()
 	_create_patients()
 	_create_crawlers()
 	_create_orderlies()
@@ -145,7 +156,8 @@ func _ready() -> void:
 	$Interface/TopBar/Title.text = "%s // %s" % [run_config.mission_title, run_config.action_code]
 	if run_config.world_id == "metro":
 		var contract_note := "\n司仪契约：%s" % str(curator_contract.title) if not curator_contract.is_empty() else ""
-		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。%s" % contract_note, 6.0)
+		var chapter_note := "\n%s：%s" % [str(narrative_chapter.get("title", "")), str(narrative_chapter.get("briefing", ""))]
+		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。%s%s" % [contract_note, chapter_note], 8.0)
 	queue_redraw()
 
 
@@ -313,7 +325,9 @@ func _process(delta: float) -> void:
 	var target := _nearest_interactable()
 	prompt_panel.visible = target != null
 	if target:
-		if run_config.world_id == "metro" and not metro_route.is_empty() and target.kind == ObjectiveInteractable.Kind.EXIT and target.objective_id != "metro_exit_%s" % metro_route:
+		if target.kind == ObjectiveInteractable.Kind.SECRET and not GameState.dungeon_hidden_open("metro", "lost_passenger_level"):
+			prompt.text = "维护层封闭 // 林雾说下一次潮汐会改变门锁"
+		elif run_config.world_id == "metro" and not metro_route.is_empty() and target.kind == ObjectiveInteractable.Kind.EXIT and target.objective_id != "metro_exit_%s" % metro_route:
 			prompt.text = "列车未停靠此站 // 前往%s站台" % ("北" if metro_route == "north" else "南")
 		else:
 			prompt.text = target.get_prompt(collected_records.size(), power_restored, total_records)
@@ -352,6 +366,14 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 				_complete_mission()
 		ObjectiveInteractable.Kind.FLOODGATE:
 			_activate_metro_floodgate(target)
+		ObjectiveInteractable.Kind.NPC:
+			_open_persistent_narrative(target)
+		ObjectiveInteractable.Kind.SECRET:
+			if GameState.dungeon_hidden_open("metro", "lost_passenger_level"):
+				target.mark_complete()
+				_open_hidden_gate()
+			else:
+				_show_notification("门锁拒绝当前行动代码。这里等待的是你下一次进入后的选择。", 4.0)
 	_update_mission_ui()
 
 
@@ -470,6 +492,9 @@ func _open_risk_event(risk_event: RiskEvent) -> void:
 
 
 func _resolve_active_event(take_risk: bool) -> void:
+	if not active_narrative.is_empty():
+		_resolve_persistent_narrative(take_risk)
+		return
 	if active_event == null:
 		return
 	var resolved_event_id := active_event.event_id
@@ -614,6 +639,131 @@ func _create_mission_interactables() -> void:
 		_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "动态撤离出口", run_config.exit_position)
 
 
+func _create_persistent_narrative() -> void:
+	if run_config.world_id != "metro":
+		return
+	var already_open := bool(narrative_chapter.get("hidden_open", false))
+	if already_open:
+		_add_interactable(
+			ObjectiveInteractable.Kind.NPC,
+			"metro_hidden_archive",
+			str(narrative_chapter.get("npc_title", "维护层向导 · 林雾")),
+			METRO_HIDDEN_ARCHIVE_POSITION,
+		)
+	else:
+		_add_interactable(
+			ObjectiveInteractable.Kind.NPC,
+			"linye_story",
+			str(narrative_chapter.get("npc_title", "失踪乘客 · 林雾")),
+			METRO_NPC_POSITION,
+		)
+	_add_interactable(
+		ObjectiveInteractable.Kind.SECRET,
+		"lost_passenger_gate",
+		"失踪乘客维护层",
+		Vector2(METRO_HIDDEN_GATE_RECT.position.x - 44.0, METRO_HIDDEN_GATE_RECT.get_center().y),
+	)
+	if already_open:
+		_open_hidden_gate()
+	else:
+		hidden_gate = _create_blocking_body(METRO_HIDDEN_GATE_RECT)
+
+
+func _open_persistent_narrative(target: ObjectiveInteractable) -> void:
+	if target.objective_id == "metro_hidden_archive":
+		active_narrative = _hidden_archive_presentation()
+	else:
+		active_narrative = narrative_chapter.duplicate(true)
+	active_narrative_target = target
+	event_title.text = str(active_narrative.get("npc_title", active_narrative.get("title", "副本记忆")))
+	var cause := str(active_narrative.get("cause", ""))
+	event_description.text = str(active_narrative.get("npc_description", active_narrative.get("briefing", "")))
+	if not cause.is_empty() and not cause.contains("第一次进入"):
+		event_description.text += "\n\n变化来源：%s" % cause
+	event_choice_a.text = str(active_narrative.get("choice_a", "继续"))
+	event_choice_b.text = str(active_narrative.get("choice_b", "离开"))
+	event_panel.visible = true
+	prompt_panel.visible = false
+	_set_gameplay_paused(true)
+
+
+func _resolve_persistent_narrative(choose_a: bool) -> void:
+	var choice_key := "choice_a_id" if choose_a else "choice_b_id"
+	var choice := str(active_narrative.get(choice_key, ""))
+	var result := GameState.resolve_metro_narrative(choice)
+	if not bool(result.get("accepted", false)):
+		_show_notification("这段记忆没有回应当前选择。", 3.0)
+	else:
+		event_results.append("剧情：%s" % str(result.get("summary", "")))
+		if active_narrative_target:
+			active_narrative_target.mark_complete()
+		if bool(result.get("hidden_opened", false)):
+			_open_hidden_gate()
+			_add_hidden_archive_interaction()
+		var unique_offer := str(result.get("unique_offer", ""))
+		if not unique_offer.is_empty() and not run_equipment_rewards.has(unique_offer) and GameState.dungeon_reward_pool([unique_offer]).has(unique_offer):
+			run_equipment_rewards.append(unique_offer)
+			_show_notification("%s\n剧情唯一物品已暂存，成功撤离后入库。" % str(result.get("summary", "")), 6.0)
+		else:
+			_show_notification(str(result.get("summary", "")), 6.0)
+		narrative_chapter = GameState.dungeon_chapter("metro")
+	active_narrative = {}
+	active_narrative_target = null
+	event_panel.visible = false
+	_set_gameplay_paused(false)
+	_update_mission_ui()
+	queue_redraw()
+
+
+func _hidden_archive_presentation() -> Dictionary:
+	var chapter := GameState.dungeon_chapter("metro")
+	var continuing_npc := str(chapter.get("chapter", "")) in ["guided_aftermath", "resistance_aftermath"]
+	return {
+		"title": str(chapter.get("title", "失踪乘客维护层")),
+		"npc_title": str(chapter.get("npc_title", "失踪乘客名单")),
+		"npc_description": "%s\n墙上的名单同时记录生者与回声。你上一次的决定让这扇门出现在地图上。" % str(chapter.get("npc_description", "")),
+		"choice_a": "保存名单：让林雾继续辨认" if continuing_npc else "面对回声：承认因果",
+		"choice_b": "抹除名单：阻止阵营利用" if continuing_npc else "切断回声：永久静默",
+		"choice_a_id": "preserve_manifest" if continuing_npc else "face_echo",
+		"choice_b_id": "erase_manifest" if continuing_npc else "silence_echo",
+		"cause": str(chapter.get("cause", "")),
+	}
+
+
+func _open_hidden_gate() -> void:
+	if is_instance_valid(hidden_gate):
+		hidden_gate.queue_free()
+	hidden_gate = null
+	if not run_config.revealed_secret_regions.has("lost_passenger_level"):
+		run_config.revealed_secret_regions.append("lost_passenger_level")
+	if minimap:
+		minimap.queue_redraw()
+	queue_redraw()
+
+
+func _add_hidden_archive_interaction() -> void:
+	if interactables.any(func(item): return item.objective_id == "metro_hidden_archive"):
+		return
+	_add_interactable(
+		ObjectiveInteractable.Kind.NPC,
+		"metro_hidden_archive",
+		"失踪乘客名单",
+		METRO_HIDDEN_ARCHIVE_POSITION,
+	)
+
+
+func _create_blocking_body(rect: Rect2) -> StaticBody2D:
+	var body := StaticBody2D.new()
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = rect.size
+	collision.shape = shape
+	body.position = rect.get_center()
+	body.add_child(collision)
+	add_child(body)
+	return body
+
+
 func _metro_next_switch_name() -> String:
 	var order_index := collected_records.size()
 	if order_index >= run_config.metro_switch_order.size():
@@ -750,12 +900,15 @@ func _pickup_color(kind: int) -> Color:
 func _spawn_reward_chest(at: Vector2) -> RewardChest:
 	var chest := RewardChest.new()
 	chest.position = at
-	var pool := world_rules.reward_pool()
+	var pool := GameState.dungeon_reward_pool(world_rules.reward_pool())
+	if pool.size() < 3:
+		pool = world_rules.reward_pool()
 	pool.shuffle()
 	chest.candidates.assign(pool.slice(0, 3))
 	var difficulty := GameState.get_difficulty()
-	if _loot_rng.randf() <= float(difficulty.boss_drop):
-		chest.candidates[0] = EquipmentDatabase.boss_growth_item(run_config.world_id)
+	var boss_item := EquipmentDatabase.boss_growth_item(run_config.world_id)
+	if _loot_rng.randf() <= float(difficulty.boss_drop) and GameState.dungeon_reward_pool([boss_item]).has(boss_item):
+		chest.candidates[0] = boss_item
 	add_child.call_deferred(chest)
 	reward_chests.append(chest)
 	_show_notification("主要威胁已清除：异常回收箱已生成\n可选择一件装备，成功撤离后入库", 5.0)
@@ -1176,6 +1329,11 @@ func _draw() -> void:
 			draw_line(DynamicRunConfig.METRO_NORTH_SWITCH, DynamicRunConfig.METRO_NORTH_EXIT, Color("a4f6cf"), 5.0)
 		elif metro_route == "south":
 			draw_line(DynamicRunConfig.METRO_SOUTH_SWITCH, DynamicRunConfig.METRO_SOUTH_EXIT, Color("f0b568"), 5.0)
+		if run_config.revealed_secret_regions.has("lost_passenger_level"):
+			var secret_rect: Rect2 = DynamicRunConfig.METRO_SECRET_REGION.rect
+			draw_rect(secret_rect, Color(0.18, 0.09, 0.25, 0.42), true)
+			draw_rect(secret_rect, Color("b88be2"), false, 4.0)
+			draw_string(UI_FONT, secret_rect.position + Vector2(24, 72), "失踪乘客维护层 // 副本记忆已显现", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 20, Color("d9b8ef"))
 	_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():

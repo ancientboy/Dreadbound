@@ -659,6 +659,23 @@ func _build_run_archive_text(run: Dictionary) -> String:
 	var faction_turn: Dictionary = run.get("faction_turn", {})
 	for change in faction_turn.get("changes", []):
 		lines.append("· %s" % _world_change_text(change))
+	var dungeon_memory: Dictionary = run.get("dungeon_memory", {})
+	if not dungeon_memory.is_empty():
+		lines.append("")
+		lines.append("【副本记忆】")
+		lines.append("第 %d 次进入 · 已完成 %d 次 · 当前章节 %s" % [
+			int(dungeon_memory.get("visits", 0)),
+			int(dungeon_memory.get("completed_runs", 0)),
+			str(dungeon_memory.get("chapter", "未知")),
+		])
+		var dungeon_history: Array = run.get("dungeon_history", [])
+		for memory in dungeon_history:
+			var choice := str(memory.get("choice", ""))
+			if choice in ["extracted", "lost"]:
+				continue
+			lines.append("· 第 %d 次：%s" % [int(memory.get("visit", 0)), str(memory.get("summary", ""))])
+		if GameState.dungeon_hidden_open(str(dungeon_memory.get("world_id", "")), "lost_passenger_level"):
+			lines.append("· 隐藏区域：失踪乘客维护层已永久显现")
 	var trailer := str(assessment.get("trailer", ""))
 	if not trailer.is_empty():
 		lines.append("")
