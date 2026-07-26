@@ -168,6 +168,7 @@ func try_attack() -> bool:
 	noise_generated.emit(1)
 	_attack_flash = 0.14
 	combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
+	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
@@ -175,8 +176,10 @@ func try_attack() -> bool:
 		if offset.length() <= attack_range and facing.dot(offset.normalized()) >= 0.25:
 			var damage := int(attack_damage * pathway_multiplier * (1.35 if insulated and (target is Conductor or target is LastTrainBoss or target is SignalAnchor) else 1.0))
 			target.take_damage(damage, global_position)
+			hit_count += 1
 			_apply_relic_hit_effect(target, "melee", offset)
 			combat_fx.impact(target.global_position, offset, true)
+	_record_equipment_mastery("melee_hits", hit_count)
 	queue_redraw()
 	return true
 
@@ -218,6 +221,9 @@ func _try_ranged_attack() -> bool:
 			hit_target.take_damage(int(ranged_damage * multiplier), global_position)
 			_apply_relic_hit_effect(hit_target, "ranged", hit_offset)
 			combat_fx.impact(hit_target.global_position, hit_offset, index > 0)
+		_record_equipment_mastery("ranged_hits", mini(target_limit, candidates.size()))
+		if mini(target_limit, candidates.size()) > 1:
+			_record_equipment_mastery("multi_hits", 1)
 	else:
 		pathway_effects.consume_attack_multiplier()
 	var visual := _pathway_visual()
@@ -238,6 +244,7 @@ func _try_shotgun_attack() -> bool:
 	var visual := _pathway_visual()
 	combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, shotgun_range, visual.tracer, visual.muzzle)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
+	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
@@ -245,11 +252,22 @@ func _try_shotgun_attack() -> bool:
 		if offset.length() <= shotgun_range and facing.dot(offset.normalized()) >= 0.72:
 			var falloff := clampf(1.25 - offset.length() / shotgun_range * 0.55, 0.7, 1.0)
 			target.take_damage(int(shotgun_damage * falloff * pathway_multiplier), global_position)
+			hit_count += 1
 			_apply_relic_hit_effect(target, "shotgun", offset)
 			combat_fx.impact(target.global_position, offset, true)
+	_record_equipment_mastery("multi_hits" if hit_count > 1 else "ranged_hits", maxi(hit_count, 0))
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
+
+
+func _record_equipment_mastery(use_type: String, amount: int) -> void:
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if state == null or equipped_weapon_item.is_empty() or amount <= 0:
+		return
+	state.record_equipment_use(equipped_weapon_item, use_type, amount)
+	if health <= int(max_health * 0.35):
+		state.record_equipment_use(equipped_weapon_item, "low_health_hits", amount)
 
 
 func take_damage(amount: int, source_position: Vector2) -> bool:

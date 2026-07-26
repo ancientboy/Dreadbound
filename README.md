@@ -30,6 +30,10 @@ L0–L5 Human Mirror Loop 已接入：回廊新增独立“人性镜鉴”，知
 
 完整实现边界见 [`docs/human-mirror-loop-l0-l5.md`](docs/human-mirror-loop-l0-l5.md)。
 
+M0–M6 Exchange & Evolution Loop 已接入：终末回廊开放异常兑换、六种世界材料、确定性轮换、三件合成三选一、结果锁定、合成余烬与保底；三职业扩展为十二战斗流派，装备支持五级强化与行为条件进化，人性行为会进一步形成不可购买的个人心相。存档版本升级为 v20。
+
+完整实现边界见 [`docs/exchange-evolution-loop-m0-m6.md`](docs/exchange-evolution-loop-m0-m6.md)。
+
 详细设计与扩展边界见 [`docs/persistent-narrative-dungeon.md`](docs/persistent-narrative-dungeon.md)。
 
 ## 运行目标

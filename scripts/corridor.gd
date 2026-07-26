@@ -29,6 +29,7 @@ var warehouse_list: VBoxContainer
 var warehouse_detail: Label
 var equip_button: Button
 var salvage_button: Button
+var progress_button: Button
 var selected_equipment_id := ""
 var salvage_reward_panel: ColorRect
 var salvage_reward_detail: Label
@@ -48,6 +49,7 @@ var _touch_direction := Vector2.ZERO
 var _hub_action_touch := -1
 var mobile_terminal_panel: ColorRect
 var curator_offer_box: VBoxContainer
+var style_buttons := {}
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
 const CURATOR_POSITION := Vector2(640, 416)
@@ -86,6 +88,7 @@ func _ready() -> void:
 	_create_mobile_terminal_panel()
 	_create_curator_controls()
 	_create_respec_control()
+	_create_style_controls()
 	_create_difficulty_control()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
@@ -177,8 +180,10 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	warehouse_detail.position = Vector2(52 + list_width, 92)
 	warehouse_detail.size = Vector2(list_width - 24, warehouse_panel.size.y - 260)
 	equip_button.position = Vector2(52 + list_width, warehouse_panel.size.y - 154)
-	equip_button.size = Vector2((list_width - 36) * 0.5, 58)
-	salvage_button.position = Vector2(70 + list_width + equip_button.size.x, warehouse_panel.size.y - 154)
+	equip_button.size = Vector2((list_width - 52) / 3.0, 58)
+	progress_button.position = Vector2(62 + list_width + equip_button.size.x, warehouse_panel.size.y - 154)
+	progress_button.size = equip_button.size
+	salvage_button.position = Vector2(72 + list_width + equip_button.size.x * 2.0, warehouse_panel.size.y - 154)
 	salvage_button.size = equip_button.size
 	var close := warehouse_panel.get_node("ReturnWarehouse") as Button
 	close.position = Vector2((panel_width - 250) * 0.5, warehouse_panel.size.y - 72)
@@ -311,7 +316,7 @@ func _update_hub_actions(target: Dictionary) -> void:
 
 
 func _refresh() -> void:
-	currency.text = "回响碎片  %d    ·    因果残片  %d" % [GameState.echo_shards, GameState.causality_fragments]
+	currency.text = "回响 %d · 因果 %d · 合成余烬 %d" % [GameState.echo_shards, GameState.causality_fragments, GameState.synthesis_embers]
 	var values := GameState.get_player_stats()
 	stats.text = "生命上限       %d\n移动速度       %d\n近战伤害       %d\n手枪伤害       %d\n绷带恢复       %d" % [values.max_health, int(values.movement_speed), values.melee_damage, values.ranged_damage, values.bandage_heal]
 	for upgrade_id in UPGRADE_INFO:
@@ -337,6 +342,15 @@ func _refresh() -> void:
 		var anchor_text := "锚定 %s：%d 碎片 + %d 因果残片\n" % [path_name, int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards), int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments)] if anchor_needed else ""
 		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else anchor_text + ("前置节点未锚定" if missing_requirement else ("已选择%s" % GameState.get_pathway_name() if locked_path else "%s · %d 碎片" % [str(node.description), int(node.cost)]))]
 		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards) if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments) if anchor_needed else 0)
+	for style_id in style_buttons:
+		var style: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
+		var style_button: Button = style_buttons[style_id]
+		var available_path := str(style.path) == GameState.selected_pathway
+		style_button.visible = available_path
+		if available_path:
+			var unlocked := GameState.unlocked_combat_styles.has(style_id)
+			style_button.text = "%s%s\n%s" % ["▶ " if GameState.active_combat_style == style_id else ("✓ " if unlocked else ""), str(style.name), "点击切换流派" if unlocked else "%s · 5 回响" % str(style.description)]
+			style_button.disabled = not unlocked and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
 	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
 	if respec:
 		respec.text = "重构职业 · 1 因果残片（可无限次）"
@@ -379,6 +393,27 @@ func _select_loadout(loadout_id: String) -> void:
 func _unlock_path_node(node_id: String) -> void:
 	var node: Dictionary = GameProgress.PATH_NODES[node_id]
 	feedback.text = "%s已锚定：%s" % [str(node.name), str(node.description)] if GameState.unlock_path_node(node_id) else "无法锚定：需先选择该职业、满足前置节点，并支付回响碎片与首次锚定的因果残片。"
+
+
+func _create_style_controls() -> void:
+	var parent := $Margin/Layout/Columns/Paths as VBoxContainer
+	var title := Label.new()
+	title.text = "战斗流派 · 12"
+	title.add_theme_color_override("font_color", Color("6cd7c0"))
+	parent.add_child(title)
+	for style_id in ExchangeEvolution.COMBAT_STYLES:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 48)
+		button.visible = false
+		button.pressed.connect(_toggle_combat_style.bind(style_id))
+		parent.add_child(button)
+		style_buttons[style_id] = button
+
+
+func _toggle_combat_style(style_id: String) -> void:
+	var success := GameState.select_combat_style(style_id) if GameState.unlocked_combat_styles.has(style_id) else GameState.unlock_combat_style(style_id)
+	feedback.text = "当前流派：%s。" % str(ExchangeEvolution.COMBAT_STYLES[style_id].name) if success else "无法启用流派：需完成职业核心节点并支付 5 回响。"
+	_refresh()
 
 
 func _deploy() -> void:
@@ -550,6 +585,12 @@ func _create_warehouse_panel() -> void:
 	salvage_button.text = "拆解"
 	salvage_button.pressed.connect(_salvage_selected)
 	warehouse_panel.add_child(salvage_button)
+	progress_button = Button.new()
+	progress_button.position = Vector2(710, 390)
+	progress_button.size = Vector2(135, 62)
+	progress_button.text = "升级 / 进化"
+	progress_button.pressed.connect(_progress_selected)
+	warehouse_panel.add_child(progress_button)
 	var close := Button.new()
 	close.name = "ReturnWarehouse"
 	close.position = Vector2(390, 515)
@@ -1011,7 +1052,7 @@ func _refresh_mobile_terminal() -> void:
 	var currency_label := Label.new()
 	currency_label.position = Vector2(18, 52)
 	currency_label.size = Vector2(panel_width - 36, 27)
-	currency_label.text = "回响碎片 %d  ·  因果残片 %d" % [GameState.echo_shards, GameState.causality_fragments]
+	currency_label.text = "回响 %d · 因果 %d · 余烬 %d" % [GameState.echo_shards, GameState.causality_fragments, GameState.synthesis_embers]
 	currency_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	currency_label.add_theme_font_size_override("font_size", 16)
 	mobile_terminal_panel.add_child(currency_label)
@@ -1104,6 +1145,19 @@ func _refresh_mobile_terminal() -> void:
 		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (8 if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (1 if anchor_needed else 0)
 		button.pressed.connect(_unlock_path_node.bind(node_id))
 		content.add_child(button)
+	if not GameState.selected_pathway.is_empty():
+		_mobile_terminal_section(content, "战斗流派 · 四选一", "职业决定身份，流派决定实际打法。解锁后可随时切换已拥有流派。")
+		for style_id in ExchangeEvolution.COMBAT_STYLES:
+			var style: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
+			if str(style.path) != GameState.selected_pathway:
+				continue
+			var style_button := Button.new()
+			var unlocked_style := GameState.unlocked_combat_styles.has(style_id)
+			style_button.custom_minimum_size = Vector2(0, 58)
+			style_button.text = "%s%s\n%s" % ["▶ " if GameState.active_combat_style == style_id else ("✓ " if unlocked_style else ""), str(style.name), "点击切换" if unlocked_style else "%s · 5 回响" % str(style.description)]
+			style_button.disabled = not unlocked_style and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
+			style_button.pressed.connect(_toggle_combat_style.bind(style_id))
+			content.add_child(style_button)
 	var respec := Button.new()
 	respec.custom_minimum_size = Vector2(0, 52)
 	respec.text = "重构职业 · 1 因果残片（可无限次）"
@@ -1151,6 +1205,8 @@ func _curator_profile_text() -> String:
 	lines.append(str(assessment.get("trailer", "")))
 	lines.append("世界简报：%s" % "；".join(GameState.world_briefing()))
 	lines.append("成长计划：%s" % " → ".join(GameState.get_growth_plan()))
+	if not GameState.heart_aspect.is_empty():
+		lines.append("心相：%s // %s" % [str(GameState.heart_aspect.name), str(GameState.heart_aspect.description)])
 	if not trial.is_empty():
 		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward_text])
 	var recent: Array = profile.get("recent_runs", [])
@@ -1236,6 +1292,39 @@ func _open_warehouse() -> void:
 func _refresh_warehouse() -> void:
 	for child in warehouse_list.get_children():
 		child.queue_free()
+	var exchange_title := Label.new()
+	exchange_title.text = "终末回廊异常兑换所 · 轮换 %d" % GameState.exchange_cycle
+	exchange_title.add_theme_color_override("font_color", Color("6cd7c0"))
+	warehouse_list.add_child(exchange_title)
+	for offer in GameState.get_exchange_offers():
+		var offer_button := Button.new()
+		offer_button.text = "兑换 %s · %d 回响" % [str(offer.name), int(offer.echo_cost)]
+		offer_button.disabled = GameState.echo_shards < int(offer.echo_cost) or GameState.exchange_purchases.has("%d:%s" % [GameState.exchange_cycle, str(offer.id)])
+		offer_button.pressed.connect(_purchase_exchange.bind(str(offer.id)))
+		warehouse_list.add_child(offer_button)
+	if not GameState.pending_synthesis.is_empty():
+		var synthesis_title := Label.new()
+		synthesis_title.text = "合成结果已锁定 · 选择一项"
+		synthesis_title.add_theme_color_override("font_color", Color("d6b968"))
+		warehouse_list.add_child(synthesis_title)
+		var candidates: Array = GameState.pending_synthesis.get("candidates", [])
+		for index in range(candidates.size()):
+			var candidate: Dictionary = candidates[index]
+			var candidate_item := EquipmentDatabase.get_item(str(candidate.item_id))
+			var candidate_affix: Dictionary = ExchangeEvolution.AFFIXES.get(str(candidate.affix_id), {})
+			var candidate_button := Button.new()
+			candidate_button.text = "%s · 词条「%s」" % [str(candidate_item.name), str(candidate_affix.get("name", "未知"))]
+			candidate_button.pressed.connect(_choose_synthesis.bind(index))
+			warehouse_list.add_child(candidate_button)
+		var reject := Button.new()
+		reject.text = "放弃结果并转化为合成余烬"
+		reject.pressed.connect(_reject_synthesis)
+		warehouse_list.add_child(reject)
+	else:
+		var synthesize := Button.new()
+		synthesize.text = "自动装填可用配方 · 三件同槽同品质 → 三选一"
+		synthesize.pressed.connect(_auto_synthesis)
+		warehouse_list.add_child(synthesize)
 	var counts := {}
 	for item_id in GameState.equipment_inventory:
 		counts[item_id] = int(counts.get(item_id, 0)) + 1
@@ -1250,7 +1339,8 @@ func _refresh_warehouse() -> void:
 		warehouse_list.add_child(button)
 	equip_button.disabled = true
 	salvage_button.disabled = true
-	warehouse_detail.text = "仓库容量 %d/%d\n\n选择一件装备查看评级与属性。" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT]
+	progress_button.disabled = true
+	warehouse_detail.text = "仓库容量 %d/%d\n合成余烬 %d\n\n选择一件装备查看评级、升级与进化。" % [GameState.equipment_inventory.size(), GameProgress.MAX_EQUIPMENT, GameState.synthesis_embers]
 
 
 func _select_equipment(item_id: String) -> void:
@@ -1259,9 +1349,83 @@ func _select_equipment(item_id: String) -> void:
 	var equipped_mark := "\n\n当前已装备" if GameState.equipped.get(item.slot, "") == item_id else ""
 	var level := GameState.get_relic_growth(item_id)
 	var growth := "\n成长：Lv.%d/%d（击败对应首领可提升）\n当前形态：%s" % [level, int(item.get("growth_max", 0)), EquipmentDatabase.relic_growth_description(item_id, level)] if item.has("series") else ""
-	warehouse_detail.text = "%s // %s\n评级 %d\n槽位：%s\n\n%s%s%s" % [item.quality, item.name, item.rating, "武器" if item.slot == "weapon" else "护符", item.description, growth, equipped_mark]
+	var upgrade_level := int(GameState.equipment_levels.get(item_id, 0))
+	var affix_id := str(GameState.equipment_affixes.get(item_id, ""))
+	var affix_name := str(ExchangeEvolution.AFFIXES.get(affix_id, {}).get("name", "无"))
+	var evolution := GameState.current_equipment_evolution(item_id)
+	var evolution_name := str(evolution.get("name", "尚未进化"))
+	warehouse_detail.text = "%s // %s\n评级 %d · 强化 Lv.%d/5\n词条：%s · 进化：%s\n槽位：%s\n\n%s%s%s" % [item.quality, item.name, item.rating, upgrade_level, affix_name, evolution_name, "武器" if item.slot == "weapon" else "护符", item.description, growth, equipped_mark]
 	equip_button.disabled = false
 	salvage_button.disabled = GameState.equipped.values().has(item_id) and GameState.equipment_inventory.count(item_id) <= 1
+	progress_button.disabled = false
+
+
+func _purchase_exchange(offer_id: String) -> void:
+	feedback.text = "兑换完成，物资已写入仓库。" if GameState.purchase_exchange_offer(offer_id) else "兑换失败：检查回响、仓库容量或本轮限购。"
+	_refresh_warehouse()
+	_refresh()
+
+
+func _auto_synthesis() -> void:
+	var groups := {}
+	for item_id in GameState.equipment_inventory:
+		var item := EquipmentDatabase.get_item(item_id)
+		if item.is_empty() or bool(item.get("unique", false)) or int(item.get("quality_rank", -1)) >= 3:
+			continue
+		var key := "%s:%d" % [str(item.slot), int(item.quality_rank)]
+		if not groups.has(key):
+			groups[key] = []
+		groups[key].append(item_id)
+	for key in groups:
+		var inputs: Array = groups[key]
+		var usable: Array[String] = []
+		var preserved := {}
+		for item_id in inputs:
+			if GameState.equipped.values().has(item_id) and not bool(preserved.get(item_id, false)):
+				preserved[item_id] = true
+				continue
+			usable.append(str(item_id))
+			if usable.size() == 3:
+				break
+		if usable.size() == 3 and not GameState.begin_synthesis(usable).is_empty():
+			feedback.text = "合成完成计算：结果已经锁定，请在仓库列表三选一。"
+			_refresh_warehouse()
+			return
+	feedback.text = "没有三件可安全消耗的同槽、同品质装备；已装备与唯一遗物不会被误用。"
+
+
+func _choose_synthesis(index: int) -> void:
+	var result := GameState.complete_synthesis(index)
+	feedback.text = "已选择%s，词条「%s」已固定。" % [str(EquipmentDatabase.get_item(str(result.get("item_id", ""))).get("name", "合成装备")), str(ExchangeEvolution.AFFIXES.get(str(result.get("affix_id", "")), {}).get("name", "未知"))] if not result.is_empty() else "无法领取合成结果：请检查仓库容量。"
+	_refresh_warehouse()
+	_refresh()
+
+
+func _reject_synthesis() -> void:
+	var gained := GameState.reject_synthesis()
+	feedback.text = "合成结果已转化：+%d 合成余烬，保底进度提高。" % gained
+	_refresh_warehouse()
+	_refresh()
+
+
+func _progress_selected() -> void:
+	if selected_equipment_id.is_empty():
+		return
+	if int(GameState.equipment_levels.get(selected_equipment_id, 0)) < 5:
+		feedback.text = "装备强化完成。" if GameState.upgrade_equipment(selected_equipment_id) else "强化失败：回响或合成余烬不足。"
+	else:
+		var choices := GameState.available_evolutions(selected_equipment_id)
+		var evolved := false
+		for evolution in choices:
+			if bool(evolution.available):
+				evolved = GameState.evolve_equipment(selected_equipment_id, str(evolution.id))
+				if evolved:
+					feedback.text = "装备已进化为「%s」。" % str(evolution.name)
+					break
+		if not evolved:
+			feedback.text = "尚未满足进化行为条件，或缺少 1 因果残片。"
+	_refresh_warehouse()
+	_refresh()
 
 
 func _equip_selected() -> void:

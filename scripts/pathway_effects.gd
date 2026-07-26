@@ -24,7 +24,7 @@ func tick(delta: float) -> void:
 
 func on_bandage_used(health_before: int, maximum: int) -> void:
 	if state and state.has_path_node("steadfast_barrier") and float(health_before) / maximum <= 0.4:
-		guard_duration = 4.0
+		guard_duration = 6.0 if state.active_combat_style == "barrier_counter" else 4.0
 		last_trigger = "应急屏障"
 
 
@@ -36,15 +36,23 @@ func on_weapon_switched() -> void:
 
 
 func consume_attack_multiplier() -> float:
+	var style_multiplier := 1.0
+	if state:
+		if state.active_combat_style in ["barrier_counter", "demolition_traps"]:
+			style_multiplier = 1.12
+		elif state.active_combat_style == "aberrant_form":
+			style_multiplier = 1.18
 	if not calibration_ready:
-		return 1.0
+		return style_multiplier
 	calibration_ready = false
 	calibration_duration = 0.0
-	return 1.2
+	return 1.2 * style_multiplier
 
 
 func incoming_damage_multiplier() -> float:
-	return 0.75 if guard_duration > 0.0 else 1.0
+	if state and state.active_combat_style == "last_stand" and player and player.health <= int(player.max_health * 0.3):
+		return 0.62
+	return 0.70 if guard_duration > 0.0 and state and state.active_combat_style == "barrier_counter" else (0.75 if guard_duration > 0.0 else 1.0)
 
 
 func on_risk_event(take_risk: bool) -> int:
@@ -52,11 +60,12 @@ func on_risk_event(take_risk: bool) -> int:
 		return 0
 	anomaly_pressure = mini(anomaly_pressure + 1, 5)
 	last_trigger = "异常摄取"
-	return 2
+	return 3 if state.active_combat_style == "anomaly_ingestion" else 2
 
 
 func healing_multiplier() -> float:
-	return maxf(0.6, 1.0 - anomaly_pressure * 0.08)
+	var base := maxf(0.6, 1.0 - anomaly_pressure * 0.08)
+	return base * 1.25 if state and state.active_combat_style == "sacrifice_medic" else base
 
 
 func statuses() -> Array[Dictionary]:

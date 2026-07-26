@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 19
+const SAVE_VERSION := 20
 const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
@@ -76,6 +76,21 @@ var active_counter_contract := {}
 var last_save_health := {"status": "new", "loaded_version": 0, "current_version": SAVE_VERSION, "migrations": []}
 var persistent_dungeons := PersistentDungeonState.new()
 var active_dungeon_chapter := {}
+var synthesis_embers := 0
+var world_materials := _default_world_materials()
+var known_recipes: Array[String] = ["basic_weapon_fusion", "basic_charm_fusion"]
+var exchange_cycle := 0
+var exchange_purchases: Array[String] = []
+var pending_synthesis := {}
+var synthesis_counter := 0
+var synthesis_pity := {"weapon": 0, "charm": 0}
+var equipment_levels := {}
+var equipment_affixes := {}
+var equipment_evolutions := {}
+var equipment_mastery := {}
+var unlocked_combat_styles: Array[String] = []
+var active_combat_style := ""
+var heart_aspect := {}
 
 
 func _ready() -> void:
@@ -96,18 +111,38 @@ func get_player_stats() -> Dictionary:
 		gear.ranged_damage += level * 2 if relic.has("ranged_damage") else 0
 		gear.shotgun_damage += level if relic.has("shotgun_damage") else 0
 	var path := get_path_bonuses()
+	var equipped_weapon := str(equipped.get("weapon", ""))
+	var equipped_charm := str(equipped.get("charm", ""))
+	for item_id in [equipped_weapon, equipped_charm]:
+		var upgraded := EquipmentDatabase.upgraded_bonuses(item_id, int(equipment_levels.get(item_id, 0)))
+		for stat in upgraded:
+			gear[stat] += upgraded[stat]
+	var evolution := current_equipment_evolution(equipped_weapon)
+	var progression := ExchangeEvolution.combined_bonuses(
+		active_combat_style,
+		str(equipment_affixes.get(equipped_weapon, equipment_affixes.get(equipped_charm, ""))),
+		evolution,
+		heart_aspect,
+	)
 	return {
-		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health) + int(path.max_health),
-		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0 + float(gear.movement_speed) + float(path.movement_speed),
-		"melee_damage": 35 + int(upgrades.weapons) * 4 + int(gear.melee_damage) + int(path.melee_damage),
-		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage) + int(path.ranged_damage),
-		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage),
-		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal),
-		"attack_range": 76.0 + float(relic_profile.get("melee_range", 0.0)),
-		"ranged_range": 430.0 + float(relic_profile.get("ranged_range", 0.0)),
-		"shotgun_range": 235.0 + float(relic_profile.get("shotgun_range", 0.0)),
+		"max_health": 100 + int(upgrades.vitality) * 10 + int(gear.max_health) + int(path.max_health) + int(progression.max_health),
+		"movement_speed": 210.0 + int(upgrades.mobility) * 8.0 + float(gear.movement_speed) + float(path.movement_speed) + float(progression.movement_speed),
+		"melee_damage": 35 + int(upgrades.weapons) * 4 + int(gear.melee_damage) + int(path.melee_damage) + int(progression.melee_damage),
+		"ranged_damage": 25 + int(upgrades.weapons) * 3 + int(gear.ranged_damage) + int(path.ranged_damage) + int(progression.ranged_damage),
+		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage) + int(progression.shotgun_damage),
+		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal) + int(progression.bandage_heal),
+		"attack_range": 76.0 + float(relic_profile.get("melee_range", 0.0)) + float(progression.attack_range),
+		"ranged_range": 430.0 + float(relic_profile.get("ranged_range", 0.0)) + float(progression.ranged_range),
+		"shotgun_range": 235.0 + float(relic_profile.get("shotgun_range", 0.0)) + float(progression.shotgun_range),
 		"relic_profile": relic_profile,
 	}
+
+
+static func _default_world_materials() -> Dictionary:
+	var result := {}
+	for material_id in ExchangeEvolution.MATERIALS:
+		result[material_id] = 0
+	return result
 
 
 func get_difficulty() -> Dictionary:
@@ -366,6 +401,8 @@ func respec_pathway() -> bool:
 	echo_shards += shard_refund
 	causality_fragments += fragment_refund
 	unlocked_path_nodes.clear()
+	unlocked_combat_styles.clear()
+	active_combat_style = ""
 	selected_pathway = ""
 	# Profession reconstruction is intentionally unlimited.  The one fragment fee
 	# keeps it a meaningful preparation choice without trapping a player forever.
@@ -468,6 +505,11 @@ func record_human_choice(event_type: String, target := "", choice := "", context
 		return {}
 	var event := record_action(event_type, "player", target, choice, context, result)
 	if not event.is_empty():
+		var weapon_id := str(equipped.get("weapon", ""))
+		if event_type in ["costly_rescue", "forgive_rescue", "promise_kept"]:
+			record_equipment_use(weapon_id, "rescues", 1)
+		if event_type in ["risk_choice", "anonymous_exploitation", "accept_memory"]:
+			record_equipment_use(weapon_id, "anomaly_events", 1)
 		last_reflection = curator_v2.assess(action_ledger.events, world_state)
 	return event
 
@@ -588,6 +630,7 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 		last_run.counter_contract_result = counter_resolution
 		active_counter_contract = {}
 	last_reflection.counter_contract = active_counter_contract.duplicate(true)
+	refresh_heart_aspect()
 	last_run.humanity_reflection = last_reflection
 	last_run.action_events = action_ledger.events_for_run(action_code)
 	last_run.world_consequences = settlement_event.get("consequences", [])
@@ -598,6 +641,12 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 		bool(run_summary.get("boss_defeated", false)),
 	)
 	last_run.dungeon_history = persistent_dungeons.history_for(world_id).slice(0, 4)
+	if success:
+		var material_rewards := ExchangeEvolution.material_rewards(world_id, bool(run_summary.get("boss_defeated", false)), active_run_seed)
+		for material_id in material_rewards:
+			world_materials[material_id] = int(world_materials.get(material_id, 0)) + int(material_rewards[material_id])
+		last_run.world_materials = material_rewards
+		exchange_cycle += 1
 	_append_reflection_snapshot(action_code, world_id, success)
 	active_run_seed = 0
 	active_dungeon_chapter = {}
@@ -727,6 +776,7 @@ func disassemble_item(item_id: String) -> bool:
 	var rewards := get_disassembly_rewards(item)
 	echo_shards += int(rewards.echo_shards)
 	causality_fragments += int(rewards.causality_fragments)
+	synthesis_embers += int(rewards.synthesis_embers)
 	save_progress()
 	progress_changed.emit()
 	return true
@@ -734,14 +784,211 @@ func disassemble_item(item_id: String) -> bool:
 
 func get_disassembly_rewards(item: Dictionary) -> Dictionary:
 	var rank := int(item.get("quality_rank", 0))
-	return {"echo_shards": 2 + rank * 3, "causality_fragments": maxi(rank - 1, 0)}
+	return {"echo_shards": 2 + rank * 3, "causality_fragments": maxi(rank - 1, 0), "synthesis_embers": 1 + rank}
+
+
+func get_exchange_offers() -> Array[Dictionary]:
+	return ExchangeEvolution.exchange_offers(exchange_cycle, selected_world)
+
+
+func purchase_exchange_offer(offer_id: String) -> bool:
+	var purchase_key := "%d:%s" % [exchange_cycle, offer_id]
+	if exchange_purchases.has(purchase_key):
+		return false
+	for offer in get_exchange_offers():
+		if str(offer.id) != offer_id:
+			continue
+		var cost := int(offer.echo_cost)
+		if echo_shards < cost:
+			return false
+		if str(offer.kind) == "item" and equipment_inventory.size() >= MAX_EQUIPMENT:
+			return false
+		echo_shards -= cost
+		if str(offer.kind) == "item":
+			equipment_inventory.append(str(offer.item_id))
+		else:
+			var material_id := str(offer.material_id)
+			world_materials[material_id] = int(world_materials.get(material_id, 0)) + 1
+		exchange_purchases.append(purchase_key)
+		save_progress()
+		progress_changed.emit()
+		return true
+	return false
+
+
+func begin_synthesis(item_ids: Array[String], catalyst_id := "", locked_affix := "") -> Dictionary:
+	if not pending_synthesis.is_empty() or item_ids.size() != 3:
+		return {}
+	var first := EquipmentDatabase.get_item(item_ids[0])
+	if first.is_empty() or bool(first.get("unique", false)):
+		return {}
+	var slot := str(first.get("slot", ""))
+	var rank := int(first.get("quality_rank", -1))
+	if rank < 0 or rank >= 3:
+		return {}
+	var required_counts := {}
+	for item_id in item_ids:
+		var item := EquipmentDatabase.get_item(item_id)
+		if item.is_empty() or bool(item.get("unique", false)) or str(item.get("slot", "")) != slot or int(item.get("quality_rank", -1)) != rank:
+			return {}
+		required_counts[item_id] = int(required_counts.get(item_id, 0)) + 1
+	for item_id in required_counts:
+		var protected := 1 if equipped.values().has(item_id) else 0
+		if equipment_inventory.count(item_id) - protected < int(required_counts[item_id]):
+			return {}
+	if not catalyst_id.is_empty():
+		if not ExchangeEvolution.MATERIALS.has(catalyst_id) or int(world_materials.get(catalyst_id, 0)) <= 0:
+			return {}
+	if not locked_affix.is_empty():
+		if not ExchangeEvolution.AFFIXES.has(locked_affix) or causality_fragments < 1:
+			return {}
+		causality_fragments -= 1
+	for item_id in item_ids:
+		equipment_inventory.remove_at(equipment_inventory.rfind(item_id))
+	if not catalyst_id.is_empty():
+		world_materials[catalyst_id] = int(world_materials[catalyst_id]) - 1
+	synthesis_counter += 1
+	var seed := active_run_seed + synthesis_counter * 7919 + exchange_cycle * 101
+	var candidates := ExchangeEvolution.synthesis_candidates(slot, rank + 1, catalyst_id, seed, int(synthesis_pity.get(slot, 0)))
+	if not locked_affix.is_empty():
+		for candidate in candidates:
+			candidate.affix_id = locked_affix
+	pending_synthesis = {"slot": slot, "source_rank": rank, "catalyst": catalyst_id, "candidates": candidates, "seed": seed}
+	save_progress()
+	progress_changed.emit()
+	return pending_synthesis.duplicate(true)
+
+
+func complete_synthesis(choice_index: int) -> Dictionary:
+	var candidates: Array = pending_synthesis.get("candidates", [])
+	if choice_index < 0 or choice_index >= candidates.size() or equipment_inventory.size() >= MAX_EQUIPMENT:
+		return {}
+	var result: Dictionary = candidates[choice_index].duplicate(true)
+	var item_id := str(result.item_id)
+	equipment_inventory.append(item_id)
+	equipment_affixes[item_id] = str(result.affix_id)
+	synthesis_pity[str(pending_synthesis.slot)] = 0
+	pending_synthesis = {}
+	save_progress()
+	progress_changed.emit()
+	return result
+
+
+func reject_synthesis() -> int:
+	if pending_synthesis.is_empty():
+		return 0
+	var slot := str(pending_synthesis.slot)
+	var gained := 2 + int(pending_synthesis.source_rank)
+	synthesis_embers += gained
+	synthesis_pity[slot] = mini(int(synthesis_pity.get(slot, 0)) + 1, 3)
+	pending_synthesis = {}
+	save_progress()
+	progress_changed.emit()
+	return gained
+
+
+func equipment_upgrade_cost(item_id: String) -> Dictionary:
+	if not equipment_inventory.has(item_id):
+		return {}
+	var level := clampi(int(equipment_levels.get(item_id, 0)), 0, 5)
+	if level >= 5:
+		return {}
+	var shard_costs := [3, 5, 8, 12, 17]
+	return {"echo_shards": shard_costs[level], "synthesis_embers": maxi(level - 1, 0)}
+
+
+func upgrade_equipment(item_id: String) -> bool:
+	var cost := equipment_upgrade_cost(item_id)
+	if cost.is_empty() or echo_shards < int(cost.echo_shards) or synthesis_embers < int(cost.synthesis_embers):
+		return false
+	echo_shards -= int(cost.echo_shards)
+	synthesis_embers -= int(cost.synthesis_embers)
+	equipment_levels[item_id] = int(equipment_levels.get(item_id, 0)) + 1
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func record_equipment_use(item_id: String, use_type: String, amount := 1) -> void:
+	if item_id.is_empty() or not equipment_inventory.has(item_id):
+		return
+	var mastery: Dictionary = equipment_mastery.get(item_id, {})
+	mastery[use_type] = int(mastery.get(use_type, 0)) + maxi(amount, 0)
+	equipment_mastery[item_id] = mastery
+
+
+func available_evolutions(item_id: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if int(equipment_levels.get(item_id, 0)) < 5 or not ExchangeEvolution.EVOLUTIONS.has(item_id):
+		return result
+	var mastery: Dictionary = equipment_mastery.get(item_id, {})
+	for evolution_id in ExchangeEvolution.EVOLUTIONS[item_id]:
+		var evolution: Dictionary = ExchangeEvolution.EVOLUTIONS[item_id][evolution_id].duplicate(true)
+		evolution.id = evolution_id
+		evolution.available = int(mastery.get(str(evolution.mastery), 0)) >= int(evolution.required)
+		evolution.progress = int(mastery.get(str(evolution.mastery), 0))
+		result.append(evolution)
+	return result
+
+
+func evolve_equipment(item_id: String, evolution_id: String) -> bool:
+	if causality_fragments < 1 or not equipment_inventory.has(item_id):
+		return false
+	for evolution in available_evolutions(item_id):
+		if str(evolution.id) == evolution_id and bool(evolution.available):
+			causality_fragments -= 1
+			equipment_evolutions[item_id] = evolution_id
+			save_progress()
+			progress_changed.emit()
+			return true
+	return false
+
+
+func current_equipment_evolution(item_id: String) -> Dictionary:
+	var evolution_id := str(equipment_evolutions.get(item_id, ""))
+	if evolution_id.is_empty() or not ExchangeEvolution.EVOLUTIONS.get(item_id, {}).has(evolution_id):
+		return {}
+	var result: Dictionary = ExchangeEvolution.EVOLUTIONS[item_id][evolution_id].duplicate(true)
+	result.id = evolution_id
+	return result
+
+
+func unlock_combat_style(style_id: String) -> bool:
+	if not ExchangeEvolution.COMBAT_STYLES.has(style_id) or unlocked_combat_styles.has(style_id):
+		return false
+	var style: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
+	if str(style.path) != selected_pathway or not has_path_node(str(style.requires)) or echo_shards < 5:
+		return false
+	echo_shards -= 5
+	unlocked_combat_styles.append(style_id)
+	if active_combat_style.is_empty():
+		active_combat_style = style_id
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func select_combat_style(style_id: String) -> bool:
+	if not unlocked_combat_styles.has(style_id):
+		return false
+	active_combat_style = style_id
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func refresh_heart_aspect() -> Dictionary:
+	var formed := ExchangeEvolution.heart_aspect_for(last_reflection, action_ledger.events)
+	if not formed.is_empty():
+		heart_aspect = formed
+	return heart_aspect.duplicate(true)
 
 
 func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "synthesis_embers": synthesis_embers, "world_materials": world_materials, "known_recipes": known_recipes, "exchange_cycle": exchange_cycle, "exchange_purchases": exchange_purchases, "pending_synthesis": pending_synthesis, "synthesis_counter": synthesis_counter, "synthesis_pity": synthesis_pity, "equipment_levels": equipment_levels, "equipment_affixes": equipment_affixes, "equipment_evolutions": equipment_evolutions, "equipment_mastery": equipment_mastery, "unlocked_combat_styles": unlocked_combat_styles, "active_combat_style": active_combat_style, "heart_aspect": heart_aspect, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
 	last_save_health = {"status": "saved", "loaded_version": SAVE_VERSION, "current_version": SAVE_VERSION, "migrations": []}
 	return true
 
@@ -760,6 +1007,8 @@ func load_progress() -> void:
 	var migrations: Array[String] = []
 	if loaded_version < 19:
 		migrations.append("v19：人性镜鉴时间线、异议与反证契约")
+	if loaded_version < 20:
+		migrations.append("v20：兑换、材料、合成、十二流派、装备进化与心相")
 	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
@@ -780,6 +1029,36 @@ func load_progress() -> void:
 	active_dungeon_chapter = saved_chapter.duplicate(true) if saved_chapter is Dictionary else {}
 	echo_shards = maxi(int(parsed.get("echo_shards", 0)), 0)
 	causality_fragments = maxi(int(parsed.get("causality_fragments", 0)), 0)
+	synthesis_embers = maxi(int(parsed.get("synthesis_embers", 0)), 0)
+	world_materials = _default_world_materials()
+	var saved_materials: Variant = parsed.get("world_materials", {})
+	if saved_materials is Dictionary:
+		for material_id in world_materials:
+			world_materials[material_id] = maxi(int(saved_materials.get(material_id, 0)), 0)
+	known_recipes.assign([])
+	for recipe_id in parsed.get("known_recipes", ["basic_weapon_fusion", "basic_charm_fusion"]):
+		known_recipes.append(str(recipe_id))
+	exchange_cycle = maxi(int(parsed.get("exchange_cycle", 0)), 0)
+	exchange_purchases.assign([])
+	for purchase_id in parsed.get("exchange_purchases", []):
+		exchange_purchases.append(str(purchase_id))
+	var saved_pending: Variant = parsed.get("pending_synthesis", {})
+	pending_synthesis = saved_pending.duplicate(true) if saved_pending is Dictionary else {}
+	synthesis_counter = maxi(int(parsed.get("synthesis_counter", 0)), 0)
+	var saved_pity: Variant = parsed.get("synthesis_pity", {})
+	synthesis_pity = saved_pity.duplicate(true) if saved_pity is Dictionary else {"weapon": 0, "charm": 0}
+	for field in ["equipment_levels", "equipment_affixes", "equipment_evolutions", "equipment_mastery"]:
+		var source: Variant = parsed.get(field, {})
+		set(field, source.duplicate(true) if source is Dictionary else {})
+	unlocked_combat_styles.assign([])
+	for style_id in parsed.get("unlocked_combat_styles", []):
+		if ExchangeEvolution.COMBAT_STYLES.has(str(style_id)):
+			unlocked_combat_styles.append(str(style_id))
+	active_combat_style = str(parsed.get("active_combat_style", ""))
+	if not unlocked_combat_styles.has(active_combat_style):
+		active_combat_style = ""
+	var saved_heart: Variant = parsed.get("heart_aspect", {})
+	heart_aspect = saved_heart.duplicate(true) if saved_heart is Dictionary else {}
 	var saved_upgrades = parsed.get("upgrades", {})
 	if saved_upgrades is Dictionary:
 		for upgrade_id in upgrades:
@@ -817,6 +1096,13 @@ func load_progress() -> void:
 	if selected_pathway not in PATHWAY_NAMES:
 		selected_pathway = str(PATH_NODES[unlocked_path_nodes[0]].path) if not unlocked_path_nodes.is_empty() else ""
 	_sanitize_pathway_nodes()
+	var valid_styles: Array[String] = []
+	for style_id in unlocked_combat_styles:
+		if str(ExchangeEvolution.COMBAT_STYLES[style_id].path) == selected_pathway:
+			valid_styles.append(style_id)
+	unlocked_combat_styles.assign(valid_styles)
+	if not unlocked_combat_styles.has(active_combat_style):
+		active_combat_style = ""
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -879,6 +1165,21 @@ func _clear_runtime_progress() -> void:
 	reflection_history.clear()
 	reflection_disputes = {}
 	active_counter_contract = {}
+	synthesis_embers = 0
+	world_materials = _default_world_materials()
+	known_recipes.assign(["basic_weapon_fusion", "basic_charm_fusion"])
+	exchange_cycle = 0
+	exchange_purchases.clear()
+	pending_synthesis = {}
+	synthesis_counter = 0
+	synthesis_pity = {"weapon": 0, "charm": 0}
+	equipment_levels = {}
+	equipment_affixes = {}
+	equipment_evolutions = {}
+	equipment_mastery = {}
+	unlocked_combat_styles.clear()
+	active_combat_style = ""
+	heart_aspect = {}
 	last_save_health = {"status": "new", "loaded_version": 0, "current_version": SAVE_VERSION, "migrations": []}
 
 
