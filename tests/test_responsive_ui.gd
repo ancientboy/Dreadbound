@@ -9,6 +9,12 @@ func _run_test() -> void:
 	var main = load("res://scenes/metro.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	var minimap = main.get_node("Interface/Minimap")
+	assert(minimap.map_button != null)
+	minimap.map_button.pressed.emit()
+	assert(minimap.expanded)
+	minimap.map_button.pressed.emit()
+	assert(not minimap.expanded)
 	for viewport_width in [1280, 1024, 960]:
 		main._apply_responsive_ui(Vector2(viewport_width, 720))
 		var top_bar: Control = main.get_node("Interface/TopBar")

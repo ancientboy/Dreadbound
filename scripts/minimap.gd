@@ -3,7 +3,7 @@ extends Control
 
 signal expanded_changed(expanded: bool)
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const MINI_RADIUS := 68.0
 
 var player: Player
@@ -11,11 +11,36 @@ var fog: FogOfWar
 var run_config: DynamicRunConfig
 var expanded := false
 var _last_player_position := Vector2.INF
+var map_button: Button
 
 
 func _ready() -> void:
 	set_process_input(true)
+	map_button = Button.new()
+	map_button.name = "MapTouchTarget"
+	map_button.flat = true
+	map_button.focus_mode = Control.FOCUS_NONE
+	map_button.self_modulate = Color(1, 1, 1, 0)
+	map_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	map_button.pressed.connect(func(): set_expanded(not expanded))
+	add_child(map_button)
+	_layout_touch_target()
 	queue_redraw()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED and map_button:
+		_layout_touch_target()
+		queue_redraw()
+
+
+func _layout_touch_target() -> void:
+	if expanded:
+		map_button.position = Vector2.ZERO
+		map_button.size = size
+	else:
+		map_button.position = _mini_center() - Vector2(90, 90)
+		map_button.size = Vector2(180, 190)
 
 
 func _process(_delta: float) -> void:
@@ -46,6 +71,7 @@ func set_expanded(value: bool) -> void:
 	if expanded == value:
 		return
 	expanded = value
+	_layout_touch_target()
 	expanded_changed.emit(expanded)
 	queue_redraw()
 
@@ -89,7 +115,14 @@ func _draw_map_contents(target_rect: Rect2, show_labels: bool) -> void:
 	var scale_factor := minf(target_rect.size.x / world_size.x, target_rect.size.y / world_size.y)
 	var drawn_size := world_size * scale_factor
 	var origin := target_rect.get_center() - drawn_size * 0.5
-	var regions: Array[Dictionary] = run_config.map_regions() if run_config else []
+	var regions: Array[Dictionary] = []
+	if run_config:
+		regions.assign(run_config.map_regions())
+	if run_config and run_config.world_id == "metro" and regions.size() > 1:
+		for index in range(regions.size() - 1):
+			var from_rect: Rect2 = regions[index].rect
+			var to_rect: Rect2 = regions[index + 1].rect
+			draw_line(origin + from_rect.get_center() * scale_factor, origin + to_rect.get_center() * scale_factor, Color(0.35, 0.72, 0.86, 0.82), 3.0 if show_labels else 2.0)
 	for region in regions:
 		var region_rect: Rect2 = region.rect
 		var room_rect := Rect2(origin + region_rect.position * scale_factor, region_rect.size * scale_factor)

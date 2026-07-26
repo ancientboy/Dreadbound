@@ -1,7 +1,7 @@
 class_name Crawler
 extends CharacterBody2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 @export var movement_speed := 148.0
 @export var max_health := 35

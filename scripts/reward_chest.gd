@@ -1,7 +1,7 @@
 class_name RewardChest
 extends Node2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 var candidates: Array[String] = []
 var opened := false

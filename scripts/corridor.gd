@@ -1,6 +1,6 @@
 extends Control
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 const UPGRADE_INFO := {
 	"vitality": ["耐受训练", "生命上限 +10"],

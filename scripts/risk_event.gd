@@ -1,7 +1,7 @@
 class_name RiskEvent
 extends Node2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 @export var event_id := ""
 @export var title := "异常事件"
