@@ -3,6 +3,7 @@ extends Node2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const WORLD_FEEDBACK: Texture2D = preload("res://assets/art/vfx/world_feedback.png")
+const MATERIAL_AFFIX_ATLAS: Texture2D = preload("res://assets/art/vfx/materials_enemy_affixes.png")
 
 signal material_collected(material_id: String, amount: int)
 
@@ -61,7 +62,15 @@ func _draw() -> void:
 	var color: Color = colors[int(kind)]
 	draw_circle(Vector2(0, bob), 18.0 + sin(_pulse * 3.0) * 2.0, Color(color, 0.1))
 	var atlas_index := _atlas_index()
-	if atlas_index >= 0 and WORLD_FEEDBACK != null and WORLD_FEEDBACK.get_size() == Vector2(256, 128):
+	var material_index := _material_atlas_index()
+	if material_index >= 0 and MATERIAL_AFFIX_ATLAS != null and MATERIAL_AFFIX_ATLAS.get_size() == Vector2(320, 128):
+		draw_texture_rect_region(
+			MATERIAL_AFFIX_ATLAS,
+			Rect2(-24, -24 + bob, 48, 48),
+			Rect2(material_index * 64, 0, 64, 64),
+			Color(1.12, 1.12, 1.12, 1.0),
+		)
+	elif atlas_index >= 0 and WORLD_FEEDBACK != null and WORLD_FEEDBACK.get_size() == Vector2(256, 128):
 		draw_texture_rect_region(
 			WORLD_FEEDBACK,
 			Rect2(-24, -24 + bob, 48, 48),
@@ -99,4 +108,15 @@ func _atlas_index() -> int:
 				return 6
 			if material_id == "medical_record":
 				return 7
+	return -1
+
+
+func _material_atlas_index() -> int:
+	if kind != Kind.MATERIAL:
+		return -1
+	match material_id:
+		"stitch_core": return 0
+		"flooded_circuit": return 1
+		"ticket_stub": return 2
+		"conductor_coil": return 3
 	return -1

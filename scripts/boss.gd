@@ -19,6 +19,7 @@ var history_effect := ""
 var _walk_animation_time := 0.0
 var _facing := Vector2.DOWN
 var _body_sprite: Sprite2D
+var _phase_visual_played := false
 
 
 func _ready() -> void:
@@ -52,7 +53,11 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		_sync_body_sprite(delta)
 		return
+	var entering_phase_two := not phase_two and health <= max_health / 2
 	phase_two = health <= max_health / 2
+	if entering_phase_two and not _phase_visual_played:
+		_phase_visual_played = true
+		_get_combat_fx().sanatorium_enemy_skill("director_mutation", global_position, Vector2.DOWN, 188.0, 0.72)
 	_timer = maxf(_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
 	if _windup > 0.0:
@@ -78,9 +83,11 @@ func _physics_process(delta: float) -> void:
 func _execute_attack() -> void:
 	var distance := global_position.distance_to(target.global_position)
 	if _attack_index % 2 == 0:
+		_get_combat_fx().sanatorium_enemy_skill("director_sweep", global_position, global_position.direction_to(target.global_position), 176.0, 0.4)
 		if distance <= 105.0:
 			target.take_damage(int(round((32 if phase_two else 25) * history_damage_multiplier)), global_position)
 	else:
+		_get_combat_fx().sanatorium_enemy_skill("director_slam", global_position, Vector2.DOWN, 244.0, 0.5)
 		if distance <= 230.0:
 			target.take_damage(int(round(20 * history_damage_multiplier)), global_position)
 	_attack_index += 1

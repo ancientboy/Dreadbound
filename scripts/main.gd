@@ -16,6 +16,10 @@ const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/s
 const METRO_TILESET: Texture2D = preload("res://assets/art/worlds/metro/metro_tileset.png")
 const METRO_PROPS: Texture2D = preload("res://assets/art/worlds/metro/metro_props.png")
 const METRO_FLOOD_LAYERS: Texture2D = preload("res://assets/art/vfx/metro_flood_layers.png")
+const METRO_MAINTENANCE_ATLAS: Texture2D = preload("res://assets/art/worlds/metro/metro_maintenance_atlas.png")
+const STORY_NPC_PORTRAITS: Texture2D = preload("res://assets/art/characters/npcs/story_npc_portraits.png")
+const PROGRESSION_STATUS_ICONS: Texture2D = preload("res://assets/art/ui/progression_status_icons.png")
+const MILESTONE_FEEDBACK: Texture2D = preload("res://assets/art/vfx/milestone_feedback.png")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -98,6 +102,11 @@ var metro_floodgate_timer := 0.0
 var run_elapsed := 0.0
 var boss_defeated := false
 var pathway_status_label: Label
+var pathway_status_icons: HBoxContainer
+var narrative_portrait: TextureRect
+var milestone_feedback: TextureRect
+var milestone_caption: Label
+var _status_icon_signature := ""
 var metro_zero_route_timer := 0.0
 var metro_switch_failures := 0
 var curator_contract := {}
@@ -218,6 +227,8 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	if pathway_status_label:
 		pathway_status_label.position = Vector2((viewport_size.x - minf(720.0, viewport_size.x - 64.0)) * 0.5, 178)
 		pathway_status_label.size = Vector2(minf(720.0, viewport_size.x - 64.0), 28)
+	if pathway_status_icons:
+		pathway_status_icons.position = Vector2(pathway_status_label.position.x - 112.0, 174)
 	if reward_panel:
 		_layout_centered_panel(reward_panel, viewport_size, Vector2(720, 610), Vector2(24, 48))
 		_layout_reward_contents()
@@ -235,8 +246,11 @@ func _layout_event_contents() -> void:
 	var width := event_panel.size.x
 	event_title.position = Vector2(28, 24)
 	event_title.size = Vector2(width - 56, 48)
-	event_description.position = Vector2(42, 84)
-	event_description.size = Vector2(width - 84, 118)
+	if narrative_portrait:
+		narrative_portrait.position = Vector2(38, 82)
+		narrative_portrait.size = Vector2(126, 126)
+	event_description.position = Vector2(180 if narrative_portrait and narrative_portrait.visible else 42, 84)
+	event_description.size = Vector2(width - (222 if narrative_portrait and narrative_portrait.visible else 84), 118)
 	var button_width := (width - 126) * 0.5
 	event_choice_a.position = Vector2(42, 232)
 	event_choice_a.size = Vector2(button_width, 92)
@@ -501,11 +515,14 @@ func _nearest_risk_event() -> RiskEvent:
 
 func _open_risk_event(risk_event: RiskEvent) -> void:
 	active_event = risk_event
+	if narrative_portrait:
+		narrative_portrait.visible = false
 	event_title.text = risk_event.title
 	event_description.text = risk_event.description
 	event_choice_a.text = risk_event.choice_a
 	event_choice_b.text = risk_event.choice_b
 	event_panel.visible = true
+	_layout_event_contents()
 	prompt_panel.visible = false
 	_set_gameplay_paused(true)
 
@@ -743,6 +760,7 @@ func _open_persistent_narrative(target: ObjectiveInteractable) -> void:
 		active_narrative = narrative_chapter.duplicate(true)
 	active_narrative_target = target
 	event_title.text = str(active_narrative.get("npc_title", active_narrative.get("title", "副本记忆")))
+	_set_narrative_portrait(target)
 	var cause := str(active_narrative.get("cause", ""))
 	event_description.text = str(active_narrative.get("npc_description", active_narrative.get("briefing", "")))
 	if not cause.is_empty() and not cause.contains("第一次进入"):
@@ -750,6 +768,7 @@ func _open_persistent_narrative(target: ObjectiveInteractable) -> void:
 	event_choice_a.text = str(active_narrative.get("choice_a", "继续"))
 	event_choice_b.text = str(active_narrative.get("choice_b", "离开"))
 	event_panel.visible = true
+	_layout_event_contents()
 	prompt_panel.visible = false
 	_set_gameplay_paused(true)
 
@@ -939,6 +958,7 @@ func _on_enemy_removed(enemy: Node) -> void:
 		enemies_defeated += 1
 		if enemy is SanatoriumBoss:
 			boss_defeated = true
+			_show_milestone_feedback(0, "首领已击败")
 			var boss_loot := LootDatabase.boss_reward(run_config.world_id)
 			var material_id := str(boss_loot.get("material", ""))
 			if not material_id.is_empty():
@@ -1351,6 +1371,38 @@ func _create_feedback_layer() -> void:
 	pathway_status_label.add_theme_font_size_override("font_size", 15)
 	pathway_status_label.add_theme_color_override("font_color", Color("d4c079"))
 	$Interface.add_child(pathway_status_label)
+	pathway_status_icons = HBoxContainer.new()
+	pathway_status_icons.name = "PathwayStatusIcons"
+	pathway_status_icons.position = Vector2(253, 164)
+	pathway_status_icons.add_theme_constant_override("separation", 4)
+	$Interface.add_child(pathway_status_icons)
+	narrative_portrait = TextureRect.new()
+	narrative_portrait.name = "NarrativePortrait"
+	narrative_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	narrative_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	narrative_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	narrative_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	narrative_portrait.visible = false
+	event_panel.add_child(narrative_portrait)
+	milestone_feedback = TextureRect.new()
+	milestone_feedback.name = "MilestoneFeedback"
+	milestone_feedback.size = Vector2(220, 220)
+	milestone_feedback.position = Vector2((get_viewport_rect().size.x - 220.0) * 0.5, 210)
+	milestone_feedback.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	milestone_feedback.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	milestone_feedback.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	milestone_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	milestone_feedback.z_index = 500
+	milestone_feedback.visible = false
+	$Interface.add_child(milestone_feedback)
+	milestone_caption = Label.new()
+	milestone_caption.position = Vector2(-100, 184)
+	milestone_caption.size = Vector2(420, 40)
+	milestone_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	milestone_caption.add_theme_font_override("font", UI_FONT)
+	milestone_caption.add_theme_font_size_override("font_size", 22)
+	milestone_caption.add_theme_color_override("font_color", Color("e4eee9"))
+	milestone_feedback.add_child(milestone_caption)
 	_sound_player = AudioStreamPlayer.new()
 	add_child(_sound_player)
 
@@ -1365,6 +1417,82 @@ func _update_pathway_status() -> void:
 		parts.append("站务员哨 %.1fs" % whistle_cooldown)
 	pathway_status_label.text = "  ·  ".join(parts)
 	pathway_status_label.visible = not parts.is_empty()
+	_refresh_status_icons(player.pathway_effects.statuses())
+
+
+func _refresh_status_icons(statuses: Array[Dictionary]) -> void:
+	if pathway_status_icons == null:
+		return
+	var signature := ",".join(statuses.map(func(status): return str(status.get("id", ""))))
+	if signature == _status_icon_signature:
+		pathway_status_icons.visible = not statuses.is_empty()
+		return
+	_status_icon_signature = signature
+	for child in pathway_status_icons.get_children():
+		child.queue_free()
+	var index_by_id := {"guard": 0, "calibration": 1, "anomaly": 2, "freeze": 3, "paralyze": 4, "weakpoint": 5}
+	for status in statuses:
+		var index := int(index_by_id.get(str(status.get("id", "")), -1))
+		if index < 0:
+			continue
+		var icon := TextureRect.new()
+		icon.custom_minimum_size = Vector2(28, 28)
+		icon.texture = _atlas_texture(PROGRESSION_STATUS_ICONS, Rect2(index * 32, 64, 32, 32))
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.tooltip_text = str(status.get("name", "状态"))
+		pathway_status_icons.add_child(icon)
+	pathway_status_icons.visible = not statuses.is_empty()
+
+
+func _show_milestone_feedback(index: int, caption: String) -> void:
+	if milestone_feedback == null or MILESTONE_FEEDBACK == null or MILESTONE_FEEDBACK.get_size() != Vector2(768, 192):
+		return
+	milestone_feedback.texture = _atlas_texture(MILESTONE_FEEDBACK, Rect2(clampi(index, 0, 3) * 192, 0, 192, 192))
+	milestone_feedback.position = Vector2((get_viewport_rect().size.x - 220.0) * 0.5, 210)
+	milestone_feedback.modulate = Color(1, 1, 1, 0)
+	milestone_feedback.scale = Vector2(0.75, 0.75)
+	milestone_feedback.visible = true
+	milestone_caption.text = caption
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(milestone_feedback, "modulate", Color.WHITE, 0.18)
+	tween.tween_property(milestone_feedback, "scale", Vector2.ONE, 0.22)
+	tween.chain().tween_interval(1.15)
+	tween.chain().set_parallel(true)
+	tween.tween_property(milestone_feedback, "modulate", Color(1, 1, 1, 0), 0.35)
+	tween.tween_property(milestone_feedback, "position:y", 184.0, 0.35)
+	tween.chain().tween_callback(func(): milestone_feedback.visible = false)
+
+
+func _set_narrative_portrait(target: ObjectiveInteractable) -> void:
+	if narrative_portrait == null:
+		return
+	var index := -1
+	match target.objective_id:
+		"sanatorium_memory":
+			index = 2 if target.display_name.contains("周衡") else 1
+		"sanatorium_archive":
+			index = 2
+		"linye_story":
+			index = 3
+		"xuzhao_memory":
+			index = 4
+		"ticket_echo_memory":
+			index = 5
+		"metro_hidden_archive":
+			index = 3 if target.display_name.contains("林雾") else -1
+	if index < 0 or STORY_NPC_PORTRAITS == null or STORY_NPC_PORTRAITS.get_size() != Vector2(576, 384):
+		narrative_portrait.visible = false
+		return
+	narrative_portrait.texture = _atlas_texture(STORY_NPC_PORTRAITS, Rect2((index % 3) * 192, floori(float(index) / 3.0) * 192, 192, 192))
+	narrative_portrait.visible = true
+
+
+func _atlas_texture(atlas: Texture2D, region: Rect2) -> AtlasTexture:
+	var texture := AtlasTexture.new()
+	texture.atlas = atlas
+	texture.region = region
+	return texture
 
 
 func _create_reward_panel() -> void:
@@ -1464,9 +1592,7 @@ func _draw() -> void:
 			draw_line(DynamicRunConfig.METRO_SOUTH_SWITCH, DynamicRunConfig.METRO_SOUTH_EXIT, Color("f0b568"), 5.0)
 		if run_config.revealed_secret_regions.has("lost_passenger_level"):
 			var secret_rect: Rect2 = DynamicRunConfig.METRO_SECRET_REGION.rect
-			draw_rect(secret_rect, Color(0.18, 0.09, 0.25, 0.42), true)
-			draw_rect(secret_rect, Color("b88be2"), false, 4.0)
-			draw_string(UI_FONT, secret_rect.position + Vector2(24, 72), "失踪乘客维护层 // 副本记忆已显现", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 20, Color("d9b8ef"))
+			_draw_metro_maintenance_level(secret_rect)
 	for wall in _wall_rectangles():
 		if metro:
 			_draw_metro_wall(wall)
@@ -1584,6 +1710,35 @@ func _draw_metro_props() -> void:
 	]
 	for placement in placements:
 		_draw_metro_prop(int(placement[0]), placement[1], float(placement[2]))
+
+
+func _draw_metro_maintenance_level(secret_rect: Rect2) -> void:
+	draw_rect(secret_rect, Color(0.04, 0.055, 0.075, 0.96), true)
+	if METRO_MAINTENANCE_ATLAS != null and METRO_MAINTENANCE_ATLAS.get_size() == Vector2(512, 256):
+		for y in range(int(secret_rect.position.y), int(secret_rect.end.y), 128):
+			for x in range(int(secret_rect.position.x), int(secret_rect.end.x), 128):
+				draw_texture_rect_region(
+					METRO_MAINTENANCE_ATLAS,
+					Rect2(x, y, 128, 128).intersection(secret_rect),
+					Rect2(0, 0, 128, 128),
+					Color(0.7, 0.76, 0.82, 0.9),
+				)
+		var props := [
+			[2, secret_rect.position + Vector2(76, 76)],
+			[3, secret_rect.position + Vector2(secret_rect.size.x - 88, 82)],
+			[4, secret_rect.position + Vector2(96, secret_rect.size.y - 90)],
+			[7, secret_rect.position + Vector2(secret_rect.size.x - 110, secret_rect.size.y - 88)],
+		]
+		for spec in props:
+			var index := int(spec[0])
+			var center: Vector2 = spec[1]
+			draw_texture_rect_region(
+				METRO_MAINTENANCE_ATLAS,
+				Rect2(center - Vector2(58, 58), Vector2(116, 116)),
+				Rect2((index % 4) * 128, floori(float(index) / 4.0) * 128, 128, 128),
+			)
+	draw_rect(secret_rect, Color("8d68b3"), false, 3.0)
+	draw_string(UI_FONT, secret_rect.position + Vector2(24, 38), "失踪乘客维护层 // 名单与排水记录", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 18, Color("d9b8ef"))
 
 
 func _draw_metro_prop(index: int, center: Vector2, draw_size: float) -> void:

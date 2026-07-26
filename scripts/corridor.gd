@@ -6,6 +6,10 @@ const CORRIDOR_TILESET: Texture2D = preload("res://assets/art/worlds/corridor/co
 const CORRIDOR_PROPS: Texture2D = preload("res://assets/art/worlds/corridor/corridor_props.png")
 const CORRIDOR_HUB_ATLAS: Texture2D = preload("res://assets/art/worlds/corridor/corridor_hub_atlas.png")
 const HUB_SECTION_ICONS: Texture2D = preload("res://assets/art/ui/hub_section_icons.png")
+const PROGRESSION_STATUS_ICONS: Texture2D = preload("res://assets/art/ui/progression_status_icons.png")
+const STORY_NPC_PORTRAITS: Texture2D = preload("res://assets/art/characters/npcs/story_npc_portraits.png")
+const ARCHIVE_ILLUSTRATIONS: Texture2D = preload("res://assets/art/narrative/archive_illustrations.png")
+const MILESTONE_FEEDBACK: Texture2D = preload("res://assets/art/vfx/milestone_feedback.png")
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
 const THRESHOLD_CURATOR_SPRITESHEET: Texture2D = preload("res://assets/art/characters/corridor/threshold_curator_spritesheet.png")
 const EQUIPMENT_ICONS := {
@@ -105,6 +109,9 @@ const SANATORIUM_GATE_POSITION := Vector2(250, 372)
 const METRO_GATE_POSITION := Vector2(1030, 372)
 const INTERACTION_RANGE := 118.0
 var active_gate_world := "sanatorium"
+var milestone_feedback: TextureRect
+var milestone_caption: Label
+var _shown_heart_id := ""
 
 
 func _ready() -> void:
@@ -140,6 +147,7 @@ func _ready() -> void:
 	_create_difficulty_control()
 	_create_hub_navigation()
 	_create_section_panel()
+	_create_milestone_feedback()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
@@ -472,6 +480,10 @@ func _refresh() -> void:
 	queue_redraw()
 	if mobile_terminal_panel and mobile_terminal_panel.visible:
 		_refresh_mobile_terminal()
+	var heart_id := str(GameState.heart_aspect.get("id", ""))
+	if not heart_id.is_empty() and heart_id != _shown_heart_id:
+		_shown_heart_id = heart_id
+		call_deferred("_show_milestone", 3, str(GameState.heart_aspect.get("name", "心相形成")))
 
 
 func _purchase(upgrade_id: String) -> void:
@@ -485,7 +497,11 @@ func _select_loadout(loadout_id: String) -> void:
 
 func _unlock_path_node(node_id: String) -> void:
 	var node: Dictionary = GameProgress.PATH_NODES[node_id]
-	feedback.text = "%s已锚定：%s" % [str(node.name), str(node.description)] if GameState.unlock_path_node(node_id) else "无法锚定：需先选择该职业、满足前置节点，并支付回响碎片与首次锚定的因果残片。"
+	var first_anchor := GameState.selected_pathway.is_empty()
+	var success := GameState.unlock_path_node(node_id)
+	feedback.text = "%s已锚定：%s" % [str(node.name), str(node.description)] if success else "无法锚定：需先选择该职业、满足前置节点，并支付回响碎片与首次锚定的因果残片。"
+	if success and first_anchor:
+		_show_milestone(1, "%s已锚定" % GameState.get_pathway_name())
 
 
 func _create_style_controls() -> void:
@@ -504,8 +520,11 @@ func _create_style_controls() -> void:
 
 
 func _toggle_combat_style(style_id: String) -> void:
+	var newly_unlocked := not GameState.unlocked_combat_styles.has(style_id)
 	var success := GameState.select_combat_style(style_id) if GameState.unlocked_combat_styles.has(style_id) else GameState.unlock_combat_style(style_id)
 	feedback.text = "当前流派：%s。" % str(ExchangeEvolution.COMBAT_STYLES[style_id].name) if success else "无法启用流派：需完成职业核心节点并支付 5 回响。"
+	if success and newly_unlocked:
+		_show_milestone(2, "流派解锁 · %s" % str(ExchangeEvolution.COMBAT_STYLES[style_id].name))
 	_refresh()
 
 
@@ -1566,7 +1585,64 @@ func _section_heading(text: String, body := "") -> void:
 		section_content.add_child(detail)
 
 
-func _create_icon_card(icon_texture: Texture2D, title_text: String, subtitle_text: String, action: Callable) -> Button:
+func _progression_icon(row: int, column: int) -> AtlasTexture:
+	var texture := AtlasTexture.new()
+	texture.atlas = PROGRESSION_STATUS_ICONS
+	texture.region = Rect2(clampi(column, 0, 5) * 32, clampi(row, 0, 2) * 32, 32, 32)
+	return texture
+
+
+func _affix_icon_index(affix_id: String) -> int:
+	return ["guardian", "last_round", "suppression", "volatile", "perception", "restoration"].find(affix_id)
+
+
+func _create_milestone_feedback() -> void:
+	milestone_feedback = TextureRect.new()
+	milestone_feedback.name = "MilestoneFeedback"
+	milestone_feedback.size = Vector2(210, 210)
+	milestone_feedback.position = Vector2((size.x - 210.0) * 0.5, 150)
+	milestone_feedback.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	milestone_feedback.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	milestone_feedback.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	milestone_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	milestone_feedback.z_index = 500
+	milestone_feedback.visible = false
+	add_child(milestone_feedback)
+	milestone_caption = Label.new()
+	milestone_caption.position = Vector2(-120, 178)
+	milestone_caption.size = Vector2(450, 42)
+	milestone_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	milestone_caption.add_theme_font_override("font", UI_FONT)
+	milestone_caption.add_theme_font_size_override("font_size", 22)
+	milestone_caption.add_theme_color_override("font_color", Color("d9ece6"))
+	milestone_caption.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+	milestone_feedback.add_child(milestone_caption)
+
+
+func _show_milestone(index: int, caption: String) -> void:
+	if milestone_feedback == null or MILESTONE_FEEDBACK == null or MILESTONE_FEEDBACK.get_size() != Vector2(768, 192):
+		return
+	var texture := AtlasTexture.new()
+	texture.atlas = MILESTONE_FEEDBACK
+	texture.region = Rect2(clampi(index, 0, 3) * 192, 0, 192, 192)
+	milestone_feedback.texture = texture
+	milestone_feedback.position = Vector2((size.x - 210.0) * 0.5, 150)
+	milestone_feedback.modulate = Color(1, 1, 1, 0)
+	milestone_feedback.scale = Vector2(0.72, 0.72)
+	milestone_feedback.visible = true
+	milestone_caption.text = caption
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(milestone_feedback, "modulate", Color.WHITE, 0.18)
+	tween.tween_property(milestone_feedback, "scale", Vector2.ONE, 0.22)
+	tween.chain().tween_interval(1.2)
+	tween.chain().set_parallel(true)
+	tween.tween_property(milestone_feedback, "modulate", Color(1, 1, 1, 0), 0.35)
+	tween.tween_property(milestone_feedback, "position:y", 124.0, 0.35)
+	tween.chain().tween_callback(func(): milestone_feedback.visible = false)
+
+
+func _create_icon_card(icon_texture: Texture2D, title_text: String, subtitle_text: String, action: Callable, badge_index := -1) -> Button:
 	var card := Button.new()
 	card.custom_minimum_size = Vector2(116, 112)
 	card.focus_mode = Control.FOCUS_NONE
@@ -1581,6 +1657,16 @@ func _create_icon_card(icon_texture: Texture2D, title_text: String, subtitle_tex
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(icon)
+	if badge_index >= 0:
+		var badge := TextureRect.new()
+		badge.position = Vector2(78, 5)
+		badge.size = Vector2(28, 28)
+		badge.texture = _progression_icon(0, badge_index)
+		badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		badge.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(badge)
 	var title := Label.new()
 	title.position = Vector2(5, 64)
 	title.size = Vector2(106, 24)
@@ -1698,6 +1784,25 @@ func _build_world_archive_section() -> void:
 	section_title.text = "世界与叙事档案 // WORLD CODEX"
 	var identity := narrative_catalog.identity()
 	_section_heading(str(identity.get("title", "Dreadbound")), "%s\n\n%s" % [str(identity.get("genre", "")), str(identity.get("positioning", ""))])
+	var curator_row := HBoxContainer.new()
+	var curator_portrait := TextureRect.new()
+	curator_portrait.custom_minimum_size = Vector2(112, 112)
+	var curator_texture := AtlasTexture.new()
+	curator_texture.atlas = STORY_NPC_PORTRAITS
+	curator_texture.region = Rect2(0, 0, 192, 192)
+	curator_portrait.texture = curator_texture
+	curator_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	curator_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	curator_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	curator_row.add_child(curator_portrait)
+	var curator_text := Label.new()
+	curator_text.text = "阈值司仪\n记录行动证据、世界变化与未完成的代价。"
+	curator_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	curator_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	curator_text.add_theme_font_size_override("font_size", 16)
+	curator_text.add_theme_color_override("font_color", Color("b8cec6"))
+	curator_row.add_child(curator_text)
+	section_content.add_child(curator_row)
 	_add_codex_button("世界底层法则 · %d 条" % narrative_catalog.data.get("world_rules", {}).size(), "rules")
 	_add_codex_button("四大阵营 · 信条与代价", "factions")
 	_add_codex_button("行者编组 · 职责、资源与失联", "squad")
@@ -1768,6 +1873,7 @@ func _build_dungeon_codex(world_id: String) -> void:
 	var world := narrative_catalog.dungeon(world_id)
 	var dungeon_state: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
 	section_title.text = "%s // %s" % [str(world.get("name", world_id)), str(world.get("english_name", ""))]
+	_add_archive_illustration(world_id, dungeon_state)
 	_section_heading("投送简介", str(world.get("short_intro", "")))
 	_section_heading("完整故事", str(world.get("full_story", "")))
 	_section_heading("核心恐惧", str(world.get("core_fear", "")))
@@ -1807,6 +1913,27 @@ func _build_dungeon_codex(world_id: String) -> void:
 	_section_heading("回廊主线线索", str(world.get("main_story_clue", "")) if int(GameState.persistent_dungeons.dungeons.get(world_id, {}).get("visits", 0)) >= 2 else "需要至少两次进入该世界。")
 
 
+func _add_archive_illustration(world_id: String, dungeon_state: Dictionary) -> void:
+	if ARCHIVE_ILLUSTRATIONS == null or ARCHIVE_ILLUSTRATIONS.get_size() != Vector2(768, 288):
+		return
+	var local_index := 0
+	if int(dungeon_state.get("boss_state", {}).get("defeats", 0)) > 0:
+		local_index = 1
+	elif int(dungeon_state.get("completed_runs", 0)) > 0:
+		local_index = 2
+	var index := local_index + (3 if world_id == "metro" else 0)
+	var image := TextureRect.new()
+	image.custom_minimum_size = Vector2(0, 238)
+	var texture := AtlasTexture.new()
+	texture.atlas = ARCHIVE_ILLUSTRATIONS
+	texture.region = Rect2((index % 3) * 256, floori(float(index) / 3.0) * 144, 256, 144)
+	image.texture = texture
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	section_content.add_child(image)
+
+
 func _truth_record_unlocked(world_id: String, record: Dictionary) -> bool:
 	var unlock: Dictionary = record.get("unlock", {})
 	var dungeon: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
@@ -1830,6 +1957,23 @@ func _truth_unlock_hint(unlock: Dictionary) -> String:
 func _build_career_section() -> void:
 	section_title.text = "职业锚点与战斗流派 // CAREER"
 	_section_heading("当前职业", "%s · 当前流派：%s" % [GameState.get_pathway_name(), str(ExchangeEvolution.COMBAT_STYLES.get(GameState.active_combat_style, {}).get("name", "未选择"))])
+	if not GameState.heart_aspect.is_empty():
+		var heart_ids := ["watch", "last_breath", "broken_oath", "seek_gap", "contain_abyss", "finale"]
+		var heart_row := HBoxContainer.new()
+		var heart_icon := TextureRect.new()
+		heart_icon.custom_minimum_size = Vector2(58, 58)
+		heart_icon.texture = _progression_icon(1, maxi(0, heart_ids.find(str(GameState.heart_aspect.get("id", "")))))
+		heart_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		heart_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		heart_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		heart_row.add_child(heart_icon)
+		var heart_text := Label.new()
+		heart_text.text = "%s\n%s" % [str(GameState.heart_aspect.get("name", "未成形心相")), str(GameState.heart_aspect.get("description", ""))]
+		heart_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		heart_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		heart_text.add_theme_color_override("font_color", Color("c8b8df"))
+		heart_row.add_child(heart_text)
+		section_content.add_child(heart_row)
 	for node_id in GameProgress.PATH_NODES:
 		var node: Dictionary = GameProgress.PATH_NODES[node_id]
 		if (GameState.selected_pathway.is_empty() and not str(node.get("requires", "")).is_empty()) or (not GameState.selected_pathway.is_empty() and str(node.path) != GameState.selected_pathway):
@@ -2015,7 +2159,8 @@ func _refresh_warehouse() -> void:
 				EQUIPMENT_ICONS.get(str(candidate.item_id), UNKNOWN_EQUIPMENT_ICON),
 				str(candidate_item.name),
 				"候选 · %s" % str(candidate_affix.get("name", "未知")),
-				_choose_synthesis.bind(index)
+				_choose_synthesis.bind(index),
+				_affix_icon_index(str(candidate.affix_id)),
 			))
 		var reject := Button.new()
 		reject.custom_minimum_size = Vector2(116, 112)
@@ -2040,7 +2185,8 @@ func _refresh_warehouse() -> void:
 			EQUIPMENT_ICONS.get(str(item_id), UNKNOWN_EQUIPMENT_ICON),
 			"%s%s" % [equipped_mark, str(item.name)],
 			"×%d · %s" % [counts[item_id], str(item.quality)],
-			_select_equipment.bind(str(item_id))
+			_select_equipment.bind(str(item_id)),
+			_affix_icon_index(str(GameState.equipment_affixes.get(item_id, ""))),
 		))
 	equip_button.disabled = true
 	salvage_button.disabled = true

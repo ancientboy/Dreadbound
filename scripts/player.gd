@@ -5,10 +5,16 @@ const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drif
 const STEADFAST_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/steadfast_spritesheet.png")
 const ARMORER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/armorer_spritesheet.png")
 const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/resonant_spritesheet.png")
-const COMBAT_STYLE_FORMS: Texture2D = preload("res://assets/art/characters/professions/combat_style_forms.png")
+const COMBAT_STYLE_FORM_ATLASES := {
+	"steadfast": preload("res://assets/art/characters/professions/combat_style_forms_steadfast.png"),
+	"armorer": preload("res://assets/art/characters/professions/combat_style_forms_armorer.png"),
+	"resonant": preload("res://assets/art/characters/professions/combat_style_forms_resonant.png"),
+}
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
+const ADVANCED_WEAPONS: Texture2D = preload("res://assets/art/weapons/advanced_weapons.png")
 const DIRECTOR_REAPER_GROWTH: Texture2D = preload("res://assets/art/weapons/director_reaper_growth.png")
 const CONDUCTOR_RAILGUN_GROWTH: Texture2D = preload("res://assets/art/weapons/conductor_railgun_growth.png")
+const BOSS_EVOLUTION_WEAPONS: Texture2D = preload("res://assets/art/weapons/boss_evolution_weapons.png")
 const PLAYER_STATES_LIGHTING: Texture2D = preload("res://assets/art/vfx/player_states_lighting.png")
 const METRO_FLOOD_LAYERS: Texture2D = preload("res://assets/art/vfx/metro_flood_layers.png")
 
@@ -660,15 +666,22 @@ func _draw() -> void:
 	var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
 	var weapon_scale := float(weapon_visual.get("scale", 1.0))
 	var growth := int(weapon_visual.get("growth", 0))
+	var evolution_id := str(state.current_equipment_evolution(weapon_item).get("id", "")) if state else ""
 	# Equipment owns the silhouette while loadouts still select the attack mode.
 	if str(weapon_visual.shape) == "reaper":
-		_draw_director_reaper(growth, weapon_scale, weapon_color)
+		if evolution_id in ["watcher_form", "execution_form", "abyss_form"]:
+			_draw_boss_evolution(["watcher_form", "execution_form", "abyss_form"].find(evolution_id), weapon_scale)
+		else:
+			_draw_director_reaper(growth, weapon_scale, weapon_color)
 		if growth >= 3:
 			draw_arc(Vector2.ZERO, 30.0 + growth * 3.0, facing.angle() - 0.8, facing.angle() + 0.55, 18, Color(weapon_color, 0.2), 2.0)
-	elif str(weapon_visual.shape) == "blade":
-		draw_line(facing * 8.0, facing * 40.0, weapon_color, 5.0)
 	elif str(weapon_visual.shape) == "railgun":
-		_draw_conductor_railgun(growth, weapon_scale, weapon_color)
+		if evolution_id in ["hunter_form", "storm_form", "runaway_form"]:
+			_draw_boss_evolution(3 + ["hunter_form", "storm_form", "runaway_form"].find(evolution_id), weapon_scale)
+		else:
+			_draw_conductor_railgun(growth, weapon_scale, weapon_color)
+	elif str(weapon_visual.shape) == "advanced":
+		_draw_advanced_weapon(int(weapon_visual.get("atlas_index", 0)))
 	elif current_weapon == Weapon.RANGED:
 		_draw_basic_weapon(1)
 	elif current_weapon == Weapon.SHOTGUN:
@@ -711,15 +724,24 @@ func _draw_combat_style_form() -> void:
 		"psychic_sense", "anomaly_ingestion", "echo_summoner", "aberrant_form",
 	]
 	var style_index := style_order.find(_active_combat_style())
-	if style_index < 0 or COMBAT_STYLE_FORMS == null or COMBAT_STYLE_FORMS.get_size() != Vector2(512, 384):
+	if style_index < 0:
 		return
+	var pathway: String = ["steadfast", "armorer", "resonant"][clampi(floori(float(style_index) / 4.0), 0, 2)]
+	var atlas: Texture2D = COMBAT_STYLE_FORM_ATLASES.get(pathway)
+	if atlas == null or atlas.get_size() != Vector2(512, 512):
+		return
+	var direction_column := 0
+	if absf(facing.x) > absf(facing.y):
+		direction_column = 2 if facing.x > 0.0 else 1
+	elif facing.y < 0.0:
+		direction_column = 3
 	var tint := Color(1.0, 1.0, 1.0, 0.76)
 	if style_index in [9, 11] and pathway_effects != null:
 		tint.a = 0.64 + minf(float(pathway_effects.anomaly_pressure) * 0.05, 0.24)
 	draw_texture_rect_region(
-		COMBAT_STYLE_FORMS,
+		atlas,
 		Rect2(-64, -91, 128, 128),
-		Rect2((style_index % 4) * 128, floori(float(style_index) / 4.0) * 128, 128, 128),
+		Rect2(direction_column * 128, (style_index % 4) * 128, 128, 128),
 		tint,
 	)
 
@@ -774,6 +796,37 @@ func _draw_basic_weapon(atlas_index: int) -> void:
 		Rect2(-16, -16, 32, 32),
 		Rect2(atlas_index * 32, 0, 32, 32),
 		Color(1.15, 1.15, 1.15, 1.0) if _attack_flash > 0.0 else Color.WHITE
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_advanced_weapon(atlas_index: int) -> void:
+	if ADVANCED_WEAPONS == null or ADVANCED_WEAPONS.get_size() != Vector2(320, 64):
+		_draw_basic_weapon(int(current_weapon))
+		return
+	var hand_position := Vector2(0, -27) + facing * 14.0 + facing.orthogonal() * 5.0
+	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
+	draw_texture_rect_region(
+		ADVANCED_WEAPONS,
+		Rect2(-32, -32, 64, 64),
+		Rect2(clampi(atlas_index, 0, 4) * 64, 0, 64, 64),
+		Color(1.16, 1.14, 1.12, 1.0) if _attack_flash > 0.0 else Color.WHITE,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_boss_evolution(atlas_index: int, scale: float) -> void:
+	if BOSS_EVOLUTION_WEAPONS == null or BOSS_EVOLUTION_WEAPONS.get_size() != Vector2(384, 128):
+		return
+	var column := atlas_index % 3
+	var row := floori(float(atlas_index) / 3.0)
+	var hand_position := Vector2(0, -27) + facing * 15.0 + facing.orthogonal() * 5.0
+	draw_set_transform(hand_position, facing.angle() + (PI * 0.5 if row == 0 else 0.0), Vector2.ONE * scale)
+	draw_texture_rect_region(
+		BOSS_EVOLUTION_WEAPONS,
+		Rect2(-48, -32, 96, 64),
+		Rect2(column * 128, row * 64, 128, 64),
+		Color(1.18, 1.12, 1.1, 1.0) if _attack_flash > 0.0 else Color.WHITE,
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

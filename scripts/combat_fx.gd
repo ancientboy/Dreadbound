@@ -6,7 +6,12 @@ extends Node2D
 const MAX_EVENTS := 48
 const COMBAT_ATLAS: Texture2D = preload("res://assets/art/vfx/combat_core.png")
 const METRO_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/metro_enemy_skills.png")
-const PROFESSION_SKILLS: Texture2D = preload("res://assets/art/vfx/profession_skills.png")
+const SANATORIUM_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/sanatorium_enemy_skills.png")
+const PROFESSION_SKILL_ATLASES := {
+	"steadfast": preload("res://assets/art/vfx/profession_skills_steadfast.png"),
+	"armorer": preload("res://assets/art/vfx/profession_skills_armorer.png"),
+	"resonant": preload("res://assets/art/vfx/profession_skills_resonant.png"),
+}
 
 var _events: Array[Dictionary] = []
 var _camera: Camera2D
@@ -113,6 +118,22 @@ func metro_enemy_skill(kind: String, position: Vector2, direction := Vector2.DOW
 		"conductor_train": 7,
 	}.get(kind, 0))
 	_spawn("metro_skill_%d" % int(skill_index), position, direction, size, duration, Color.WHITE)
+
+
+func sanatorium_enemy_skill(kind: String, position: Vector2, direction := Vector2.DOWN, size := 96.0, duration := 0.32) -> void:
+	var skill_index: int = int({
+		"patient_claw": 0,
+		"crawler_lunge": 1,
+		"orderly_heavy": 2,
+		"director_sweep": 3,
+		"director_slam": 4,
+		"director_mutation": 5,
+		"patient_grasp": 6,
+		"crawler_tear": 7,
+	}.get(kind, -1))
+	if skill_index < 0:
+		return
+	_spawn("sanatorium_skill_%d" % skill_index, position, direction, size, duration, Color.WHITE)
 
 
 func profession_skill(kind: String, position: Vector2, direction := Vector2.DOWN, size := 96.0, duration := 0.36) -> void:
@@ -223,6 +244,18 @@ func _draw() -> void:
 						rotation,
 						Color(1.0, 1.0, 1.0, fade),
 					)
+				elif String(event.kind).begins_with("sanatorium_skill_"):
+					var index := int(String(event.kind).trim_prefix("sanatorium_skill_"))
+					var direction: Vector2 = event.payload
+					var rotation := direction.angle() + PI * 0.5 if index in [0, 1, 2, 3, 6, 7] else 0.0
+					var scale_pulse := 0.82 + sin(progress * PI) * 0.26
+					_draw_sanatorium_fx_cell(
+						index,
+						event.origin + (direction * float(event.radius) * 0.16 if index in [0, 1, 2, 3, 6, 7] else Vector2.ZERO),
+						float(event.radius) * scale_pulse,
+						rotation,
+						Color(1.0, 1.0, 1.0, fade),
+					)
 				elif String(event.kind).begins_with("profession_skill_"):
 					var index := int(String(event.kind).trim_prefix("profession_skill_"))
 					var direction: Vector2 = event.payload
@@ -230,6 +263,7 @@ func _draw() -> void:
 					var scale_pulse := 0.82 + sin(progress * PI) * 0.24
 					_draw_profession_fx_cell(
 						index,
+						progress,
 						event.origin + (direction * float(event.radius) * 0.12 if index in [3, 4, 5] else Vector2.ZERO),
 						float(event.radius) * scale_pulse,
 						rotation,
@@ -269,17 +303,35 @@ func _draw_metro_fx_cell(index: int, center: Vector2, draw_size: float, rotation
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-func _draw_profession_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
-	if PROFESSION_SKILLS == null or PROFESSION_SKILLS.get_size() != Vector2(512, 384):
+func _draw_sanatorium_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
+	if SANATORIUM_ENEMY_SKILLS == null or SANATORIUM_ENEMY_SKILLS.get_size() != Vector2(512, 256):
 		draw_arc(center, draw_size * 0.4, 0.0, TAU, 24, modulate, 3.0)
 		return
 	var column := index % 4
 	var row := floori(float(index) / 4.0)
 	draw_set_transform(center, rotation, Vector2.ONE)
 	draw_texture_rect_region(
-		PROFESSION_SKILLS,
+		SANATORIUM_ENEMY_SKILLS,
 		Rect2(Vector2(-draw_size, -draw_size) * 0.5, Vector2(draw_size, draw_size)),
 		Rect2(column * 128, row * 128, 128, 128),
+		modulate,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_profession_fx_cell(index: int, progress: float, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
+	var pathway: String = ["steadfast", "armorer", "resonant"][clampi(floori(float(index) / 4.0), 0, 2)]
+	var atlas: Texture2D = PROFESSION_SKILL_ATLASES.get(pathway)
+	if atlas == null or atlas.get_size() != Vector2(512, 512):
+		draw_arc(center, draw_size * 0.4, 0.0, TAU, 24, modulate, 3.0)
+		return
+	var row := index % 4
+	var frame := clampi(floori(progress * 4.0), 0, 3)
+	draw_set_transform(center, rotation, Vector2.ONE)
+	draw_texture_rect_region(
+		atlas,
+		Rect2(Vector2(-draw_size, -draw_size) * 0.5, Vector2(draw_size, draw_size)),
+		Rect2(frame * 128, row * 128, 128, 128),
 		modulate,
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

@@ -60,6 +60,7 @@ func _physics_process(delta: float) -> void:
 		if _windup <= 0.0:
 			_cooldown = attack_cooldown
 			if global_position.distance_to(target.global_position) <= attack_range + 18.0:
+				_get_combat_fx().sanatorium_enemy_skill("orderly_heavy", global_position, _facing, 108.0, 0.34)
 				target.take_damage(attack_damage, global_position)
 	elif distance <= attack_range and _cooldown <= 0.0:
 		_windup = windup_duration

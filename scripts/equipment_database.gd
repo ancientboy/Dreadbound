@@ -33,8 +33,11 @@ static func weapon_visual(item_id: String, growth_level := 0) -> Dictionary:
 	match item_id:
 		"director_reaper": return {"shape": "reaper", "color": Color("c9786a").lerp(Color("9fe6ff"), float(growth_level) * 0.055), "name": "缝合镰", "scale": scale, "growth": growth_level}
 		"conductor_railgun": return {"shape": "railgun", "color": Color("79d8e8").lerp(Color("d7b1ff"), float(growth_level) * 0.06), "name": "导轨枪", "scale": scale, "growth": growth_level}
-		"insulated_crowbar": return {"shape": "crowbar", "color": Color("8dc5d4"), "name": "绝缘撬棍"}
-		"echo_edge": return {"shape": "blade", "color": Color("66d9c6"), "name": "回响切割器"}
+		"echo_edge": return {"shape": "advanced", "atlas_index": 0, "color": Color("66d9c6"), "name": "回响切割器"}
+		"insulated_crowbar": return {"shape": "advanced", "atlas_index": 1, "color": Color("8dc5d4"), "name": "绝缘撬棍"}
+		"nullpoint_sidearm": return {"shape": "advanced", "atlas_index": 2, "color": Color("79d8e8"), "name": "零点标记枪"}
+		"siege_core": return {"shape": "advanced", "atlas_index": 3, "color": Color("e58a54"), "name": "围城火力核心"}
+		"volatile_edge": return {"shape": "advanced", "atlas_index": 4, "color": Color("b47cff"), "name": "失控回响刃"}
 	return {"shape": "standard", "color": QUALITY_COLORS[clampi(int(item.get("quality_rank", 0)), 0, QUALITY_COLORS.size() - 1)], "name": str(item.get("name", "制式武器"))}
 
 

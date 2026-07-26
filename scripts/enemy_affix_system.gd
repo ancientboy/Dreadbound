@@ -1,6 +1,8 @@
 class_name EnemyAffixSystem
 extends RefCounted
 
+const AFFIX_ATLAS: Texture2D = preload("res://assets/art/vfx/materials_enemy_affixes.png")
+
 var catalog := ContentCatalog.new()
 
 
@@ -31,6 +33,7 @@ func apply(enemy: Node, difficulty_id: String, seed: int, ordinal: int, base_nam
 	enemy.set_meta("dreadbound_drop_bonus", float(affix.get("drop_bonus", 0.0)))
 	if enemy is CanvasItem:
 		enemy.modulate = Color(str(affix.get("tint", "ffffff")))
+	_attach_visual(enemy, affix_id)
 	if enemy.has_method("queue_redraw"):
 		enemy.queue_redraw()
 	return {
@@ -40,6 +43,24 @@ func apply(enemy: Node, difficulty_id: String, seed: int, ordinal: int, base_nam
 		"effect": str(affix.get("effect", "")),
 		"drop_bonus": float(affix.get("drop_bonus", 0.0)),
 	}
+
+
+func _attach_visual(enemy: Node, affix_id: String) -> void:
+	var order := ["elite", "mutated", "frenzied", "frozen", "resonant", "nightmare"]
+	var index := order.find(affix_id)
+	if index < 0 or AFFIX_ATLAS == null or AFFIX_ATLAS.get_size() != Vector2(320, 128) or not enemy is Node2D:
+		return
+	var region := AtlasTexture.new()
+	region.atlas = AFFIX_ATLAS
+	region.region = Rect2(((index + 4) % 5) * 64, floori(float(index + 4) / 5.0) * 64, 64, 64)
+	var sprite := Sprite2D.new()
+	sprite.name = "AffixVisual"
+	sprite.texture = region
+	sprite.position = Vector2(0, -28)
+	sprite.scale = Vector2.ONE * (1.35 if enemy.is_in_group("bosses") else 0.92)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_index = 4
+	enemy.add_child(sprite)
 
 
 func _set_label(enemy: Node, value: String) -> void:
