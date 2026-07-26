@@ -71,6 +71,7 @@ var metro_water_state := 0
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(_apply_responsive_ui)
 	var run_seed: int = GameState.active_run_seed
 	if run_seed == 0:
 		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
@@ -108,6 +109,7 @@ func _ready() -> void:
 	_update_mission_ui()
 	_create_feedback_layer()
 	_create_reward_panel()
+	_apply_responsive_ui()
 	_loot_rng.randomize()
 	if not GameState.corridor_unlocked:
 		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
@@ -115,6 +117,54 @@ func _ready() -> void:
 	if run_config.world_id == "metro":
 		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。", 6.0)
 	queue_redraw()
+
+
+func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
+	# All disaster worlds share this layout contract.  Keep HUD content inside the
+	# actual browser canvas instead of assuming the 1280x720 design viewport.
+	var viewport_size: Vector2 = override_size if override_size != Vector2.ZERO else get_viewport_rect().size
+	var safe_margin := clampf(viewport_size.x * 0.018, 14.0, 28.0)
+	var top_bar := $Interface/TopBar as ColorRect
+	top_bar.position = Vector2(safe_margin, 16.0)
+	top_bar.size = Vector2(maxf(760.0, viewport_size.x - safe_margin * 2.0), 76.0)
+	var width := top_bar.size.x
+	var title := $Interface/TopBar/Title as Label
+	var controls := $Interface/TopBar/Controls as Label
+	title.position = Vector2(16, 7)
+	title.size = Vector2(width * 0.46, 24)
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	$Interface/TopBar/Inventory.position = Vector2(width * 0.46, 7)
+	$Interface/TopBar/Inventory.size = Vector2(width * 0.17, 24)
+	$Interface/TopBar/Health.position = Vector2(width * 0.63, 7)
+	$Interface/TopBar/Health.size = Vector2(width * 0.14, 24)
+	controls.position = Vector2(width * 0.77, 7)
+	controls.size = Vector2(width * 0.21 - 12, 24)
+	controls.visible = width >= 1050.0
+	$Interface/TopBar/Objective.position = Vector2(16, 39)
+	$Interface/TopBar/Objective.size = Vector2(width * 0.48, 24)
+	$Interface/TopBar/Objective.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	$Interface/TopBar/Weapon.position = Vector2(width * 0.48, 39)
+	$Interface/TopBar/Weapon.size = Vector2(width * 0.22, 24)
+	$Interface/TopBar/Progress.position = Vector2(width * 0.70, 39)
+	$Interface/TopBar/Progress.size = Vector2(width * 0.28 - 12, 24)
+	$Interface/TopBar/Progress.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	abandon_button.position = Vector2(0, 82)
+	abandon_button.size = Vector2(142, 40)
+	_layout_centered_panel(complete_panel, viewport_size, Vector2(600, 276), Vector2(32, 150))
+	_layout_centered_panel(event_panel, viewport_size, Vector2(680, 380), Vector2(32, 150))
+	if notification:
+		notification.position = Vector2((viewport_size.x - minf(720.0, viewport_size.x - 64.0)) * 0.5, 104)
+		notification.size = Vector2(minf(720.0, viewport_size.x - 64.0), 76)
+	if reward_panel:
+		_layout_centered_panel(reward_panel, viewport_size, Vector2(940, 410), Vector2(32, 140))
+
+
+func _layout_centered_panel(panel: Control, viewport_size: Vector2, preferred: Vector2, padding: Vector2) -> void:
+	if panel == null:
+		return
+	var panel_size := Vector2(minf(preferred.x, viewport_size.x - padding.x * 2.0), minf(preferred.y, viewport_size.y - padding.y))
+	panel.size = panel_size
+	panel.position = Vector2((viewport_size.x - panel_size.x) * 0.5, maxf(108.0, (viewport_size.y - panel_size.y) * 0.5))
 
 
 func _on_map_expanded_changed(expanded: bool) -> void:
@@ -736,6 +786,7 @@ func _create_feedback_layer() -> void:
 	notification = Label.new()
 	notification.position = Vector2(365, 96)
 	notification.size = Vector2(550, 72)
+	notification.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	notification.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	notification.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	notification.add_theme_font_override("font", UI_FONT)
@@ -784,6 +835,7 @@ func _create_reward_panel() -> void:
 	note.add_theme_font_size_override("font_size", 15)
 	note.add_theme_color_override("font_color", Color("78958d"))
 	reward_panel.add_child(note)
+	_apply_responsive_ui()
 
 
 func _show_notification(message: String, duration := 3.5) -> void:

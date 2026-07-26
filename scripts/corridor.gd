@@ -45,6 +45,7 @@ var active_gate_world := "sanatorium"
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(_apply_responsive_ui)
 	GameState.progress_changed.connect(_refresh)
 	for upgrade_id in UPGRADE_INFO:
 		var button := get_node("Margin/Layout/Columns/Upgrades/%s" % upgrade_id.capitalize()) as Button
@@ -73,6 +74,43 @@ func _ready() -> void:
 		feedback.text = "终末回廊已解锁：在此查看属性、强化身体、选择整备并再次投送。"
 	$HubHint.text = "两扇传说门已开启：左侧疗养院，右侧潮没末班线。靠近后按 E / 点击进入。"
 	$HubActions.visible = false
+	_apply_responsive_ui()
+	queue_redraw()
+
+
+func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
+	var viewport_size: Vector2 = override_size if override_size != Vector2.ZERO else get_viewport_rect().size
+	var margin := $Margin as MarginContainer
+	var inset := clampf(viewport_size.x * 0.025, 20.0, 42.0)
+	margin.offset_left = inset
+	margin.offset_right = -inset
+	margin.offset_top = 20.0
+	margin.offset_bottom = -20.0
+	# The terminal must never become wider than its canvas.  The previous action
+	# row alone requested 1232 px and caused every column to be centred offscreen.
+	var compact := viewport_size.x < 1180.0
+	$Margin/Layout.add_theme_constant_override("separation", 10 if compact else 18)
+	$Margin/Layout/Columns.add_theme_constant_override("separation", 10 if compact else 18)
+	$Margin/Layout/Actions.add_theme_constant_override("separation", 6 if compact else 18)
+	var compact_column_widths := [180.0, 180.0, 210.0, 210.0]
+	var columns := $Margin/Layout/Columns
+	for index in range(columns.get_child_count()):
+		var column := columns.get_child(index) as Control
+		if column:
+			var column_width: float = compact_column_widths[index] if compact else [220.0, 220.0, 280.0, 260.0][index]
+			column.custom_minimum_size = Vector2(column_width, column.custom_minimum_size.y)
+	var compact_action_widths := [110.0, 150.0, 160.0, 190.0, 110.0]
+	var normal_action_widths := [140.0, 180.0, 190.0, 260.0, 140.0]
+	var actions := $Margin/Layout/Actions
+	for index in range(actions.get_child_count()):
+		var action := actions.get_child(index) as Button
+		var action_width: float = compact_action_widths[index] if compact else normal_action_widths[index]
+		action.custom_minimum_size = Vector2(action_width, action.custom_minimum_size.y)
+		action.add_theme_font_size_override("font_size", 14 if compact else (20 if action.name == "Deploy" else 16))
+	$Margin/Layout/Header/Title.add_theme_font_size_override("font_size", 24 if compact else 30)
+	$Margin/Layout/Header/Currency.add_theme_font_size_override("font_size", 15 if compact else 18)
+	$HubTitle.position = Vector2(inset, 24)
+	$HubTitle.size = Vector2(viewport_size.x - inset * 2.0, 48)
 	queue_redraw()
 
 

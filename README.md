@@ -54,7 +54,7 @@
 14. **阶段 G 奖励基础（完成）**：普通怪物掉落、Boss 三选一回收箱、8 件样品装备、4 档品质、仓库、装备、拆解和撤离入库。
 15. **动态副本框架 H1（完成）**：带种子的房间模块重组、任务插槽、可达性验证、小地图适配与行动代码复现。
 16. **动态任务与 AI 导演 H2–H4（完成首轮）**：支线条件、因果链、压力/节奏导演、敌人记忆和 500 种子回归。
-17. **第二个灾难世界（下一步）**：在动态框架稳定后，以新的房间模块、任务契约和因果链接入。
+17. **第二个灾难世界（进行中）**：在动态框架稳定后，以新的房间模块、任务契约和因果链接入；所有世界必须遵守共享的 [UI 开发与验收标准](docs/ui-development-standard.md)，不得复制固定坐标界面。
 
 详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md)、[`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md)、[`docs/dynamic-director-plan.md`](docs/dynamic-director-plan.md) 和 [`docs/second-disaster-world-design.md`](docs/second-disaster-world-design.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 

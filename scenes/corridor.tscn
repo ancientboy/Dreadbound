@@ -218,28 +218,28 @@ alignment = 1
 theme_override_constants/separation = 18
 
 [node name="Reset" type="Button" parent="Margin/Layout/Actions"]
-custom_minimum_size = Vector2(180, 58)
+custom_minimum_size = Vector2(140, 58)
 layout_mode = 2
 text = "清除存档"
 
 [node name="Warehouse" type="Button" parent="Margin/Layout/Actions"]
-custom_minimum_size = Vector2(220, 58)
+custom_minimum_size = Vector2(180, 58)
 layout_mode = 2
 text = "装备回收仓库"
 
 [node name="SelectMetro" type="Button" parent="Margin/Layout/Actions"]
-custom_minimum_size = Vector2(220, 58)
+custom_minimum_size = Vector2(190, 58)
 layout_mode = 2
 text = "切换至潮没末班线"
 
 [node name="Deploy" type="Button" parent="Margin/Layout/Actions"]
-custom_minimum_size = Vector2(360, 58)
+custom_minimum_size = Vector2(260, 58)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "进入废弃疗养院"
 
 [node name="CloseTerminal" type="Button" parent="Margin/Layout/Actions"]
-custom_minimum_size = Vector2(180, 58)
+custom_minimum_size = Vector2(140, 58)
 layout_mode = 2
 text = "关闭终端"
 
