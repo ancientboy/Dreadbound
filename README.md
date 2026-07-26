@@ -36,11 +36,15 @@ V21 Loot & Hub 已接入：普通怪、精英、Boss、隐藏来源与撤离奖�
 
 N0–N7 World & Narrative Bible 已接入：正式确定七条世界法则、阈值司仪与四大阵营、行者编组职责和资源/失联/背叛规则、四幕全局主线，以及两张副本的独立故事、异常法则、Boss 真相与五视角档案。三件唯一物品和六种世界材料均拥有统一叙事规格；“档案”入口现为可逐步解锁的世界档案馆，最近一次行动结算继续使用独立“行动档案”。启动场景已升级为正式游戏首页，展示核心循环、当前世界与进入游戏入口；副本页可查看章节走向与历史选择，装备/终端会明确显示强化、进化与合成成本、候选池、催化和保底。结构化目录会交叉校验副本、唯一物品、材料、装备和经济数据库，防止后续内容互相冲突。
 
+O0 Playable Alpha 基线已锁定：1280×720 / 32 px Tile / 48×64 人形 Sprite、四方向动画行序、统一色板与世界视觉语言，以及 48 kHz 音频、总线、响度和循环规范均已定版。首页、回廊、两张副本、玩家、敌人/Boss、全部装备、六种材料、UI/VFX、音乐/环境/战斗/广播已进入机器可检查的资产清单；正式资产必须同步登记来源与许可证。O1 将先制作可进游戏验证的风格试片，再扩展完整资产，暂不开发第三张大型副本。
+
 完整实现边界见 [`docs/exchange-evolution-loop-m0-m6.md`](docs/exchange-evolution-loop-m0-m6.md)。
 
 掉落表、分类背包与回廊信息架构见 [`docs/loot-inventory-hub-v21.md`](docs/loot-inventory-hub-v21.md)。
 
 世界观、团队、副本故事与内容生成边界见 [`docs/world-narrative-bible-n0-n7.md`](docs/world-narrative-bible-n0-n7.md)。
+
+Playable Alpha 验收、正式美术/音频规范与资产生产边界见 [`docs/playable-alpha-o0.md`](docs/playable-alpha-o0.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/audio-style.md`](docs/audio-style.md) 和 [`content/alpha_asset_manifest.json`](content/alpha_asset_manifest.json)。
 
 详细设计与扩展边界见 [`docs/persistent-narrative-dungeon.md`](docs/persistent-narrative-dungeon.md)。
 
