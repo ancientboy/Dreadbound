@@ -3,10 +3,13 @@ extends Node2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
-enum Kind { BANDAGE, ECHO_SHARD, AMMO, SHELLS, SEDATIVE, STIMULANT }
+signal material_collected(material_id: String, amount: int)
+
+enum Kind { BANDAGE, ECHO_SHARD, AMMO, SHELLS, SEDATIVE, STIMULANT, MATERIAL }
 
 @export var kind := Kind.BANDAGE
 @export var amount := 1
+@export var material_id := ""
 
 var _pulse := 0.0
 var _redraw_accumulator := 0.0
@@ -42,6 +45,10 @@ func collect(player: Player) -> bool:
 			accepted = player.add_sedatives(amount)
 		Kind.STIMULANT:
 			accepted = player.add_stimulants(amount)
+		Kind.MATERIAL:
+			accepted = ExchangeEvolution.MATERIALS.has(material_id)
+			if accepted:
+				material_collected.emit(material_id, amount)
 	if accepted:
 		queue_free()
 	return accepted
@@ -49,13 +56,13 @@ func collect(player: Player) -> bool:
 
 func _draw() -> void:
 	var bob := sin(_pulse * 2.4) * 3.0
-	var colors := [Color("8fc6a1"), Color("45d8c3"), Color("d0a75a"), Color("c77b52"), Color("8ca7c7"), Color("d18b9f")]
+	var colors := [Color("8fc6a1"), Color("45d8c3"), Color("d0a75a"), Color("c77b52"), Color("8ca7c7"), Color("d18b9f"), Color("c892ff")]
 	var color: Color = colors[int(kind)]
 	draw_circle(Vector2(0, bob), 18.0 + sin(_pulse * 3.0) * 2.0, Color(color, 0.1))
 	if kind == Kind.BANDAGE:
 		draw_rect(Rect2(-13, -9 + bob, 26, 18), Color("d1cbb5"))
 		draw_rect(Rect2(-3, -9 + bob, 6, 18), Color("758f78"))
-	elif kind == Kind.ECHO_SHARD:
+	elif kind == Kind.ECHO_SHARD or kind == Kind.MATERIAL:
 		var points := PackedVector2Array([Vector2(0, -17 + bob), Vector2(12, bob), Vector2(0, 17 + bob), Vector2(-12, bob)])
 		draw_colored_polygon(points, color)
 	elif kind == Kind.AMMO or kind == Kind.SHELLS:
@@ -65,6 +72,6 @@ func _draw() -> void:
 	else:
 		draw_rect(Rect2(-8, -16 + bob, 16, 32), Color("aeb7b0"))
 		draw_rect(Rect2(-6, -12 + bob, 12, 20), color)
-	var labels := ["绷带", "回响碎片", "手枪弹药", "霰弹", "镇静剂", "兴奋剂"]
-	var label: String = labels[int(kind)]
+	var labels := ["绷带", "回响碎片", "手枪弹药", "霰弹", "镇静剂", "兴奋剂", "材料"]
+	var label: String = str(ExchangeEvolution.MATERIALS.get(material_id, {}).get("name", "未知材料")) if kind == Kind.MATERIAL else labels[int(kind)]
 	draw_string(UI_FONT, Vector2(-42, 38), label, HORIZONTAL_ALIGNMENT_CENTER, 84, 12, color)
