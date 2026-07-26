@@ -49,6 +49,7 @@ var stimulant_duration := 0.0
 var environment_speed_multiplier := 1.0
 var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
+var _movement_echo_timer := 0.0
 var _audio: AudioStreamPlayer
 var pathway_effects: PathwayEffects
 var combat_fx: CombatFX
@@ -100,6 +101,7 @@ func _physics_process(delta: float) -> void:
 	_invulnerability_timer = maxf(_invulnerability_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
 	_heal_flash = maxf(_heal_flash - delta, 0.0)
+	_movement_echo_timer = maxf(_movement_echo_timer - delta, 0.0)
 	sedative_duration = maxf(sedative_duration - delta, 0.0)
 	stimulant_duration = maxf(stimulant_duration - delta, 0.0)
 	pathway_effects.tick(delta)
@@ -126,6 +128,7 @@ func _physics_process(delta: float) -> void:
 	velocity = input_direction * movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
 		facing = input_direction.normalized()
+		_emit_pathway_movement_echo()
 	if wants_to_attack:
 		try_attack()
 	if wants_to_use_item:
@@ -156,7 +159,7 @@ func try_attack() -> bool:
 	_play_tone(115.0, 0.08)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
-	combat_fx.melee_swing(global_position, facing, attack_range)
+	combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
@@ -202,7 +205,8 @@ func _try_ranged_attack() -> bool:
 		combat_fx.impact(best_target.global_position, _shot_end)
 	else:
 		pathway_effects.consume_attack_multiplier()
-	combat_fx.pistol_shot(global_position + facing * 18.0, global_position + _shot_end)
+	var visual := _pathway_visual()
+	combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, visual.tracer, visual.muzzle)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -216,7 +220,8 @@ func _try_shotgun_attack() -> bool:
 	shells -= 1
 	_play_tone(190.0, 0.14)
 	noise_generated.emit(4)
-	combat_fx.shotgun_blast(global_position + facing * 18.0, facing, shotgun_range)
+	var visual := _pathway_visual()
+	combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, shotgun_range, visual.tracer, visual.muzzle)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
@@ -409,21 +414,73 @@ func _play_tone(frequency: float, duration: float) -> void:
 	_audio.play()
 
 
+func _pathway_visual() -> Dictionary:
+	var state := get_node_or_null("/root/GameState")
+	var pathway := str(state.selected_pathway) if state != null else ""
+	match pathway:
+		"steadfast":
+			return {"id": pathway, "accent": Color("88bc82"), "tracer": Color("b4d6a7"), "muzzle": Color("d9e7ad")}
+		"armorer":
+			return {"id": pathway, "accent": Color("f0a44d"), "tracer": Color("ffbd61"), "muzzle": Color("fff0b5")}
+		"resonant":
+			return {"id": pathway, "accent": Color("b47cff"), "tracer": Color("9ee8ff"), "muzzle": Color("ddbcff")}
+	return {"id": "", "accent": Color("36dbc0"), "tracer": Color("6fe8c8"), "muzzle": Color("f5e6b2")}
+
+
+func _emit_pathway_movement_echo() -> void:
+	if _movement_echo_timer > 0.0 or combat_fx == null:
+		return
+	var visual := _pathway_visual()
+	if visual.id.is_empty():
+		return
+	_movement_echo_timer = 0.09 if visual.id == "resonant" else 0.18
+	combat_fx.movement_echo(global_position, facing, visual.accent, visual.id == "resonant")
+
+
 func _draw() -> void:
 	# A low-cost flashlight wedge gives direction and local contrast without a large WebGL light texture.
 	var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
 	draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
+	var visual := _pathway_visual()
+	var pathway_id := str(visual.id)
 	var coat_color := Color("75a783") if _heal_flash > 0.0 else (Color("8a514d") if _hurt_flash > 0.0 else Color("56665b"))
+	if pathway_id == "steadfast":
+		coat_color = Color("455b4a")
+	elif pathway_id == "armorer":
+		coat_color = Color("5a5142")
+	elif pathway_id == "resonant":
+		coat_color = Color("4e485f")
 	# Layered graybox silhouette: backpack, coat, head, flashlight and anomaly mark.
 	draw_rect(Rect2(-15, -8, 30, 30), Color("35443d"), true)
 	draw_rect(Rect2(-18, -5, 7, 25), Color("514a38"), true)
 	draw_rect(Rect2(-13, -19, 26, 34), coat_color, true)
 	draw_circle(Vector2(0, -24), 9.0, Color("292d2b"))
+	match pathway_id:
+		"steadfast":
+			# Heavy plating and a mask make the defensive path legible at a glance.
+			draw_rect(Rect2(-16, -13, 5, 23), Color("8aa184"), true)
+			draw_rect(Rect2(11, -13, 5, 23), Color("8aa184"), true)
+			draw_circle(Vector2(0, -24), 5.5, Color("789071"))
+			draw_arc(Vector2(0, 1), 23.0, -2.5, 0.4, 12, Color(visual.accent, 0.62), 2.0)
+		"armorer":
+			# Equipment pack, hazard lamp and shoulder module sell the industrial silhouette.
+			draw_rect(Rect2(-20, -12, 7, 25), Color("35383a"), true)
+			draw_rect(Rect2(11, -15, 9, 13), Color("3d3f3b"), true)
+			draw_circle(Vector2(16, -10), 3.0, visual.accent)
+			draw_circle(Vector2(-16, 0), 2.5, Color("ffd177"))
+		"resonant":
+			# Anomalous marks and a soft halo distinguish the high-risk path without new sprites.
+			draw_circle(Vector2.ZERO, 28.0, Color(visual.accent, 0.08))
+			draw_circle(Vector2(-5, -21), 2.5, visual.accent)
+			draw_circle(Vector2(4, -16), 2.0, Color("7ce7ff"))
+			draw_line(Vector2(-9, -9), Vector2(8, 9), Color(visual.accent, 0.72), 2.0)
 	draw_line(facing * 8.0, facing * 29.0, Color("d5d0a3"), 5.0)
 	if current_weapon == Weapon.RANGED:
-		draw_line(facing * 10.0, facing * 34.0, Color("5c7771"), 7.0)
-	draw_circle(Vector2(-12, 3), 3.5, Color("36dbc0"))
-	draw_circle(Vector2(-12, 3), 7.0, Color(0.21, 0.86, 0.75, 0.13))
+		draw_line(facing * 10.0, facing * 34.0, visual.tracer.darkened(0.42), 7.0)
+	elif current_weapon == Weapon.SHOTGUN:
+		draw_line(facing * 9.0, facing * 37.0, visual.tracer.darkened(0.32), 9.0)
+	draw_circle(Vector2(-12, 3), 3.5, visual.accent)
+	draw_circle(Vector2(-12, 3), 7.0, Color(visual.accent, 0.13))
 	# Keep combat readability close to the character while the top HUD remains the detailed status view.
 	var health_ratio := clampf(float(health) / float(max_health), 0.0, 1.0)
 	var bar_rect := Rect2(-23, -43, 46, 6)

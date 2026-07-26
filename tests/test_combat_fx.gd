@@ -12,11 +12,13 @@ func _run_test() -> void:
 	fx.pistol_shot(Vector2.ZERO, Vector2(200, 0))
 	fx.shotgun_blast(Vector2.ZERO, Vector2.RIGHT, 235.0)
 	fx.impact(Vector2(80, 0), Vector2.RIGHT, true)
+	fx.melee_swing_styled(Vector2.ZERO, Vector2.RIGHT, 76.0, Color("b47cff"))
+	fx.movement_echo(Vector2(40, 0), Vector2.RIGHT, Color("88bc82"))
 	var active := 0
 	for event in fx._events:
 		if event.active:
 			active += 1
-	assert(active >= 11) # swing + pistol/muzzle + shotgun/muzzle/seven pellets + impact
+	assert(active >= 13) # base weapons plus a styled swing and profession movement echo
 	await create_timer(0.25).timeout
 	for event in fx._events:
 		assert(not event.active)
