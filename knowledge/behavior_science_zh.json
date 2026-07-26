@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "scope": "non_clinical_gameplay_reflection",
+  "guardrails": [
+    "只描述游戏情境中的行为倾向，不推断现实人格定论",
+    "不提供精神疾病、人格障碍或临床诊断",
+    "样本不足时必须降低置信度并明确说明",
+    "每项解释必须引用玩家事件证据和知识条目"
+  ],
+  "entries": [
+    {
+      "id": "bs_risk_01",
+      "title": "情境风险偏好",
+      "tags": ["冒险", "保守", "risk_choice", "extraction"],
+      "summary": "风险选择会受收益、损失概率、当前资源和时间压力共同影响，不能用单次选择概括稳定人格。",
+      "source": "Kahneman & Tversky, 1979, Prospect Theory",
+      "source_type": "peer_reviewed",
+      "dimensions": ["risk"]
+    },
+    {
+      "id": "bs_commitment_01",
+      "title": "承诺与行为一致性",
+      "tags": ["守诺", "背弃", "promise_kept", "promise_broken"],
+      "summary": "跨情境重复兑现承诺比口头选择更能支持行为一致性的推断；高代价、无额外奖励的行为证据权重更高。",
+      "source": "Cialdini, 2009, Influence: Science and Practice",
+      "source_type": "scholarly_book",
+      "dimensions": ["commitment", "loyalty"]
+    },
+    {
+      "id": "bs_helping_01",
+      "title": "亲社会帮助",
+      "tags": ["帮助", "担当", "rescue", "share_loot", "sacrifice"],
+      "summary": "帮助行为需要结合成本、是否有人观察、互惠预期和重复性解释；匿名且有代价的帮助提供更强证据。",
+      "source": "Batson, 2011, Altruism in Humans",
+      "source_type": "scholarly_book",
+      "dimensions": ["responsibility"]
+    },
+    {
+      "id": "bs_aggression_01",
+      "title": "工具性与反应性攻击",
+      "tags": ["克制", "暴力", "attack_neutral", "threats_cleared"],
+      "summary": "攻击可能是生存所需、工具性选择或压力反应；应区分必要威胁清除与对中立目标的主动伤害。",
+      "source": "Anderson & Bushman, 2002, Annual Review of Psychology",
+      "source_type": "peer_reviewed",
+      "dimensions": ["restraint"]
+    },
+    {
+      "id": "bs_loyalty_01",
+      "title": "群体忠诚与机会转换",
+      "tags": ["忠诚", "机会主义", "faction_help", "faction_betrayal"],
+      "summary": "阵营转换可能来自价值改变、信息更新或短期收益；只有在相似条件下反复选择才能形成较可靠的倾向判断。",
+      "source": "Tajfel & Turner, 1979, Social Identity Theory",
+      "source_type": "peer_reviewed",
+      "dimensions": ["loyalty", "belonging"]
+    },
+    {
+      "id": "bs_autonomy_01",
+      "title": "自主、胜任与归属",
+      "tags": ["个体性", "群体依赖", "independent_choice", "follow_group"],
+      "summary": "人会同时追求自主、胜任与关系归属；选择独立行动不等于反社会，依赖群体也不等于缺乏自主。",
+      "source": "Ryan & Deci, 2000, Self-Determination Theory",
+      "source_type": "peer_reviewed",
+      "dimensions": ["belonging"]
+    },
+    {
+      "id": "bs_context_01",
+      "title": "情境与行为交互",
+      "tags": ["context", "confidence", "sample_size"],
+      "summary": "行为由个人倾向与具体情境共同产生。跨世界、跨压力水平的重复证据比单一关卡中的重复动作更有解释力。",
+      "source": "Mischel & Shoda, 1995, CAPS",
+      "source_type": "peer_reviewed",
+      "dimensions": ["all"]
+    },
+    {
+      "id": "bs_uncertainty_01",
+      "title": "不确定性表达",
+      "tags": ["confidence", "evidence", "uncertainty"],
+      "summary": "系统应区分观察、推断和未知；显示样本量、相反证据与置信度能够减少过度确定的错误印象。",
+      "source": "APA, Standards for Educational and Psychological Testing, 2014",
+      "source_type": "professional_standard",
+      "dimensions": ["all"]
+    }
+  ]
+}

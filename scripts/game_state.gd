@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 15
+const SAVE_VERSION := 17
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -62,6 +62,13 @@ var selected_pathway := ""
 var pathway_respec_used := false
 var claimed_milestones: Array[String] = []
 var pathway_migration_refund := 0
+var action_ledger := ActionLedger.new()
+var world_state := WorldStateStore.new()
+var consequence_engine := ConsequenceEngine.new()
+var faction_simulator := FactionSimulator.new()
+var humanity_profiler := HumanityProfile.new()
+var curator_v2 := CuratorV2.new()
+var last_reflection := {}
 
 
 func _ready() -> void:
@@ -358,12 +365,49 @@ func respec_pathway() -> bool:
 func begin_run(requested_seed := 0) -> int:
 	active_run_seed = requested_seed if requested_seed != 0 else int(Time.get_unix_time_from_system()) ^ Time.get_ticks_msec()
 	last_action_code = ("MET" if selected_world == "metro" else "SAN") + "-%08X" % absi(active_run_seed)
+	record_action("run_started", "system", selected_world, "", {"seed": active_run_seed, "difficulty": selected_difficulty})
 	save_progress()
 	return active_run_seed
 
 
+func record_action(event_type: String, actor := "player", target := "", choice := "", context := {}, result := {}) -> Dictionary:
+	if last_action_code.is_empty():
+		return {}
+	var manager: LocalProfileManager
+	if is_inside_tree():
+		manager = get_node_or_null("/root/ProfileManager") as LocalProfileManager
+	var profile_id := manager.active_profile_id if manager else ""
+	var event := action_ledger.record(last_action_code, profile_id, last_action_code, selected_world, event_type, actor, target, choice, context, result)
+	if not event.is_empty():
+		event.consequences = consequence_engine.apply_event(event, world_state)
+	return event
+
+
+func humanity_reflection() -> Dictionary:
+	last_reflection = curator_v2.assess(action_ledger.events, world_state)
+	return last_reflection.duplicate(true)
+
+
+func record_human_choice(event_type: String, target := "", choice := "", context := {}, result := {}) -> Dictionary:
+	if not HumanityProfile.EVENT_WEIGHTS.has(event_type) and event_type not in ["promise_made", "run_settled"]:
+		return {}
+	var event := record_action(event_type, "player", target, choice, context, result)
+	if not event.is_empty():
+		last_reflection = curator_v2.assess(action_ledger.events, world_state)
+	return event
+
+
+func next_curator_contract() -> Dictionary:
+	var assessment := humanity_reflection()
+	return curator_v2.offer_contract(assessment, selected_world)
+
+
+func world_briefing() -> Array[String]:
+	return faction_simulator.build_briefing(world_state)
+
+
 func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0, equipment_rewards: Array[String] = [], run_summary: Dictionary = {}) -> int:
-	var action_code := str(run_summary.get("action_code", ""))
+	var action_code := str(run_summary.get("action_code", last_action_code))
 	var settled_codes: Array = player_profile.get("settled_action_codes", [])
 	if not action_code.is_empty() and settled_codes.has(action_code):
 		return 0
@@ -424,6 +468,14 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 		if settled_codes.size() > 32:
 			settled_codes = settled_codes.slice(settled_codes.size() - 32)
 		player_profile.settled_action_codes = settled_codes
+	if not action_code.is_empty():
+		last_action_code = action_code
+	var settlement_event := record_action("run_settled", "system", str(run_summary.get("world", selected_world)), "extract" if success else "lost", {"records": records, "events_resolved": events_resolved, "enemies_defeated": enemies_defeated}, {"success": success, "banked_shards": banked})
+	last_run.faction_turn = faction_simulator.advance(world_state, str(settlement_event.get("event_id", "")), false)
+	last_reflection = curator_v2.assess(action_ledger.events, world_state)
+	last_run.humanity_reflection = last_reflection
+	last_run.action_events = action_ledger.events_for_run(action_code)
+	last_run.world_consequences = settlement_event.get("consequences", [])
 	active_run_seed = 0
 	save_progress()
 	progress_changed.emit()
@@ -565,7 +617,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection}))
 	return true
 
 
@@ -578,6 +630,10 @@ func load_progress() -> void:
 	var parsed = JSON.parse_string(file.get_as_text())
 	if not parsed is Dictionary:
 		return
+	action_ledger.load_dict(parsed.get("action_ledger", {}))
+	world_state.load_dict(parsed.get("world_state", {}))
+	var saved_reflection: Variant = parsed.get("last_reflection", {})
+	last_reflection = saved_reflection.duplicate(true) if saved_reflection is Dictionary else {}
 	echo_shards = maxi(int(parsed.get("echo_shards", 0)), 0)
 	causality_fragments = maxi(int(parsed.get("causality_fragments", 0)), 0)
 	var saved_upgrades = parsed.get("upgrades", {})
@@ -670,6 +726,9 @@ func _clear_runtime_progress() -> void:
 	pathway_respec_used = false
 	claimed_milestones.clear()
 	pathway_migration_refund = 0
+	action_ledger.clear()
+	world_state.reset()
+	last_reflection = {}
 
 
 func _sanitize_pathway_nodes() -> void:

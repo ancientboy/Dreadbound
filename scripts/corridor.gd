@@ -316,7 +316,7 @@ func _refresh() -> void:
 			milestone_text += "\n因果里程碑  +%d %s" % [int(reward.get("causality_fragments", 0)), str(reward.get("title", ""))]
 		for reward in run.get("trial_rewards", []):
 			milestone_text += "\n司仪试炼  +%d 因果残片 · %s" % [int(reward.get("causality_fragments", 0)), str(reward.get("title", ""))]
-		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d%s\n\n司仪观察：%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, milestone_text, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。"))]
+		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d%s\n\n司仪观察：%s\n%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, milestone_text, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。")), _humanity_summary()]
 	queue_redraw()
 	if mobile_terminal_panel and mobile_terminal_panel.visible:
 		_refresh_mobile_terminal()
@@ -793,6 +793,10 @@ func _curator_profile_text() -> String:
 	var trial := GameState.get_curator_trial()
 	var lines := [str(profile.get("last_observation", "尚无足够行动数据。")), "行动 %d · 成功 %d · 静默撤离 %d · 风险选择 %d · 清除威胁 %d" % [int(profile.get("runs", 0)), int(profile.get("successful_runs", 0)), int(profile.get("quiet_successes", 0)), int(profile.get("events_taken", 0)), int(profile.get("threats_cleared", 0))]]
 	lines.append("依据：%s" % "；".join(GameState.curator_evidence()))
+	lines.append(_humanity_summary())
+	var assessment := GameState.humanity_reflection()
+	lines.append(str(assessment.get("trailer", "")))
+	lines.append("世界简报：%s" % "；".join(GameState.world_briefing()))
 	lines.append("成长计划：%s" % " → ".join(GameState.get_growth_plan()))
 	if not trial.is_empty():
 		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward_text])
@@ -800,6 +804,29 @@ func _curator_profile_text() -> String:
 	for run in recent:
 		lines.append("%s · %s · 噪音%d · 事件%d" % ["地铁" if str(run.get("world", "")) == "metro" else "疗养院", "撤离" if bool(run.get("success", false)) else "失联", int(run.get("noise", 0)), int(run.get("events", 0))])
 	return "\n".join(lines)
+
+
+func _humanity_summary() -> String:
+	var assessment := GameState.humanity_reflection()
+	var profile: Dictionary = assessment.get("profile", {})
+	var dimensions: Dictionary = profile.get("dimensions", {})
+	var echo: Dictionary = assessment.get("echo", {})
+	if str(echo.get("id", "")) == "unformed_echo":
+		return "人性回声：未成形（有效行为样本不足；不作人格判断）"
+	var dimension := str(echo.get("dimension", ""))
+	var result: Dictionary = dimensions.get(dimension, {})
+	var evidence: Array = result.get("evidence", []) if int(result.get("score", 0)) > 0 else result.get("counter_evidence", [])
+	var evidence_text := "暂无"
+	if not evidence.is_empty():
+		evidence_text = "%s / %s" % [str(evidence[-1].get("event_type", "")), str(evidence[-1].get("world_id", ""))]
+	var knowledge: Array = result.get("knowledge", [])
+	var source_text := "知识条目待补充"
+	if not knowledge.is_empty():
+		source_text = "%s（%s）" % [str(knowledge[0].get("title", "")), str(knowledge[0].get("source", ""))]
+	return "人性回声：%s · %s · 置信度 %d%%\n行为依据：%s\n知识依据：%s\n仅反映游戏选择，不是现实人格或心理诊断。" % [
+		str(echo.get("name", "")), str(result.get("interpretation", "")),
+		int(round(float(result.get("confidence", 0.0)) * 100.0)), evidence_text, source_text,
+	]
 
 
 func _accept_trial() -> void:
