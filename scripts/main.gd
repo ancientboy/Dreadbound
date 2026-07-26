@@ -79,6 +79,7 @@ var whistle_cooldown := 0.0
 var whistle_uses := 0
 var metro_missed_train := false
 var run_elapsed := 0.0
+var boss_defeated := false
 var pathway_status_label: Label
 
 
@@ -352,7 +353,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -622,6 +623,7 @@ func _on_enemy_removed(enemy: Node) -> void:
 	if enemy.get("health") != null and int(enemy.get("health")) <= 0:
 		enemies_defeated += 1
 		if enemy is SanatoriumBoss:
+			boss_defeated = true
 			_spawn_reward_chest(enemy.global_position)
 		else:
 			_drop_for_enemy(enemy, _loot_rng.randf())

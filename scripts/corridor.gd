@@ -277,7 +277,11 @@ func _refresh() -> void:
 		var run: Dictionary = GameState.last_run
 		var gear_count: int = run.get("equipment_rewards", []).size()
 		var dynamic: Dictionary = run.get("dynamic_run", {})
-		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d\n\n司仪观察：%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。"))]
+		var milestones: Array = run.get("milestone_rewards", [])
+		var milestone_text := ""
+		for reward in milestones:
+			milestone_text += "\n因果里程碑  +%d %s" % [int(reward.get("causality_fragments", 0)), str(reward.get("title", ""))]
+		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d%s\n\n司仪观察：%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, milestone_text, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。"))]
 	queue_redraw()
 	if mobile_terminal_panel and mobile_terminal_panel.visible:
 		_refresh_mobile_terminal()

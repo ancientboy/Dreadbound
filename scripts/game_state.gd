@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 10
+const SAVE_VERSION := 11
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -44,10 +44,14 @@ var player_profile := _default_player_profile()
 var unlocked_path_nodes: Array[String] = []
 var selected_pathway := ""
 var pathway_respec_used := false
+var claimed_milestones: Array[String] = []
 
 
 func _ready() -> void:
-	load_progress()
+	var manager := get_node_or_null("/root/ProfileManager") as LocalProfileManager
+	if manager and not manager.active_profile_id.is_empty():
+		save_path = manager.active_save_path()
+		load_progress()
 
 
 func get_player_stats() -> Dictionary:
@@ -216,7 +220,8 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 				else:
 					overflow_shards += 1 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
 	banked += overflow_shards
-	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "dynamic_run": run_summary}
+	var milestone_rewards := _claim_run_milestones(success, run_summary)
+	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "milestone_rewards": milestone_rewards, "dynamic_run": run_summary}
 	player_profile.runs = int(player_profile.get("runs", 0)) + 1
 	player_profile.successful_runs = int(player_profile.get("successful_runs", 0)) + (1 if success else 0)
 	player_profile.metro_runs = int(player_profile.get("metro_runs", 0)) + (1 if str(run_summary.get("world", "")) == "metro" else 0)
@@ -255,6 +260,30 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	save_progress()
 	progress_changed.emit()
 	return banked
+
+
+func _claim_run_milestones(success: bool, run_summary: Dictionary) -> Array[Dictionary]:
+	var rewards: Array[Dictionary] = []
+	if not success:
+		return rewards
+	var world := str(run_summary.get("world", "sanatorium"))
+	if world == "metro":
+		_claim_milestone("first_metro_clear", "首次完成潮没末班线", 2, rewards)
+		if bool(run_summary.get("boss_defeated", false)):
+			_claim_milestone("first_last_train_defeat", "首次击败末班列车", 1, rewards)
+	else:
+		_claim_milestone("first_sanatorium_clear", "首次完成废弃疗养院", 1, rewards)
+		if bool(run_summary.get("boss_defeated", false)):
+			_claim_milestone("first_sanatorium_boss", "首次击败缝合主任", 1, rewards)
+	return rewards
+
+
+func _claim_milestone(id: String, title: String, amount: int, rewards: Array[Dictionary]) -> void:
+	if claimed_milestones.has(id):
+		return
+	claimed_milestones.append(id)
+	causality_fragments += amount
+	rewards.append({"id": id, "title": title, "causality_fragments": amount})
 
 
 func _complete_curator_trial_if_eligible(success: bool, events_resolved: int, run_summary: Dictionary) -> void:
@@ -349,7 +378,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones}))
 	return true
 
 
@@ -389,6 +418,9 @@ func load_progress() -> void:
 			unlocked_path_nodes.append(str(node_id))
 	selected_pathway = str(parsed.get("selected_pathway", ""))
 	pathway_respec_used = bool(parsed.get("pathway_respec_used", false))
+	claimed_milestones.clear()
+	for milestone_id in parsed.get("claimed_milestones", []):
+		claimed_milestones.append(str(milestone_id))
 	if selected_pathway not in PATHWAY_NAMES:
 		selected_pathway = str(PATH_NODES[unlocked_path_nodes[0]].path) if not unlocked_path_nodes.is_empty() else ""
 	equipment_inventory.clear()
@@ -406,6 +438,23 @@ func load_progress() -> void:
 
 
 func reset_progress() -> void:
+	_clear_runtime_progress()
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(save_path)
+	progress_changed.emit()
+
+
+func activate_profile(profile_save_path: String) -> bool:
+	if profile_save_path.is_empty():
+		return false
+	_clear_runtime_progress()
+	save_path = profile_save_path
+	load_progress()
+	progress_changed.emit()
+	return true
+
+
+func _clear_runtime_progress() -> void:
 	echo_shards = 0
 	causality_fragments = 0
 	for upgrade_id in upgrades:
@@ -423,9 +472,7 @@ func reset_progress() -> void:
 	unlocked_path_nodes.clear()
 	selected_pathway = ""
 	pathway_respec_used = false
-	if FileAccess.file_exists(save_path):
-		DirAccess.remove_absolute(save_path)
-	progress_changed.emit()
+	claimed_milestones.clear()
 
 
 func _build_observation(success: bool, enemies_defeated: int, events_resolved: int, run_summary: Dictionary) -> String:

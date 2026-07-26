@@ -41,7 +41,7 @@ func _run_test() -> void:
 	assert(state.get_curator_trial().id == "quiet_extraction")
 	var before_fragments := state.causality_fragments
 	state.settle_run(true, 3, 0, 2, 1, [], {"world": "metro", "noise": 2, "action_code": "MET-TEST"})
-	assert(state.causality_fragments == before_fragments + 1)
+	assert(state.causality_fragments == before_fragments + 3) # first Metro clear + curator trial
 	assert(state.player_profile.recent_runs.size() == 1)
 	assert(state.player_profile.quiet_successes == 1)
 	state.reset_curator_profile()

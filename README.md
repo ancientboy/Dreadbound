@@ -57,6 +57,7 @@
 17. **第二个灾难世界（完成首轮）**：潮没末班线已接入双契约、潮位/噪音/车次、双路线撤离、专属敌人和 Boss、四件机制装备与阈值司仪试炼；后续发布继续执行桌面与真实移动设备烟雾测试。所有世界必须遵守共享的 [UI 开发与验收标准](docs/ui-development-standard.md)，不得复制固定坐标界面。
 18. **潮没末班线 H5（完成自动化）**：检票员会响应噪音调查并拦截非撤离连接；末班列车阶段读取潮位、车次和信号锚；站务员哨支持键盘/触控主动诱敌；司仪报告显示可追溯行为依据。真实设备平衡仍属于发布烟雾测试。
 19. **阶段 I1–I3（完成自动化）**：三职业机制节点、统一状态/冷却/异化显示、范围预览、v9→v10 存档迁移、按职业/世界行动统计、单次有限重构与 500 种子平衡回归已接入；真实玩家平衡数据继续随发布积累。
+20. **阶段 U1–U4（完成代码与本地回归）**：首次世界/Boss 因果里程碑、本地多昵称档案、旧单档迁移、可选账号登录、云存档 revision 冲突处理、游客绑定、离线回退与账号删除已实现；云功能需部署 `backend/` 服务并配置 HTTPS API，未配置时保持纯本地单机体验。
 
 详见 [`docs/game-vision.md`](docs/game-vision.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/first-vertical-slice.md`](docs/first-vertical-slice.md)、[`docs/progression-roadmap.md`](docs/progression-roadmap.md)、[`docs/pre-second-map-plan.md`](docs/pre-second-map-plan.md)、[`docs/loot-and-progression-plan.md`](docs/loot-and-progression-plan.md)、[`docs/dynamic-director-plan.md`](docs/dynamic-director-plan.md) 和 [`docs/second-disaster-world-design.md`](docs/second-disaster-world-design.md)。第一阶段不开发多人、3D、复杂队友 AI、程序化地图或大量装备。
 

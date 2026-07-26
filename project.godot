@@ -6,7 +6,12 @@ config/name="Dreadbound"
 run/main_scene="res://scenes/startup.tscn"
 
 [autoload]
+ProfileManager="*res://scripts/profile_manager.gd"
 GameState="*res://scripts/game_state.gd"
+CloudSync="*res://scripts/cloud_save_service.gd"
+
+[cloud]
+api_url=""
 
 [display]
 window/size/viewport_width=1280
