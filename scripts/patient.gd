@@ -2,6 +2,7 @@ class_name Patient
 extends CharacterBody2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+const PATIENT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/sanatorium/patient_spritesheet.png")
 
 @export var movement_speed := 82.0
 @export var max_health := 70
@@ -19,6 +20,8 @@ var _attack_windup := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
 var enemy_label := "病患"
+var facing := Vector2.DOWN
+var _walk_animation_time := 0.0
 
 
 func _ready() -> void:
@@ -64,8 +67,14 @@ func _physics_process(delta: float) -> void:
 			_get_combat_fx().attack_telegraph(global_position, attack_range + 18.0, _attack_windup, Color("d66c59"))
 		if _attack_timer <= 0.0 and _attack_windup <= 0.0:
 			_attack_timer = attack_cooldown
+	if velocity.length() > 2.0:
+		facing = velocity.normalized()
+		_walk_animation_time += delta
+	elif is_instance_valid(target):
+		facing = global_position.direction_to(target.global_position)
+		_walk_animation_time = 0.0
 	move_and_slide()
-	if had_hurt_flash:
+	if had_hurt_flash or velocity.length() > 2.0:
 		queue_redraw()
 
 
@@ -83,15 +92,21 @@ func take_damage(amount: int, source_position: Vector2) -> void:
 
 
 func _draw() -> void:
-	var body_color := Color("a55d58") if _hurt_flash > 0.0 else Color("707a70")
-	draw_rect(Rect2(-14, -18, 28, 40), body_color)
-	draw_rect(Rect2(-12, -13, 24, 5), Color("9ba198"))
-	draw_circle(Vector2(0, -25), 10.0, Color("8b9088"))
-	draw_line(Vector2(-13, -4), Vector2(-23, 13), body_color, 7.0)
-	draw_line(Vector2(13, -4), Vector2(23, 13), body_color, 7.0)
+	var row := 0
+	if absf(facing.x) > absf(facing.y):
+		row = 2 if facing.x > 0.0 else 1
+	elif facing.y < 0.0:
+		row = 3
+	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
+	draw_texture_rect_region(
+		PATIENT_SPRITESHEET,
+		Rect2(-24, -58, 48, 64),
+		Rect2(frame * 48, row * 64, 48, 64),
+		Color("ffafa6") if _hurt_flash > 0.0 else Color.WHITE
+	)
 	if health < max_health:
-		draw_rect(Rect2(-24, -44, 48, 5), Color("261b1a"))
-		draw_rect(Rect2(-24, -44, 48.0 * float(health) / max_health, 5), Color("9f3e38"))
+		draw_rect(Rect2(-24, -68, 48, 5), Color("261b1a"))
+		draw_rect(Rect2(-24, -68, 48.0 * float(health) / max_health, 5), Color("9f3e38"))
 	draw_string(UI_FONT, Vector2(-42, 42), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 84, 12, Color("76bdd0") if enemy_label == "溺行者" else Color("8d9990"))
 
 

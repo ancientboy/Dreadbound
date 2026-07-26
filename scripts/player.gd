@@ -1,6 +1,8 @@
 class_name Player
 extends CharacterBody2D
 
+const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+
 signal health_changed(current: int, maximum: int)
 signal died
 signal inventory_changed(bandages: int, echo_shards: int)
@@ -56,6 +58,7 @@ var combat_fx: CombatFX
 var relic_profile := {}
 var equipped_weapon_item := ""
 var _relic_hit_counter := 0
+var _walk_animation_time := 0.0
 
 
 func _ready() -> void:
@@ -136,7 +139,10 @@ func _physics_process(delta: float) -> void:
 	velocity = input_direction * movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
 		facing = input_direction.normalized()
+		_walk_animation_time += delta
 		_emit_pathway_movement_echo()
+	else:
+		_walk_animation_time = 0.0
 	if wants_to_attack:
 		try_attack()
 	if wants_to_use_item:
@@ -149,7 +155,7 @@ func _physics_process(delta: float) -> void:
 		use_equipment_trait()
 	_collect_nearby_pickups()
 	move_and_slide()
-	if had_visual_effect or not facing.is_equal_approx(previous_facing):
+	if had_visual_effect or velocity.length() > 2.0 or not facing.is_equal_approx(previous_facing):
 		queue_redraw()
 
 
@@ -528,33 +534,26 @@ func _draw() -> void:
 	draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
 	var visual := _pathway_visual()
 	var pathway_id := str(visual.id)
-	var coat_color := Color("75a783") if _heal_flash > 0.0 else (Color("8a514d") if _hurt_flash > 0.0 else Color("56665b"))
-	if pathway_id == "steadfast":
-		coat_color = Color("455b4a")
-	elif pathway_id == "armorer":
-		coat_color = Color("5a5142")
-	elif pathway_id == "resonant":
-		coat_color = Color("4e485f")
-	# Layered graybox silhouette: backpack, coat, head, flashlight and anomaly mark.
-	draw_rect(Rect2(-15, -8, 30, 30), Color("35443d"), true)
-	draw_rect(Rect2(-18, -5, 7, 25), Color("514a38"), true)
-	draw_rect(Rect2(-13, -19, 26, 34), coat_color, true)
-	draw_circle(Vector2(0, -24), 9.0, Color("292d2b"))
+	var row := 0
+	if absf(facing.x) > absf(facing.y):
+		row = 2 if facing.x > 0.0 else 1
+	elif facing.y < 0.0:
+		row = 3
+	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
+	var sprite_modulate := Color("ffb5ad") if _hurt_flash > 0.0 else (Color("c8ffdc") if _heal_flash > 0.0 else Color.WHITE)
+	draw_texture_rect_region(
+		DRIFTER_SPRITESHEET,
+		Rect2(-24, -58, 48, 64),
+		Rect2(frame * 48, row * 64, 48, 64),
+		sprite_modulate
+	)
 	match pathway_id:
 		"steadfast":
-			# Heavy plating and a mask make the defensive path legible at a glance.
-			draw_rect(Rect2(-16, -13, 5, 23), Color("8aa184"), true)
-			draw_rect(Rect2(11, -13, 5, 23), Color("8aa184"), true)
-			draw_circle(Vector2(0, -24), 5.5, Color("789071"))
 			draw_arc(Vector2(0, 1), 23.0, -2.5, 0.4, 12, Color(visual.accent, 0.62), 2.0)
 		"armorer":
-			# Equipment pack, hazard lamp and shoulder module sell the industrial silhouette.
-			draw_rect(Rect2(-20, -12, 7, 25), Color("35383a"), true)
-			draw_rect(Rect2(11, -15, 9, 13), Color("3d3f3b"), true)
 			draw_circle(Vector2(16, -10), 3.0, visual.accent)
 			draw_circle(Vector2(-16, 0), 2.5, Color("ffd177"))
 		"resonant":
-			# Anomalous marks and a soft halo distinguish the high-risk path without new sprites.
 			draw_circle(Vector2.ZERO, 28.0, Color(visual.accent, 0.08))
 			draw_circle(Vector2(-5, -21), 2.5, visual.accent)
 			draw_circle(Vector2(4, -16), 2.0, Color("7ce7ff"))
@@ -593,7 +592,7 @@ func _draw() -> void:
 	draw_circle(Vector2(-12, 3), 7.0, Color(visual.accent, 0.13))
 	# Keep combat readability close to the character while the top HUD remains the detailed status view.
 	var health_ratio := clampf(float(health) / float(max_health), 0.0, 1.0)
-	var bar_rect := Rect2(-23, -43, 46, 6)
+	var bar_rect := Rect2(-23, -68, 46, 6)
 	draw_rect(bar_rect.grow(2.0), Color(0.005, 0.014, 0.012, 0.9), true)
 	draw_rect(bar_rect, Color("283832"), true)
 	var health_color := Color("5edb9b").lerp(Color("e56e66"), 1.0 - health_ratio)

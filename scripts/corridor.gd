@@ -1,6 +1,8 @@
 extends Control
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+const CORRIDOR_FLOOR_TILE: Texture2D = preload("res://assets/art/worlds/corridor/corridor_floor_tile.png")
+const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
 
 const UPGRADE_INFO := {
 	"vitality": ["耐受训练", "生命上限 +10"],
@@ -488,6 +490,7 @@ func _reset_progress() -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("071311"))
+	draw_texture_rect(CORRIDOR_FLOOR_TILE, Rect2(0, 112, size.x, size.y - 112), true, Color(0.42, 0.55, 0.52, 0.34))
 	# A layered, walkable chamber: floor lanes, pillars, the Curator's dais and a live gate.
 	for y in range(140, int(size.y), 58):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.1, 0.27, 0.23, 0.27), 1.0)
@@ -511,14 +514,19 @@ func _draw() -> void:
 	# Each unlocked disaster world has a permanent, visible legendary gate.
 	_draw_legend_gate(SANATORIUM_GATE_POSITION, Color("5ce8cf"), "废弃疗养院", "医疗异化 · 供电撤离")
 	_draw_legend_gate(METRO_GATE_POSITION, Color("6098f5"), "潮没末班线", "涨潮迷失 · 末班撤离")
-	# Animated Drifter. The gait reacts to actual movement instead of a static icon.
+	# The same O1 review slice is used in the hub and mission.
 	var bob := sin(walk_phase) * 3.0 if walker_velocity.length() > 2.0 else sin(Time.get_ticks_msec() * 0.002) * 1.2
-	draw_circle(walker_position + Vector2(0, -25 + bob), 13, Color("c3d9d1"))
-	draw_colored_polygon(PackedVector2Array([walker_position + Vector2(-18, -10 + bob), walker_position + Vector2(18, -10 + bob), walker_position + Vector2(23, 26), walker_position + Vector2(-23, 26)]), Color("62847b"))
-	var stride := sin(walk_phase) * 9.0 if walker_velocity.length() > 2.0 else 0.0
-	draw_line(walker_position + Vector2(-8, 22), walker_position + Vector2(-12 + stride, 40), Color("2e4a43"), 7.0)
-	draw_line(walker_position + Vector2(8, 22), walker_position + Vector2(12 - stride, 40), Color("2e4a43"), 7.0)
-	draw_circle(walker_position + walker_facing * 23 + Vector2(0, bob), 4, Color("72f1d7"))
+	var walker_row := 0
+	if absf(walker_facing.x) > absf(walker_facing.y):
+		walker_row = 2 if walker_facing.x > 0.0 else 1
+	elif walker_facing.y < 0.0:
+		walker_row = 3
+	var walker_frame := int(walk_phase / TAU * 6.0) % 6 if walker_velocity.length() > 2.0 else 0
+	draw_texture_rect_region(
+		DRIFTER_SPRITESHEET,
+		Rect2(walker_position + Vector2(-24, -58 + bob), Vector2(48, 64)),
+		Rect2(walker_frame * 48, walker_row * 64, 48, 64)
+	)
 	for y in range(10, int(size.y), 8):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.4, 0.8, 0.7, 0.012), 1.0)
 	if _terminal_is_open():

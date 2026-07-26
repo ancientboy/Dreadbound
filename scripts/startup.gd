@@ -1,6 +1,7 @@
 extends Control
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+const HOME_KEYART: Texture2D = preload("res://assets/art/brand/home_keyart.png")
 
 var content: VBoxContainer
 var feature_grid: GridContainer
@@ -21,6 +22,9 @@ func _ready() -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("030a0d"))
+	draw_texture_rect(HOME_KEYART, Rect2(Vector2.ZERO, size), false, Color(0.82, 0.88, 0.87, 0.72))
+	draw_rect(Rect2(0, 0, size.x * 0.58, size.y), Color(0.008, 0.022, 0.026, 0.72))
+	draw_rect(Rect2(0, 0, size.x, size.y), Color(0.01, 0.03, 0.035, 0.16))
 	var horizon := size.y * 0.48
 	for index in range(9):
 		var radius := 60.0 + index * 54.0
@@ -63,7 +67,7 @@ func _build_home() -> void:
 	brand.add_theme_color_override("font_color", Color("74e7cf"))
 	nav.add_child(brand)
 	var build := Label.new()
-	build.text = "WORLD BIBLE · N0–N7"
+	build.text = "PLAYABLE ALPHA · O1 VISUAL SLICE"
 	build.add_theme_font_size_override("font_size", 13)
 	build.add_theme_color_override("font_color", Color("7d9993"))
 	nav.add_child(build)

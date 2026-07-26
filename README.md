@@ -38,6 +38,8 @@ N0–N7 World & Narrative Bible 已接入：正式确定七条世界法则、阈
 
 O0 Playable Alpha 基线已锁定：1280×720 / 32 px Tile / 48×64 人形 Sprite、四方向动画行序、统一色板与世界视觉语言，以及 48 kHz 音频、总线、响度和循环规范均已定版。首页、回廊、两张副本、玩家、敌人/Boss、全部装备、六种材料、UI/VFX、音乐/环境/战斗/广播已进入机器可检查的资产清单；正式资产必须同步登记来源与许可证。O1 将先制作可进游戏验证的风格试片，再扩展完整资产，暂不开发第三张大型副本。
 
+O1 第一批美术试片现已进入游戏 Review：首页使用正式 Key Art，行者与疗养院病患使用统一 48×64 四方向六帧行走素材，终末回廊接入 32×32 地面语言，并建立疗养院标准病房视觉基准。试片必须通过桌面、手机横屏、完整测试与 Web 导出后才会从 `review` 升为 `approved`。
+
 完整实现边界见 [`docs/exchange-evolution-loop-m0-m6.md`](docs/exchange-evolution-loop-m0-m6.md)。
 
 掉落表、分类背包与回廊信息架构见 [`docs/loot-inventory-hub-v21.md`](docs/loot-inventory-hub-v21.md)。
@@ -45,6 +47,8 @@ O0 Playable Alpha 基线已锁定：1280×720 / 32 px Tile / 48×64 人形 Sprit
 世界观、团队、副本故事与内容生成边界见 [`docs/world-narrative-bible-n0-n7.md`](docs/world-narrative-bible-n0-n7.md)。
 
 Playable Alpha 验收、正式美术/音频规范与资产生产边界见 [`docs/playable-alpha-o0.md`](docs/playable-alpha-o0.md)、[`docs/art-style.md`](docs/art-style.md)、[`docs/audio-style.md`](docs/audio-style.md) 和 [`content/alpha_asset_manifest.json`](content/alpha_asset_manifest.json)。
+
+O1 第一批生成记录、游戏内接入与 Review 标准见 [`docs/o1-visual-slice.md`](docs/o1-visual-slice.md)。
 
 详细设计与扩展边界见 [`docs/persistent-narrative-dungeon.md`](docs/persistent-narrative-dungeon.md)。
 
