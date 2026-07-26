@@ -5,6 +5,7 @@ const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 var max_health := 75
 var health := 75
+var _fallback_combat_fx: CombatFX
 
 
 func _ready() -> void:
@@ -33,11 +34,13 @@ func _draw() -> void:
 
 
 func _get_combat_fx() -> CombatFX:
-	# Unit tests can damage an anchor before it enters a scene tree.
-	# In that case there is no player-owned effect pool to query.
-	if not is_inside_tree():
-		return CombatFX.new()
-	var player := get_tree().get_first_node_in_group("player") as Player
-	if player != null and player.combat_fx != null:
-		return player.combat_fx
-	return CombatFX.new()
+	# Unit tests can damage an anchor without a player-owned effect pool. Keep
+	# the fallback attached so it is released with the anchor instead of leaking.
+	if is_inside_tree():
+		var player := get_tree().get_first_node_in_group("player") as Player
+		if player != null and player.combat_fx != null:
+			return player.combat_fx
+	if _fallback_combat_fx == null:
+		_fallback_combat_fx = CombatFX.new()
+		add_child(_fallback_combat_fx)
+	return _fallback_combat_fx
