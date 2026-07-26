@@ -66,6 +66,7 @@ var warehouse_scroll: ScrollContainer
 var warehouse_list: GridContainer
 var warehouse_status: Label
 var warehouse_preview: TextureRect
+var warehouse_detail_scroll: ScrollContainer
 var warehouse_detail: Label
 var equip_button: Button
 var salvage_button: Button
@@ -248,8 +249,9 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	if warehouse_panel == null:
 		return
 	var panel_width := minf(1050.0, viewport_size.x - 48.0)
-	warehouse_panel.position = Vector2((viewport_size.x - panel_width) * 0.5, 48)
-	warehouse_panel.size = Vector2(panel_width, minf(590.0, viewport_size.y - 82.0))
+	var panel_height := minf(590.0, viewport_size.y - 32.0)
+	warehouse_panel.position = Vector2((viewport_size.x - panel_width) * 0.5, (viewport_size.y - panel_height) * 0.5)
+	warehouse_panel.size = Vector2(panel_width, panel_height)
 	var title := warehouse_panel.get_child(0) as Label
 	title.position = Vector2(24, 18)
 	title.size = Vector2(panel_width - 48, 48)
@@ -266,8 +268,10 @@ func _layout_warehouse(viewport_size: Vector2) -> void:
 	var detail_width := panel_width - detail_x - 26
 	warehouse_preview.position = Vector2(detail_x, 88)
 	warehouse_preview.size = Vector2(112, 112)
-	warehouse_detail.position = Vector2(detail_x, 212)
-	warehouse_detail.size = Vector2(detail_width, warehouse_panel.size.y - 360)
+	warehouse_detail_scroll.position = Vector2(detail_x, 212)
+	warehouse_detail_scroll.size = Vector2(detail_width, maxf(54.0, panel_height - 366.0))
+	warehouse_detail.custom_minimum_size = Vector2(maxf(80.0, detail_width - 18.0), 0)
+	warehouse_detail.size = Vector2(maxf(80.0, detail_width - 18.0), 0)
 	equip_button.position = Vector2(detail_x, warehouse_panel.size.y - 138)
 	equip_button.size = Vector2((detail_width - 20) / 3.0, 52)
 	progress_button.position = Vector2(detail_x + equip_button.size.x + 10, warehouse_panel.size.y - 138)
@@ -671,6 +675,8 @@ func _open_terminal() -> void:
 	if _is_portrait():
 		_refresh_mobile_terminal()
 		mobile_terminal_panel.visible = true
+		if hub_navigation:
+			hub_navigation.visible = false
 	$HubTitle.visible = false
 	$HubHint.visible = false
 	$HubActions.visible = false
@@ -682,6 +688,8 @@ func _close_terminal() -> void:
 	$Background.color = Color(0.015, 0.032, 0.031, 0)
 	if mobile_terminal_panel:
 		mobile_terminal_panel.visible = false
+	if hub_navigation:
+		hub_navigation.visible = true
 	$HubTitle.visible = true
 	$HubHint.visible = true
 	$HubActions.visible = false
@@ -731,7 +739,12 @@ func _create_warehouse_panel() -> void:
 	warehouse_detail.add_theme_font_size_override("font_size", 16)
 	warehouse_detail.add_theme_color_override("font_color", Color("a7bbb4"))
 	warehouse_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	warehouse_panel.add_child(warehouse_detail)
+	warehouse_detail_scroll = ScrollContainer.new()
+	warehouse_detail_scroll.name = "EquipmentDetailScroll"
+	warehouse_detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	warehouse_detail_scroll.clip_contents = true
+	warehouse_panel.add_child(warehouse_detail_scroll)
+	warehouse_detail_scroll.add_child(warehouse_detail)
 	equip_button = Button.new()
 	equip_button.text = "装备"
 	equip_button.pressed.connect(_equip_selected)
@@ -1211,7 +1224,9 @@ func _refresh_mobile_terminal() -> void:
 	mobile_terminal_panel.add_child(currency_label)
 	var scroll := ScrollContainer.new()
 	scroll.position = Vector2(14, 88)
-	scroll.size = Vector2(panel_width - 28, mobile_terminal_panel.size.y - 164)
+	scroll.size = Vector2(panel_width - 28, maxf(64.0, mobile_terminal_panel.size.y - 176))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.clip_contents = true
 	mobile_terminal_panel.add_child(scroll)
 	var content := VBoxContainer.new()
 	content.custom_minimum_size = Vector2(panel_width - 50, 0)
@@ -1318,8 +1333,9 @@ func _refresh_mobile_terminal() -> void:
 	respec.pressed.connect(_respec_pathway)
 	content.add_child(respec)
 	var actions := HBoxContainer.new()
-	actions.position = Vector2(14, mobile_terminal_panel.size.y - 66)
-	actions.size = Vector2(panel_width - 28, 52)
+	actions.name = "FixedActions"
+	actions.position = Vector2(14, mobile_terminal_panel.size.y - 72)
+	actions.size = Vector2(panel_width - 28, 58)
 	actions.add_theme_constant_override("separation", 10)
 	mobile_terminal_panel.add_child(actions)
 	var warehouse := Button.new()
@@ -1413,11 +1429,17 @@ func _respec_pathway() -> void:
 
 
 func _hub_stick_center() -> Vector2:
-	return Vector2(106.0, size.y - 108.0)
+	return Vector2(106.0, size.y - _hub_control_bottom_inset())
 
 
 func _hub_action_center() -> Vector2:
-	return Vector2(size.x - 104.0, size.y - 106.0)
+	return Vector2(size.x - 104.0, size.y - _hub_control_bottom_inset())
+
+
+func _hub_control_bottom_inset() -> float:
+	# Keep both circles and their captions above the one- or two-row navigation
+	# bar. The old fixed 108 px inset placed them behind the function buttons.
+	return 240.0 if hub_navigation and hub_navigation.columns == 4 else 178.0
 
 
 func _draw_mobile_hub_controls() -> void:

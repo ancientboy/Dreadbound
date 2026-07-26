@@ -66,6 +66,22 @@ func _run_test() -> void:
 	corridor._open_terminal()
 	assert(not corridor.get_node("Margin").visible)
 	assert(corridor.mobile_terminal_panel.visible)
+	assert(not corridor.hub_navigation.visible)
+	var terminal_actions := corridor.mobile_terminal_panel.get_node("FixedActions") as HBoxContainer
+	var terminal_scroll := corridor.mobile_terminal_panel.get_child(2) as ScrollContainer
+	assert(terminal_actions.position.y >= terminal_scroll.position.y + terminal_scroll.size.y)
+	assert(terminal_actions.position.y + terminal_actions.size.y <= corridor.mobile_terminal_panel.size.y)
+	corridor._close_terminal()
+	assert(corridor.hub_navigation.visible)
+	corridor._apply_responsive_ui(Vector2(680, 720))
+	corridor.size = Vector2(680, 720)
+	var nav_top: float = corridor.hub_navigation.position.y
+	assert(corridor._hub_stick_center().y + 104.0 < nav_top)
+	assert(corridor._hub_action_center().y + 84.0 < nav_top)
+	corridor._open_warehouse()
+	var detail_scroll: ScrollContainer = corridor.warehouse_detail_scroll
+	assert(detail_scroll != null and detail_scroll.clip_contents)
+	assert(detail_scroll.position.y + detail_scroll.size.y <= corridor.equip_button.position.y)
 	corridor.queue_free()
 	print("Responsive UI tests passed")
 	quit()
