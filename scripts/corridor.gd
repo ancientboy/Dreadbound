@@ -35,6 +35,9 @@ var salvage_reward_detail: Label
 var run_archive_panel: ColorRect
 var run_archive_scroll: ScrollContainer
 var run_archive_detail: Label
+var mirror_panel: ColorRect
+var mirror_content: VBoxContainer
+var open_mirror_button: Button
 var walker_position := Vector2(640, 585)
 var walker_velocity := Vector2.ZERO
 var walker_facing := Vector2.RIGHT
@@ -79,6 +82,7 @@ func _ready() -> void:
 	_create_warehouse_panel()
 	_create_salvage_reward_panel()
 	_create_run_archive_panel()
+	_create_human_mirror_panel()
 	_create_mobile_terminal_panel()
 	_create_curator_controls()
 	_create_respec_control()
@@ -137,6 +141,19 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$HubTitle.size = Vector2(maxf(260.0, viewport_size.x - inset * 2.0 - 224.0), 48)
 	$OpenArchive.position = Vector2(viewport_size.x - inset - 202.0, 24)
 	$OpenArchive.size = Vector2(202, 48)
+	if open_mirror_button:
+		open_mirror_button.position = Vector2(viewport_size.x - inset - 414.0, 24)
+		open_mirror_button.size = Vector2(202, 48)
+	if mirror_panel:
+		var panel_size := Vector2(minf(980.0, viewport_size.x - 32.0), minf(650.0, viewport_size.y - 32.0))
+		mirror_panel.size = panel_size
+		mirror_panel.position = (viewport_size - panel_size) * 0.5
+		var scroll := mirror_panel.get_node("Scroll") as ScrollContainer
+		scroll.position = Vector2(28, 82)
+		scroll.size = Vector2(panel_size.x - 56, panel_size.y - 150)
+		mirror_content.custom_minimum_size.x = panel_size.x - 84
+		var close := mirror_panel.get_node("Close") as Button
+		close.position = Vector2(panel_size.x - 150, panel_size.y - 56)
 	_layout_warehouse(viewport_size)
 	_layout_salvage_reward(viewport_size)
 	_layout_run_archive(viewport_size)
@@ -204,7 +221,7 @@ func _layout_run_archive(viewport_size: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
-	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible:
+	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible or (mirror_panel and mirror_panel.visible):
 		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if _move_touch != -1:
@@ -228,7 +245,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible):
+	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible) or (mirror_panel and mirror_panel.visible):
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.distance_to(_hub_action_center()) <= 76.0:
@@ -601,6 +618,133 @@ func _create_run_archive_panel() -> void:
 	run_archive_panel.add_child(close)
 
 
+func _create_human_mirror_panel() -> void:
+	open_mirror_button = Button.new()
+	open_mirror_button.name = "OpenHumanMirror"
+	open_mirror_button.text = "人性镜鉴"
+	open_mirror_button.add_theme_font_size_override("font_size", 18)
+	open_mirror_button.pressed.connect(_open_human_mirror)
+	add_child(open_mirror_button)
+	mirror_panel = ColorRect.new()
+	mirror_panel.name = "HumanMirror"
+	mirror_panel.color = Color(0.006, 0.026, 0.034, 0.995)
+	mirror_panel.visible = false
+	mirror_panel.z_index = 300
+	add_child(mirror_panel)
+	var title := Label.new()
+	title.name = "Title"
+	title.position = Vector2(28, 20)
+	title.size = Vector2(700, 46)
+	title.text = "人性镜鉴 // HUMAN MIRROR"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color("7ddcf2"))
+	mirror_panel.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	mirror_panel.add_child(scroll)
+	mirror_content = VBoxContainer.new()
+	mirror_content.name = "Content"
+	mirror_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(mirror_content)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "返回终末回廊"
+	close.size = Vector2(122, 42)
+	close.pressed.connect(func(): mirror_panel.visible = false)
+	mirror_panel.add_child(close)
+
+
+func _open_human_mirror() -> void:
+	_refresh_human_mirror()
+	mirror_panel.visible = true
+	$HubActions.visible = false
+	_apply_responsive_ui()
+
+
+func _refresh_human_mirror() -> void:
+	for child in mirror_content.get_children():
+		child.queue_free()
+	var assessment := GameState.humanity_reflection()
+	var profile: Dictionary = assessment.get("profile", {})
+	var intro := Label.new()
+	intro.text = "%s\n这里记录的是游戏高压情境中的可反驳推断，不是现实人格或心理诊断。" % str(profile.get("disclaimer", ""))
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	intro.add_theme_color_override("font_color", Color("b8d5dc"))
+	mirror_content.add_child(intro)
+	var contract: Dictionary = GameState.active_counter_contract
+	if not contract.is_empty():
+		var contract_label := Label.new()
+		contract_label.text = "当前反证契约：%s\n%s · 目标行为 %s · 完成奖励 %d 因果残片" % [
+			str(contract.get("title", "")), str(contract.get("method", "")),
+			str(contract.get("success_event", "")), int(contract.get("reward", 0)),
+		]
+		contract_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		contract_label.add_theme_color_override("font_color", Color("efc66d"))
+		mirror_content.add_child(contract_label)
+	var dimensions: Dictionary = profile.get("dimensions", {})
+	for dimension_id in HumanityProfile.DIMENSIONS:
+		var result: Dictionary = dimensions.get(dimension_id, {})
+		var poles: Dictionary = HumanityProfile.DIMENSIONS[dimension_id]
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 4)
+		mirror_content.add_child(box)
+		var heading := Label.new()
+		heading.text = "%s ↔ %s  //  %s  ·  置信度 %d%%  ·  样本 %d" % [
+			str(poles.negative), str(poles.positive), str(result.get("pole", "尚未形成")),
+			int(round(float(result.get("confidence", 0.0)) * 100.0)), int(result.get("sample_size", 0)),
+		]
+		heading.add_theme_font_size_override("font_size", 19)
+		heading.add_theme_color_override("font_color", Color("7ddcf2"))
+		box.add_child(heading)
+		var evidence := Label.new()
+		evidence.text = "%s\n支持证据 %d 条 · 相反证据 %d 条\n方法：%s" % [
+			str(result.get("interpretation", "样本不足，暂不判断。")),
+			result.get("evidence", []).size(), result.get("counter_evidence", []).size(),
+			str(result.get("method", "等待更多跨情境行为")),
+		]
+		evidence.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		evidence.add_theme_color_override("font_color", Color("b8cbc8"))
+		box.add_child(evidence)
+		var dispute := Button.new()
+		dispute.name = "Dispute_%s" % dimension_id
+		var disputed: Dictionary = GameState.reflection_disputes.get(dimension_id, {})
+		dispute.text = "已提出异议：等待用行动反证" if not disputed.is_empty() and not bool(disputed.get("resolved", false)) else ("反证已被记录" if bool(disputed.get("resolved", false)) else "我不同意这个解释 · 生成反证契约")
+		dispute.disabled = int(result.get("sample_size", 0)) <= 0 or (not GameState.active_counter_contract.is_empty() and str(GameState.active_counter_contract.get("dimension", "")) != dimension_id)
+		dispute.pressed.connect(_dispute_dimension.bind(str(dimension_id)))
+		box.add_child(dispute)
+	var timeline_title := Label.new()
+	timeline_title.text = "跨局变化时间线"
+	timeline_title.add_theme_font_size_override("font_size", 22)
+	timeline_title.add_theme_color_override("font_color", Color("efc66d"))
+	mirror_content.add_child(timeline_title)
+	var timeline := GameState.reflection_timeline()
+	if timeline.is_empty():
+		var empty := Label.new()
+		empty.text = "完成一次副本后，这里会显示六维倾向、置信度与司仪预测如何变化。"
+		mirror_content.add_child(empty)
+	for snapshot in timeline:
+		var line := Label.new()
+		var changed: Array[String] = []
+		for dimension_id in snapshot.get("dimensions", {}):
+			var result: Dictionary = snapshot.dimensions[dimension_id]
+			if int(result.get("sample_size", 0)) > 0:
+				changed.append("%s %s %d%%" % [dimension_id, str(result.get("pole", "")), int(round(float(result.get("confidence", 0.0)) * 100.0))])
+		line.text = "%s · %s · %s\n%s" % [
+			str(snapshot.get("action_code", "")),
+			"潮没末班线" if str(snapshot.get("world_id", "")) == "metro" else "废弃疗养院",
+			"撤离" if bool(snapshot.get("success", false)) else "失联",
+			"；".join(changed) if not changed.is_empty() else "本局未形成有效维度变化",
+		]
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		mirror_content.add_child(line)
+
+
+func _dispute_dimension(dimension_id: String) -> void:
+	var contract := GameState.dispute_reflection(dimension_id)
+	feedback.text = "已生成反证契约：下一局可用真实行动推翻旧解释。" if not contract.is_empty() else "该维度样本不足，暂时无法生成反证契约。"
+	_refresh_human_mirror()
+
+
 func _open_run_archive() -> void:
 	if GameState.last_run.is_empty():
 		feedback.text = "行动档案尚未形成；完成一次副本后，结算、收获与人性洞察会保存在这里。"
@@ -882,6 +1026,15 @@ func _refresh_mobile_terminal() -> void:
 	_mobile_terminal_section(content, "漂泊者档案", stats.text)
 	_mobile_terminal_section(content, "上次行动", report.text)
 	_mobile_terminal_section(content, "阈值司仪 · 行动档案", _curator_profile_text())
+	var mirror := Button.new()
+	mirror.name = "MobileOpenHumanMirror"
+	mirror.custom_minimum_size = Vector2(0, 56)
+	mirror.text = "打开人性镜鉴 · 时间线 / 证据 / 反证契约"
+	mirror.pressed.connect(func():
+		mobile_terminal_panel.visible = false
+		_open_human_mirror()
+	)
+	content.add_child(mirror)
 	var trial := GameState.get_curator_trial()
 	if trial.is_empty():
 		_mobile_terminal_section(content, "本次可选契约（仅可采纳一项）", "司仪会提供副本专属、行为导向与高风险契约；所有规则在进入副本前公开。")

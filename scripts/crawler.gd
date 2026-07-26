@@ -18,6 +18,7 @@ var _stagger_timer := 0.0
 var _attack_windup := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
+var enemy_label := "爬行者"
 
 
 func _ready() -> void:
@@ -91,7 +92,7 @@ func _draw() -> void:
 	if health < max_health:
 		draw_rect(Rect2(-22, -31, 44, 4), Color("261b1a"))
 		draw_rect(Rect2(-22, -31, 44.0 * float(health) / max_health, 4), Color("9f3e38"))
-	draw_string(UI_FONT, Vector2(-36, 35), "爬行者", HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color("839087"))
+	draw_string(UI_FONT, Vector2(-52, 35), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 104, 12, Color("c8a4df") if "变异" in enemy_label or "噩梦" in enemy_label else Color("839087"))
 
 
 func _draw_body_ellipse(center: Vector2, radii: Vector2, color: Color) -> void:

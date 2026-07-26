@@ -24,6 +24,19 @@ const EVENT_WEIGHTS := {
 	"safe_choice": {"risk": -1},
 	"independent_choice": {"belonging": -1},
 	"follow_group": {"belonging": 1},
+	"costly_rescue": {"responsibility": 3, "risk": 1},
+	"self_preservation": {"responsibility": -1, "risk": -1},
+	"anonymous_restraint": {"restraint": 2, "responsibility": 1},
+	"anonymous_exploitation": {"restraint": -2, "loyalty": -1},
+	"authority_obedience": {"belonging": 1, "responsibility": -1},
+	"share_burden": {"responsibility": 2, "loyalty": 1},
+	"forgive_rescue": {"responsibility": 2, "restraint": 2},
+	"retaliation": {"restraint": -2, "loyalty": -1},
+	"outgroup_help": {"responsibility": 3, "belonging": -1},
+	"ingroup_help": {"loyalty": 2, "belonging": 2},
+	"public_help": {"responsibility": 1, "belonging": 1},
+	"anonymous_help": {"responsibility": 3, "restraint": 1},
+	"responsibility_acceptance": {"responsibility": 3, "commitment": 1},
 }
 
 var knowledge := BehaviorKnowledgeBase.new()
@@ -46,9 +59,17 @@ func analyze(events: Array[Dictionary]) -> Dictionary:
 			event_type = "safe_choice"
 		if weights.is_empty():
 			continue
+		var context: Dictionary = event.get("context", {})
+		var cost_level := clampi(int(context.get("cost_level", 1)), 1, 3)
+		var cost_multiplier := 0.75 + float(cost_level) * 0.25
+		var anonymous_multiplier := 1.2 if bool(context.get("anonymous", false)) else 1.0
+		var observed_multiplier := 0.85 if bool(context.get("public", false)) else 1.0
 		worlds[str(event.get("world_id", "unknown"))] = true
 		for dimension in weights:
-			var weight := int(weights[dimension])
+			var raw_weight := int(weights[dimension])
+			var weight := int(round(float(raw_weight) * cost_multiplier * anonymous_multiplier * observed_multiplier))
+			if weight == 0:
+				weight = signi(raw_weight)
 			scores[dimension] = int(scores[dimension]) + weight
 			var item := {
 				"event_id": str(event.get("event_id", "")),
@@ -56,6 +77,9 @@ func analyze(events: Array[Dictionary]) -> Dictionary:
 				"world_id": str(event.get("world_id", "")),
 				"weight": weight,
 				"choice": str(event.get("choice", "")),
+				"cost_level": cost_level,
+				"anonymous": bool(context.get("anonymous", false)),
+				"public": bool(context.get("public", false)),
 			}
 			if weight >= 0:
 				evidence[dimension].append(item)
@@ -82,6 +106,7 @@ func analyze(events: Array[Dictionary]) -> Dictionary:
 			"counter_evidence": negative.slice(maxi(negative.size() - 5, 0)),
 			"knowledge": citations,
 			"interpretation": _interpretation(dimension, pole, confidence, sample_size),
+			"method": "行为代价、是否公开、跨副本一致性与相反证据共同决定权重",
 		}
 	return {
 		"scope": "gameplay_tendency_only",

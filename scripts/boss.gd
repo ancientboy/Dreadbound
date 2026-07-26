@@ -13,6 +13,8 @@ var _windup := 0.0
 var _attack_index := 0
 var _hurt_flash := 0.0
 var boss_label := "缝合主任"
+var history_damage_multiplier := 1.0
+var history_effect := ""
 
 
 func _ready() -> void:
@@ -28,6 +30,15 @@ func activate(player: Player) -> void:
 	active = true
 	visible = true
 	set_physics_process(true)
+	queue_redraw()
+
+
+func configure_history_variant(variant: Dictionary) -> void:
+	boss_label = str(variant.get("name", boss_label))
+	history_damage_multiplier = maxf(float(variant.get("damage", 1.0)), 1.0)
+	history_effect = str(variant.get("effect", ""))
+	set_meta("dreadbound_boss_phase", str(variant.get("phase", "")))
+	set_meta("dreadbound_boss_effect", history_effect)
 	queue_redraw()
 
 
@@ -60,10 +71,10 @@ func _execute_attack() -> void:
 	var distance := global_position.distance_to(target.global_position)
 	if _attack_index % 2 == 0:
 		if distance <= 105.0:
-			target.take_damage(32 if phase_two else 25, global_position)
+			target.take_damage(int(round((32 if phase_two else 25) * history_damage_multiplier)), global_position)
 	else:
 		if distance <= 230.0:
-			target.take_damage(20, global_position)
+			target.take_damage(int(round(20 * history_damage_multiplier)), global_position)
 	_attack_index += 1
 	_timer = 1.15 if phase_two else 1.65
 
@@ -92,6 +103,8 @@ func _draw() -> void:
 	draw_rect(Rect2(-80, -98, 160, 10), Color("1e1718"))
 	draw_rect(Rect2(-80, -98, 160.0 * float(health) / max_health, 10), Color("a73f3a"))
 	draw_string(UI_FONT, Vector2(-115, 72), boss_label, HORIZONTAL_ALIGNMENT_CENTER, 230, 18, Color("8ed9ef") if boss_label.begins_with("末班") else Color("c3b7a8"))
+	if not history_effect.is_empty():
+		draw_string(UI_FONT, Vector2(-90, 94), "历史能力：%s" % history_effect, HORIZONTAL_ALIGNMENT_CENTER, 180, 13, Color("efb36f"))
 
 
 func _get_combat_fx() -> CombatFX:

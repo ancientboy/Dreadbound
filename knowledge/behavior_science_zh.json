@@ -79,6 +79,105 @@
       "source": "APA, Standards for Educational and Psychological Testing, 2014",
       "source_type": "professional_standard",
       "dimensions": ["all"]
+    },
+    {
+      "id": "bs_loss_aversion_01", "title": "损失厌恶", "tags": ["loss", "risk_choice", "保守"], "summary": "同等数量的损失通常比收益更显著；撤离与冒险必须结合玩家已携带资源解释。", "source": "Kahneman & Tversky, 1979, Econometrica", "source_type": "peer_reviewed", "dimensions": ["risk"]
+    },
+    {
+      "id": "bs_scarcity_01", "title": "稀缺与认知负荷", "tags": ["scarcity", "costly_rescue", "担当"], "summary": "资源稀缺会收窄注意并改变取舍，稀缺情境下的选择不能脱离资源余量解释。", "source": "Shah, Mullainathan & Shafir, 2012, Science", "source_type": "peer_reviewed", "dimensions": ["responsibility", "risk"]
+    },
+    {
+      "id": "bs_authority_01", "title": "权威服从情境", "tags": ["authority_obedience", "忠诚"], "summary": "服从可能来自合法性、责任转移或惩罚压力，不能直接等同于忠诚。", "source": "Milgram, 1963, Journal of Abnormal and Social Psychology", "source_type": "peer_reviewed", "dimensions": ["loyalty", "responsibility"]
+    },
+    {
+      "id": "bs_bystander_01", "title": "旁观者效应", "tags": ["bystander", "rescue", "担当"], "summary": "他人在场可能分散帮助责任；单独承担且有代价的救援是更强证据。", "source": "Darley & Latané, 1968, JPSP", "source_type": "peer_reviewed", "dimensions": ["responsibility"]
+    },
+    {
+      "id": "bs_ingroup_01", "title": "内群体偏好", "tags": ["ingroup_help", "群体依赖"], "summary": "优先帮助己方可能来自身份认同或互惠结构；需与帮助陌生人的行为对照。", "source": "Tajfel et al., 1971, European Journal of Social Psychology", "source_type": "peer_reviewed", "dimensions": ["belonging", "loyalty"]
+    },
+    {
+      "id": "bs_outgroup_01", "title": "跨群体帮助", "tags": ["outgroup_help", "担当"], "summary": "在群体冲突中帮助外群体且承担真实成本，可作为超越阵营边界的行为证据。", "source": "Dovidio et al., 2006, The SAGE Handbook of Prejudice", "source_type": "scholarly_book", "dimensions": ["responsibility", "belonging"]
+    },
+    {
+      "id": "bs_reciprocity_01", "title": "互惠规范", "tags": ["reciprocity", "faction_help"], "summary": "回报帮助可能遵循互惠规范，不能与无回报预期的帮助使用相同权重。", "source": "Gouldner, 1960, American Sociological Review", "source_type": "peer_reviewed", "dimensions": ["loyalty", "responsibility"]
+    },
+    {
+      "id": "bs_revenge_01", "title": "报复与公平恢复", "tags": ["retaliation", "暴力"], "summary": "报复可能服务于威慑或公平恢复，应区分即时反应与持续惩罚。", "source": "Carlsmith, Wilson & Gilbert, 2008, JPSP", "source_type": "peer_reviewed", "dimensions": ["restraint", "loyalty"]
+    },
+    {
+      "id": "bs_escalation_01", "title": "承诺升级", "tags": ["commitment", "sunk_cost"], "summary": "先前投入会促使继续投入，即使前景变差；持续行动不必然代表守诺。", "source": "Staw, 1976, Organizational Behavior and Human Performance", "source_type": "peer_reviewed", "dimensions": ["commitment", "risk"]
+    },
+    {
+      "id": "bs_sunk_cost_01", "title": "沉没成本效应", "tags": ["sunk_cost", "risk_choice"], "summary": "不可回收的既有投入不应决定下一步，但常显著影响继续或退出。", "source": "Arkes & Blumer, 1985, OBHDP", "source_type": "peer_reviewed", "dimensions": ["risk", "commitment"]
+    },
+    {
+      "id": "bs_moral_licensing_01", "title": "道德许可", "tags": ["moral_license", "anonymous_exploitation"], "summary": "先前善行有时会让后续自利行为更容易被自我许可，需观察选择序列。", "source": "Merritt, Effron & Monin, 2010, Social and Personality Psychology Compass", "source_type": "peer_reviewed", "dimensions": ["responsibility", "restraint"]
+    },
+    {
+      "id": "bs_diffusion_01", "title": "责任分散", "tags": ["share_burden", "responsibility"], "summary": "群体决策会稀释个人责任感；主动明确承担比被动随多数更有解释力。", "source": "Latané & Darley, 1970, The Unresponsive Bystander", "source_type": "scholarly_book", "dimensions": ["responsibility", "belonging"]
+    },
+    {
+      "id": "bs_control_01", "title": "知觉控制感", "tags": ["control", "independent_choice"], "summary": "可控感会影响坚持、探索和压力反应；选择控制不等同于拒绝合作。", "source": "Skinner, 1996, Journal of Personality and Social Psychology", "source_type": "peer_reviewed", "dimensions": ["belonging", "risk"]
+    },
+    {
+      "id": "bs_helplessness_01", "title": "习得性无助边界", "tags": ["helplessness", "safe_choice"], "summary": "反复不可控失败会减少尝试；游戏系统不得把一次退出解释为稳定无助。", "source": "Maier & Seligman, 2016, Psychological Review", "source_type": "peer_reviewed", "dimensions": ["risk"]
+    },
+    {
+      "id": "bs_stress_aggression_01", "title": "压力与攻击", "tags": ["stress", "attack_neutral"], "summary": "高唤醒与威胁可能增加攻击反应；必须记录生命、时间和敌意状态。", "source": "Berkowitz, 1989, Psychological Bulletin", "source_type": "peer_reviewed", "dimensions": ["restraint"]
+    },
+    {
+      "id": "bs_avoidance_01", "title": "威胁回避", "tags": ["avoidance", "safe_choice"], "summary": "回避可能是有效风险管理，也可能是压力反应，需结合信息与替代路线。", "source": "LeDoux & Daw, 2018, PNAS", "source_type": "peer_reviewed", "dimensions": ["risk"]
+    },
+    {
+      "id": "bs_delay_01", "title": "延迟折扣", "tags": ["short_term", "commitment"], "summary": "即时收益通常被赋予更高权重；放弃即时收益维护长期关系提供较强证据。", "source": "Frederick, Loewenstein & O'Donoghue, 2002, Journal of Economic Literature", "source_type": "peer_reviewed", "dimensions": ["commitment", "loyalty"]
+    },
+    {
+      "id": "bs_public_01", "title": "公开选择与声誉", "tags": ["public_help", "public_choice"], "summary": "公开帮助可能包含声誉激励，不能与匿名帮助直接等权。", "source": "Ariely, Bracha & Meier, 2009, American Economic Review", "source_type": "peer_reviewed", "dimensions": ["responsibility", "belonging"]
+    },
+    {
+      "id": "bs_anonymous_01", "title": "匿名亲社会行为", "tags": ["anonymous_help", "anonymous_restraint"], "summary": "无人观察且没有外部奖励的克制或帮助，减少了声誉解释的可能。", "source": "Haley & Fessler, 2005, Evolution and Human Behavior", "source_type": "peer_reviewed", "dimensions": ["responsibility", "restraint"]
+    },
+    {
+      "id": "bs_costly_help_01", "title": "有代价的帮助", "tags": ["costly_rescue", "sacrifice"], "summary": "帮助的资源、受伤和机会成本越清楚，越能区分口头意愿与实际行为。", "source": "Fehr & Fischbacher, 2003, Nature", "source_type": "peer_reviewed", "dimensions": ["responsibility"]
+    },
+    {
+      "id": "bs_free_help_01", "title": "低成本帮助边界", "tags": ["rescue", "cost_level"], "summary": "几乎无成本的帮助仍是行为，但证据权重应低于牺牲稀缺资源的帮助。", "source": "Piliavin et al., 1981, Emergency Intervention", "source_type": "scholarly_book", "dimensions": ["responsibility"]
+    },
+    {
+      "id": "bs_forgiveness_01", "title": "宽恕与关系修复", "tags": ["forgive_rescue", "忠诚"], "summary": "帮助曾经伤害自己的人可能反映关系修复，也可能是策略选择；需记录后续互动。", "source": "McCullough, 2001, Personality and Social Psychology Review", "source_type": "peer_reviewed", "dimensions": ["loyalty", "restraint"]
+    },
+    {
+      "id": "bs_self_preservation_01", "title": "自我保存", "tags": ["self_preservation", "保守"], "summary": "保存自身资源在高威胁环境中可能是适应性行为，不应自动标记为利己。", "source": "Lazarus & Folkman, 1984, Stress, Appraisal, and Coping", "source_type": "scholarly_book", "dimensions": ["responsibility", "risk"]
+    },
+    {
+      "id": "bs_accountability_01", "title": "责任承担", "tags": ["responsibility_acceptance", "担当"], "summary": "在结果不利且可推卸时公开承担后果，比无代价承认提供更强证据。", "source": "Tetlock, 1985, Social Psychology Quarterly", "source_type": "peer_reviewed", "dimensions": ["responsibility", "commitment"]
+    },
+    {
+      "id": "bs_norm_01", "title": "社会规范遵循", "tags": ["anonymous_restraint", "authority_obedience"], "summary": "遵守规则可能来自内化规范、惩罚预期或权威压力，匿名情境可帮助区分。", "source": "Cialdini & Goldstein, 2004, Annual Review of Psychology", "source_type": "peer_reviewed", "dimensions": ["restraint", "belonging"]
+    },
+    {
+      "id": "bs_exploitation_01", "title": "机会性利用", "tags": ["anonymous_exploitation", "机会主义"], "summary": "在无惩罚条件下利用他人资源是情境证据，但需要跨情境重复才能形成较高置信度。", "source": "Gneezy, 2005, American Economic Review", "source_type": "peer_reviewed", "dimensions": ["loyalty", "restraint"]
+    },
+    {
+      "id": "bs_cooperation_01", "title": "重复互动合作", "tags": ["cooperation", "promise_kept"], "summary": "未来仍会相遇时，合作可能同时服务长期互惠；系统需显示关系持续性。", "source": "Axelrod & Hamilton, 1981, Science", "source_type": "peer_reviewed", "dimensions": ["loyalty", "commitment"]
+    },
+    {
+      "id": "bs_reputation_01", "title": "声誉动机", "tags": ["public_choice", "belonging"], "summary": "公开环境中的选择会受未来评价影响，不能直接外推到匿名环境。", "source": "Nowak & Sigmund, 2005, Nature", "source_type": "peer_reviewed", "dimensions": ["belonging", "responsibility"]
+    },
+    {
+      "id": "bs_omission_01", "title": "行动与不行动", "tags": ["abandon", "omission"], "summary": "人们常区别看待主动造成与未阻止的结果；档案应同时记录可选行动与不行动成本。", "source": "Ritov & Baron, 1990, Journal of Risk and Uncertainty", "source_type": "peer_reviewed", "dimensions": ["responsibility", "restraint"]
+    },
+    {
+      "id": "bs_ambiguity_01", "title": "模糊厌恶", "tags": ["uncertainty", "safe_choice"], "summary": "未知概率可能比已知风险更令人回避；风险标签必须说明玩家当时知道什么。", "source": "Ellsberg, 1961, Quarterly Journal of Economics", "source_type": "peer_reviewed", "dimensions": ["risk"]
+    },
+    {
+      "id": "bs_prediction_01", "title": "可证伪预测", "tags": ["prediction", "counter_evidence"], "summary": "行为预测应给出可观察的失败条件，并在反例出现时更新而非隐藏。", "source": "Popper, 1959, The Logic of Scientific Discovery", "source_type": "scholarly_book", "dimensions": ["all"]
+    },
+    {
+      "id": "bs_measurement_01", "title": "测量误差与重复观察", "tags": ["confidence", "sample_size"], "summary": "单一事件含有较大情境噪声；置信度应随独立情境和一致证据逐步变化。", "source": "Nunnally & Bernstein, 1994, Psychometric Theory", "source_type": "scholarly_book", "dimensions": ["all"]
+    },
+    {
+      "id": "bs_consent_01", "title": "反思系统的自主权", "tags": ["dispute", "counter_contract"], "summary": "玩家应能查看依据、拒绝解释并主动提供反证，反思系统不应把算法判断当作身份标签。", "source": "APA, Ethical Principles of Psychologists, 2017", "source_type": "professional_standard", "dimensions": ["all"]
     }
   ]
 }

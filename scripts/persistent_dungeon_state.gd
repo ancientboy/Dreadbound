@@ -11,6 +11,7 @@ const UNIQUE_ITEMS := {
 
 var dungeons := {}
 var unique_registry := {}
+var catalog := ContentCatalog.new()
 
 
 func _init() -> void:
@@ -50,6 +51,11 @@ func begin_visit(world_id: String, run_id: String, world_state: WorldStateStore)
 	dungeons[world_id] = dungeon
 	if world_id == "metro":
 		_ensure_linye(world_state)
+		_ensure_npc(world_state, "xuzhao", "许照", "metro_service", "watchmaker")
+		_ensure_npc(world_state, "ticket_echo", "无票者七号", "metro_platform", "echo")
+	else:
+		_ensure_npc(world_state, "shenlan", "沈岚", "sanatorium_ward", "patient")
+		_ensure_npc(world_state, "zhouheng", "周衡", "sanatorium_nurse_station", "orderly")
 	return chapter_snapshot(world_id, world_state)
 
 
@@ -57,16 +63,21 @@ func chapter_snapshot(world_id: String, world_state: WorldStateStore) -> Diction
 	var dungeon := _ensure_dungeon(world_id)
 	var chapter := str(dungeon.get("chapter", "first_arrival"))
 	if world_id != "metro":
-		return {
-			"world_id": world_id,
-			"chapter": chapter,
-			"visit": int(dungeon.get("visits", 0)),
-			"title": "疗养院残留记录",
-			"briefing": "这座副本已经开始保存你的行动痕迹。",
-			"hidden_open": has_opened_area(world_id, "lost_passenger_level"),
-		}
+		var sanatorium := _catalog_presentation(world_id, chapter)
+		sanatorium.world_id = world_id
+		sanatorium.chapter = chapter
+		sanatorium.visit = int(dungeon.get("visits", 0))
+		sanatorium.hidden_open = has_opened_area(world_id, "sealed_archive")
+		sanatorium.npc_title = "失忆病人 · 沈岚" if chapter in ["first_arrival", "patient_return"] else "最后的护理员 · 周衡"
+		sanatorium.npc_description = str(sanatorium.get("briefing", ""))
+		sanatorium.cause = _latest_cause(dungeon)
+		sanatorium.boss_variant = boss_variant(world_id, world_state)
+		return sanatorium
 	var npc: Dictionary = _ensure_linye(world_state)
 	var presentation := _metro_presentation(chapter, npc)
+	var catalog_presentation := _catalog_presentation(world_id, chapter)
+	for key in catalog_presentation:
+		presentation[key] = catalog_presentation[key]
 	presentation.world_id = world_id
 	presentation.chapter = chapter
 	presentation.visit = int(dungeon.get("visits", 0))
@@ -74,6 +85,81 @@ func chapter_snapshot(world_id: String, world_state: WorldStateStore) -> Diction
 	presentation.npc = npc.duplicate(true)
 	presentation.cause = _latest_cause(dungeon)
 	return presentation
+
+
+func resolve_choice(world_id: String, choice: String, world_state: WorldStateStore, run_id: String) -> Dictionary:
+	if world_id == "metro":
+		return resolve_metro_choice(choice, world_state, run_id)
+	return _resolve_sanatorium_choice(choice, world_state, run_id)
+
+
+func _resolve_sanatorium_choice(choice: String, world_state: WorldStateStore, run_id: String) -> Dictionary:
+	var dungeon := _ensure_dungeon("sanatorium")
+	var chapter := str(dungeon.get("chapter", "first_arrival"))
+	var shenlan := _ensure_npc(world_state, "shenlan", "沈岚", "sanatorium_ward", "patient")
+	var zhouheng := _ensure_npc(world_state, "zhouheng", "周衡", "sanatorium_nurse_station", "orderly")
+	var result := {"accepted": true, "choice": choice, "chapter": chapter, "event_type": "", "summary": "", "hidden_opened": false, "unique_offer": ""}
+	match choice:
+		"rescue_shenlan":
+			shenlan.last_outcome = "rescued"
+			shenlan.trust = int(shenlan.get("trust", 0)) + 24
+			shenlan.location = "corridor"
+			dungeon.next_variant = "patient_return"
+			result.event_type = "costly_rescue"
+			result.summary = "你放弃近路补给救出沈岚；她会在二刷返回疗养院寻找其他病历。"
+		"seal_ward":
+			shenlan.last_outcome = "sealed_inside"
+			zhouheng.last_outcome = "seal_enforcer"
+			dungeon.next_variant = "sealed_aftermath"
+			result.event_type = "abandon"
+			result.summary = "你封锁病区保住撤离窗口；污染和沈岚都留在门后。"
+		"return_records":
+			shenlan.last_outcome = "archive_keeper"
+			dungeon.next_variant = "living_archive"
+			_open_area(dungeon, "sealed_archive")
+			result.hidden_opened = true
+			result.event_type = "sacrifice"
+			result.summary = "你归还病历，让沈岚恢复了其他病人的姓名；隐藏档案室已显现。"
+		"keep_records":
+			shenlan.last_outcome = "records_withheld"
+			dungeon.next_variant = "living_archive"
+			result.event_type = "independent_choice"
+			result.summary = "你保留病历强化个人路线；沈岚记住了这次拒绝。"
+		"break_seal":
+			shenlan.last_outcome = "rescued_after_seal"
+			zhouheng.last_outcome = "authority_broken"
+			dungeon.next_variant = "living_archive"
+			_open_area(dungeon, "sealed_archive")
+			result.hidden_opened = true
+			result.event_type = "costly_rescue"
+			result.summary = "你承受污染破坏封锁；沈岚获救，周衡转为敌对监管者。"
+		"enforce_seal":
+			shenlan.last_outcome = "lost_to_corruption"
+			shenlan.alive = false
+			zhouheng.last_outcome = "ward_controller"
+			dungeon.next_variant = "living_archive"
+			result.event_type = "authority_obedience"
+			result.summary = "你协助周衡维持封锁；疗养院安全上升，但病区污染吞没了沈岚。"
+		"share_archive":
+			zhouheng.last_outcome = "shared_accountability"
+			result.event_type = "public_help"
+			result.summary = "你公开档案，让幸存者与护理员共同承担疗养院的历史。"
+		"hide_archive":
+			shenlan.last_outcome = "protected_identity"
+			result.event_type = "anonymous_help"
+			result.summary = "你隐藏档案保护幸存者姓名，没有阵营知道这次选择。"
+		_:
+			result.accepted = false
+			return result
+	_record_npc_memory(shenlan, run_id, int(dungeon.get("visits", 0)), chapter, choice, str(result.summary))
+	_record_npc_memory(zhouheng, run_id, int(dungeon.get("visits", 0)), chapter, choice, str(result.summary))
+	world_state.npcs.shenlan = shenlan
+	world_state.npcs.zhouheng = zhouheng
+	_complete_event(dungeon, "%s:%s" % [chapter, choice])
+	_append_history(dungeon, {"run_id": run_id, "visit": int(dungeon.get("visits", 0)), "chapter": chapter, "choice": choice, "summary": str(result.summary)})
+	dungeon.chapter = str(dungeon.get("next_variant", chapter))
+	dungeons.sanatorium = dungeon
+	return result
 
 
 func resolve_metro_choice(choice: String, world_state: WorldStateStore, run_id: String) -> Dictionary:
@@ -326,12 +412,28 @@ func _ensure_linye(world_state: WorldStateStore) -> Dictionary:
 	return world_state.npcs.linye
 
 
+func _ensure_npc(world_state: WorldStateStore, npc_id: String, npc_name: String, location: String, role: String) -> Dictionary:
+	if not world_state.npcs.has(npc_id):
+		world_state.npcs[npc_id] = {
+			"name": npc_name, "alive": true, "trust": 0, "injury": 0,
+			"location": location, "role": role, "promise": "", "last_outcome": "unmet",
+			"first_met_run": "", "last_met_run": "", "memories": [],
+		}
+	return world_state.npcs[npc_id]
+
+
 func _select_chapter(world_id: String, dungeon: Dictionary, world_state: WorldStateStore) -> String:
-	if world_id != "metro":
-		return str(dungeon.get("next_variant", "first_arrival"))
 	var visits := int(dungeon.get("visits", 0))
 	if visits <= 1:
 		return "first_arrival"
+	if world_id != "metro":
+		var shenlan := _ensure_npc(world_state, "shenlan", "沈岚", "sanatorium_ward", "patient")
+		var sanatorium_outcome := str(shenlan.get("last_outcome", "unmet"))
+		if sanatorium_outcome == "rescued":
+			return "patient_return"
+		if sanatorium_outcome == "sealed_inside":
+			return "sealed_aftermath"
+		return str(dungeon.get("next_variant", "living_archive"))
 	var npc: Dictionary = _ensure_linye(world_state)
 	var outcome := str(npc.get("last_outcome", "unmet"))
 	if outcome == "waiting_for_return":
@@ -347,6 +449,47 @@ func _select_chapter(world_id: String, dungeon: Dictionary, world_state: WorldSt
 	if outcome in ["taken_by_authority"]:
 		return "authority_aftermath"
 	return str(dungeon.get("next_variant", "first_arrival"))
+
+
+func boss_variant(world_id: String, world_state: WorldStateStore) -> Dictionary:
+	var dungeon := _ensure_dungeon(world_id)
+	var defeats := int(dungeon.get("boss_state", {}).get("defeats", 0))
+	var chapter := str(dungeon.get("chapter", "first_arrival"))
+	if world_id == "sanatorium":
+		var shenlan: Dictionary = world_state.npcs.get("shenlan", {})
+		if not bool(shenlan.get("alive", true)):
+			return {"name": "污染继任者·缝合主任", "phase": "corruption_heir", "health": 1.30, "damage": 1.18, "effect": "污染脉冲"}
+		if chapter == "living_archive":
+			return {"name": "病历吞噬者·主任回声", "phase": "archive_devourer", "health": 1.18, "damage": 1.12, "effect": "记忆切割"}
+		return {"name": "缝合主任" if defeats == 0 else "复诊·缝合主任", "phase": "initial" if defeats == 0 else "returning", "health": 1.0 + defeats * 0.06, "damage": 1.0 + defeats * 0.04, "effect": "缝合"}
+	var linye: Dictionary = world_state.npcs.get("linye", {})
+	if not bool(linye.get("alive", true)):
+		return {"name": "失约列车·车长回声", "phase": "broken_promise", "health": 1.28, "damage": 1.20, "effect": "失约广播"}
+	return {"name": "末班列车·车长回声" if defeats == 0 else "重返末班·车长回声", "phase": "returning", "health": 1.0 + defeats * 0.07, "damage": 1.0 + defeats * 0.05, "effect": "时刻重写"}
+
+
+func _catalog_presentation(world_id: String, chapter_id: String) -> Dictionary:
+	var chapter := catalog.chapter(world_id, chapter_id)
+	if chapter.is_empty():
+		return {}
+	var choices: Array = chapter.get("choices", [])
+	if choices.size() >= 2:
+		chapter.choice_a = str(choices[0].get("label", "继续"))
+		chapter.choice_b = str(choices[1].get("label", "离开"))
+		chapter.choice_a_id = str(choices[0].get("id", ""))
+		chapter.choice_b_id = str(choices[1].get("id", ""))
+	return chapter
+
+
+func _record_npc_memory(npc: Dictionary, run_id: String, visit: int, chapter: String, choice: String, summary: String) -> void:
+	if str(npc.get("first_met_run", "")).is_empty():
+		npc.first_met_run = run_id
+	npc.last_met_run = run_id
+	var memories: Array = npc.get("memories", [])
+	memories.push_front({"run_id": run_id, "visit": visit, "chapter": chapter, "choice": choice, "summary": summary})
+	if memories.size() > 12:
+		memories.resize(12)
+	npc.memories = memories
 
 
 func _metro_presentation(chapter: String, npc: Dictionary) -> Dictionary:

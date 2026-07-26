@@ -8,7 +8,9 @@ func _run_test() -> void:
  root.add_child(mission)
  await process_frame
  assert(mission.run_config.validate())
- assert(mission.interactables.size() == mission.total_records + 2)
+ # Persistent narrative NPCs are additional authored interactions; the core
+ # objective, power and extraction chain must remain present and ordered first.
+ assert(mission.interactables.size() >= mission.total_records + 3)
  assert(mission.risk_events.size() == 2)
  assert(mission.abandon_button.visible)
  var power = mission.interactables[mission.total_records]

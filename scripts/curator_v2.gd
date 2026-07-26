@@ -53,6 +53,33 @@ func offer_contract(assessment: Dictionary, world_id: String) -> Dictionary:
 	}
 
 
+func offer_counter_contract(assessment: Dictionary, world_id: String, dimension: String) -> Dictionary:
+	var prediction: Dictionary = assessment.get("prediction", {})
+	var dimensions: Dictionary = assessment.get("profile", {}).get("dimensions", {})
+	var result: Dictionary = dimensions.get(dimension, {})
+	if result.is_empty():
+		return {}
+	var expected_positive := float(result.get("score", 0.0)) > 0.0
+	var opposing_events := {
+		"responsibility": ["abandon", "costly_rescue"],
+		"loyalty": ["faction_betrayal", "faction_help"],
+		"restraint": ["attack_neutral", "anonymous_restraint"],
+		"risk": ["safe_choice", "risk_choice"],
+		"commitment": ["promise_broken", "promise_kept"],
+		"belonging": ["independent_choice", "ingroup_help"],
+	}
+	var pair: Array = opposing_events.get(dimension, ["run_settled", "run_settled"])
+	var challenge_event := str(pair[0] if expected_positive else pair[1])
+	return {
+		"id": "counter_%s_%s" % [dimension, str(Time.get_unix_time_from_system())],
+		"title": "反证契约：%s" % str(HumanityProfile.DIMENSIONS[dimension].get("negative" if expected_positive else "positive", dimension)),
+		"dimension": dimension,
+		"world_id": world_id,
+		"success_event": challenge_event,
+		"reward": 2,
+		"method": "在下一局作出与当前解释相反且有代价的选择",
+		"previous_prediction": prediction.duplicate(true),
+	}
 func evaluate_prediction(prediction: Dictionary, new_events: Array[Dictionary]) -> Dictionary:
 	var dimension := str(prediction.get("dimension", ""))
 	if dimension.is_empty():

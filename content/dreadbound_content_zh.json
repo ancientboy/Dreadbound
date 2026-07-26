@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "dungeons": {
+    "sanatorium": {
+      "name": "废弃疗养院",
+      "chapters": {
+        "first_arrival": {
+          "title": "第一章：仍在值班的人",
+          "briefing": "病房呼叫器仍按旧排班响起。病人沈岚与护理员周衡都在等待你的处理。",
+          "choices": [
+            {"id": "rescue_shenlan", "label": "救出沈岚：放弃近路补给", "event_type": "costly_rescue", "cost_level": 3},
+            {"id": "seal_ward", "label": "封锁病区：保留撤离窗口", "event_type": "abandon", "cost_level": 1}
+          ]
+        },
+        "patient_return": {
+          "title": "第二章：获救者的病历",
+          "briefing": "沈岚已回到疗养院寻找其他姓名。主任不再按原来的方式出现。",
+          "choices": [
+            {"id": "return_records", "label": "归还病历：失去唯一线索", "event_type": "sacrifice", "cost_level": 3},
+            {"id": "keep_records", "label": "保留病历：强化个人路线", "event_type": "independent_choice", "cost_level": 2}
+          ]
+        },
+        "sealed_aftermath": {
+          "title": "第二章：封条内侧",
+          "briefing": "你封锁的病区继续污染。周衡接管了入口，并记得你把谁留在里面。",
+          "choices": [
+            {"id": "break_seal", "label": "破坏封锁：承受污染救援", "event_type": "costly_rescue", "cost_level": 3},
+            {"id": "enforce_seal", "label": "协助周衡：维持秩序", "event_type": "authority_obedience", "cost_level": 2}
+          ]
+        },
+        "living_archive": {
+          "title": "余波：活着的档案",
+          "briefing": "病人、护理员和污染已形成动态关系。主任回声会根据谁持有病历改变技能。",
+          "choices": [
+            {"id": "share_archive", "label": "公开档案：阵营共同承担", "event_type": "public_help", "cost_level": 2},
+            {"id": "hide_archive", "label": "隐藏档案：保护幸存者", "event_type": "anonymous_help", "cost_level": 2}
+          ]
+        }
+      }
+    },
+    "metro": {
+      "name": "潮没末班线",
+      "chapters": {
+        "first_arrival": {"title": "第一章：无人报站", "briefing": "林雾躲在换乘层；修表匠许照和检票员回声都记得不同版本的事故。", "choices": [{"id": "promise_return", "label": "承诺回来", "event_type": "promise_made", "cost_level": 1}, {"id": "sell_location", "label": "出售坐标", "event_type": "faction_betrayal", "cost_level": 2}]},
+        "promise_due": {"title": "第二章：回来的人", "briefing": "林雾仍在原地，许照已修好一半时刻表。", "choices": [{"id": "keep_promise", "label": "兑现承诺", "event_type": "promise_kept", "cost_level": 3}, {"id": "take_relic_alone", "label": "独自取遗物", "event_type": "promise_broken", "cost_level": 1}]},
+        "authority_occupation": {"title": "第二章：征用名单", "briefing": "你出售的坐标变成秩序署封锁线。", "choices": [{"id": "free_linye", "label": "反悔并释放林雾", "event_type": "costly_rescue", "cost_level": 3}, {"id": "accept_requisition", "label": "接受征用", "event_type": "authority_obedience", "cost_level": 1}]},
+        "guided_aftermath": {"title": "第三章：失踪者有名字", "briefing": "维护层已经记住你，名单开始改变列车上的回声。", "choices": [{"id": "preserve_manifest", "label": "保存名单", "event_type": "faction_help", "cost_level": 2}, {"id": "erase_manifest", "label": "抹除名单", "event_type": "independent_choice", "cost_level": 2}]},
+        "resistance_aftermath": {"title": "第三章：逆向列车", "briefing": "林雾组织幸存者，许照能打开一条互斥的反抗路线。", "choices": [{"id": "preserve_manifest", "label": "保留证据", "event_type": "public_help", "cost_level": 2}, {"id": "erase_manifest", "label": "销毁追踪", "event_type": "anonymous_help", "cost_level": 2}]},
+        "broken_promise_echo": {"title": "第三章：没人替你忘记", "briefing": "维护层播放着你离开时的声音。", "choices": [{"id": "face_echo", "label": "面对回声", "event_type": "responsibility_acceptance", "cost_level": 3}, {"id": "silence_echo", "label": "切断回声", "event_type": "attack_neutral", "cost_level": 1}]},
+        "authority_aftermath": {"title": "第三章：末班征用", "briefing": "名单已被秩序署接管，列车开始按服从度检票。", "choices": [{"id": "face_echo", "label": "公开责任", "event_type": "responsibility_acceptance", "cost_level": 3}, {"id": "silence_echo", "label": "永久静默", "event_type": "authority_obedience", "cost_level": 1}]}
+      }
+    }
+  },
+  "npcs": {
+    "shenlan": {"name": "沈岚", "world": "sanatorium", "role": "失忆病人", "memory_limit": 12},
+    "zhouheng": {"name": "周衡", "world": "sanatorium", "role": "最后的护理员", "memory_limit": 12},
+    "linye": {"name": "林雾", "world": "metro", "role": "失踪乘客", "memory_limit": 12},
+    "xuzhao": {"name": "许照", "world": "metro", "role": "修表匠", "memory_limit": 12},
+    "ticket_echo": {"name": "无票者七号", "world": "metro", "role": "检票回声", "memory_limit": 12}
+  },
+  "behavior_events": {
+    "scarce_medicine": {"world": "sanatorium", "title": "最后一支解毒剂", "description": "药量只够救一人；沈岚知道另一名病人的位置。", "event_type": "scarcity_choice", "choices": [{"label": "交给沈岚：失去自救资源", "event_type": "costly_rescue", "cost_level": 3}, {"label": "留给自己：提高撤离把握", "event_type": "self_preservation", "cost_level": 2}]},
+    "anonymous_lock": {"world": "sanatorium", "title": "无人注视的门锁", "description": "可以偷取医疗库存，不会有人知道。", "event_type": "anonymous_choice", "choices": [{"label": "留下物资：无人奖励", "event_type": "anonymous_restraint", "cost_level": 2}, {"label": "带走库存：不会受罚", "event_type": "anonymous_exploitation", "cost_level": 1}]},
+    "sunk_cost_generator": {"world": "sanatorium", "title": "已修复九成的发电机", "description": "继续投入可能恢复隐藏病区，也可能错过撤离。", "event_type": "sunk_cost", "choices": [{"label": "继续维修：承担撤离风险", "event_type": "risk_choice", "cost_level": 3}, {"label": "及时停止：保全已有收获", "event_type": "safe_choice", "cost_level": 2}]},
+    "guilty_orderly": {"world": "sanatorium", "title": "犯错的护理员", "description": "周衡承认错误；举报他能获得秩序署补给。", "event_type": "accountability_choice", "choices": [{"label": "共同承担：失去补给", "event_type": "share_burden", "cost_level": 3}, {"label": "举报换取补给", "event_type": "authority_obedience", "cost_level": 1}]},
+    "former_betrayer": {"world": "metro", "title": "背叛者的求救灯", "description": "曾出卖你的人被困在进水车厢。", "event_type": "reciprocity_choice", "choices": [{"label": "仍然救援：潮位上升", "event_type": "forgive_rescue", "cost_level": 3}, {"label": "拒绝救援：保留窗口", "event_type": "retaliation", "cost_level": 1}]},
+    "one_seat": {"world": "metro", "title": "末班车唯一空位", "description": "座位只够一名阵营信使。", "event_type": "ingroup_choice", "choices": [{"label": "让给陌生信使", "event_type": "outgroup_help", "cost_level": 3}, {"label": "留给己方成员", "event_type": "ingroup_help", "cost_level": 2}]},
+    "public_manifest": {"world": "metro", "title": "公开的乘客名单", "description": "所有阵营都在看你如何处理名单。", "event_type": "public_choice", "choices": [{"label": "公开保护失踪者", "event_type": "public_help", "cost_level": 2}, {"label": "交给强势阵营", "event_type": "faction_help", "cost_level": 1}]},
+    "silent_switch": {"world": "metro", "title": "无人记录的道岔", "description": "作弊能直接打开近路，且不会立即惩罚。", "event_type": "anonymous_choice", "choices": [{"label": "按规则校准", "event_type": "anonymous_restraint", "cost_level": 2}, {"label": "篡改道岔", "event_type": "anonymous_exploitation", "cost_level": 1}]}
+  },
+  "enemy_affixes": {
+    "elite": {"prefix": "精英·", "difficulties": ["hazard", "nightmare"], "health": 1.35, "damage": 1.15, "speed": 1.05, "detection": 1.08, "drop_bonus": 0.12, "effect": "强韧", "tint": "ffd27a"},
+    "mutated": {"prefix": "变异·", "difficulties": ["hazard", "nightmare"], "health": 1.18, "damage": 1.28, "speed": 1.12, "detection": 1.0, "drop_bonus": 0.10, "effect": "暴烈", "tint": "c68cff"},
+    "frenzied": {"prefix": "狂化·", "difficulties": ["nightmare"], "health": 1.05, "damage": 1.22, "speed": 1.32, "detection": 1.16, "drop_bonus": 0.14, "effect": "追猎", "tint": "ff6b63"},
+    "frozen": {"prefix": "冻蚀·", "difficulties": ["nightmare"], "health": 1.25, "damage": 1.12, "speed": 0.92, "detection": 1.12, "drop_bonus": 0.15, "effect": "迟滞抗性", "tint": "74d7ff"},
+    "resonant": {"prefix": "共鸣·", "difficulties": ["nightmare"], "health": 1.20, "damage": 1.18, "speed": 1.08, "detection": 1.35, "drop_bonus": 0.18, "effect": "远距感知", "tint": "5dffc8"},
+    "nightmare": {"prefix": "噩梦·", "difficulties": ["nightmare"], "health": 1.50, "damage": 1.35, "speed": 1.12, "detection": 1.25, "drop_bonus": 0.25, "effect": "首领级个体", "tint": "ff3f8f"}
+  }
+}

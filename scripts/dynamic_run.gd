@@ -21,6 +21,7 @@ const METRO_MAP_REGIONS := [
 	{"id": "transfer", "name": "换乘天桥", "rect": Rect2(64, 992, 640, 288)},
 ]
 const METRO_SECRET_REGION := {"id": "lost_passenger_level", "name": "失踪乘客维护层", "rect": Rect2(1504, 960, 704, 320), "secret": true}
+const SANATORIUM_SECRET_REGION := {"id": "sealed_archive", "name": "封存病历室", "rect": Rect2(1088, 384, 256, 192), "secret": true}
 const CONTENT_SLOTS := [
 	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
 	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),
@@ -195,6 +196,8 @@ func map_regions() -> Array[Dictionary]:
 	for room in SanatoriumLayout.rooms():
 		regions.append({"id": room.id, "name": room_role(index), "rect": room.rect})
 		index += 1
+	if revealed_secret_regions.has("sealed_archive"):
+		regions.append(SANATORIUM_SECRET_REGION.duplicate(true))
 	return regions
 
 

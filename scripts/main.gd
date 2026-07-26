@@ -98,6 +98,10 @@ var narrative_chapter := {}
 var active_narrative := {}
 var active_narrative_target: ObjectiveInteractable
 var hidden_gate: StaticBody2D
+var content_catalog := ContentCatalog.new()
+var enemy_affixes := EnemyAffixSystem.new()
+var encountered_affixes: Array[Dictionary] = []
+var _enemy_ordinal := 0
 
 
 func _ready() -> void:
@@ -108,7 +112,7 @@ func _ready() -> void:
 	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world, GameState.selected_difficulty)
 	narrative_chapter = GameState.dungeon_chapter(run_config.world_id)
 	if bool(narrative_chapter.get("hidden_open", false)):
-		run_config.revealed_secret_regions.append("lost_passenger_level")
+		run_config.revealed_secret_regions.append("lost_passenger_level" if run_config.world_id == "metro" else "sealed_archive")
 	curator_contract = GameState.get_curator_trial()
 	curator_effects = GameState.get_active_contract_effects()
 	world_rules = WorldRules.new(run_config.world_id)
@@ -158,6 +162,9 @@ func _ready() -> void:
 		var contract_note := "\n司仪契约：%s" % str(curator_contract.title) if not curator_contract.is_empty() else ""
 		var chapter_note := "\n%s：%s" % [str(narrative_chapter.get("title", "")), str(narrative_chapter.get("briefing", ""))]
 		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。%s%s" % [contract_note, chapter_note], 8.0)
+	else:
+		var chapter_note := "%s：%s" % [str(narrative_chapter.get("title", "")), str(narrative_chapter.get("briefing", ""))]
+		_show_notification("废弃疗养院已读取你的历史。\n%s" % chapter_note, 7.0)
 	queue_redraw()
 
 
@@ -396,7 +403,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "difficulty": run_config.difficulty_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "difficulty": run_config.difficulty_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used, "enemy_affixes": encountered_affixes}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -498,6 +505,7 @@ func _resolve_active_event(take_risk: bool) -> void:
 	if active_event == null:
 		return
 	var resolved_event_id := active_event.event_id
+	var behavior_data: Dictionary = active_event.behavior_data
 	var pathway_bonus := player.pathway_effects.on_risk_event(take_risk)
 	if pathway_bonus > 0:
 		player.add_echo_shards(pathway_bonus)
@@ -565,8 +573,32 @@ func _resolve_active_event(take_risk: bool) -> void:
 			else:
 				player.add_stimulants(1)
 				event_results.append("断路器旁路：保守")
+		_:
+			var choices: Array = behavior_data.get("choices", [])
+			var selected: Dictionary = choices[0 if take_risk else 1] if choices.size() == 2 else {}
+			var cost_level := int(selected.get("cost_level", 1))
+			if take_risk:
+				player.add_echo_shards(2 + cost_level)
+				if cost_level >= 3:
+					player.take_damage(10, player.global_position)
+			else:
+				player.add_ammo(2 + cost_level)
+			event_results.append("%s：%s" % [str(behavior_data.get("title", "高压选择")), str(selected.get("label", "已选择"))])
 	active_event.mark_resolved()
-	GameState.record_action("risk_choice", "player", resolved_event_id, "risk" if take_risk else "safe", {"took_risk": take_risk}, {"summary": event_results[-1]})
+	var selected_choice: Dictionary = {}
+	var behavior_choices: Array = behavior_data.get("choices", [])
+	if behavior_choices.size() == 2:
+		selected_choice = behavior_choices[0 if take_risk else 1]
+	var event_type := str(selected_choice.get("event_type", "risk_choice"))
+	var context := {
+		"took_risk": take_risk,
+		"cost_level": int(selected_choice.get("cost_level", 1)),
+		"anonymous": "anonymous" in str(behavior_data.get("event_type", "")) or "anonymous" in event_type,
+		"public": "public" in str(behavior_data.get("event_type", "")) or "public" in event_type,
+		"resources_at_choice": player.echo_shards + player.ammo + player.shells,
+		"time_pressure": metro_train_window if run_config.world_id == "metro" else run_elapsed,
+	}
+	GameState.record_human_choice(event_type, resolved_event_id, str(selected_choice.get("label", "risk" if take_risk else "safe")), context, {"summary": event_results[-1]})
 	active_event = null
 	event_panel.visible = false
 	_set_gameplay_paused(false)
@@ -588,6 +620,7 @@ func _spawn_crawler_wave() -> void:
 		var crawler := CRAWLER_SCENE.instantiate() as Crawler
 		crawler.position = player.global_position + offset
 		crawler.target = player
+		_apply_difficulty_to_enemy(crawler, "爬行者")
 		crawler.tree_exiting.connect(_on_enemy_removed.bind(crawler))
 		add_child(crawler)
 
@@ -641,6 +674,14 @@ func _create_mission_interactables() -> void:
 
 func _create_persistent_narrative() -> void:
 	if run_config.world_id != "metro":
+		_add_interactable(
+			ObjectiveInteractable.Kind.NPC,
+			"sanatorium_memory",
+			str(narrative_chapter.get("npc_title", "失忆病人 · 沈岚")),
+			Vector2(800, 480),
+		)
+		if bool(narrative_chapter.get("hidden_open", false)):
+			_add_interactable(ObjectiveInteractable.Kind.NPC, "sanatorium_archive", "隐藏病历室 · 周衡", Vector2(1184, 480))
 		return
 	var already_open := bool(narrative_chapter.get("hidden_open", false))
 	if already_open:
@@ -663,6 +704,8 @@ func _create_persistent_narrative() -> void:
 		"失踪乘客维护层",
 		Vector2(METRO_HIDDEN_GATE_RECT.position.x - 44.0, METRO_HIDDEN_GATE_RECT.get_center().y),
 	)
+	_add_interactable(ObjectiveInteractable.Kind.NPC, "xuzhao_memory", "修表匠 · 许照", Vector2(1040, 1008))
+	_add_interactable(ObjectiveInteractable.Kind.NPC, "ticket_echo_memory", "无票者七号", Vector2(1780, 980))
 	if already_open:
 		_open_hidden_gate()
 	else:
@@ -670,7 +713,18 @@ func _create_persistent_narrative() -> void:
 
 
 func _open_persistent_narrative(target: ObjectiveInteractable) -> void:
-	if target.objective_id == "metro_hidden_archive":
+	if target.objective_id in ["xuzhao_memory", "ticket_echo_memory"]:
+		var npc_name := "许照" if target.objective_id == "xuzhao_memory" else "无票者七号"
+		active_narrative = {
+			"npc_title": npc_name,
+			"npc_description": "%s记得当前章节“%s”，也记得林雾上一次如何看待你。其后续身份会随名单与阵营控制变化。" % [npc_name, str(narrative_chapter.get("title", ""))],
+			"choice_a": str(narrative_chapter.get("choice_a", "听完")),
+			"choice_b": str(narrative_chapter.get("choice_b", "离开")),
+			"choice_a_id": str(narrative_chapter.get("choice_a_id", "")),
+			"choice_b_id": str(narrative_chapter.get("choice_b_id", "")),
+			"cause": str(narrative_chapter.get("cause", "")),
+		}
+	elif target.objective_id == "metro_hidden_archive":
 		active_narrative = _hidden_archive_presentation()
 	else:
 		active_narrative = narrative_chapter.duplicate(true)
@@ -690,7 +744,7 @@ func _open_persistent_narrative(target: ObjectiveInteractable) -> void:
 func _resolve_persistent_narrative(choose_a: bool) -> void:
 	var choice_key := "choice_a_id" if choose_a else "choice_b_id"
 	var choice := str(active_narrative.get(choice_key, ""))
-	var result := GameState.resolve_metro_narrative(choice)
+	var result := GameState.resolve_dungeon_narrative(run_config.world_id, choice)
 	if not bool(result.get("accepted", false)):
 		_show_notification("这段记忆没有回应当前选择。", 3.0)
 	else:
@@ -706,7 +760,7 @@ func _resolve_persistent_narrative(choose_a: bool) -> void:
 			_show_notification("%s\n剧情唯一物品已暂存，成功撤离后入库。" % str(result.get("summary", "")), 6.0)
 		else:
 			_show_notification(str(result.get("summary", "")), 6.0)
-		narrative_chapter = GameState.dungeon_chapter("metro")
+		narrative_chapter = GameState.dungeon_chapter(run_config.world_id)
 	active_narrative = {}
 	active_narrative_target = null
 	event_panel.visible = false
@@ -802,7 +856,7 @@ func _create_patients() -> void:
 		var patient := (DROWNED_SCENE.instantiate() if run_config.world_id == "metro" else PATIENT_SCENE.instantiate()) as Patient
 		patient.position = spawn_position
 		patient.target = player
-		_apply_difficulty_to_enemy(patient)
+		_apply_difficulty_to_enemy(patient, "溺行者" if run_config.world_id == "metro" else "病患")
 		if patient is Drowned:
 			patient.water_depth_provider = _metro_water_depth_at
 		patient.tree_exiting.connect(_on_enemy_removed.bind(patient))
@@ -814,7 +868,7 @@ func _create_crawlers() -> void:
 		var crawler := CRAWLER_SCENE.instantiate() as Crawler
 		crawler.position = spawn_position
 		crawler.target = player
-		_apply_difficulty_to_enemy(crawler)
+		_apply_difficulty_to_enemy(crawler, "爬行者")
 		crawler.tree_exiting.connect(_on_enemy_removed.bind(crawler))
 		add_child(crawler)
 
@@ -824,7 +878,7 @@ func _create_orderlies() -> void:
 		var orderly := (CONDUCTOR_SCENE.instantiate() if run_config.world_id == "metro" else ORDERLY_SCENE.instantiate()) as Orderly
 		orderly.position = spawn_position
 		orderly.target = player
-		_apply_difficulty_to_enemy(orderly)
+		_apply_difficulty_to_enemy(orderly, "检票员" if run_config.world_id == "metro" else "护理员")
 		if orderly is Conductor:
 			orderly.noise_provider = func(): return metro_noise
 			orderly.route_provider = _metro_intercept_candidates
@@ -838,6 +892,9 @@ func _create_boss() -> void:
 	boss.target = player
 	var difficulty := GameState.get_difficulty()
 	boss.max_health = int(round(boss.max_health * float(difficulty.enemy_health)))
+	var variant := GameState.dungeon_boss_variant(run_config.world_id)
+	boss.max_health = int(round(boss.max_health * float(variant.get("health", 1.0))))
+	boss.configure_history_variant(variant)
 	boss.health = boss.max_health
 	if boss is LastTrainBoss:
 		boss.encounter_provider = func(): return {"anchors": get_tree().get_nodes_in_group("signal_anchors").size(), "tide": metro_tide_level, "window": metro_train_window}
@@ -845,7 +902,7 @@ func _create_boss() -> void:
 	add_child(boss)
 
 
-func _apply_difficulty_to_enemy(enemy: Node) -> void:
+func _apply_difficulty_to_enemy(enemy: Node, base_name := "威胁") -> void:
 	var difficulty := GameState.get_difficulty()
 	if enemy.get("max_health") != null:
 		enemy.max_health = int(round(int(enemy.max_health) * float(difficulty.enemy_health)))
@@ -853,6 +910,10 @@ func _apply_difficulty_to_enemy(enemy: Node) -> void:
 			enemy.health = enemy.max_health
 	if enemy.get("attack_damage") != null:
 		enemy.attack_damage = int(round(int(enemy.attack_damage) * float(difficulty.enemy_damage)))
+	var affix := enemy_affixes.apply(enemy, run_config.difficulty_id, run_config.seed, _enemy_ordinal, base_name)
+	_enemy_ordinal += 1
+	if not str(affix.get("id", "")).is_empty():
+		encountered_affixes.append({"id": affix.id, "name": affix.name, "effect": affix.effect})
 
 
 func _on_enemy_removed(enemy: Node) -> void:
@@ -881,6 +942,7 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 		kind = ResourcePickup.Kind.BANDAGE if roll < 0.16 else ResourcePickup.Kind.ECHO_SHARD
 		threshold = 0.42
 	threshold += float(GameState.get_difficulty().loot_bonus)
+	threshold += float(enemy.get_meta("dreadbound_drop_bonus", 0.0))
 	if roll > threshold:
 		return null
 	var pickup := PICKUP_SCENE.instantiate() as ResourcePickup
@@ -969,6 +1031,14 @@ func _create_pickups() -> void:
 
 
 func _create_risk_events() -> void:
+	var authored := content_catalog.behavior_events_for(run_config.world_id)
+	if not authored.is_empty():
+		var start := absi(run_config.seed) % authored.size()
+		for index in range(mini(2, authored.size())):
+			var event: Dictionary = authored[(start + index) % authored.size()]
+			var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
+			_add_behavior_event(str(event.id), event, at)
+		return
 	for index in range(run_config.side_contracts.size()):
 		var event_id: String = run_config.side_contracts[index]
 		var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
@@ -1007,6 +1077,22 @@ func _add_risk_event(id: String, title: String, description: String, choice_a: S
 	risk_event.description = description
 	risk_event.choice_a = choice_a
 	risk_event.choice_b = choice_b
+	risk_event.position = at
+	add_child(risk_event)
+	risk_events.append(risk_event)
+
+
+func _add_behavior_event(id: String, data: Dictionary, at: Vector2) -> void:
+	var choices: Array = data.get("choices", [])
+	if choices.size() != 2:
+		return
+	var risk_event := RiskEvent.new()
+	risk_event.event_id = id
+	risk_event.title = str(data.get("title", "高压情境"))
+	risk_event.description = "%s\n系统会记录真实代价、是否公开以及你当时拥有的资源。" % str(data.get("description", ""))
+	risk_event.choice_a = str(choices[0].get("label", "选择一"))
+	risk_event.choice_b = str(choices[1].get("label", "选择二"))
+	risk_event.behavior_data = data.duplicate(true)
 	risk_event.position = at
 	add_child(risk_event)
 	risk_events.append(risk_event)

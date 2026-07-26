@@ -10,6 +10,7 @@ const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 @export var choice_b := "安全离开"
 
 var resolved := false
+var behavior_data := {}
 
 
 func _ready() -> void:

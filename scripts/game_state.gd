@@ -3,7 +3,8 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 18
+const SAVE_VERSION := 19
+const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -69,6 +70,10 @@ var faction_simulator := FactionSimulator.new()
 var humanity_profiler := HumanityProfile.new()
 var curator_v2 := CuratorV2.new()
 var last_reflection := {}
+var reflection_history: Array[Dictionary] = []
+var reflection_disputes := {}
+var active_counter_contract := {}
+var last_save_health := {"status": "new", "loaded_version": 0, "current_version": SAVE_VERSION, "migrations": []}
 var persistent_dungeons := PersistentDungeonState.new()
 var active_dungeon_chapter := {}
 
@@ -390,10 +395,10 @@ func dungeon_chapter(world_id := "") -> Dictionary:
 	return persistent_dungeons.chapter_snapshot(target_world, world_state)
 
 
-func resolve_metro_narrative(choice: String) -> Dictionary:
-	if selected_world != "metro" or last_action_code.is_empty():
+func resolve_dungeon_narrative(world_id: String, choice: String) -> Dictionary:
+	if selected_world != world_id or last_action_code.is_empty():
 		return {}
-	var result := persistent_dungeons.resolve_metro_choice(choice, world_state, last_action_code)
+	var result := persistent_dungeons.resolve_choice(world_id, choice, world_state, last_action_code)
 	if not bool(result.get("accepted", false)):
 		return result
 	var context := {
@@ -401,13 +406,33 @@ func resolve_metro_narrative(choice: String) -> Dictionary:
 		"hidden_opened": bool(result.get("hidden_opened", false)),
 	}
 	if str(result.get("event_type", "")) in HumanityProfile.EVENT_WEIGHTS or str(result.get("event_type", "")) == "promise_made":
-		record_human_choice(str(result.event_type), "linye", choice, context, {"summary": str(result.summary)})
+		var content_choice := _chapter_choice_data(world_id, str(result.get("chapter", "")), choice)
+		context.cost_level = int(content_choice.get("cost_level", 1))
+		context.anonymous = "anonymous" in str(result.event_type)
+		context.public = "public" in str(result.event_type)
+		record_human_choice(str(result.event_type), "linye" if world_id == "metro" else "sanatorium_npcs", choice, context, {"summary": str(result.summary)})
 	else:
 		record_action(str(result.event_type), "player", "linye", choice, context, {"summary": str(result.summary)})
-	active_dungeon_chapter = persistent_dungeons.chapter_snapshot("metro", world_state)
+	active_dungeon_chapter = persistent_dungeons.chapter_snapshot(world_id, world_state)
 	save_progress()
 	progress_changed.emit()
 	return result
+
+
+func resolve_metro_narrative(choice: String) -> Dictionary:
+	return resolve_dungeon_narrative("metro", choice)
+
+
+func dungeon_boss_variant(world_id: String) -> Dictionary:
+	return persistent_dungeons.boss_variant(world_id, world_state)
+
+
+func _chapter_choice_data(world_id: String, chapter_id: String, choice_id: String) -> Dictionary:
+	var chapter := ContentCatalog.new().chapter(world_id, chapter_id)
+	for choice in chapter.get("choices", []):
+		if str(choice.get("id", "")) == choice_id:
+			return choice.duplicate(true)
+	return {}
 
 
 func dungeon_hidden_open(world_id: String, area_id: String) -> bool:
@@ -433,6 +458,8 @@ func record_action(event_type: String, actor := "player", target := "", choice :
 
 func humanity_reflection() -> Dictionary:
 	last_reflection = curator_v2.assess(action_ledger.events, world_state)
+	last_reflection.disputes = reflection_disputes.duplicate(true)
+	last_reflection.counter_contract = active_counter_contract.duplicate(true)
 	return last_reflection.duplicate(true)
 
 
@@ -448,6 +475,35 @@ func record_human_choice(event_type: String, target := "", choice := "", context
 func next_curator_contract() -> Dictionary:
 	var assessment := humanity_reflection()
 	return curator_v2.offer_contract(assessment, selected_world)
+
+
+func dispute_reflection(dimension: String) -> Dictionary:
+	if not HumanityProfile.DIMENSIONS.has(dimension):
+		return {}
+	var assessment := humanity_reflection()
+	var result: Dictionary = assessment.get("profile", {}).get("dimensions", {}).get(dimension, {})
+	if int(result.get("sample_size", 0)) <= 0:
+		return {}
+	reflection_disputes[dimension] = {
+		"at_run": last_action_code,
+		"reason": "玩家不同意当前解释",
+		"score_at_dispute": int(result.get("score", 0)),
+		"confidence_at_dispute": float(result.get("confidence", 0.0)),
+	}
+	active_counter_contract = curator_v2.offer_counter_contract(assessment, selected_world, dimension)
+	last_reflection.disputes = reflection_disputes.duplicate(true)
+	last_reflection.counter_contract = active_counter_contract.duplicate(true)
+	save_progress()
+	progress_changed.emit()
+	return active_counter_contract.duplicate(true)
+
+
+func reflection_timeline() -> Array[Dictionary]:
+	return reflection_history.duplicate(true)
+
+
+func save_health() -> Dictionary:
+	return last_save_health.duplicate(true)
 
 
 func world_briefing() -> Array[String]:
@@ -526,6 +582,12 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	var settlement_event := record_action("run_settled", "system", str(run_summary.get("world", selected_world)), "extract" if success else "lost", {"records": records, "events_resolved": events_resolved, "enemies_defeated": enemies_defeated}, {"success": success, "banked_shards": banked})
 	last_run.faction_turn = faction_simulator.advance(world_state, str(settlement_event.get("event_id", "")), false)
 	last_reflection = curator_v2.assess(action_ledger.events, world_state)
+	last_reflection.disputes = reflection_disputes.duplicate(true)
+	var counter_resolution := _resolve_counter_contract(action_ledger.events_for_run(action_code))
+	if not counter_resolution.is_empty():
+		last_run.counter_contract_result = counter_resolution
+		active_counter_contract = {}
+	last_reflection.counter_contract = active_counter_contract.duplicate(true)
 	last_run.humanity_reflection = last_reflection
 	last_run.action_events = action_ledger.events_for_run(action_code)
 	last_run.world_consequences = settlement_event.get("consequences", [])
@@ -536,6 +598,7 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 		bool(run_summary.get("boss_defeated", false)),
 	)
 	last_run.dungeon_history = persistent_dungeons.history_for(world_id).slice(0, 4)
+	_append_reflection_snapshot(action_code, world_id, success)
 	active_run_seed = 0
 	active_dungeon_chapter = {}
 	save_progress()
@@ -678,7 +741,8 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
+	last_save_health = {"status": "saved", "loaded_version": SAVE_VERSION, "current_version": SAVE_VERSION, "migrations": []}
 	return true
 
 
@@ -690,12 +754,28 @@ func load_progress() -> void:
 		return
 	var parsed = JSON.parse_string(file.get_as_text())
 	if not parsed is Dictionary:
+		last_save_health = {"status": "invalid_json", "loaded_version": 0, "current_version": SAVE_VERSION, "migrations": []}
 		return
+	var loaded_version := maxi(int(parsed.get("version", 0)), 0)
+	var migrations: Array[String] = []
+	if loaded_version < 19:
+		migrations.append("v19：人性镜鉴时间线、异议与反证契约")
+	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
 	persistent_dungeons.load_dict(parsed.get("persistent_dungeons", {}))
 	var saved_reflection: Variant = parsed.get("last_reflection", {})
 	last_reflection = saved_reflection.duplicate(true) if saved_reflection is Dictionary else {}
+	reflection_history.clear()
+	for snapshot in parsed.get("reflection_history", []):
+		if snapshot is Dictionary:
+			reflection_history.append(snapshot.duplicate(true))
+	if reflection_history.size() > MAX_REFLECTION_HISTORY:
+		reflection_history.resize(MAX_REFLECTION_HISTORY)
+	var saved_disputes: Variant = parsed.get("reflection_disputes", {})
+	reflection_disputes = saved_disputes.duplicate(true) if saved_disputes is Dictionary else {}
+	var saved_contract: Variant = parsed.get("active_counter_contract", {})
+	active_counter_contract = saved_contract.duplicate(true) if saved_contract is Dictionary else {}
 	var saved_chapter: Variant = parsed.get("active_dungeon_chapter", {})
 	active_dungeon_chapter = saved_chapter.duplicate(true) if saved_chapter is Dictionary else {}
 	echo_shards = maxi(int(parsed.get("echo_shards", 0)), 0)
@@ -796,6 +876,55 @@ func _clear_runtime_progress() -> void:
 	claimed_milestones.clear()
 	pathway_migration_refund = 0
 	last_reflection = {}
+	reflection_history.clear()
+	reflection_disputes = {}
+	active_counter_contract = {}
+	last_save_health = {"status": "new", "loaded_version": 0, "current_version": SAVE_VERSION, "migrations": []}
+
+
+func _append_reflection_snapshot(action_code: String, world_id: String, success: bool) -> void:
+	var dimensions: Dictionary = last_reflection.get("profile", {}).get("dimensions", {})
+	var compact := {}
+	for dimension in dimensions:
+		var result: Dictionary = dimensions[dimension]
+		compact[dimension] = {
+			"score": int(result.get("score", 0)),
+			"confidence": float(result.get("confidence", 0.0)),
+			"sample_size": int(result.get("sample_size", 0)),
+			"pole": str(result.get("pole", "")),
+		}
+	reflection_history.push_front({
+		"action_code": action_code,
+		"world_id": world_id,
+		"success": success,
+		"dimensions": compact,
+		"echo": last_reflection.get("echo", {}).duplicate(true),
+		"prediction": last_reflection.get("prediction", {}).duplicate(true),
+	})
+	if reflection_history.size() > MAX_REFLECTION_HISTORY:
+		reflection_history.resize(MAX_REFLECTION_HISTORY)
+
+
+func _resolve_counter_contract(run_events: Array[Dictionary]) -> Dictionary:
+	if active_counter_contract.is_empty():
+		return {}
+	var expected := str(active_counter_contract.get("success_event", ""))
+	var matched := run_events.any(func(event): return str(event.get("event_type", "")) == expected)
+	var result := {
+		"contract_id": str(active_counter_contract.get("id", "")),
+		"dimension": str(active_counter_contract.get("dimension", "")),
+		"resolved": true,
+		"contradicted": matched,
+		"expected_event": expected,
+		"summary": "你用实际行动提供了反证；司仪将降低旧解释的确定性。" if matched else "本局没有出现足以反驳旧解释的行为。",
+	}
+	if matched:
+		causality_fragments += int(active_counter_contract.get("reward", 2))
+		var dimension := str(active_counter_contract.get("dimension", ""))
+		if reflection_disputes.has(dimension):
+			reflection_disputes[dimension].resolved = true
+			reflection_disputes[dimension].resolved_run = last_action_code
+	return result
 
 
 func _sanitize_pathway_nodes() -> void:

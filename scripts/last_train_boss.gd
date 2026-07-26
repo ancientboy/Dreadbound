@@ -36,13 +36,13 @@ func _execute_attack() -> void:
 	match train_phase:
 		TrainPhase.ARRIVAL:
 			if distance <= 135.0:
-				target.take_damage(22, global_position)
+				target.take_damage(int(round(22 * history_damage_multiplier)), global_position)
 		TrainPhase.INSPECTION:
 			if distance <= 280.0:
-				target.take_damage(20, global_position)
+				target.take_damage(int(round(20 * history_damage_multiplier)), global_position)
 		TrainPhase.DEPARTURE:
 			if distance <= 185.0:
-				target.take_damage(30, global_position)
+				target.take_damage(int(round(30 * history_damage_multiplier)), global_position)
 	_attack_index += 1
 	_timer = 1.05 if train_phase == TrainPhase.DEPARTURE else 1.5
 
