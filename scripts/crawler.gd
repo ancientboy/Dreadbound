@@ -14,6 +14,8 @@ var health := 35
 var target: Player
 var _attack_timer := 0.0
 var _hurt_flash := 0.0
+var _stagger_timer := 0.0
+var _attack_windup := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
 
@@ -29,9 +31,14 @@ func _physics_process(delta: float) -> void:
 	var had_hurt_flash := _hurt_flash > 0.0
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
+	_stagger_timer = maxf(_stagger_timer - delta, 0.0)
 	_memory_timer = maxf(_memory_timer - delta, 0.0)
 	if not is_instance_valid(target) or target.health <= 0:
 		velocity = Vector2.ZERO
+		return
+	if _stagger_timer > 0.0:
+		velocity = Vector2.ZERO
+		queue_redraw()
 		return
 	var distance := global_position.distance_to(target.global_position)
 	if distance <= detection_range * target.get_detection_multiplier():
@@ -46,9 +53,16 @@ func _physics_process(delta: float) -> void:
 		velocity = global_position.direction_to(target.global_position) * movement_speed
 	else:
 		velocity = Vector2.ZERO
-		if _attack_timer <= 0.0:
+		if _attack_windup > 0.0:
+			_attack_windup = maxf(_attack_windup - delta, 0.0)
+			if _attack_windup <= 0.0 and global_position.distance_to(target.global_position) <= attack_range + 10.0:
+				_attack_timer = attack_cooldown
+				target.take_damage(attack_damage, global_position)
+		elif _attack_timer <= 0.0:
+			_attack_windup = 0.2
+			_get_combat_fx().attack_telegraph(global_position, attack_range + 14.0, _attack_windup, Color("c77b62"))
+		if _attack_timer <= 0.0 and _attack_windup <= 0.0:
 			_attack_timer = attack_cooldown
-			target.take_damage(attack_damage, global_position)
 	move_and_slide()
 	if had_hurt_flash:
 		queue_redraw()
@@ -57,8 +71,11 @@ func _physics_process(delta: float) -> void:
 func take_damage(amount: int, source_position: Vector2) -> void:
 	health = maxi(health - amount, 0)
 	_hurt_flash = 0.18
+	_stagger_timer = 0.14 if amount >= 24 else 0.06
 	global_position += source_position.direction_to(global_position) * 24.0
+	_get_combat_fx().enemy_hit(global_position, source_position.direction_to(global_position), amount >= 24, Color("d37a68"))
 	if health == 0:
+		_get_combat_fx().enemy_defeat(global_position, Color("c2685d"))
 		queue_free()
 	else:
 		queue_redraw()
@@ -83,3 +100,9 @@ func _draw_body_ellipse(center: Vector2, radii: Vector2, color: Color) -> void:
 		var angle := TAU * index / 24.0
 		points.append(center + Vector2(cos(angle) * radii.x, sin(angle) * radii.y))
 	draw_colored_polygon(points, color)
+
+
+func _get_combat_fx() -> CombatFX:
+	if is_instance_valid(target) and target.combat_fx != null:
+		return target.combat_fx
+	return CombatFX.new()

@@ -11,6 +11,7 @@ var phase_two := false
 var _timer := 1.2
 var _windup := 0.0
 var _attack_index := 0
+var _hurt_flash := 0.0
 var boss_label := "缝合主任"
 
 
@@ -36,6 +37,7 @@ func _physics_process(delta: float) -> void:
 		return
 	phase_two = health <= max_health / 2
 	_timer = maxf(_timer - delta, 0.0)
+	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
 	if _windup > 0.0:
 		_windup -= delta
 		velocity = Vector2.ZERO
@@ -47,6 +49,7 @@ func _physics_process(delta: float) -> void:
 	var speed := 92.0 if phase_two else 68.0
 	if _timer <= 0.0 and distance < 250.0:
 		_windup = 0.65
+		_get_combat_fx().attack_telegraph(global_position, 230.0 if _attack_index % 2 == 1 else 105.0, _windup, Color("f06b4e"))
 		queue_redraw()
 	else:
 		velocity = global_position.direction_to(target.global_position) * speed
@@ -67,7 +70,10 @@ func _execute_attack() -> void:
 
 func take_damage(amount: int, _source_position: Vector2) -> void:
 	health = maxi(health - amount, 0)
+	_hurt_flash = 0.18
+	_get_combat_fx().enemy_hit(global_position, _source_position.direction_to(global_position), amount >= 28, Color("f0a475"))
 	if health == 0:
+		_get_combat_fx().enemy_defeat(global_position, Color("e98568"), true)
 		queue_free()
 	else:
 		queue_redraw()
@@ -77,7 +83,7 @@ func _draw() -> void:
 	var warning_radius := 230.0 if _attack_index % 2 == 1 else 105.0
 	if _windup > 0.0:
 		draw_arc(Vector2.ZERO, warning_radius, 0.0, TAU, 64, Color(0.88, 0.16, 0.12, 0.55), 9.0)
-	var color := Color("77383d") if phase_two else Color("475751")
+	var color := Color("9b4d4e") if _hurt_flash > 0.0 else (Color("77383d") if phase_two else Color("475751"))
 	draw_circle(Vector2.ZERO, 42.0, color)
 	draw_rect(Rect2(-32, -50, 64, 90), color)
 	draw_circle(Vector2(0, -62), 23.0, Color("878077"))
@@ -86,3 +92,9 @@ func _draw() -> void:
 	draw_rect(Rect2(-80, -98, 160, 10), Color("1e1718"))
 	draw_rect(Rect2(-80, -98, 160.0 * float(health) / max_health, 10), Color("a73f3a"))
 	draw_string(UI_FONT, Vector2(-115, 72), boss_label, HORIZONTAL_ALIGNMENT_CENTER, 230, 18, Color("8ed9ef") if boss_label.begins_with("末班") else Color("c3b7a8"))
+
+
+func _get_combat_fx() -> CombatFX:
+	if is_instance_valid(target) and target.combat_fx != null:
+		return target.combat_fx
+	return CombatFX.new()

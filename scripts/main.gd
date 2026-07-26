@@ -707,8 +707,14 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 	pickup.kind = kind
 	pickup.amount = amount
 	pickup.position = enemy.global_position
+	player.combat_fx.loot_burst(pickup.position, _pickup_color(kind))
 	add_child.call_deferred(pickup)
 	return pickup
+
+
+func _pickup_color(kind: int) -> Color:
+	var colors := [Color("8fc6a1"), Color("45d8c3"), Color("d0a75a"), Color("c77b52"), Color("8ca7c7"), Color("d18b9f")]
+	return colors[int(kind)]
 
 
 func _spawn_reward_chest(at: Vector2) -> RewardChest:

@@ -16,6 +16,7 @@ var target: Player
 var _cooldown := 0.0
 var _windup := 0.0
 var _hurt_flash := 0.0
+var _stagger_timer := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
 var enemy_label := "护理员"
@@ -31,9 +32,14 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_cooldown = maxf(_cooldown - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
+	_stagger_timer = maxf(_stagger_timer - delta, 0.0)
 	_memory_timer = maxf(_memory_timer - delta, 0.0)
 	if not is_instance_valid(target) or target.health <= 0:
 		velocity = Vector2.ZERO
+		return
+	if _stagger_timer > 0.0:
+		velocity = Vector2.ZERO
+		queue_redraw()
 		return
 	var distance := global_position.distance_to(target.global_position)
 	var effective_detection := detection_range * target.get_detection_multiplier()
@@ -50,6 +56,7 @@ func _physics_process(delta: float) -> void:
 				target.take_damage(attack_damage, global_position)
 	elif distance <= attack_range and _cooldown <= 0.0:
 		_windup = windup_duration
+		_get_combat_fx().attack_telegraph(global_position, attack_range, windup_duration, Color("ed875c"))
 		queue_redraw()
 	elif distance <= effective_detection:
 		velocity = global_position.direction_to(target.global_position) * movement_speed
@@ -63,8 +70,11 @@ func _physics_process(delta: float) -> void:
 func take_damage(amount: int, source_position: Vector2) -> void:
 	health = maxi(health - amount, 0)
 	_hurt_flash = 0.18
+	_stagger_timer = 0.2 if amount >= 24 else 0.1
 	global_position += source_position.direction_to(global_position) * 8.0
+	_get_combat_fx().enemy_hit(global_position, source_position.direction_to(global_position), amount >= 24, Color("e29b72"))
 	if health == 0:
+		_get_combat_fx().enemy_defeat(global_position, Color("d38468"))
 		queue_free()
 	else:
 		queue_redraw()
@@ -83,3 +93,9 @@ func _draw() -> void:
 	draw_rect(Rect2(-28, -59, 56, 5), Color("261b1a"))
 	draw_rect(Rect2(-28, -59, 56.0 * float(health) / max_health, 5), Color("9f3e38"))
 	draw_string(UI_FONT, Vector2(-50, 52), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 100, 13, Color("d89b76") if enemy_label == "检票员" else Color("9aa49e"))
+
+
+func _get_combat_fx() -> CombatFX:
+	if is_instance_valid(target) and target.combat_fx != null:
+		return target.combat_fx
+	return CombatFX.new()
