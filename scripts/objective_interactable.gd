@@ -3,7 +3,7 @@ extends Node2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
-enum Kind { RECORD, POWER, EXIT }
+enum Kind { RECORD, POWER, EXIT, FLOODGATE }
 
 @export var kind := Kind.RECORD
 @export var objective_id := ""
@@ -28,6 +28,8 @@ func get_prompt(records_found: int, power_online: bool, records_required := 3) -
 			if not power_online:
 				return "尚未解锁 // 撤离线路未校准"
 			return "[E] 撤离并返回终末回廊"
+		Kind.FLOODGATE:
+			return "水闸已开启" if completed else "[E] 开启应急水闸 · 清空低层通道"
 	return "[E] 交互"
 
 
@@ -54,4 +56,6 @@ func _display_color() -> Color:
 			return Color("b7b75d")
 		Kind.EXIT:
 			return Color("b55252")
+		Kind.FLOODGATE:
+			return Color("6eaee8")
 	return Color.WHITE

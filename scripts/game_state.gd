@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 12
+const SAVE_VERSION := 13
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -76,7 +76,9 @@ func get_player_stats() -> Dictionary:
 
 
 static func _default_player_profile() -> Dictionary:
-	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "north_routes": 0, "south_routes": 0, "missed_trains": 0, "whistle_uses": 0, "pathway_stats": {}, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": []}
+	# Keep reward claims separate from display history: malformed legacy saves
+	# must never turn a paid trial into another fragment source.
+	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "north_routes": 0, "south_routes": 0, "missed_trains": 0, "whistle_uses": 0, "pathway_stats": {}, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": [], "trial_reward_claims": [], "settled_action_codes": []}
 
 
 func has_equipment_trait(trait_id: String) -> bool:
@@ -102,15 +104,16 @@ func accept_curator_trial() -> bool:
 		return false
 	var dismissed: Array = player_profile.get("dismissed_trials", [])
 	var completed: Array = player_profile.get("completed_trials", [])
+	var claimed: Array = player_profile.get("trial_reward_claims", [])
 	var preferred_world := selected_world
 	var candidates: Array[String] = []
 	for trial_id in CURATOR_TRIALS:
 		var trial: Dictionary = CURATOR_TRIALS[trial_id]
-		if not completed.has(trial_id) and not dismissed.has(trial_id) and str(trial.world) in [preferred_world, "any"]:
+		if not completed.has(trial_id) and not claimed.has(trial_id) and not dismissed.has(trial_id) and str(trial.world) in [preferred_world, "any"]:
 			candidates.append(trial_id)
 	if candidates.is_empty():
 		for trial_id in CURATOR_TRIALS:
-			if not completed.has(trial_id) and not dismissed.has(trial_id):
+			if not completed.has(trial_id) and not claimed.has(trial_id) and not dismissed.has(trial_id):
 				candidates.append(trial_id)
 	if candidates.is_empty():
 		return false
@@ -137,10 +140,14 @@ func dismiss_curator_trial() -> bool:
 
 func reset_curator_profile() -> void:
 	var completed: Array = player_profile.get("completed_trials", []).duplicate()
+	var claimed: Array = player_profile.get("trial_reward_claims", []).duplicate()
+	var settled: Array = player_profile.get("settled_action_codes", []).duplicate()
 	var dismissed: Array = player_profile.get("dismissed_trials", []).duplicate()
 	var active := str(player_profile.get("active_trial", ""))
 	player_profile = _default_player_profile()
 	player_profile.completed_trials = completed
+	player_profile.trial_reward_claims = claimed
+	player_profile.settled_action_codes = settled
 	player_profile.dismissed_trials = dismissed
 	player_profile.active_trial = active
 	save_progress()
@@ -214,11 +221,22 @@ func unlock_path_node(node_id: String) -> bool:
 func respec_pathway() -> bool:
 	if pathway_respec_used or selected_pathway.is_empty() or causality_fragments < 1:
 		return false
-	var refund := 0
+	# A respec is intentionally limited to once per profile and still costs one
+	# causality fragment. It must, however, return every resource invested in the
+	# pathway: the initial anchor, each node's shards, and node fragment costs.
+	# Returning only half the shard cost made changing profession permanently
+	# punitive and silently destroyed the anchor/material investment.
+	var shard_refund := int(PATHWAY_ANCHOR_COST.echo_shards)
+	var fragment_refund := int(PATHWAY_ANCHOR_COST.causality_fragments)
 	for node_id in unlocked_path_nodes:
-		refund += int(PATH_NODES[node_id].cost) / 2
+		if not PATH_NODES.has(node_id):
+			continue
+		var node: Dictionary = PATH_NODES[node_id]
+		shard_refund += int(node.get("cost", 0))
+		fragment_refund += int(node.get("fragment_cost", 0))
 	causality_fragments -= 1
-	echo_shards += refund
+	echo_shards += shard_refund
+	causality_fragments += fragment_refund
 	unlocked_path_nodes.clear()
 	selected_pathway = ""
 	pathway_respec_used = true
@@ -235,6 +253,10 @@ func begin_run(requested_seed := 0) -> int:
 
 
 func settle_run(success: bool, records: int, carried_shards: int, enemies_defeated: int, events_resolved := 0, equipment_rewards: Array[String] = [], run_summary: Dictionary = {}) -> int:
+	var action_code := str(run_summary.get("action_code", ""))
+	var settled_codes: Array = player_profile.get("settled_action_codes", [])
+	if not action_code.is_empty() and settled_codes.has(action_code):
+		return 0
 	var mission_reward := records * 2 + (3 if success else 0)
 	var banked := carried_shards + mission_reward if success else 0
 	var banked_equipment: Array[String] = []
@@ -284,6 +306,11 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true
+	if not action_code.is_empty():
+		settled_codes.append(action_code)
+		if settled_codes.size() > 32:
+			settled_codes = settled_codes.slice(settled_codes.size() - 32)
+		player_profile.settled_action_codes = settled_codes
 	active_run_seed = 0
 	save_progress()
 	progress_changed.emit()
@@ -330,12 +357,16 @@ func _complete_curator_trial_if_eligible(success: bool, enemies_defeated: int, e
 	if not completed:
 		return rewards
 	var completed_trials: Array = player_profile.get("completed_trials", [])
-	if not completed_trials.has(trial):
-		completed_trials.append(trial)
+	var claimed: Array = player_profile.get("trial_reward_claims", [])
+	if not claimed.has(trial):
+		if not completed_trials.has(trial):
+			completed_trials.append(trial)
+		claimed.append(trial)
 		var amount := int(CURATOR_TRIALS[trial].reward)
 		causality_fragments += amount
 		rewards.append({"id": trial, "title": str(CURATOR_TRIALS[trial].title), "causality_fragments": amount})
 	player_profile.completed_trials = completed_trials
+	player_profile.trial_reward_claims = claimed
 	player_profile.active_trial = ""
 	return rewards
 
@@ -545,6 +576,15 @@ func _migrate_curator_trials() -> void:
 		if not completed.has("metro_quiet"):
 			completed.append("metro_quiet")
 	player_profile.completed_trials = completed
+	var claimed: Array = player_profile.get("trial_reward_claims", [])
+	for trial_id in completed:
+		if CURATOR_TRIALS.has(str(trial_id)) and not claimed.has(trial_id):
+			claimed.append(trial_id)
+	player_profile.trial_reward_claims = claimed
+	var settled: Array = player_profile.get("settled_action_codes", [])
+	if settled.size() > 32:
+		settled = settled.slice(settled.size() - 32)
+	player_profile.settled_action_codes = settled
 
 
 func _build_observation(success: bool, enemies_defeated: int, events_resolved: int, run_summary: Dictionary) -> String:

@@ -678,7 +678,7 @@ func _reset_curator_profile() -> void:
 
 
 func _respec_pathway() -> void:
-	feedback.text = "职业锚点已重构；返还已购节点一半回响碎片。" if GameState.respec_pathway() else "无法重构：每个存档仅限一次，并需要 1 因果残片。"
+	feedback.text = "职业锚点已重构；已返还全部职业投入（锚定、节点碎片与节点残片），并扣除 1 因果残片重构费。" if GameState.respec_pathway() else "无法重构：每个存档仅限一次，并需要 1 因果残片。"
 	_refresh()
 
 

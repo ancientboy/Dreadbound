@@ -49,6 +49,12 @@ func _run_test() -> void:
 	trials.settle_run(true, 3, 0, 2, 0, [], {"world": "sanatorium", "boss_defeated": true})
 	assert(trials.last_run.trial_rewards.size() == 1)
 	assert(trials.player_profile.completed_trials.has(san_trial_id))
+	assert(trials.player_profile.trial_reward_claims.has(san_trial_id))
+	# A duplicate UI event for the same mission must never settle the run twice.
+	trials.settle_run(true, 3, 0, 2, 0, [], {"world": "sanatorium", "action_code": "SAN-ONCE"})
+	var first_action_fragments := trials.causality_fragments
+	trials.settle_run(true, 3, 0, 2, 0, [], {"world": "sanatorium", "action_code": "SAN-ONCE"})
+	assert(trials.causality_fragments == first_action_fragments)
 	trials.selected_world = "metro"
 	assert(trials.accept_curator_trial())
 	assert(str(trials.get_curator_trial().world) in ["metro", "any"])
@@ -56,6 +62,7 @@ func _run_test() -> void:
 	var completed_before_reset: Array = trials.player_profile.completed_trials.duplicate()
 	trials.reset_curator_profile()
 	assert(trials.player_profile.completed_trials == completed_before_reset)
+	assert(trials.player_profile.trial_reward_claims.has(san_trial_id))
 
 	var corrupt := GameProgress.new()
 	corrupt.save_path = "user://test_dreadbound_cross_path.json"

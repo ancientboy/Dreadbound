@@ -39,9 +39,14 @@ func _run_test() -> void:
 
 	state.causality_fragments = 5
 	var shards_before := state.echo_shards
+	var fragments_before := state.causality_fragments
 	assert(state.respec_pathway())
 	assert(state.selected_pathway.is_empty())
-	assert(state.echo_shards > shards_before)
+	# The selected resonant path had consumed 8 anchor shards + 5 + 8 + 3 node
+	# shards, plus 1 anchor fragment + 1 final-node fragment. A respec refunds all
+	# of that investment, then charges its fixed one-fragment fee.
+	assert(state.echo_shards == shards_before + 24)
+	assert(state.causality_fragments == fragments_before + 1)
 	assert(not state.respec_pathway())
 	state.save_progress()
 	var restored := GameProgress.new()

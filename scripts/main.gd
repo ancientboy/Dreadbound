@@ -17,6 +17,9 @@ const MAP_SIZE := Vector2(2304.0, 1440.0)
 const INTERACTION_DISTANCE := 86.0
 const METRO_SHALLOW_ZONES := [Rect2(480, 704, 416, 192), Rect2(960, 704, 480, 192), Rect2(1504, 960, 704, 320)]
 const METRO_DEEP_ZONES := [Rect2(960, 704, 480, 192), Rect2(1504, 960, 704, 320)]
+const METRO_FLOODGATE_POSITION := Vector2(1456, 864)
+const METRO_DRAINED_ZONE := Rect2(960, 704, 480, 192)
+const METRO_FLOODGATE_DURATION := 28.0
 
 @onready var player: Player = $Player
 @onready var objective: Label = $Interface/TopBar/Objective
@@ -78,6 +81,7 @@ var signal_anchors: Array[SignalAnchor] = []
 var whistle_cooldown := 0.0
 var whistle_uses := 0
 var metro_missed_train := false
+var metro_floodgate_timer := 0.0
 var run_elapsed := 0.0
 var boss_defeated := false
 var pathway_status_label: Label
@@ -331,6 +335,8 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 		ObjectiveInteractable.Kind.EXIT:
 			if power_restored and (run_config.world_id != "metro" or (target.objective_id == "metro_exit_%s" % metro_route and metro_train_window > 0.0)):
 				_complete_mission()
+		ObjectiveInteractable.Kind.FLOODGATE:
+			_activate_metro_floodgate(target)
 	_update_mission_ui()
 
 
@@ -548,7 +554,8 @@ func _update_mission_ui() -> void:
 	if run_config.world_id == "metro":
 		var tide_names := ["干燥", "浸水", "深水"]
 		var train := "未校准" if metro_train_window < 0.0 else "%ds" % ceili(metro_train_window)
-		progress.text = "%s %d/%d · 潮位%s · 噪音%d · 车次%s" % [run_config.objective_noun, collected_records.size(), total_records, tide_names[metro_tide_level], metro_noise, train]
+		var gate := " · 水闸%ds" % ceili(metro_floodgate_timer) if metro_floodgate_timer > 0.0 else ""
+		progress.text = "%s %d/%d · 潮位%s · 噪音%d · 车次%s%s" % [run_config.objective_noun, collected_records.size(), total_records, tide_names[metro_tide_level], metro_noise, train, gate]
 		var route_text := "选择北/南站台道岔" if metro_route.is_empty() else ("赶往%s站台，在车门关闭前登车" % ("北" if metro_route == "north" else "南"))
 		objective.text = "当前目标：%s" % ("校准车次信标" if mission_phase == MissionPhase.COLLECT_RECORDS else ("选择撤离站台" if mission_phase == MissionPhase.RESTORE_POWER else route_text))
 		return
@@ -572,6 +579,7 @@ func _create_mission_interactables() -> void:
 		_add_interactable(ObjectiveInteractable.Kind.POWER, "metro_south_switch", "南站台道岔 · 淹没快线", run_config.metro_route_positions.south.switch)
 		_add_interactable(ObjectiveInteractable.Kind.EXIT, "metro_exit_north", "北站台末班车", run_config.metro_route_positions.north.exit)
 		_add_interactable(ObjectiveInteractable.Kind.EXIT, "metro_exit_south", "南站台末班车", run_config.metro_route_positions.south.exit)
+		_add_interactable(ObjectiveInteractable.Kind.FLOODGATE, "metro_emergency_floodgate", "应急水闸 · 中央低层", METRO_FLOODGATE_POSITION)
 	else:
 		_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "供电稳定节点", run_config.power_position)
 		_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "动态撤离出口", run_config.exit_position)
@@ -797,6 +805,11 @@ func _update_metro_pressure(delta: float) -> void:
 			metro_train_window = world_rules.train_window(metro_route, has_ticket, true)
 			metro_noise += 1
 			_show_notification("末班票根解析出隐藏车次：补救窗口延长至 50 秒。" if has_ticket else "错过末班车：备用道岔响应，补救车次开放 35 秒。", 5.0)
+	if metro_floodgate_timer > 0.0:
+		metro_floodgate_timer = maxf(metro_floodgate_timer - delta, 0.0)
+		if is_zero_approx(metro_floodgate_timer):
+			_show_notification("应急水闸失压：低层通道再次被深水淹没。", 3.5)
+			queue_redraw()
 	_update_mission_ui()
 	_update_metro_water_state(delta)
 
@@ -822,11 +835,26 @@ func _activate_metro_route(target: ObjectiveInteractable) -> void:
 	queue_redraw()
 
 
+func _activate_metro_floodgate(target: ObjectiveInteractable) -> void:
+	if run_config.world_id != "metro" or target.completed:
+		return
+	if metro_tide_level < 1:
+		_show_notification("水位尚未压到闸门，先继续推进。", 2.5)
+		return
+	target.mark_complete()
+	metro_floodgate_timer = METRO_FLOODGATE_DURATION
+	metro_noise += 1
+	_show_notification("应急水闸开启：中央低层通道排水 %d 秒。快速穿越，但检票员已听见闸门。" % int(METRO_FLOODGATE_DURATION), 5.0)
+	queue_redraw()
+
+
 func _metro_water_depth_at(position: Vector2) -> int:
 	if metro_tide_level <= 0:
 		return 0
 	for zone in METRO_SHALLOW_ZONES:
 		if zone.has_point(position):
+			if metro_floodgate_timer > 0.0 and METRO_DRAINED_ZONE.has_point(position):
+				return 0
 			if metro_tide_level >= 2:
 				return 2 if METRO_DEEP_ZONES.any(func(deep_zone): return deep_zone.has_point(position)) else 1
 			return 1
@@ -1024,6 +1052,9 @@ func _draw() -> void:
 				draw_rect(zone, Color("7fd9ed") if deep else Color("52a9c7"), false, 3.0)
 				for x in range(int(zone.position.x) + 20, int(zone.end.x), 46):
 					draw_line(Vector2(x, zone.position.y + 18), Vector2(x + 20, zone.position.y + 18), Color(0.68, 0.94, 1.0, 0.38), 2.0)
+			if metro_floodgate_timer > 0.0:
+				draw_rect(METRO_DRAINED_ZONE, Color("223e4d"), true)
+				draw_rect(METRO_DRAINED_ZONE, Color("96e7ef"), false, 4.0)
 		if metro_route == "north":
 			draw_line(DynamicRunConfig.METRO_NORTH_SWITCH, DynamicRunConfig.METRO_NORTH_EXIT, Color("a4f6cf"), 5.0)
 		elif metro_route == "south":

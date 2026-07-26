@@ -55,6 +55,18 @@ func _run_test() -> void:
 	assert(metro.boss is LastTrainBoss)
 	assert(metro._metro_intercept_candidates().has(Vector2(1472, 992)))
 	assert(not metro._metro_intercept_candidates().has(DynamicRunConfig.METRO_SOUTH_EXIT))
+	metro.metro_tide_level = 2
+	var floodgate: ObjectiveInteractable
+	for item in metro.interactables:
+		if item.objective_id == "metro_emergency_floodgate":
+			floodgate = item
+			break
+	assert(floodgate != null)
+	assert(metro._metro_water_depth_at(Vector2(1184, 800)) == 2)
+	metro._activate_metro_floodgate(floodgate)
+	assert(floodgate.completed)
+	assert(metro.metro_floodgate_timer > 0.0)
+	assert(metro._metro_water_depth_at(Vector2(1184, 800)) == 0)
 	metro.queue_free()
 	await process_frame
 	print("Metro behavior test passed: safe interception, contextual boss phases, anchors and mobile trait input")
