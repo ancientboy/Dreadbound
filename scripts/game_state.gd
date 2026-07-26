@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 11
+const SAVE_VERSION := 12
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -26,6 +26,13 @@ const PATH_NODES := {
 	"resonant_ingestion": {"path": "resonant", "name": "共鸣者：异常摄取", "cost": 3, "fragment_cost": 1, "requires": "resonant_bargain", "description": "高风险事件 +2 碎片并累积异化"},
 }
 const PATHWAY_NAMES := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}
+const CURATOR_TRIALS := {
+	"sanatorium_restraint": {"world": "sanatorium", "title": "病区克制", "description": "在废弃疗养院清除不超过 4 个威胁并成功撤离。", "reward": 1},
+	"sanatorium_director": {"world": "sanatorium", "title": "终止主任", "description": "击败缝合主任并从废弃疗养院成功撤离。", "reward": 1},
+	"metro_quiet": {"world": "metro", "title": "静默末班", "description": "在潮没末班线以噪音不高于 3 成功撤离。", "reward": 1},
+	"metro_recovery": {"world": "metro", "title": "错时补救", "description": "错过首班车后仍从潮没末班线成功撤离。", "reward": 1},
+	"risk_control": {"world": "any", "title": "可控异常", "description": "解决至少 2 个风险事件并成功撤离。", "reward": 1},
+}
 
 var save_path := "user://dreadbound_progress.json"
 var echo_shards := 0
@@ -45,6 +52,7 @@ var unlocked_path_nodes: Array[String] = []
 var selected_pathway := ""
 var pathway_respec_used := false
 var claimed_milestones: Array[String] = []
+var pathway_migration_refund := 0
 
 
 func _ready() -> void:
@@ -81,19 +89,33 @@ func has_path_node(node_id: String) -> bool:
 
 func get_curator_trial() -> Dictionary:
 	var active := str(player_profile.get("active_trial", ""))
-	if active == "quiet_extraction":
-		return {"id": active, "title": "静默末班", "description": "在潮没末班线以噪音不高于 3 成功撤离。", "reward": "1 因果残片"}
-	if active == "risk_control":
-		return {"id": active, "title": "可控异常", "description": "解决至少 2 个风险事件并成功撤离。", "reward": "1 因果残片"}
-	return {}
+	if not CURATOR_TRIALS.has(active):
+		return {}
+	var trial: Dictionary = CURATOR_TRIALS[active].duplicate(true)
+	trial.id = active
+	trial.reward_text = "%d 因果残片" % int(trial.reward)
+	return trial
 
 
 func accept_curator_trial() -> bool:
 	if not str(player_profile.get("active_trial", "")).is_empty():
 		return false
 	var dismissed: Array = player_profile.get("dismissed_trials", [])
-	var candidate := "quiet_extraction" if int(player_profile.get("noise_actions", 0)) >= 4 and not dismissed.has("quiet_extraction") else "risk_control"
-	player_profile.active_trial = candidate
+	var completed: Array = player_profile.get("completed_trials", [])
+	var preferred_world := selected_world
+	var candidates: Array[String] = []
+	for trial_id in CURATOR_TRIALS:
+		var trial: Dictionary = CURATOR_TRIALS[trial_id]
+		if not completed.has(trial_id) and not dismissed.has(trial_id) and str(trial.world) in [preferred_world, "any"]:
+			candidates.append(trial_id)
+	if candidates.is_empty():
+		for trial_id in CURATOR_TRIALS:
+			if not completed.has(trial_id) and not dismissed.has(trial_id):
+				candidates.append(trial_id)
+	if candidates.is_empty():
+		return false
+	var index := (int(player_profile.get("runs", 0)) + completed.size()) % candidates.size()
+	player_profile.active_trial = candidates[index]
 	save_progress()
 	progress_changed.emit()
 	return true
@@ -114,7 +136,13 @@ func dismiss_curator_trial() -> bool:
 
 
 func reset_curator_profile() -> void:
+	var completed: Array = player_profile.get("completed_trials", []).duplicate()
+	var dismissed: Array = player_profile.get("dismissed_trials", []).duplicate()
+	var active := str(player_profile.get("active_trial", ""))
 	player_profile = _default_player_profile()
+	player_profile.completed_trials = completed
+	player_profile.dismissed_trials = dismissed
+	player_profile.active_trial = active
 	save_progress()
 	progress_changed.emit()
 
@@ -184,12 +212,12 @@ func unlock_path_node(node_id: String) -> bool:
 
 
 func respec_pathway() -> bool:
-	if pathway_respec_used or selected_pathway.is_empty() or causality_fragments < 2:
+	if pathway_respec_used or selected_pathway.is_empty() or causality_fragments < 1:
 		return false
 	var refund := 0
 	for node_id in unlocked_path_nodes:
 		refund += int(PATH_NODES[node_id].cost) / 2
-	causality_fragments -= 2
+	causality_fragments -= 1
 	echo_shards += refund
 	unlocked_path_nodes.clear()
 	selected_pathway = ""
@@ -221,7 +249,8 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 					overflow_shards += 1 + int(EquipmentDatabase.get_item(item_id).quality_rank) * 2
 	banked += overflow_shards
 	var milestone_rewards := _claim_run_milestones(success, run_summary)
-	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "milestone_rewards": milestone_rewards, "dynamic_run": run_summary}
+	var trial_rewards := _complete_curator_trial_if_eligible(success, enemies_defeated, events_resolved, run_summary)
+	last_run = {"success": success, "records": records, "carried_shards": carried_shards, "mission_reward": mission_reward if success else 0, "banked_shards": banked, "enemies_defeated": enemies_defeated, "events_resolved": events_resolved, "equipment_rewards": banked_equipment, "overflow_shards": overflow_shards, "milestone_rewards": milestone_rewards, "trial_rewards": trial_rewards, "dynamic_run": run_summary}
 	player_profile.runs = int(player_profile.get("runs", 0)) + 1
 	player_profile.successful_runs = int(player_profile.get("successful_runs", 0)) + (1 if success else 0)
 	player_profile.metro_runs = int(player_profile.get("metro_runs", 0)) + (1 if str(run_summary.get("world", "")) == "metro" else 0)
@@ -252,7 +281,6 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	if recent.size() > 5:
 		recent.resize(5)
 	player_profile.recent_runs = recent
-	_complete_curator_trial_if_eligible(success, events_resolved, run_summary)
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true
@@ -286,17 +314,30 @@ func _claim_milestone(id: String, title: String, amount: int, rewards: Array[Dic
 	rewards.append({"id": id, "title": title, "causality_fragments": amount})
 
 
-func _complete_curator_trial_if_eligible(success: bool, events_resolved: int, run_summary: Dictionary) -> void:
+func _complete_curator_trial_if_eligible(success: bool, enemies_defeated: int, events_resolved: int, run_summary: Dictionary) -> Array[Dictionary]:
+	var rewards: Array[Dictionary] = []
 	var trial := str(player_profile.get("active_trial", ""))
-	var completed := success and ((trial == "quiet_extraction" and str(run_summary.get("world", "")) == "metro" and int(run_summary.get("noise", 0)) <= 3) or (trial == "risk_control" and events_resolved >= 2))
+	if not success or not CURATOR_TRIALS.has(trial):
+		return rewards
+	var world := str(run_summary.get("world", "sanatorium"))
+	var completed := false
+	match trial:
+		"sanatorium_restraint": completed = world == "sanatorium" and enemies_defeated <= 4
+		"sanatorium_director": completed = world == "sanatorium" and bool(run_summary.get("boss_defeated", false))
+		"metro_quiet": completed = world == "metro" and int(run_summary.get("noise", 0)) <= 3
+		"metro_recovery": completed = world == "metro" and bool(run_summary.get("missed_train", false))
+		"risk_control": completed = events_resolved >= 2
 	if not completed:
-		return
+		return rewards
 	var completed_trials: Array = player_profile.get("completed_trials", [])
 	if not completed_trials.has(trial):
 		completed_trials.append(trial)
-		causality_fragments += 1
+		var amount := int(CURATOR_TRIALS[trial].reward)
+		causality_fragments += amount
+		rewards.append({"id": trial, "title": str(CURATOR_TRIALS[trial].title), "causality_fragments": amount})
 	player_profile.completed_trials = completed_trials
 	player_profile.active_trial = ""
+	return rewards
 
 
 func get_upgrade_cost(upgrade_id: String) -> int:
@@ -412,6 +453,7 @@ func load_progress() -> void:
 	if saved_profile is Dictionary:
 		for key in player_profile:
 			player_profile[key] = saved_profile.get(key, player_profile[key])
+	_migrate_curator_trials()
 	unlocked_path_nodes.clear()
 	for node_id in parsed.get("unlocked_path_nodes", []):
 		if PATH_NODES.has(str(node_id)):
@@ -423,6 +465,7 @@ func load_progress() -> void:
 		claimed_milestones.append(str(milestone_id))
 	if selected_pathway not in PATHWAY_NAMES:
 		selected_pathway = str(PATH_NODES[unlocked_path_nodes[0]].path) if not unlocked_path_nodes.is_empty() else ""
+	_sanitize_pathway_nodes()
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -473,6 +516,35 @@ func _clear_runtime_progress() -> void:
 	selected_pathway = ""
 	pathway_respec_used = false
 	claimed_milestones.clear()
+	pathway_migration_refund = 0
+
+
+func _sanitize_pathway_nodes() -> void:
+	pathway_migration_refund = 0
+	if selected_pathway.is_empty():
+		return
+	var valid_nodes: Array[String] = []
+	for node_id in unlocked_path_nodes:
+		if str(PATH_NODES[node_id].path) == selected_pathway:
+			valid_nodes.append(node_id)
+		else:
+			pathway_migration_refund += int(PATH_NODES[node_id].cost)
+	if pathway_migration_refund > 0:
+		echo_shards += pathway_migration_refund
+		unlocked_path_nodes.assign(valid_nodes)
+
+
+func _migrate_curator_trials() -> void:
+	if str(player_profile.get("active_trial", "")) == "quiet_extraction":
+		player_profile.active_trial = "metro_quiet"
+	elif not str(player_profile.get("active_trial", "")).is_empty() and not CURATOR_TRIALS.has(str(player_profile.active_trial)):
+		player_profile.active_trial = ""
+	var completed: Array = player_profile.get("completed_trials", [])
+	if completed.has("quiet_extraction"):
+		completed.erase("quiet_extraction")
+		if not completed.has("metro_quiet"):
+			completed.append("metro_quiet")
+	player_profile.completed_trials = completed
 
 
 func _build_observation(success: bool, enemies_defeated: int, events_resolved: int, run_summary: Dictionary) -> String:

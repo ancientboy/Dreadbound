@@ -37,8 +37,9 @@ func _run_test() -> void:
 	assert(state.equip_item("waterproof_pulse"))
 	assert(state.has_equipment_trait("reduce_water_penalty"))
 	state.player_profile.noise_actions = 8
+	state.selected_world = "metro"
 	assert(state.accept_curator_trial())
-	assert(state.get_curator_trial().id == "quiet_extraction")
+	assert(state.get_curator_trial().id == "metro_quiet")
 	var before_fragments := state.causality_fragments
 	state.settle_run(true, 3, 0, 2, 1, [], {"world": "metro", "noise": 2, "action_code": "MET-TEST"})
 	assert(state.causality_fragments == before_fragments + 3) # first Metro clear + curator trial

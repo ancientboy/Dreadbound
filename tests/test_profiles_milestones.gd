@@ -39,13 +39,45 @@ func _run_test() -> void:
 	restored.settle_run(true, 3, 0, 4, 0, [], {"world": "metro", "boss_defeated": true})
 	assert(restored.causality_fragments == 5)
 
+	var trials := GameProgress.new()
+	trials.save_path = "user://test_dreadbound_trial_worlds.json"
+	trials.reset_progress()
+	trials.selected_world = "sanatorium"
+	assert(trials.accept_curator_trial())
+	assert(str(trials.get_curator_trial().world) == "sanatorium")
+	var san_trial_id := str(trials.get_curator_trial().id)
+	trials.settle_run(true, 3, 0, 2, 0, [], {"world": "sanatorium", "boss_defeated": true})
+	assert(trials.last_run.trial_rewards.size() == 1)
+	assert(trials.player_profile.completed_trials.has(san_trial_id))
+	trials.selected_world = "metro"
+	assert(trials.accept_curator_trial())
+	assert(str(trials.get_curator_trial().world) in ["metro", "any"])
+	assert(str(trials.get_curator_trial().id) != san_trial_id)
+	var completed_before_reset: Array = trials.player_profile.completed_trials.duplicate()
+	trials.reset_curator_profile()
+	assert(trials.player_profile.completed_trials == completed_before_reset)
+
+	var corrupt := GameProgress.new()
+	corrupt.save_path = "user://test_dreadbound_cross_path.json"
+	var corrupt_file := FileAccess.open(corrupt.save_path, FileAccess.WRITE)
+	corrupt_file.store_string(JSON.stringify({"version": 11, "echo_shards": 0, "selected_pathway": "steadfast", "unlocked_path_nodes": ["steadfast_guard", "armorer_calibration", "resonant_sense"]}))
+	corrupt_file = null
+	corrupt.load_progress()
+	assert(corrupt.unlocked_path_nodes == ["steadfast_guard"])
+	assert(corrupt.echo_shards == 10)
+	assert(corrupt.pathway_migration_refund == 10)
+
 	assert(manager.delete_profile(str(first.id)))
 	assert(manager.profiles.size() == 1)
 	state.reset_progress()
 	restored.reset_progress()
+	trials.reset_progress()
+	corrupt.reset_progress()
 	if FileAccess.file_exists(manager.index_path): DirAccess.remove_absolute(manager.index_path)
 	manager.free()
 	state.free()
 	restored.free()
+	trials.free()
+	corrupt.free()
 	print("Profiles and milestones test passed: isolated nicknames, four first-clear rewards and duplicate prevention")
 	quit()

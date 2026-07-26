@@ -73,6 +73,8 @@ func _ready() -> void:
 	_create_curator_controls()
 	_create_respec_control()
 	_refresh()
+	if GameState.pathway_migration_refund > 0:
+		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
 	if not GameState.corridor_intro_seen:
 		GameState.corridor_intro_seen = true
 		GameState.save_progress()
@@ -262,12 +264,13 @@ func _refresh() -> void:
 		var anchor_needed := GameState.selected_pathway.is_empty()
 		var locked_path := not GameState.selected_pathway.is_empty() and GameState.selected_pathway != str(node.path)
 		var missing_requirement := not str(node.get("requires", "")).is_empty() and not GameState.unlocked_path_nodes.has(str(node.requires))
+		button.visible = (str(node.get("requires", "")).is_empty() if GameState.selected_pathway.is_empty() else str(node.path) == GameState.selected_pathway)
 		var anchor_text := "锚定 %s：%d 碎片 + %d 因果残片\n" % [path_name, int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards), int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments)] if anchor_needed else ""
 		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else anchor_text + ("前置节点未锚定" if missing_requirement else ("已选择%s" % GameState.get_pathway_name() if locked_path else "%s · %d 碎片" % [str(node.description), int(node.cost)]))]
 		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards) if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments) if anchor_needed else 0)
 	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
 	if respec:
-		respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty() or GameState.causality_fragments < 2
+		respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
 	world_button.text = "传说门选择副本"
 	deploy_button.text = "请在回廊进入传说门"
 	$HubActions/Deploy.text = "进入%s" % _world_name()
@@ -281,6 +284,8 @@ func _refresh() -> void:
 		var milestone_text := ""
 		for reward in milestones:
 			milestone_text += "\n因果里程碑  +%d %s" % [int(reward.get("causality_fragments", 0)), str(reward.get("title", ""))]
+		for reward in run.get("trial_rewards", []):
+			milestone_text += "\n司仪试炼  +%d 因果残片 · %s" % [int(reward.get("causality_fragments", 0)), str(reward.get("title", ""))]
 		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d%s\n\n司仪观察：%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, milestone_text, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。"))]
 	queue_redraw()
 	if mobile_terminal_panel and mobile_terminal_panel.visible:
@@ -506,7 +511,7 @@ func _create_respec_control() -> void:
 	var button := Button.new()
 	button.name = "RespecPathway"
 	button.custom_minimum_size = Vector2(0, 44)
-	button.text = "有限重构职业 · 2 因果残片（仅一次）"
+	button.text = "有限重构职业 · 1 因果残片（仅一次）"
 	button.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
 	button.pressed.connect(_respec_pathway)
 	$Margin/Layout/Columns/Paths.add_child(button)
@@ -585,6 +590,8 @@ func _refresh_mobile_terminal() -> void:
 	_mobile_terminal_section(content, "阈值途径 · 职业成长", "首次锚定消耗 8 回响碎片 + 1 因果残片，并选定一条职业路线；该职业会开放两项基础强化的 Lv.4–6。因果残片可通过分解回响/异常装备获得。")
 	for node_id in GameProgress.PATH_NODES:
 		var node: Dictionary = GameProgress.PATH_NODES[node_id]
+		if (GameState.selected_pathway.is_empty() and not str(node.get("requires", "")).is_empty()) or (not GameState.selected_pathway.is_empty() and str(node.path) != GameState.selected_pathway):
+			continue
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(0, 60)
 		var unlocked := GameState.unlocked_path_nodes.has(node_id)
@@ -606,8 +613,8 @@ func _refresh_mobile_terminal() -> void:
 		content.add_child(button)
 	var respec := Button.new()
 	respec.custom_minimum_size = Vector2(0, 52)
-	respec.text = "有限重构职业 · 2 因果残片（仅一次）"
-	respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty() or GameState.causality_fragments < 2
+	respec.text = "有限重构职业 · 1 因果残片（仅一次）"
+	respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
 	respec.pressed.connect(_respec_pathway)
 	content.add_child(respec)
 	var actions := HBoxContainer.new()
@@ -647,7 +654,7 @@ func _curator_profile_text() -> String:
 	var lines := [str(profile.get("last_observation", "尚无足够行动数据。")), "行动 %d · 成功 %d · 静默撤离 %d · 风险选择 %d · 清除威胁 %d" % [int(profile.get("runs", 0)), int(profile.get("successful_runs", 0)), int(profile.get("quiet_successes", 0)), int(profile.get("events_taken", 0)), int(profile.get("threats_cleared", 0))]]
 	lines.append("依据：%s" % "；".join(GameState.curator_evidence()))
 	if not trial.is_empty():
-		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward])
+		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward_text])
 	var recent: Array = profile.get("recent_runs", [])
 	for run in recent:
 		lines.append("%s · %s · 噪音%d · 事件%d" % ["地铁" if str(run.get("world", "")) == "metro" else "疗养院", "撤离" if bool(run.get("success", false)) else "失联", int(run.get("noise", 0)), int(run.get("events", 0))])
@@ -655,14 +662,12 @@ func _curator_profile_text() -> String:
 
 
 func _accept_trial() -> void:
-	GameState.accept_curator_trial()
-	feedback.text = "阈值司仪：试炼已采纳；依据、条件与奖励均已写入档案。"
+	feedback.text = "阈值司仪：试炼已采纳；依据、条件与奖励均已写入档案。" if GameState.accept_curator_trial() else "阈值司仪：当前世界可用试炼均已完成或暂缓。"
 	_refresh()
 
 
 func _dismiss_trial() -> void:
-	GameState.dismiss_curator_trial()
-	feedback.text = "阈值司仪：已暂缓该方向，不会重复强制提示。"
+	feedback.text = "阈值司仪：已暂缓该方向，不会重复强制提示。" if GameState.dismiss_curator_trial() else "当前没有可暂缓的试炼。"
 	_refresh()
 
 
@@ -673,7 +678,7 @@ func _reset_curator_profile() -> void:
 
 
 func _respec_pathway() -> void:
-	feedback.text = "职业锚点已重构；返还已购节点一半回响碎片。" if GameState.respec_pathway() else "无法重构：每个存档仅限一次，并需要 2 因果残片。"
+	feedback.text = "职业锚点已重构；返还已购节点一半回响碎片。" if GameState.respec_pathway() else "无法重构：每个存档仅限一次，并需要 1 因果残片。"
 	_refresh()
 
 
