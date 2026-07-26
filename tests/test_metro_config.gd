@@ -16,6 +16,10 @@ func _run_test() -> void:
  assert(metro.objective_positions == DynamicRunConfig.METRO_BEACON_POSITIONS)
  assert(metro.metro_route_positions.north.exit == DynamicRunConfig.METRO_NORTH_EXIT)
  assert(metro.metro_route_positions.south.exit == DynamicRunConfig.METRO_SOUTH_EXIT)
+
+ assert(metro.metro_switch_order.size() == 3)
+ assert(metro.metro_switch_order.has(0) and metro.metro_switch_order.has(1) and metro.metro_switch_order.has(2))
+ assert(metro.metro_switch_route in ["north", "south"])
  assert(metro.map_title() == "潮没末班线")
  assert(metro.map_size() == DynamicRunConfig.WORLD_MAP_SIZE)
  assert(metro.map_regions().size() == 7)

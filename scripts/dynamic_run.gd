@@ -8,6 +8,8 @@ const METRO_NORTH_SWITCH := Vector2(1792, 288)
 const METRO_SOUTH_SWITCH := Vector2(1600, 1088)
 const METRO_NORTH_EXIT := Vector2(2048, 352)
 const METRO_SOUTH_EXIT := Vector2(224, 1184)
+const METRO_SWITCH_LOCK_POSITIONS := [Vector2(704, 256), Vector2(1184, 480), Vector2(1760, 704)]
+const METRO_SWITCH_LOCK_NAMES := ["西段锁", "中央锁", "东段锁"]
 const WORLD_MAP_SIZE := Vector2(2304.0, 1440.0)
 const METRO_MAP_REGIONS := [
 	{"id": "ticket_hall", "name": "检票大厅", "rect": Rect2(64, 96, 400, 352)},
@@ -45,6 +47,8 @@ var orderly_spawns: Array[Vector2] = []
 var side_contracts: Array[String] = []
 var causal_chain := ""
 var metro_route_positions := {}
+var metro_switch_order: Array[int] = []
+var metro_switch_route := "north"
 
 
 func _init(run_seed: int, requested_world := "sanatorium") -> void:
@@ -90,6 +94,10 @@ func _generate() -> void:
 			"north": {"switch": METRO_NORTH_SWITCH, "exit": METRO_NORTH_EXIT},
 			"south": {"switch": METRO_SOUTH_SWITCH, "exit": METRO_SOUTH_EXIT},
 		}
+		# Zero Switch is a real routing puzzle.  The order is deterministic for a run,
+		# so it can be learned and presented in the shared HUD rather than guessed.
+		metro_switch_order.assign([0, 1, 2] if seed % 2 == 0 else [2, 0, 1])
+		metro_switch_route = "north" if seed % 2 == 0 else "south"
 		_populate_enemy_spawns(rng)
 		_populate_contracts(rng)
 		return
@@ -134,7 +142,7 @@ func validate() -> bool:
 		return false
 	if objective_positions.size() != objective_count or objective_count < 2 or objective_count > 4:
 		return false
-	if world_id == "metro" and (metro_route_positions.size() != 2 or objective_positions != METRO_BEACON_POSITIONS):
+	if world_id == "metro" and (metro_route_positions.size() != 2 or objective_positions != METRO_BEACON_POSITIONS or metro_switch_order.size() != 3):
 		return false
 	var reached := {0: true}
 	for _pass in range(room_order.size()):

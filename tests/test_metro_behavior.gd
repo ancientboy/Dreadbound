@@ -69,5 +69,46 @@ func _run_test() -> void:
 	assert(metro._metro_water_depth_at(Vector2(1184, 800)) == 0)
 	metro.queue_free()
 	await process_frame
+
+	# Find an authored Zero Switch run and verify that its locks are ordered,
+	# that a wrong lock resets progress, and that the successful route drains
+	# the central low level for a limited time.
+	var zero_seed := 0
+	var zero_config: DynamicRunConfig
+	for seed in range(1, 96):
+		var candidate := DynamicRunConfig.new(seed, "metro")
+		if candidate.mission_id == "switch_zero":
+			zero_seed = seed
+			zero_config = candidate
+			break
+	assert(zero_seed > 0)
+	state.active_run_seed = zero_seed
+	var zero_metro: Node = load("res://scenes/metro.tscn").instantiate()
+	root.add_child(zero_metro)
+	await process_frame
+	var wrong_lock: ObjectiveInteractable
+	for item in zero_metro.interactables:
+		if item.objective_id == "metro_switch_lock_%d" % ((zero_config.metro_switch_order[0] + 1) % 3):
+			wrong_lock = item
+			break
+	assert(wrong_lock != null)
+	zero_metro._handle_metro_switch_lock(wrong_lock)
+	assert(zero_metro.collected_records.is_empty())
+	assert(zero_metro.metro_switch_failures == 1)
+	for lock_index in zero_config.metro_switch_order:
+		for item in zero_metro.interactables:
+			if item.objective_id == "metro_switch_lock_%d" % lock_index:
+				zero_metro._handle_metro_switch_lock(item)
+				break
+	assert(zero_metro.mission_phase == zero_metro.MissionPhase.RESTORE_POWER)
+	for item in zero_metro.interactables:
+		if item.objective_id == "metro_%s_switch" % zero_config.metro_switch_route:
+			zero_metro._activate_metro_route(item)
+			break
+	assert(zero_metro.metro_zero_route_timer > 0.0)
+	zero_metro.metro_tide_level = 2
+	assert(zero_metro._metro_water_depth_at(Vector2(1184, 800)) == 0)
+	zero_metro.queue_free()
+	await process_frame
 	print("Metro behavior test passed: safe interception, contextual boss phases, anchors and mobile trait input")
 	quit()
