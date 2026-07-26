@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 13
+const SAVE_VERSION := 14
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -27,11 +27,13 @@ const PATH_NODES := {
 }
 const PATHWAY_NAMES := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}
 const CURATOR_TRIALS := {
-	"sanatorium_restraint": {"world": "sanatorium", "title": "病区克制", "description": "在废弃疗养院清除不超过 4 个威胁并成功撤离。", "reward": 1},
-	"sanatorium_director": {"world": "sanatorium", "title": "终止主任", "description": "击败缝合主任并从废弃疗养院成功撤离。", "reward": 1},
-	"metro_quiet": {"world": "metro", "title": "静默末班", "description": "在潮没末班线以噪音不高于 3 成功撤离。", "reward": 1},
-	"metro_recovery": {"world": "metro", "title": "错时补救", "description": "错过首班车后仍从潮没末班线成功撤离。", "reward": 1},
-	"risk_control": {"world": "any", "title": "可控异常", "description": "解决至少 2 个风险事件并成功撤离。", "reward": 1},
+	"sanatorium_restraint": {"world": "sanatorium", "kind": "world", "title": "病区克制", "description": "在废弃疗养院清除不超过 4 个威胁并成功撤离。", "rule_text": "司仪会标记非必要交战；完成后获得因果残片。", "reward": 1, "effects": {"restraint": true}},
+	"sanatorium_director": {"world": "sanatorium", "kind": "world", "title": "终止主任", "description": "击败缝合主任并从废弃疗养院成功撤离。", "rule_text": "主任被标记为裁决目标；撤离条件不改变。", "reward": 1, "effects": {"boss_mark": true}},
+	"metro_quiet": {"world": "metro", "kind": "behavior", "title": "静默末班", "description": "在潮没末班线以噪音不高于 3 成功撤离。", "rule_text": "潮位第一次上升延后 15 秒；噪音超标则契约失效。", "reward": 1, "effects": {"tide_delay": 15.0}},
+	"metro_recovery": {"world": "metro", "kind": "behavior", "title": "错时补救", "description": "错过首班车后仍从潮没末班线成功撤离。", "rule_text": "备用车次额外停靠 15 秒；必须承受一次错过车次的压力。", "reward": 1, "effects": {"recovery_window_bonus": 15.0}},
+	"metro_reverse_tide": {"world": "metro", "kind": "risk", "title": "逆潮通行", "description": "潮位提前抵达；开启应急水闸后，在排水期间通过中央低层并撤离。", "rule_text": "潮位提前 15 秒；水闸排水延长 16 秒，形成高风险捷径。", "reward": 2, "effects": {"tide_advance": 15.0, "floodgate_bonus": 16.0, "requires_floodgate": true}},
+	"metro_zero_priority": {"world": "metro", "kind": "world", "title": "零号优先级", "description": "在零号道岔行动中无错序完成校准并撤离。", "rule_text": "仅零号道岔任务可完成；正确改线后中央高架额外维持 18 秒。", "reward": 2, "effects": {"zero_route_bonus": 18.0, "requires_zero_clean": true}},
+	"risk_control": {"world": "any", "kind": "behavior", "title": "可控异常", "description": "解决至少 2 个风险事件并成功撤离。", "rule_text": "风险事件会被归档为可读线索；完成后获得因果残片。", "reward": 1, "effects": {"risk_archive": true}},
 }
 
 var save_path := "user://dreadbound_progress.json"
@@ -99,29 +101,92 @@ func get_curator_trial() -> Dictionary:
 	return trial
 
 
-func accept_curator_trial() -> bool:
+func get_curator_contract_offers(world := "") -> Array[Dictionary]:
 	if not str(player_profile.get("active_trial", "")).is_empty():
-		return false
+		return []
+	var preferred_world := selected_world if world.is_empty() else world
 	var dismissed: Array = player_profile.get("dismissed_trials", [])
 	var completed: Array = player_profile.get("completed_trials", [])
 	var claimed: Array = player_profile.get("trial_reward_claims", [])
-	var preferred_world := selected_world
 	var candidates: Array[String] = []
 	for trial_id in CURATOR_TRIALS:
 		var trial: Dictionary = CURATOR_TRIALS[trial_id]
-		if not completed.has(trial_id) and not claimed.has(trial_id) and not dismissed.has(trial_id) and str(trial.world) in [preferred_world, "any"]:
+		if str(trial.world) in [preferred_world, "any"] and not completed.has(trial_id) and not claimed.has(trial_id) and not dismissed.has(trial_id):
 			candidates.append(trial_id)
-	if candidates.is_empty():
-		for trial_id in CURATOR_TRIALS:
-			if not completed.has(trial_id) and not claimed.has(trial_id) and not dismissed.has(trial_id):
-				candidates.append(trial_id)
-	if candidates.is_empty():
+	candidates.sort_custom(func(a, b): return _contract_priority(a, preferred_world) > _contract_priority(b, preferred_world))
+	var offers: Array[Dictionary] = []
+	# The curator always presents a readable choice set: one world rule, one
+	# behavior response, and one voluntary high-risk rule whenever available.
+	for kind in ["world", "behavior", "risk"]:
+		for trial_id in candidates:
+			if str(CURATOR_TRIALS[trial_id].get("kind", "behavior")) == kind:
+				var typed_offer: Dictionary = CURATOR_TRIALS[trial_id].duplicate(true)
+				typed_offer.id = trial_id
+				typed_offer.reward_text = "%d 因果残片" % int(typed_offer.reward)
+				offers.append(typed_offer)
+				break
+	for trial_id in candidates:
+		if offers.size() >= 3 or offers.any(func(offer): return str(offer.id) == trial_id):
+			continue
+		var offer: Dictionary = CURATOR_TRIALS[trial_id].duplicate(true)
+		offer.id = trial_id
+		offer.reward_text = "%d 因果残片" % int(offer.reward)
+		offers.append(offer)
+	return offers
+
+
+func choose_curator_contract(trial_id: String) -> bool:
+	if not str(player_profile.get("active_trial", "")).is_empty() or not CURATOR_TRIALS.has(trial_id):
 		return false
-	var index := (int(player_profile.get("runs", 0)) + completed.size()) % candidates.size()
-	player_profile.active_trial = candidates[index]
-	save_progress()
-	progress_changed.emit()
-	return true
+	for offer in get_curator_contract_offers():
+		if str(offer.id) == trial_id:
+			player_profile.active_trial = trial_id
+			save_progress()
+			progress_changed.emit()
+			return true
+	return false
+
+
+func get_active_contract_effects() -> Dictionary:
+	var trial := get_curator_trial()
+	return trial.get("effects", {}).duplicate(true) if not trial.is_empty() else {}
+
+
+func get_growth_plan() -> Array[String]:
+	if selected_pathway == "steadfast":
+		return ["稳固：完成一次低噪声撤离", "缝合：保留绷带完成高压行动", "屏障：在低生命状态成功撤离"]
+	if selected_pathway == "armorer":
+		return ["校准：完成一局远程主导行动", "机动：在站台追击中保持移动", "交替：切换武器后解决关键威胁"]
+	if selected_pathway == "resonant":
+		return ["感知：探索未标记区域", "代价：完成一次高风险事件", "摄取：携带异常装备完成撤离"]
+	return ["生存：完成一次可控撤离", "武器：尝试不同整备配置", "异常：在可读风险中作出选择"]
+
+
+func _contract_priority(trial_id: String, world: String) -> int:
+	var trial: Dictionary = CURATOR_TRIALS[trial_id]
+	var priority := 10 if str(trial.world) == world else 1
+	if trial_id == "metro_quiet" and int(player_profile.get("noise_actions", 0)) >= 4:
+		priority += 30
+	if trial_id == "risk_control" and int(player_profile.get("events_taken", 0)) > 0:
+		priority += 20
+	if trial_id == "metro_recovery" and int(player_profile.get("missed_trains", 0)) > 0:
+		priority += 20
+	if trial_id == "metro_zero_priority" and int(player_profile.get("metro_runs", 0)) > 0:
+		priority += 15
+	return priority
+
+
+func accept_curator_trial() -> bool:
+	# Compatibility path for older UI/tests: choose the highest-priority offer.
+	# New UI always calls choose_curator_contract with the player's explicit card.
+	var offers := get_curator_contract_offers()
+	if offers.is_empty():
+		return false
+	var chosen: Dictionary = offers[0]
+	for offer in offers:
+		if _contract_priority(str(offer.id), selected_world) > _contract_priority(str(chosen.id), selected_world):
+			chosen = offer
+	return choose_curator_contract(str(chosen.id))
 
 
 func dismiss_curator_trial() -> bool:
@@ -353,6 +418,8 @@ func _complete_curator_trial_if_eligible(success: bool, enemies_defeated: int, e
 		"sanatorium_director": completed = world == "sanatorium" and bool(run_summary.get("boss_defeated", false))
 		"metro_quiet": completed = world == "metro" and int(run_summary.get("noise", 0)) <= 3
 		"metro_recovery": completed = world == "metro" and bool(run_summary.get("missed_train", false))
+		"metro_reverse_tide": completed = world == "metro" and bool(run_summary.get("curator_floodgate_used", false))
+		"metro_zero_priority": completed = world == "metro" and str(run_summary.get("mission_id", "")) == "switch_zero" and int(run_summary.get("switch_failures", 0)) == 0
 		"risk_control": completed = events_resolved >= 2
 	if not completed:
 		return rewards

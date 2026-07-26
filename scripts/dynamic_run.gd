@@ -75,6 +75,11 @@ func _generate() -> void:
 	edges.append(Vector2i(1 + rng.randi_range(0, 2), 4 + rng.randi_range(0, 2)))
 	if world_id == "metro":
 		mission_id = "lost_service" if rng.randi() % 2 == 0 else "switch_zero"
+		# A selected Zero Priority contract is a declared rule, never a hidden
+		# reroll: it guarantees the compatible authored mission for this action.
+		var active_contract := GameState.get_curator_trial()
+		if str(active_contract.get("id", "")) == "metro_zero_priority":
+			mission_id = "switch_zero"
 		mission_title = "失联车次" if mission_id == "lost_service" else "零号道岔"
 		objective_noun = "车次信标" if mission_id == "lost_service" else "道岔锁"
 	else:

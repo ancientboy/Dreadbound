@@ -88,6 +88,9 @@ var boss_defeated := false
 var pathway_status_label: Label
 var metro_zero_route_timer := 0.0
 var metro_switch_failures := 0
+var curator_contract := {}
+var curator_effects := {}
+var curator_floodgate_used := false
 
 
 func _ready() -> void:
@@ -96,8 +99,11 @@ func _ready() -> void:
 	if run_seed == 0:
 		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
 	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world)
+	curator_contract = GameState.get_curator_trial()
+	curator_effects = GameState.get_active_contract_effects()
 	world_rules = WorldRules.new(run_config.world_id)
 	assert(run_config.validate())
+	_apply_curator_contract()
 	total_records = run_config.objective_count
 	_create_collision_walls()
 	fog_of_war.player = player
@@ -138,7 +144,8 @@ func _ready() -> void:
 		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
 	$Interface/TopBar/Title.text = "%s // %s" % [run_config.mission_title, run_config.action_code]
 	if run_config.world_id == "metro":
-		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。", 6.0)
+		var contract_note := "\n司仪契约：%s" % str(curator_contract.title) if not curator_contract.is_empty() else ""
+		_show_notification("潮没末班线：潮位正在上升。收集信标、恢复信号并赶上撤离窗口。%s" % contract_note, 6.0)
 	queue_redraw()
 
 
@@ -364,7 +371,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "mission_id": run_config.mission_id, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure, "boss_defeated": boss_defeated, "switch_failures": metro_switch_failures, "curator_floodgate_used": curator_floodgate_used}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -556,6 +563,7 @@ func _spawn_crawler_wave() -> void:
 
 
 func _update_mission_ui() -> void:
+	var contract_prefix := "[契约 %s] " % str(curator_contract.title) if not curator_contract.is_empty() else ""
 	if run_config.world_id == "metro":
 		var tide_names := ["干燥", "浸水", "深水"]
 		var train := "未校准" if metro_train_window < 0.0 else "%ds" % ceili(metro_train_window)
@@ -566,14 +574,14 @@ func _update_mission_ui() -> void:
 		var route_text := "选择北/南站台道岔" if metro_route.is_empty() else ("赶往%s站台，在车门关闭前登车" % ("北" if metro_route == "north" else "南"))
 		if run_config.mission_id == "switch_zero":
 			var next_lock := "零号主控台" if mission_phase != MissionPhase.COLLECT_RECORDS else _metro_next_switch_name()
-			objective.text = "当前目标：%s" % ("按序校准%s" % next_lock if mission_phase == MissionPhase.COLLECT_RECORDS else route_text)
+			objective.text = "%s当前目标：%s" % [contract_prefix, "按序校准%s" % next_lock if mission_phase == MissionPhase.COLLECT_RECORDS else route_text]
 		else:
-			objective.text = "当前目标：%s" % ("确认失联车次信标" if mission_phase == MissionPhase.COLLECT_RECORDS else ("选择撤离站台" if mission_phase == MissionPhase.RESTORE_POWER else route_text))
+			objective.text = "%s当前目标：%s" % [contract_prefix, "确认失联车次信标" if mission_phase == MissionPhase.COLLECT_RECORDS else ("选择撤离站台" if mission_phase == MissionPhase.RESTORE_POWER else route_text)]
 		return
 	progress.text = "%s %d/%d  ·  电力%s" % [run_config.objective_noun, collected_records.size(), total_records, "已恢复" if power_restored else "中断"]
 	match mission_phase:
 		MissionPhase.COLLECT_RECORDS:
-			objective.text = "当前目标：%s · 搜索 %d 个%s" % [run_config.mission_title, total_records, run_config.objective_noun]
+			objective.text = "%s当前目标：%s · 搜索 %d 个%s" % [contract_prefix, run_config.mission_title, total_records, run_config.objective_noun]
 		MissionPhase.RESTORE_POWER:
 			objective.text = "当前目标：前往地下维护区恢复电力"
 		MissionPhase.EVACUATE:
@@ -857,9 +865,9 @@ func _update_metro_pressure(delta: float) -> void:
 			metro_missed_train = true
 			var has_ticket := GameState.has_equipment_trait("missed_train_recovery") and not ticket_recovery_used
 			ticket_recovery_used = ticket_recovery_used or has_ticket
-			metro_train_window = world_rules.train_window(metro_route, has_ticket, true)
+			metro_train_window = world_rules.train_window(metro_route, has_ticket, true) + float(curator_effects.get("recovery_window_bonus", 0.0))
 			metro_noise += 1
-			_show_notification("末班票根解析出隐藏车次：补救窗口延长至 50 秒。" if has_ticket else "错过末班车：备用道岔响应，补救车次开放 35 秒。", 5.0)
+			_show_notification("末班票根解析出隐藏车次：补救窗口延长至 %d 秒。" % int(metro_train_window) if has_ticket else "错过末班车：备用道岔响应，补救车次开放 %d 秒。" % int(metro_train_window), 5.0)
 	if metro_floodgate_timer > 0.0:
 		metro_floodgate_timer = maxf(metro_floodgate_timer - delta, 0.0)
 		if is_zero_approx(metro_floodgate_timer):
@@ -891,8 +899,8 @@ func _activate_metro_route(target: ObjectiveInteractable) -> void:
 	_spawn_signal_anchors()
 	metro_train_window = world_rules.train_window(metro_route, false)
 	if run_config.mission_id == "switch_zero":
-		metro_zero_route_timer = METRO_ZERO_ROUTE_DURATION
-		_show_notification("零号改线成立：中央高架已排干 %d 秒。沿高架前往%s站台，绕开低层深水。" % [int(METRO_ZERO_ROUTE_DURATION), "北" if metro_route == "north" else "南"], 5.5)
+		metro_zero_route_timer = METRO_ZERO_ROUTE_DURATION + float(curator_effects.get("zero_route_bonus", 0.0))
+		_show_notification("零号改线成立：中央高架已排干 %d 秒。沿高架前往%s站台，绕开低层深水。" % [int(metro_zero_route_timer), "北" if metro_route == "north" else "南"], 5.5)
 	if metro_route == "north":
 		metro_noise += 1
 		_show_notification("高架慢线已校准：北站台 115 秒窗口。路线更长，但可避开深水。\n车长回声是可选回收目标，不必击杀。", 6.0)
@@ -910,10 +918,22 @@ func _activate_metro_floodgate(target: ObjectiveInteractable) -> void:
 		_show_notification("水位尚未压到闸门，先继续推进。", 2.5)
 		return
 	target.mark_complete()
-	metro_floodgate_timer = METRO_FLOODGATE_DURATION
+	curator_floodgate_used = true
+	metro_floodgate_timer = METRO_FLOODGATE_DURATION + float(curator_effects.get("floodgate_bonus", 0.0))
 	metro_noise += 1
-	_show_notification("应急水闸开启：中央低层通道排水 %d 秒。快速穿越，但检票员已听见闸门。" % int(METRO_FLOODGATE_DURATION), 5.0)
+	_show_notification("应急水闸开启：中央低层通道排水 %d 秒。快速穿越，但检票员已听见闸门。" % int(metro_floodgate_timer), 5.0)
 	queue_redraw()
+
+
+func _apply_curator_contract() -> void:
+	if curator_contract.is_empty():
+		return
+	# These modifiers are announced before input begins and only affect stated
+	# systems. They never touch hit chance, hidden damage, seeds, or exits.
+	metro_tide_timer += float(curator_effects.get("tide_advance", 0.0))
+	metro_tide_timer -= float(curator_effects.get("tide_delay", 0.0))
+	if run_config.world_id == "sanatorium" and bool(curator_effects.get("boss_mark", false)):
+		_show_notification("阈值司仪裁决：缝合主任已被标记为本次行动的可选裁决目标。", 4.0)
 
 
 func _metro_water_depth_at(position: Vector2) -> int:

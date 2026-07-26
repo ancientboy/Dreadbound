@@ -40,6 +40,7 @@ var _touch_origin := Vector2.ZERO
 var _touch_direction := Vector2.ZERO
 var _hub_action_touch := -1
 var mobile_terminal_panel: ColorRect
+var curator_offer_box: VBoxContainer
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
 const CURATOR_POSITION := Vector2(640, 416)
@@ -295,6 +296,7 @@ func _refresh() -> void:
 	world_button.text = "传说门选择副本"
 	deploy_button.text = "请在回廊进入传说门"
 	$HubActions/Deploy.text = "进入%s" % _world_name()
+	_refresh_curator_offers()
 	if GameState.last_run.is_empty():
 		report.text = "尚无行动记录。\n疗养院连接等待校准。"
 	else:
@@ -544,12 +546,10 @@ func _create_mobile_terminal_panel() -> void:
 
 func _create_curator_controls() -> void:
 	var archive := $Margin/Layout/Columns/Archive as VBoxContainer
-	var view := Button.new()
-	view.name = "CuratorTrial"
-	view.custom_minimum_size = Vector2(0, 46)
-	view.text = "采纳 / 暂缓司仪试炼"
-	view.pressed.connect(_toggle_curator_trial)
-	archive.add_child(view)
+	curator_offer_box = VBoxContainer.new()
+	curator_offer_box.name = "CuratorOffers"
+	curator_offer_box.add_theme_constant_override("separation", 6)
+	archive.add_child(curator_offer_box)
 	var reset := Button.new()
 	reset.name = "ResetCurator"
 	reset.custom_minimum_size = Vector2(0, 42)
@@ -568,11 +568,40 @@ func _create_respec_control() -> void:
 	$Margin/Layout/Columns/Paths.add_child(button)
 
 
-func _toggle_curator_trial() -> void:
-	if GameState.get_curator_trial().is_empty():
-		_accept_trial()
-	else:
-		_dismiss_trial()
+func _refresh_curator_offers() -> void:
+	if curator_offer_box == null:
+		return
+	for child in curator_offer_box.get_children():
+		child.queue_free()
+	var active := GameState.get_curator_trial()
+	if not active.is_empty():
+		var active_label := Label.new()
+		active_label.text = "已采纳：%s\n%s\n规则：%s · 奖励 %s" % [str(active.title), str(active.description), str(active.get("rule_text", "")), str(active.reward_text)]
+		active_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		active_label.add_theme_color_override("font_color", Color("8ce8d6"))
+		curator_offer_box.add_child(active_label)
+		var defer := Button.new()
+		defer.custom_minimum_size = Vector2(0, 42)
+		defer.text = "暂缓当前契约"
+		defer.pressed.connect(_dismiss_trial)
+		curator_offer_box.add_child(defer)
+		return
+	var heading := Label.new()
+	heading.text = "阈值司仪 · 本次可选契约（仅可采纳一项）"
+	heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	heading.add_theme_color_override("font_color", Color("6cd7c0"))
+	curator_offer_box.add_child(heading)
+	for offer in GameState.get_curator_contract_offers():
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 68)
+		button.text = "%s · %s\n%s\n规则：%s · %s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", "")), "世界专属" if str(offer.kind) == "world" else ("行为契约" if str(offer.kind) == "behavior" else "高风险")]
+		button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
+		curator_offer_box.add_child(button)
+
+
+func _choose_curator_contract(trial_id: String) -> void:
+	feedback.text = "阈值司仪：契约已写入本次投送。规则、代价与奖励均可在行动前查看。" if GameState.choose_curator_contract(trial_id) else "该契约已失效；请重新查看司仪档案。"
+	_refresh()
 
 
 func _refresh_mobile_terminal() -> void:
@@ -610,11 +639,21 @@ func _refresh_mobile_terminal() -> void:
 	_mobile_terminal_section(content, "上次行动", report.text)
 	_mobile_terminal_section(content, "阈值司仪 · 行动档案", _curator_profile_text())
 	var trial := GameState.get_curator_trial()
-	var trial_action := Button.new()
-	trial_action.custom_minimum_size = Vector2(0, 54)
-	trial_action.text = "暂缓当前试炼" if not trial.is_empty() else "采纳一项可选试炼"
-	trial_action.pressed.connect(_dismiss_trial if not trial.is_empty() else _accept_trial)
-	content.add_child(trial_action)
+	if trial.is_empty():
+		_mobile_terminal_section(content, "本次可选契约（仅可采纳一项）", "司仪会提供副本专属、行为导向与高风险契约；所有规则在进入副本前公开。")
+		for offer in GameState.get_curator_contract_offers():
+			var offer_button := Button.new()
+			offer_button.custom_minimum_size = Vector2(0, 78)
+			offer_button.text = "%s · %s\n%s\n%s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", ""))]
+			offer_button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
+			content.add_child(offer_button)
+	else:
+		_mobile_terminal_section(content, "已采纳契约", "%s\n%s\n规则：%s · 奖励 %s" % [str(trial.title), str(trial.description), str(trial.get("rule_text", "")), str(trial.reward_text)])
+		var trial_action := Button.new()
+		trial_action.custom_minimum_size = Vector2(0, 54)
+		trial_action.text = "暂缓当前契约"
+		trial_action.pressed.connect(_dismiss_trial)
+		content.add_child(trial_action)
 	var reset_profile := Button.new()
 	reset_profile.custom_minimum_size = Vector2(0, 48)
 	reset_profile.text = "重置司仪观察（不影响装备与成长）"
@@ -704,6 +743,7 @@ func _curator_profile_text() -> String:
 	var trial := GameState.get_curator_trial()
 	var lines := [str(profile.get("last_observation", "尚无足够行动数据。")), "行动 %d · 成功 %d · 静默撤离 %d · 风险选择 %d · 清除威胁 %d" % [int(profile.get("runs", 0)), int(profile.get("successful_runs", 0)), int(profile.get("quiet_successes", 0)), int(profile.get("events_taken", 0)), int(profile.get("threats_cleared", 0))]]
 	lines.append("依据：%s" % "；".join(GameState.curator_evidence()))
+	lines.append("成长计划：%s" % " → ".join(GameState.get_growth_plan()))
 	if not trial.is_empty():
 		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward_text])
 	var recent: Array = profile.get("recent_runs", [])
