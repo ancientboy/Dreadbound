@@ -74,5 +74,15 @@
 | `art_enemy_drowned` | `assets/art/characters/metro/drowned_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
 | `art_enemy_inspector` | `assets/art/characters/metro/inspector_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
 | `art_enemy_signal_anchor` | `assets/art/characters/metro/signal_anchor_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 色键移除、4×6 帧格、64×64 Nearest | review |
+| `art_boss_conductor_echo` | `assets/art/characters/metro/last_train_conductor_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro finish prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 色键移除、4×6 帧格、96×96 Boss、透明边缘与限色 | review |
+| `art_weapon_conductor_railgun_growth` | `assets/art/weapons/conductor_railgun_growth.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro finish prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 六级分格、64×64、统一握把锚点与限色 | review |
+| `art_vfx_metro_enemy_skills` | `assets/art/vfx/metro_enemy_skills.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro finish prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 4×2 分格、128×128、色键与透明边缘清理 | review |
+| `art_vfx_metro_flood_layers` | `assets/art/vfx/metro_flood_layers.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro finish prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 4×2 分格、128×128、深浅水/水线/浸没层整理 | review |
+| `art_vfx_player_states_lighting` | `assets/art/vfx/player_states_lighting.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro finish prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 4×2 分格、128×128、胸灯/光锥/路径状态整理 | review |
+| `art_brand_logo` | `assets/art/brand/dreadbound_logo.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 visual completion prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 精确字标校对、512×128、色键与透明边缘清理 | review |
+| `art_ui_mobile_controls` | `assets/art/ui/mobile_controls.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 visual completion prompt | `docs/o1-metro-visual-finish.md` | 商业生成与修改权 | 4×2 分格、64×64 触控图标、透明边缘与限色 | review |
+| `art_ui_unknown_equipment` | `assets/art/icons/ui/unknown_equipment.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 32×32 锁定装备占位图标 | review |
+| `art_ui_unknown_material` | `assets/art/icons/ui/unknown_material.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 32×32 锁定材料占位图标 | review |
+| `art_corridor_floor_tile` | `assets/art/worlds/corridor/corridor_floor_tile.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 corridor prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 128×128 回廊重复地板模块 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。

@@ -15,6 +15,7 @@ const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/
 const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
 const METRO_TILESET: Texture2D = preload("res://assets/art/worlds/metro/metro_tileset.png")
 const METRO_PROPS: Texture2D = preload("res://assets/art/worlds/metro/metro_props.png")
+const METRO_FLOOD_LAYERS: Texture2D = preload("res://assets/art/vfx/metro_flood_layers.png")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -1266,6 +1267,7 @@ func _update_metro_water_state(delta: float) -> void:
 			_show_notification("已回到干燥高地。", 1.5)
 		queue_redraw()
 	player.environment_speed_multiplier = world_rules.water_speed_multiplier(metro_water_state, GameState.has_equipment_trait("reduce_water_penalty"))
+	player.environment_water_depth = metro_water_state
 	if metro_water_state == 2:
 		metro_water_damage_timer += delta
 		if metro_water_damage_timer >= 1.2:
@@ -1436,18 +1438,25 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("10223a") if metro else (Color("15201c") if power_restored else Color("101514")))
 	if metro:
 		_draw_metro_floor()
-		# Tide is a playable surface, not background decoration: these are the low routes
-		# that slow the walker at level 1 and become damaging deep water at level 2.
-		if metro_tide_level > 0:
-			for zone in METRO_SHALLOW_ZONES:
-				var deep := metro_tide_level >= 2 and METRO_DEEP_ZONES.any(func(deep_zone): return deep_zone == zone)
-				_draw_metro_water_zone(zone, deep)
-			if metro_floodgate_timer > 0.0:
-				_draw_metro_room(METRO_DRAINED_ZONE, 5)
-				draw_rect(METRO_DRAINED_ZONE, Color("96e7ef"), false, 4.0)
-			elif metro_zero_route_timer > 0.0:
-				_draw_metro_room(METRO_DRAINED_ZONE, 6)
-				draw_rect(METRO_DRAINED_ZONE, Color("a4f6cf"), false, 4.0)
+	if not metro:
+		_draw_sanatorium_passages()
+		_draw_grid()
+	_draw_zones()
+	# Flood layers must be drawn after authored room tiles. The old order painted
+	# the rooms over the water, making tide level 2 mechanically active but
+	# visually dry.
+	if metro and metro_tide_level > 0:
+		for zone in METRO_SHALLOW_ZONES:
+			var deep := metro_tide_level >= 2 and METRO_DEEP_ZONES.any(func(deep_zone): return deep_zone == zone)
+			_draw_metro_water_zone(zone, deep)
+		if metro_floodgate_timer > 0.0:
+			_draw_metro_room(METRO_DRAINED_ZONE, 5)
+			_draw_metro_flood_cell(7, Rect2(METRO_DRAINED_ZONE.get_center() - Vector2(64, 64), Vector2(128, 128)), Color(0.9, 1.0, 1.0, 0.85))
+			draw_rect(METRO_DRAINED_ZONE, Color("96e7ef"), false, 4.0)
+		elif metro_zero_route_timer > 0.0:
+			_draw_metro_room(METRO_DRAINED_ZONE, 6)
+			draw_rect(METRO_DRAINED_ZONE, Color("a4f6cf"), false, 4.0)
+	if metro:
 		if metro_route == "north":
 			draw_line(DynamicRunConfig.METRO_NORTH_SWITCH, DynamicRunConfig.METRO_NORTH_EXIT, Color("a4f6cf"), 5.0)
 		elif metro_route == "south":
@@ -1457,10 +1466,6 @@ func _draw() -> void:
 			draw_rect(secret_rect, Color(0.18, 0.09, 0.25, 0.42), true)
 			draw_rect(secret_rect, Color("b88be2"), false, 4.0)
 			draw_string(UI_FONT, secret_rect.position + Vector2(24, 72), "失踪乘客维护层 // 副本记忆已显现", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 20, Color("d9b8ef"))
-	if not metro:
-		_draw_sanatorium_passages()
-		_draw_grid()
-	_draw_zones()
 	for wall in _wall_rectangles():
 		if metro:
 			_draw_metro_wall(wall)
@@ -1516,7 +1521,35 @@ func _draw_metro_water_zone(zone: Rect2, deep: bool) -> void:
 				tile_index,
 				Color(0.52, 0.78, 0.9, 0.98) if deep else Color(0.62, 0.82, 0.9, 0.92),
 			)
+	if METRO_FLOOD_LAYERS != null and METRO_FLOOD_LAYERS.get_size() == Vector2(512, 256):
+		var surface_index := 1 if deep else 0
+		for y in range(int(zone.position.y), int(zone.end.y), 128):
+			for x in range(int(zone.position.x), int(zone.end.x), 128):
+				_draw_metro_flood_cell(
+					surface_index,
+					Rect2(x, y, minf(128.0, zone.end.x - x), minf(128.0, zone.end.y - y)),
+					Color(0.78, 0.9, 1.0, 0.76 if deep else 0.52),
+				)
+		# A wall-waterline strip and advancing front make the flooded room read
+		# as occupied volume instead of merely a blue floor recolor.
+		for x in range(int(zone.position.x), int(zone.end.x), 128):
+			_draw_metro_flood_cell(
+				3,
+				Rect2(x, zone.position.y - 24.0, minf(128.0, zone.end.x - x), 96.0),
+				Color(0.8, 0.92, 1.0, 0.82 if deep else 0.48),
+			)
 	draw_rect(zone, Color("7fd9ed") if deep else Color("52a9c7"), false, 3.0)
+
+
+func _draw_metro_flood_cell(index: int, destination: Rect2, modulate := Color.WHITE) -> void:
+	if METRO_FLOOD_LAYERS == null or METRO_FLOOD_LAYERS.get_size() != Vector2(512, 256):
+		return
+	draw_texture_rect_region(
+		METRO_FLOOD_LAYERS,
+		destination,
+		Rect2((index % 4) * 128, floori(float(index) / 4.0) * 128, 128, 128),
+		modulate,
+	)
 
 
 func _draw_metro_wall(wall_rect: Rect2) -> void:

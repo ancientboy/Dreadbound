@@ -55,6 +55,7 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 		if _charge_windup <= 0.0:
 			_charge_time = 0.34
+			_get_combat_fx().metro_enemy_skill("inspector_charge", global_position, _charge_direction, 150.0, 0.34)
 		return
 	if _intercept_timer > 0.0 and _intercept_target != Vector2.ZERO:
 		if global_position.distance_to(_intercept_target) > 28.0:
@@ -70,6 +71,7 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		if is_instance_valid(target) and global_position.distance_to(target.global_position) < 52.0:
 			target.take_damage(attack_damage, global_position)
+			_get_combat_fx().metro_enemy_skill("inspector_impact", target.global_position, _charge_direction, 112.0, 0.28)
 			_charge_time = 0.0
 		return
 	if is_instance_valid(target) and _cooldown <= 0.0:
@@ -78,6 +80,7 @@ func _physics_process(delta: float) -> void:
 			_charge_direction = global_position.direction_to(target.global_position)
 			_charge_windup = 0.9
 			_cooldown = 2.8
+			_get_combat_fx().metro_enemy_skill("inspector_charge", global_position, _charge_direction, 210.0, 0.9)
 			queue_redraw()
 			return
 	super._physics_process(delta)
@@ -110,8 +113,5 @@ func intercept_target() -> Vector2:
 
 func _draw() -> void:
 	super._draw()
-	if _charge_windup > 0.0:
-		draw_line(Vector2.ZERO, _charge_direction * 330.0, Color(1.0, 0.55, 0.2, 0.78), 9.0)
-		draw_circle(Vector2(0, -38), 8.0, Color("f3a13b"))
 	if _intercept_timer > 0.0:
 		draw_arc(Vector2.ZERO, 54.0, 0.0, TAU, 32, Color(0.95, 0.45, 0.12, 0.7), 4.0)

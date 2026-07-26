@@ -10,6 +10,7 @@ var _fallback_combat_fx: CombatFX
 var _body_sprite: Sprite2D
 var _animation_time := 0.0
 var _hurt_flash := 0.0
+var _pulse_timer := 0.15
 
 
 func _ready() -> void:
@@ -22,6 +23,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_animation_time += delta
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
+	_pulse_timer = maxf(_pulse_timer - delta, 0.0)
+	if _pulse_timer <= 0.0:
+		_get_combat_fx().metro_enemy_skill("anchor_pulse", global_position, Vector2.ZERO, 104.0, 0.55)
+		_pulse_timer = 1.35
 	if is_instance_valid(_body_sprite):
 		_body_sprite.frame_coords = Vector2i(int(_animation_time * 7.0) % 6, 0)
 		_body_sprite.modulate = Color("ffb2a6") if _hurt_flash > 0.0 else Color.WHITE
@@ -32,6 +37,7 @@ func take_damage(amount: int, source_position: Vector2) -> void:
 	_hurt_flash = 0.18
 	_get_combat_fx().enemy_hit(global_position, source_position.direction_to(global_position), amount >= 24, Color("79d6e9"))
 	if health == 0:
+		_get_combat_fx().metro_enemy_skill("anchor_discharge", global_position, Vector2.ZERO, 132.0, 0.42)
 		_get_combat_fx().enemy_defeat(global_position, Color("60cbe0"))
 		queue_free()
 	else:

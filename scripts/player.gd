@@ -4,7 +4,9 @@ extends CharacterBody2D
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 const DIRECTOR_REAPER_GROWTH: Texture2D = preload("res://assets/art/weapons/director_reaper_growth.png")
-const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
+const CONDUCTOR_RAILGUN_GROWTH: Texture2D = preload("res://assets/art/weapons/conductor_railgun_growth.png")
+const PLAYER_STATES_LIGHTING: Texture2D = preload("res://assets/art/vfx/player_states_lighting.png")
+const METRO_FLOOD_LAYERS: Texture2D = preload("res://assets/art/vfx/metro_flood_layers.png")
 
 signal health_changed(current: int, maximum: int)
 signal died
@@ -52,6 +54,7 @@ var sedative_duration := 0.0
 var stimulants := 0
 var stimulant_duration := 0.0
 var environment_speed_multiplier := 1.0
+var environment_water_depth := 0
 var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _movement_echo_timer := 0.0
@@ -567,21 +570,10 @@ func _emit_pathway_movement_echo() -> void:
 
 func _draw() -> void:
 	_draw_flashlight()
+	_draw_pathway_state_vfx()
 	var visual := _pathway_visual()
-	var pathway_id := str(visual.id)
 	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
 		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
-	match pathway_id:
-		"steadfast":
-			draw_arc(Vector2(0, 1), 23.0, -2.5, 0.4, 12, Color(visual.accent, 0.62), 2.0)
-		"armorer":
-			draw_circle(Vector2(16, -10), 3.0, visual.accent)
-			draw_circle(Vector2(-16, 0), 2.5, Color("ffd177"))
-		"resonant":
-			draw_circle(Vector2.ZERO, 28.0, Color(visual.accent, 0.08))
-			draw_circle(Vector2(-5, -21), 2.5, visual.accent)
-			draw_circle(Vector2(4, -16), 2.0, Color("7ce7ff"))
-			draw_line(Vector2(-9, -9), Vector2(8, 9), Color(visual.accent, 0.72), 2.0)
 	var state := get_node_or_null("/root/GameState") as GameProgress
 	var weapon_item := str(state.equipped.get("weapon", "")) if state else ""
 	if weapon_item == "director_reaper" and current_weapon != Weapon.MELEE:
@@ -601,18 +593,14 @@ func _draw() -> void:
 	elif str(weapon_visual.shape) == "blade":
 		draw_line(facing * 8.0, facing * 40.0, weapon_color, 5.0)
 	elif str(weapon_visual.shape) == "railgun":
-		draw_line(facing * 8.0, facing * (43.0 * weapon_scale), weapon_color.darkened(0.35), 11.0 + growth * 0.7)
-		draw_line(facing * 12.0, facing * (47.0 * weapon_scale), weapon_color, 3.0 + growth * 0.35)
-		for rail in range(1, 1 + int(growth / 2)):
-			draw_line(facing * 15.0 + facing.orthogonal() * rail * 3.0, facing * (43.0 * weapon_scale) + facing.orthogonal() * rail * 3.0, Color(weapon_color, 0.55), 1.5)
+		_draw_conductor_railgun(growth, weapon_scale, weapon_color)
 	elif current_weapon == Weapon.RANGED:
 		_draw_basic_weapon(1)
 	elif current_weapon == Weapon.SHOTGUN:
 		_draw_basic_weapon(2)
 	else:
 		_draw_basic_weapon(0)
-	draw_circle(Vector2(-12, 3), 3.5, visual.accent)
-	draw_circle(Vector2(-12, 3), 7.0, Color(visual.accent, 0.13))
+	_draw_deep_water_occlusion()
 	# Keep combat readability close to the character while the top HUD remains the detailed status view.
 	var health_ratio := clampf(float(health) / float(max_health), 0.0, 1.0)
 	var bar_rect := Rect2(-23, -68, 46, 6)
@@ -623,16 +611,59 @@ func _draw() -> void:
 
 
 func _draw_flashlight() -> void:
-	if SANATORIUM_OBJECTIVE_LIGHTING == null or SANATORIUM_OBJECTIVE_LIGHTING.get_size() != Vector2(512, 256):
+	# The lamp is body-mounted. It provides readable forward illumination without
+	# competing with the weapon for the character's hand or silhouette.
+	if PLAYER_STATES_LIGHTING == null or PLAYER_STATES_LIGHTING.get_size() != Vector2(512, 256):
 		var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
 		draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
 		return
-	draw_set_transform(Vector2(0, -24) + facing * 4.0, facing.angle(), Vector2.ONE)
+	var chest := Vector2(0, -28) + facing * 5.0
+	draw_set_transform(chest + facing * 78.0, facing.angle(), Vector2.ONE)
 	draw_texture_rect_region(
-		SANATORIUM_OBJECTIVE_LIGHTING,
-		Rect2(0, -54, 210, 108),
-		Rect2(0, 128, 128, 128),
-		Color(0.86, 0.9, 0.76, 0.36),
+		PLAYER_STATES_LIGHTING,
+		Rect2(-82, -52, 164, 104),
+		Rect2(128, 0, 128, 128),
+		Color(0.82, 0.86, 0.72, 0.24),
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_player_state_cell(0, chest, 25.0, facing.angle(), Color(0.9, 0.9, 0.8, 0.9))
+
+
+func _draw_pathway_state_vfx() -> void:
+	if pathway_effects == null:
+		return
+	if pathway_effects.guard_duration > 0.0:
+		_draw_player_state_cell(2, Vector2(0, -6), 74.0, 0.0, Color(0.72, 0.94, 1.0, 0.72))
+	if pathway_effects.calibration_ready:
+		_draw_player_state_cell(3, Vector2(0, -25), 58.0, 0.0, Color(1.0, 0.85, 0.55, 0.82))
+	if pathway_effects.anomaly_pressure > 0:
+		var opacity := 0.32 + float(pathway_effects.anomaly_pressure) * 0.07
+		_draw_player_state_cell(4, Vector2(0, -4), 82.0, 0.0, Color(0.92, 0.74, 1.0, opacity))
+
+
+func _draw_deep_water_occlusion() -> void:
+	if environment_water_depth < 2:
+		return
+	if METRO_FLOOD_LAYERS == null or METRO_FLOOD_LAYERS.get_size() != Vector2(512, 256):
+		draw_arc(Vector2(0, 9), 29.0, 0.05, PI - 0.05, 20, Color(0.35, 0.72, 0.82, 0.72), 3.0)
+		return
+	draw_texture_rect_region(
+		METRO_FLOOD_LAYERS,
+		Rect2(-48, -4, 96, 48),
+		Rect2(256, 128, 128, 128),
+		Color(0.8, 0.92, 1.0, 0.78),
+	)
+
+
+func _draw_player_state_cell(index: int, center: Vector2, size: float, rotation: float, modulate: Color) -> void:
+	if PLAYER_STATES_LIGHTING == null or PLAYER_STATES_LIGHTING.get_size() != Vector2(512, 256):
+		return
+	draw_set_transform(center, rotation, Vector2.ONE)
+	draw_texture_rect_region(
+		PLAYER_STATES_LIGHTING,
+		Rect2(Vector2(-size, -size) * 0.5, Vector2(size, size)),
+		Rect2((index % 4) * 128, floori(float(index) / 4.0) * 128, 128, 128),
+		modulate,
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -641,7 +672,7 @@ func _draw_basic_weapon(atlas_index: int) -> void:
 	if BASIC_WEAPONS == null or BASIC_WEAPONS.get_size() != Vector2(96, 32):
 		draw_line(facing * 7.0 + Vector2(0, -22), facing * 34.0 + Vector2(0, -22), Color("8a5147"), 6.0)
 		return
-	var hand_position := Vector2(0, -24) + facing * 14.0
+	var hand_position := Vector2(0, -27) + facing * 12.0 + facing.orthogonal() * 5.0
 	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
 	draw_texture_rect_region(
 		BASIC_WEAPONS,
@@ -658,13 +689,29 @@ func _draw_director_reaper(growth: int, scale: float, fallback_color: Color) -> 
 		draw_arc(facing * (42.0 * scale), 15.0 * scale, facing.angle() - 1.35, facing.angle() + 0.55, 10, fallback_color, 5.0 + growth * 0.45)
 		return
 	var frame := clampi(growth, 0, 5)
-	var hand_position := Vector2(0, -24) + facing * (22.0 + growth * 1.5)
+	var hand_position := Vector2(0, -27) + facing * (14.0 + growth * 0.8) + facing.orthogonal() * 5.0
 	draw_set_transform(hand_position, facing.angle() + PI * 0.5, Vector2.ONE * scale)
 	draw_texture_rect_region(
 		DIRECTOR_REAPER_GROWTH,
 		Rect2(-32, -32, 64, 64),
 		Rect2(frame * 64, 0, 64, 64),
 		Color(1.18, 1.1, 1.08, 1.0) if _attack_flash > 0.0 else Color.WHITE
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_conductor_railgun(growth: int, scale: float, fallback_color: Color) -> void:
+	if CONDUCTOR_RAILGUN_GROWTH == null or CONDUCTOR_RAILGUN_GROWTH.get_size() != Vector2(384, 64):
+		draw_line(facing * 9.0, facing * (45.0 * scale), fallback_color, 7.0)
+		return
+	var frame := clampi(growth, 0, 5)
+	var hand_position := Vector2(0, -27) + facing * (13.0 + growth * 0.6) + facing.orthogonal() * 5.0
+	draw_set_transform(hand_position, facing.angle(), Vector2.ONE * scale)
+	draw_texture_rect_region(
+		CONDUCTOR_RAILGUN_GROWTH,
+		Rect2(-18, -38, 64, 64),
+		Rect2(frame * 64, 0, 64, 64),
+		Color(1.14, 1.12, 1.1, 1.0) if _attack_flash > 0.0 else Color.WHITE,
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

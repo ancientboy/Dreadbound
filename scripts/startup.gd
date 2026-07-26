@@ -2,6 +2,7 @@ extends Control
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const HOME_KEYART: Texture2D = preload("res://assets/art/brand/home_keyart.png")
+const DREADBOUND_LOGO: Texture2D = preload("res://assets/art/brand/dreadbound_logo.png")
 
 var content: VBoxContainer
 var feature_grid: GridContainer
@@ -59,13 +60,18 @@ func _build_home() -> void:
 	var nav := HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 12)
 	content.add_child(nav)
-	var brand := Label.new()
-	brand.text = "DREADBOUND"
-	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	brand.add_theme_font_override("font", UI_FONT)
-	brand.add_theme_font_size_override("font_size", 22)
-	brand.add_theme_color_override("font_color", Color("74e7cf"))
+	var brand := TextureRect.new()
+	brand.name = "BrandLogo"
+	brand.texture = DREADBOUND_LOGO
+	brand.custom_minimum_size = Vector2(205, 52)
+	brand.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	brand.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	brand.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	brand.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	nav.add_child(brand)
+	var nav_spacer := Control.new()
+	nav_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nav.add_child(nav_spacer)
 	var build := Label.new()
 	build.text = "PLAYABLE ALPHA · O1 VISUAL SLICE"
 	build.add_theme_font_size_override("font_size", 13)

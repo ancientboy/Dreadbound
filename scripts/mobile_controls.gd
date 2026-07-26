@@ -2,6 +2,7 @@ class_name MobileControls
 extends Control
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+const MOBILE_CONTROL_ICONS: Texture2D = preload("res://assets/art/ui/mobile_controls.png")
 
 const STICK_RADIUS := 82.0
 const KNOB_RADIUS := 34.0
@@ -175,35 +176,37 @@ func _draw() -> void:
 	var trait_center := _trait_center()
 	draw_circle(stick_center, STICK_RADIUS, Color(0.04, 0.11, 0.1, 0.68))
 	draw_arc(stick_center, STICK_RADIUS, 0.0, TAU, 48, Color(0.25, 0.58, 0.52, 0.72), 3.0)
+	_draw_control_icon(0, stick_center, 76.0, Color(0.78, 0.9, 0.86, 0.58))
 	draw_circle(stick_center + movement_vector * STICK_RADIUS, KNOB_RADIUS, Color(0.27, 0.72, 0.63, 0.82))
 	draw_circle(action_center, ACTION_RADIUS, Color(0.04, 0.15, 0.13, 0.86))
 	draw_arc(action_center, ACTION_RADIUS, 0.0, TAU, 48, Color(0.25, 0.88, 0.76, 0.9), 4.0)
 	if _action_touch != -1:
 		draw_circle(action_center, ACTION_RADIUS - 8.0, Color(0.25, 0.88, 0.76, 0.25))
-	draw_string(UI_FONT, action_center + Vector2(-8, 9), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("65e6cf"))
+	_draw_control_icon(1, action_center, 52.0)
 	draw_string(UI_FONT, action_center + Vector2(-14, 82), "交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.45, 0.72, 0.66, 0.9))
 	draw_circle(attack_center, ACTION_RADIUS, Color(0.14, 0.055, 0.05, 0.88))
 	draw_arc(attack_center, ACTION_RADIUS, 0.0, TAU, 48, Color(0.75, 0.28, 0.24, 0.92), 4.0)
 	if _attack_touch != -1:
 		draw_circle(attack_center, ACTION_RADIUS - 8.0, Color(0.8, 0.25, 0.2, 0.28))
-	draw_string(UI_FONT, attack_center + Vector2(-26, 8), "攻击", HORIZONTAL_ALIGNMENT_CENTER, 52, 20, Color("e8897f"))
+	_draw_control_icon(2, attack_center, 54.0)
 	draw_circle(item_center, ACTION_RADIUS - 8.0, Color(0.08, 0.13, 0.075, 0.9))
 	draw_arc(item_center, ACTION_RADIUS - 8.0, 0.0, TAU, 48, Color(0.48, 0.72, 0.49, 0.92), 3.0)
 	if _item_touch != -1:
 		draw_circle(item_center, ACTION_RADIUS - 15.0, Color(0.48, 0.72, 0.49, 0.24))
 	var player := get_tree().get_first_node_in_group("player") as Player
 	var item_label := player.get_selected_item_name() if player else "道具"
-	draw_string(UI_FONT, item_center + Vector2(-31, 7), item_label, HORIZONTAL_ALIGNMENT_CENTER, 62, 15, Color("9bd0a3"))
+	_draw_control_icon(3, item_center, 48.0)
+	draw_string(UI_FONT, item_center + Vector2(-38, 70), item_label, HORIZONTAL_ALIGNMENT_CENTER, 76, 13, Color("9bd0a3"))
 	draw_circle(switch_center, ACTION_RADIUS - 16.0, Color(0.06, 0.09, 0.12, 0.92))
 	draw_arc(switch_center, ACTION_RADIUS - 16.0, 0.0, TAU, 40, Color(0.38, 0.61, 0.7, 0.9), 3.0)
 	if _switch_touch != -1:
 		draw_circle(switch_center, ACTION_RADIUS - 22.0, Color(0.38, 0.61, 0.7, 0.25))
-	draw_string(UI_FONT, switch_center + Vector2(-23, 6), "武器", HORIZONTAL_ALIGNMENT_CENTER, 46, 15, Color("82b8c8"))
+	_draw_control_icon(4, switch_center, 42.0)
 	draw_circle(item_switch_center, 36.0, Color(0.1, 0.08, 0.12, 0.92))
 	draw_arc(item_switch_center, 36.0, 0.0, TAU, 36, Color(0.65, 0.48, 0.72, 0.9), 3.0)
 	if _item_switch_touch != -1:
 		draw_circle(item_switch_center, 29.0, Color(0.65, 0.48, 0.72, 0.25))
-	draw_string(UI_FONT, item_switch_center + Vector2(-23, 6), "道具", HORIZONTAL_ALIGNMENT_CENTER, 46, 14, Color("c39bd0"))
+	_draw_control_icon(5, item_switch_center, 38.0)
 	var state := get_node_or_null("/root/GameState")
 	if state and state.has_equipment_trait("noise_lure"):
 		draw_circle(trait_center, 38.0, Color(0.14, 0.11, 0.04, 0.92))
@@ -212,11 +215,24 @@ func _draw() -> void:
 			draw_circle(trait_center, 30.0, Color(0.9, 0.65, 0.2, 0.25))
 		var scene := get_tree().current_scene
 		var remaining := float(scene.get("whistle_cooldown")) if scene and scene.get("whistle_cooldown") != null else 0.0
-		var trait_text := "吹哨" if remaining <= 0.0 else "%ds" % ceili(remaining)
-		draw_string(UI_FONT, trait_center + Vector2(-20, 6), trait_text, HORIZONTAL_ALIGNMENT_CENTER, 40, 14, Color("f0c873"))
+		if remaining <= 0.0:
+			_draw_control_icon(6, trait_center, 38.0)
+		else:
+			draw_string(UI_FONT, trait_center + Vector2(-20, 6), "%ds" % ceili(remaining), HORIZONTAL_ALIGNMENT_CENTER, 40, 14, Color("f0c873"))
 	if player and player.pathway_effects:
 		var y := 114.0
 		for status in player.pathway_effects.statuses():
 			var suffix := " %.1fs" % float(status.remaining) if float(status.remaining) >= 0.0 else ""
 			draw_string(UI_FONT, Vector2(22, y), "%s%s" % [str(status.name), suffix], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, status.color)
 			y += 22.0
+
+
+func _draw_control_icon(index: int, center: Vector2, draw_size: float, modulate := Color.WHITE) -> void:
+	if MOBILE_CONTROL_ICONS == null or MOBILE_CONTROL_ICONS.get_size() != Vector2(256, 128):
+		return
+	draw_texture_rect_region(
+		MOBILE_CONTROL_ICONS,
+		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
+		Rect2((index % 4) * 64, floori(float(index) / 4.0) * 64, 64, 64),
+		modulate,
+	)
