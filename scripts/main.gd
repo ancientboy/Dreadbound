@@ -6,6 +6,9 @@ const PICKUP_SCENE: PackedScene = preload("res://scenes/entities/pickup.tscn")
 const CRAWLER_SCENE: PackedScene = preload("res://scenes/entities/crawler.tscn")
 const ORDERLY_SCENE: PackedScene = preload("res://scenes/entities/orderly.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss.tscn")
+const DROWNED_SCENE: PackedScene = preload("res://scenes/entities/drowned.tscn")
+const CONDUCTOR_SCENE: PackedScene = preload("res://scenes/entities/conductor.tscn")
+const LAST_TRAIN_SCENE: PackedScene = preload("res://scenes/entities/last_train_boss.tscn")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -68,6 +71,8 @@ var metro_train_window := -1.0
 var metro_route := ""
 var metro_water_damage_timer := 0.0
 var metro_water_state := 0
+var world_rules: WorldRules
+var ticket_recovery_used := false
 
 
 func _ready() -> void:
@@ -76,6 +81,7 @@ func _ready() -> void:
 	if run_seed == 0:
 		run_seed = GameState.begin_run(1337 if OS.has_feature("editor") else 0)
 	run_config = DynamicRunConfig.new(run_seed, GameState.selected_world)
+	world_rules = WorldRules.new(run_config.world_id)
 	assert(run_config.validate())
 	total_records = run_config.objective_count
 	_create_collision_walls()
@@ -98,6 +104,7 @@ func _ready() -> void:
 	player.weapon_changed.connect(_on_weapon_changed)
 	player.utility_changed.connect(_on_utility_changed)
 	player.selected_item_changed.connect(_on_selected_item_changed)
+	player.noise_generated.connect(_on_player_noise_generated)
 	abandon_button.pressed.connect(_on_abandon_pressed)
 	return_button.pressed.connect(_return_to_corridor)
 	event_choice_a.pressed.connect(_resolve_active_event.bind(true))
@@ -553,13 +560,11 @@ func _create_mission_interactables() -> void:
 
 func _create_patients() -> void:
 	for spawn_position in run_config.patient_spawns:
-		var patient := PATIENT_SCENE.instantiate() as Patient
+		var patient := (DROWNED_SCENE.instantiate() if run_config.world_id == "metro" else PATIENT_SCENE.instantiate()) as Patient
 		patient.position = spawn_position
 		patient.target = player
-		if run_config.world_id == "metro":
-			patient.movement_speed = 96.0
-			patient.max_health = 62
-			patient.enemy_label = "溺行者"
+		if patient is Drowned:
+			patient.water_depth_provider = _metro_water_depth_at
 		patient.tree_exiting.connect(_on_enemy_removed.bind(patient))
 		add_child(patient)
 
@@ -575,24 +580,20 @@ func _create_crawlers() -> void:
 
 func _create_orderlies() -> void:
 	for spawn_position in run_config.orderly_spawns:
-		var orderly := ORDERLY_SCENE.instantiate() as Orderly
+		var orderly := (CONDUCTOR_SCENE.instantiate() if run_config.world_id == "metro" else ORDERLY_SCENE.instantiate()) as Orderly
 		orderly.position = spawn_position
 		orderly.target = player
-		if run_config.world_id == "metro":
-			orderly.max_health = 130
-			orderly.attack_damage = 24
-			orderly.enemy_label = "检票员"
+		if orderly is Conductor:
+			orderly.noise_provider = func(): return metro_noise
+			orderly.route_provider = func(): return metro_route
 		orderly.tree_exiting.connect(_on_enemy_removed.bind(orderly))
 		add_child(orderly)
 
 
 func _create_boss() -> void:
-	boss = BOSS_SCENE.instantiate() as SanatoriumBoss
+	boss = (LAST_TRAIN_SCENE.instantiate() if run_config.world_id == "metro" else BOSS_SCENE.instantiate()) as SanatoriumBoss
 	boss.position = run_config.boss_position
 	boss.target = player
-	if run_config.world_id == "metro":
-		boss.boss_label = "末班列车 · 车长回声"
-		boss.max_health = 360
 	boss.tree_exiting.connect(_on_enemy_removed.bind(boss))
 	add_child(boss)
 
@@ -634,7 +635,7 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 func _spawn_reward_chest(at: Vector2) -> RewardChest:
 	var chest := RewardChest.new()
 	chest.position = at
-	var pool := EquipmentDatabase.metro_reward_pool() if run_config.world_id == "metro" else EquipmentDatabase.reward_pool()
+	var pool := world_rules.reward_pool()
 	pool.shuffle()
 	chest.candidates.assign(pool.slice(0, 3))
 	add_child.call_deferred(chest)
@@ -701,7 +702,7 @@ func _create_risk_events() -> void:
 		var event_id: String = run_config.side_contracts[index]
 		var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
 		if run_config.world_id == "metro":
-			var metro_events := ["floating_locker", "wrong_announcement", "help_carriage", "breaker_bypass"]
+			var metro_events := world_rules.event_ids()
 			var metro_id: String = metro_events[(absi(run_config.seed) + index) % metro_events.size()]
 			match metro_id:
 				"floating_locker": _add_risk_event(metro_id, "漂浮失物柜", "密封包正在水面上翻转。取走补给会破坏防水层。", "强取：补给 + 潮位上升", "放弃：保持干燥", at)
@@ -768,9 +769,11 @@ func _update_metro_pressure(delta: float) -> void:
 	if metro_train_window > 0.0:
 		metro_train_window -= delta
 		if metro_train_window <= 0.0:
-			metro_train_window = 35.0
+			var has_ticket := GameState.has_equipment_trait("missed_train_recovery") and not ticket_recovery_used
+			ticket_recovery_used = ticket_recovery_used or has_ticket
+			metro_train_window = world_rules.train_window(metro_route, has_ticket, true)
 			metro_noise += 1
-			_show_notification("错过末班车：备用道岔响应，补救车次开放 35 秒。", 5.0)
+			_show_notification("末班票根解析出隐藏车次：补救窗口延长至 50 秒。" if has_ticket else "错过末班车：备用道岔响应，补救车次开放 35 秒。", 5.0)
 	_update_mission_ui()
 	_update_metro_water_state(delta)
 
@@ -784,7 +787,7 @@ func _activate_metro_route(target: ObjectiveInteractable) -> void:
 		if item.kind == ObjectiveInteractable.Kind.POWER and item != target:
 			item.mark_complete()
 	boss.activate(player)
-	metro_train_window = 115.0 if metro_route == "north" else 70.0
+	metro_train_window = world_rules.train_window(metro_route, false)
 	if metro_route == "north":
 		metro_noise += 1
 		_show_notification("高架慢线已校准：北站台 115 秒窗口。路线更长，但可避开深水。\n车长回声是可选回收目标，不必击杀。", 6.0)
@@ -817,7 +820,7 @@ func _update_metro_water_state(delta: float) -> void:
 		else:
 			_show_notification("已回到干燥高地。", 1.5)
 		queue_redraw()
-	player.environment_speed_multiplier = 0.68 if metro_water_state == 1 else (0.46 if metro_water_state == 2 else 1.0)
+	player.environment_speed_multiplier = world_rules.water_speed_multiplier(metro_water_state, GameState.has_equipment_trait("reduce_water_penalty"))
 	if metro_water_state == 2:
 		metro_water_damage_timer += delta
 		if metro_water_damage_timer >= 1.2:
@@ -825,6 +828,18 @@ func _update_metro_water_state(delta: float) -> void:
 			player.take_damage(4, player.global_position - Vector2(0, 1))
 	else:
 		metro_water_damage_timer = 0.0
+
+
+func _on_player_noise_generated(amount: int) -> void:
+	if run_config.world_id != "metro":
+		return
+	metro_noise += amount
+	if GameState.has_equipment_trait("noise_lure"):
+		metro_noise += 1
+		for enemy in get_tree().get_nodes_in_group("metro_enemies"):
+			if enemy is Conductor:
+				enemy._last_seen_position = player.global_position
+				enemy._memory_timer = 8.0
 
 
 func _create_feedback_layer() -> void:

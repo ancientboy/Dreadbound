@@ -67,6 +67,7 @@ func _ready() -> void:
 	deploy_button.visible = false
 	_create_warehouse_panel()
 	_create_mobile_terminal_panel()
+	_create_curator_controls()
 	_refresh()
 	if not GameState.corridor_intro_seen:
 		GameState.corridor_intro_seen = true
@@ -209,7 +210,8 @@ func _nearby_target() -> Dictionary:
 func _activate_target(id: String) -> void:
 	match id:
 		"curator":
-			feedback.text = "阈值司仪：%s\n建议：%s" % [str(GameState.player_profile.get("last_observation", "尚无足够行动数据。")), "完成一次低噪声撤离试炼。" if int(GameState.player_profile.get("noise_actions", 0)) >= 4 else "继续选择可解释的风险，而非盲目深入。"]
+			var trial := GameState.get_curator_trial()
+			feedback.text = "%s\n%s" % [str(GameState.player_profile.get("last_observation", "尚无足够行动数据。")), "当前试炼：%s · %s" % [trial.title, trial.description] if not trial.is_empty() else "尚未采纳试炼；可在终端档案区选择。"]
 			_open_terminal()
 		"terminal": _open_terminal()
 		"sanatorium_gate": _deploy_world("sanatorium")
@@ -469,6 +471,29 @@ func _create_mobile_terminal_panel() -> void:
 	add_child(mobile_terminal_panel)
 
 
+func _create_curator_controls() -> void:
+	var archive := $Margin/Layout/Columns/Archive as VBoxContainer
+	var view := Button.new()
+	view.name = "CuratorTrial"
+	view.custom_minimum_size = Vector2(0, 46)
+	view.text = "采纳 / 暂缓司仪试炼"
+	view.pressed.connect(_toggle_curator_trial)
+	archive.add_child(view)
+	var reset := Button.new()
+	reset.name = "ResetCurator"
+	reset.custom_minimum_size = Vector2(0, 42)
+	reset.text = "重置司仪观察"
+	reset.pressed.connect(_reset_curator_profile)
+	archive.add_child(reset)
+
+
+func _toggle_curator_trial() -> void:
+	if GameState.get_curator_trial().is_empty():
+		_accept_trial()
+	else:
+		_dismiss_trial()
+
+
 func _refresh_mobile_terminal() -> void:
 	if mobile_terminal_panel == null:
 		return
@@ -502,6 +527,18 @@ func _refresh_mobile_terminal() -> void:
 	scroll.add_child(content)
 	_mobile_terminal_section(content, "漂泊者档案", stats.text)
 	_mobile_terminal_section(content, "上次行动", report.text)
+	_mobile_terminal_section(content, "阈值司仪 · 行动档案", _curator_profile_text())
+	var trial := GameState.get_curator_trial()
+	var trial_action := Button.new()
+	trial_action.custom_minimum_size = Vector2(0, 54)
+	trial_action.text = "暂缓当前试炼" if not trial.is_empty() else "采纳一项可选试炼"
+	trial_action.pressed.connect(_dismiss_trial if not trial.is_empty() else _accept_trial)
+	content.add_child(trial_action)
+	var reset_profile := Button.new()
+	reset_profile.custom_minimum_size = Vector2(0, 48)
+	reset_profile.text = "重置司仪观察（不影响装备与成长）"
+	reset_profile.pressed.connect(_reset_curator_profile)
+	content.add_child(reset_profile)
 	_mobile_terminal_section(content, "出发整备", "在这里调整配置；副本入口请返回回廊使用对应传说门。")
 	for loadout_id in GameProgress.LOADOUTS:
 		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
@@ -569,6 +606,36 @@ func _mobile_terminal_section(parent: VBoxContainer, title: String, body: String
 	text.add_theme_font_size_override("font_size", 15)
 	text.add_theme_color_override("font_color", Color("a7bbb4"))
 	parent.add_child(text)
+
+
+func _curator_profile_text() -> String:
+	var profile: Dictionary = GameState.player_profile
+	var trial := GameState.get_curator_trial()
+	var lines := [str(profile.get("last_observation", "尚无足够行动数据。")), "行动 %d · 成功 %d · 静默撤离 %d · 风险选择 %d · 清除威胁 %d" % [int(profile.get("runs", 0)), int(profile.get("successful_runs", 0)), int(profile.get("quiet_successes", 0)), int(profile.get("events_taken", 0)), int(profile.get("threats_cleared", 0))]]
+	if not trial.is_empty():
+		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward])
+	var recent: Array = profile.get("recent_runs", [])
+	for run in recent:
+		lines.append("%s · %s · 噪音%d · 事件%d" % ["地铁" if str(run.get("world", "")) == "metro" else "疗养院", "撤离" if bool(run.get("success", false)) else "失联", int(run.get("noise", 0)), int(run.get("events", 0))])
+	return "\n".join(lines)
+
+
+func _accept_trial() -> void:
+	GameState.accept_curator_trial()
+	feedback.text = "阈值司仪：试炼已采纳；依据、条件与奖励均已写入档案。"
+	_refresh()
+
+
+func _dismiss_trial() -> void:
+	GameState.dismiss_curator_trial()
+	feedback.text = "阈值司仪：已暂缓该方向，不会重复强制提示。"
+	_refresh()
+
+
+func _reset_curator_profile() -> void:
+	GameState.reset_curator_profile()
+	feedback.text = "阈值司仪观察已重置；装备、货币与职业成长未改变。"
+	_refresh()
 
 
 func _hub_stick_center() -> Vector2:

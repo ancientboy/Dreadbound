@@ -160,7 +160,9 @@ func map_size() -> Vector2:
 
 func map_regions() -> Array[Dictionary]:
 	if world_id == "metro":
-		return METRO_MAP_REGIONS.duplicate(true)
+		var metro_regions: Array[Dictionary] = []
+		metro_regions.assign(METRO_MAP_REGIONS.duplicate(true))
+		return metro_regions
 	var regions: Array[Dictionary] = []
 	var index := 0
 	for room in SanatoriumLayout.rooms():

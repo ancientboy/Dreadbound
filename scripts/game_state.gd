@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 8
+const SAVE_VERSION := 9
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -37,7 +37,7 @@ var equipped := {"weapon": "", "charm": ""}
 var active_run_seed := 0
 var last_action_code := ""
 var selected_world := "sanatorium"
-var player_profile := {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
+var player_profile := _default_player_profile()
 var unlocked_path_nodes: Array[String] = []
 var selected_pathway := ""
 
@@ -57,6 +57,54 @@ func get_player_stats() -> Dictionary:
 		"shotgun_damage": 28 + int(upgrades.weapons) * 3 + int(gear.shotgun_damage) + int(path.shotgun_damage),
 		"bandage_heal": 35 + int(upgrades.recovery) * 7 + int(gear.bandage_heal) + int(path.bandage_heal),
 	}
+
+
+static func _default_player_profile() -> Dictionary:
+	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": []}
+
+
+func has_equipment_trait(trait_id: String) -> bool:
+	return EquipmentDatabase.has_trait(equipped, trait_id)
+
+
+func get_curator_trial() -> Dictionary:
+	var active := str(player_profile.get("active_trial", ""))
+	if active == "quiet_extraction":
+		return {"id": active, "title": "静默末班", "description": "在潮没末班线以噪音不高于 3 成功撤离。", "reward": "1 因果残片"}
+	if active == "risk_control":
+		return {"id": active, "title": "可控异常", "description": "解决至少 2 个风险事件并成功撤离。", "reward": "1 因果残片"}
+	return {}
+
+
+func accept_curator_trial() -> bool:
+	if not str(player_profile.get("active_trial", "")).is_empty():
+		return false
+	var dismissed: Array = player_profile.get("dismissed_trials", [])
+	var candidate := "quiet_extraction" if int(player_profile.get("noise_actions", 0)) >= 4 and not dismissed.has("quiet_extraction") else "risk_control"
+	player_profile.active_trial = candidate
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func dismiss_curator_trial() -> bool:
+	var active := str(player_profile.get("active_trial", ""))
+	if active.is_empty():
+		return false
+	var dismissed: Array = player_profile.get("dismissed_trials", [])
+	if not dismissed.has(active):
+		dismissed.append(active)
+	player_profile.dismissed_trials = dismissed
+	player_profile.active_trial = ""
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func reset_curator_profile() -> void:
+	player_profile = _default_player_profile()
+	save_progress()
+	progress_changed.emit()
 
 
 func get_path_bonuses() -> Dictionary:
@@ -134,7 +182,16 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	player_profile.metro_runs = int(player_profile.get("metro_runs", 0)) + (1 if str(run_summary.get("world", "")) == "metro" else 0)
 	player_profile.noise_actions = int(player_profile.get("noise_actions", 0)) + int(run_summary.get("noise", 0))
 	player_profile.events_taken = int(player_profile.get("events_taken", 0)) + events_resolved
+	player_profile.threats_cleared = int(player_profile.get("threats_cleared", 0)) + enemies_defeated
+	if success and int(run_summary.get("noise", 0)) <= 3:
+		player_profile.quiet_successes = int(player_profile.get("quiet_successes", 0)) + 1
 	player_profile.last_observation = _build_observation(success, enemies_defeated, events_resolved, run_summary)
+	var recent: Array = player_profile.get("recent_runs", [])
+	recent.push_front({"world": str(run_summary.get("world", "sanatorium")), "success": success, "noise": int(run_summary.get("noise", 0)), "events": events_resolved, "threats": enemies_defeated, "action_code": str(run_summary.get("action_code", ""))})
+	if recent.size() > 5:
+		recent.resize(5)
+	player_profile.recent_runs = recent
+	_complete_curator_trial_if_eligible(success, events_resolved, run_summary)
 	if success:
 		echo_shards += banked
 		corridor_unlocked = true
@@ -142,6 +199,19 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	save_progress()
 	progress_changed.emit()
 	return banked
+
+
+func _complete_curator_trial_if_eligible(success: bool, events_resolved: int, run_summary: Dictionary) -> void:
+	var trial := str(player_profile.get("active_trial", ""))
+	var completed := success and ((trial == "quiet_extraction" and str(run_summary.get("world", "")) == "metro" and int(run_summary.get("noise", 0)) <= 3) or (trial == "risk_control" and events_resolved >= 2))
+	if not completed:
+		return
+	var completed_trials: Array = player_profile.get("completed_trials", [])
+	if not completed_trials.has(trial):
+		completed_trials.append(trial)
+		causality_fragments += 1
+	player_profile.completed_trials = completed_trials
+	player_profile.active_trial = ""
 
 
 func get_upgrade_cost(upgrade_id: String) -> int:
@@ -292,7 +362,7 @@ func reset_progress() -> void:
 	active_run_seed = 0
 	last_action_code = ""
 	selected_world = "sanatorium"
-	player_profile = {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
+	player_profile = _default_player_profile()
 	unlocked_path_nodes.clear()
 	selected_pathway = ""
 	if FileAccess.file_exists(save_path):

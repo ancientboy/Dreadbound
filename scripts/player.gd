@@ -7,6 +7,7 @@ signal inventory_changed(bandages: int, echo_shards: int)
 signal weapon_changed(weapon_name: String, ammo: int)
 signal utility_changed(sedatives: int, duration: float)
 signal selected_item_changed(item_name: String, count: int)
+signal noise_generated(amount: int)
 
 enum Weapon { MELEE, RANGED, SHOTGUN }
 enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
@@ -135,15 +136,19 @@ func try_attack() -> bool:
 		return _try_ranged_attack()
 	if current_weapon == Weapon.SHOTGUN:
 		return _try_shotgun_attack()
-	_attack_timer = attack_cooldown
+	var state := get_node_or_null("/root/GameState")
+	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
+	_attack_timer = attack_cooldown + (0.12 if insulated else 0.0)
 	_play_tone(115.0, 0.08)
+	noise_generated.emit(1)
 	_attack_flash = 0.14
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
 		var offset: Vector2 = target.global_position - global_position
 		if offset.length() <= attack_range and facing.dot(offset.normalized()) >= 0.25:
-			target.take_damage(attack_damage, global_position)
+			var damage := int(attack_damage * 1.35) if insulated and (target is Conductor or target is LastTrainBoss) else attack_damage
+			target.take_damage(damage, global_position)
 	queue_redraw()
 	return true
 
@@ -155,6 +160,7 @@ func _try_ranged_attack() -> bool:
 	_attack_flash = 0.11
 	ammo -= 1
 	_play_tone(520.0, 0.07)
+	noise_generated.emit(3)
 	var best_target: Node2D
 	var best_distance := ranged_range
 	for target in get_tree().get_nodes_in_group("enemies"):
@@ -181,6 +187,7 @@ func _try_shotgun_attack() -> bool:
 	_attack_flash = 0.16
 	shells -= 1
 	_play_tone(190.0, 0.14)
+	noise_generated.emit(4)
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue

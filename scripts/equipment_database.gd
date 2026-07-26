@@ -10,10 +10,10 @@ const ITEMS := {
 	"calming_coil": {"name": "镇静线圈", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 116, "description": "生命上限 +8 · 绷带恢复 +3", "max_health": 8, "bandage_heal": 3},
 	"ward_echo": {"name": "病房回响体", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 148, "description": "生命上限 +12 · 移速 +3", "max_health": 12, "movement_speed": 3.0},
 	"cyan_mark": {"name": "异常青印", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 176, "description": "全武器伤害 +5 · 生命上限 -8", "max_health": -8, "melee_damage": 5, "ranged_damage": 5, "shotgun_damage": 5},
-	"waterproof_pulse": {"name": "防水脉冲腕带", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 124, "description": "潮没区域移速 +8 · 生命上限 -3", "movement_speed": 8.0, "max_health": -3},
-	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "description": "武器伤害 +3 · 会放大行动噪音", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
-	"insulated_crowbar": {"name": "绝缘撬棍", "quality": "回响", "quality_rank": 2, "slot": "weapon", "rating": 158, "description": "近战伤害 +11 · 生命上限 -4", "melee_damage": 11, "max_health": -4},
-	"last_ticket": {"name": "末班票根", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 182, "description": "生命上限 +6 · 全武器伤害 +3", "max_health": 6, "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
+	"waterproof_pulse": {"name": "防水脉冲腕带", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 124, "trait": "reduce_water_penalty", "description": "浸水减速降低 35% · 生命上限 -3", "max_health": -3},
+	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "trait": "noise_lure", "description": "攻击会额外诱引地铁敌人 · 武器伤害 +3", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
+	"insulated_crowbar": {"name": "绝缘撬棍", "quality": "回响", "quality_rank": 2, "slot": "weapon", "rating": 158, "trait": "signal_anchor_damage", "description": "对检票员/车长近战伤害 +35% · 冷却 +0.12 秒 · 生命上限 -4", "melee_damage": 11, "max_health": -4},
+	"last_ticket": {"name": "末班票根", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 182, "trait": "missed_train_recovery", "description": "首次错过车次时补救窗口延长 15 秒 · 生命上限 +6", "max_health": 6},
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
@@ -38,3 +38,10 @@ static func get_bonuses(equipped: Dictionary) -> Dictionary:
 		for stat in bonuses:
 			bonuses[stat] += item.get(stat, 0)
 	return bonuses
+
+
+static func has_trait(equipped: Dictionary, trait_id: String) -> bool:
+	for item_id in equipped.values():
+		if str(get_item(str(item_id)).get("trait", "")) == trait_id:
+			return true
+	return false
