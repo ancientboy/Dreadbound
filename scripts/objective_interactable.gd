@@ -4,6 +4,7 @@ extends Node2D
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_props.png")
 const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
+const METRO_PROPS: Texture2D = preload("res://assets/art/worlds/metro/metro_props.png")
 
 enum Kind { RECORD, POWER, EXIT, FLOODGATE, NPC, SECRET }
 
@@ -54,6 +55,18 @@ func mark_active() -> void:
 func _draw() -> void:
 	var color := _display_color()
 	draw_circle(Vector2.ZERO, 44.0, Color(color, 0.06))
+	var metro_prop_index := _metro_prop_index()
+	if metro_prop_index >= 0 and METRO_PROPS != null and METRO_PROPS.get_size() == Vector2(512, 384):
+		var draw_size := Vector2(112, 112) if kind in [Kind.EXIT, Kind.FLOODGATE] else Vector2(92, 92)
+		draw_texture_rect_region(
+			METRO_PROPS,
+			Rect2(-draw_size.x * 0.5, -draw_size.y * 0.68, draw_size.x, draw_size.y),
+			Rect2((metro_prop_index % 4) * 128, floori(float(metro_prop_index) / 4.0) * 128, 128, 128),
+			Color(0.58, 0.62, 0.64, 0.76) if completed else (Color(0.82, 1.0, 0.96) if active else Color.WHITE),
+		)
+		_draw_objective_halo(color)
+		draw_string(UI_FONT, Vector2(-110, 56), display_name, HORIZONTAL_ALIGNMENT_CENTER, 220, 12, color)
+		return
 	var objective_index := _objective_sprite_index()
 	if objective_index >= 0 and SANATORIUM_OBJECTIVE_LIGHTING != null and SANATORIUM_OBJECTIVE_LIGHTING.get_size() == Vector2(512, 256):
 		draw_texture_rect_region(
@@ -110,6 +123,19 @@ func _sanatorium_prop_index() -> int:
 		return -1
 	match kind:
 		Kind.POWER: return 5
+	return -1
+
+
+func _metro_prop_index() -> int:
+	if world_id != "metro":
+		return -1
+	match kind:
+		Kind.RECORD: return 4
+		Kind.POWER: return 5
+		Kind.EXIT: return 10
+		Kind.FLOODGATE: return 6
+		Kind.NPC: return 2
+		Kind.SECRET: return 11
 	return -1
 
 

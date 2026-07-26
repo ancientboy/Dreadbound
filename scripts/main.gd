@@ -13,6 +13,8 @@ const SIGNAL_ANCHOR_SCENE: PackedScene = preload("res://scenes/entities/signal_a
 const SANATORIUM_TILESET: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_tileset.png")
 const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_props.png")
 const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
+const METRO_TILESET: Texture2D = preload("res://assets/art/worlds/metro/metro_tileset.png")
+const METRO_PROPS: Texture2D = preload("res://assets/art/worlds/metro/metro_props.png")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -1433,22 +1435,18 @@ func _draw() -> void:
 	var metro := run_config != null and run_config.world_id == "metro"
 	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("10223a") if metro else (Color("15201c") if power_restored else Color("101514")))
 	if metro:
+		_draw_metro_floor()
 		# Tide is a playable surface, not background decoration: these are the low routes
 		# that slow the walker at level 1 and become damaging deep water at level 2.
-		for y in range(96, int(MAP_SIZE.y), 168):
-			draw_line(Vector2(32, y + 12), Vector2(MAP_SIZE.x - 32, y + 12), Color(0.28, 0.72, 0.9, 0.22), 2.0)
 		if metro_tide_level > 0:
 			for zone in METRO_SHALLOW_ZONES:
 				var deep := metro_tide_level >= 2 and METRO_DEEP_ZONES.any(func(deep_zone): return deep_zone == zone)
-				draw_rect(zone, Color("174d6d") if deep else Color("17607b"), true)
-				draw_rect(zone, Color("7fd9ed") if deep else Color("52a9c7"), false, 3.0)
-				for x in range(int(zone.position.x) + 20, int(zone.end.x), 46):
-					draw_line(Vector2(x, zone.position.y + 18), Vector2(x + 20, zone.position.y + 18), Color(0.68, 0.94, 1.0, 0.38), 2.0)
+				_draw_metro_water_zone(zone, deep)
 			if metro_floodgate_timer > 0.0:
-				draw_rect(METRO_DRAINED_ZONE, Color("223e4d"), true)
+				_draw_metro_room(METRO_DRAINED_ZONE, 5)
 				draw_rect(METRO_DRAINED_ZONE, Color("96e7ef"), false, 4.0)
 			elif metro_zero_route_timer > 0.0:
-				draw_rect(METRO_DRAINED_ZONE, Color("253844"), true)
+				_draw_metro_room(METRO_DRAINED_ZONE, 6)
 				draw_rect(METRO_DRAINED_ZONE, Color("a4f6cf"), false, 4.0)
 		if metro_route == "north":
 			draw_line(DynamicRunConfig.METRO_NORTH_SWITCH, DynamicRunConfig.METRO_NORTH_EXIT, Color("a4f6cf"), 5.0)
@@ -1461,17 +1459,18 @@ func _draw() -> void:
 			draw_string(UI_FONT, secret_rect.position + Vector2(24, 72), "失踪乘客维护层 // 副本记忆已显现", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 20, Color("d9b8ef"))
 	if not metro:
 		_draw_sanatorium_passages()
-	_draw_grid()
+		_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():
 		if metro:
-			draw_rect(wall, Color("39423d"))
-			draw_rect(wall, Color("59635c"), false, 2.0)
+			_draw_metro_wall(wall)
 		else:
 			_draw_sanatorium_wall(wall)
 	if not metro:
 		_draw_sanatorium_props()
 		_draw_sanatorium_lights()
+	else:
+		_draw_metro_props()
 	if metro and player and GameState.has_equipment_trait("noise_lure") and whistle_cooldown <= 0.0:
 		draw_arc(player.global_position, 280.0, 0.0, TAU, 72, Color(0.91, 0.7, 0.3, 0.22), 2.0)
 
@@ -1481,6 +1480,87 @@ func _draw_grid() -> void:
 		draw_line(Vector2(x, 0), Vector2(x, MAP_SIZE.y), Color(0.13, 0.17, 0.16, 0.3), 1.0)
 	for y in range(0, int(MAP_SIZE.y) + 1, 32):
 		draw_line(Vector2(0, y), Vector2(MAP_SIZE.x, y), Color(0.13, 0.17, 0.16, 0.3), 1.0)
+
+
+func _draw_metro_floor() -> void:
+	if METRO_TILESET == null or METRO_TILESET.get_size() != Vector2(256, 256):
+		return
+	var floor_tiles := [0, 16, 17, 32]
+	for y in range(0, int(MAP_SIZE.y), 32):
+		for x in range(0, int(MAP_SIZE.x), 32):
+			var variant: int = floor_tiles[posmod(floori(float(x) / 32.0) + floori(float(y) / 32.0), floor_tiles.size())]
+			_draw_metro_tile(Rect2(x, y, 32, 32), variant, Color(0.72, 0.79, 0.83, 0.9))
+	# Twin rail beds establish both authored routes even before one route is powered.
+	for rail_y in [512, 544, 896, 928]:
+		for x in range(32, int(MAP_SIZE.x) - 32, 32):
+			_draw_metro_tile(Rect2(x, rail_y, 32, 32), 8 + posmod(floori(float(x) / 32.0), 4), Color(0.82, 0.86, 0.88, 0.96))
+
+
+func _draw_metro_room(room_rect: Rect2, room_index: int) -> void:
+	if METRO_TILESET == null or METRO_TILESET.get_size() != Vector2(256, 256):
+		draw_rect(room_rect, Color("142b40"))
+		return
+	for y in range(int(room_rect.position.y), int(room_rect.end.y), 32):
+		for x in range(int(room_rect.position.x), int(room_rect.end.x), 32):
+			var edge_row := y >= int(room_rect.end.y) - 32
+			var tile_index := 16 + posmod(room_index + floori(float(x) / 32.0), 4) if edge_row else 32 + posmod(room_index + floori(float(x + y) / 32.0), 4)
+			_draw_metro_tile(Rect2(x, y, 32, 32), tile_index, Color(0.82, 0.86, 0.88, 0.94))
+
+
+func _draw_metro_water_zone(zone: Rect2, deep: bool) -> void:
+	for y in range(int(zone.position.y), int(zone.end.y), 32):
+		for x in range(int(zone.position.x), int(zone.end.x), 32):
+			var tile_index := 46 + posmod(floori(float(x + y) / 32.0), 2) if deep else 41 + posmod(floori(float(x + y) / 32.0), 5)
+			_draw_metro_tile(
+				Rect2(x, y, minf(32.0, zone.end.x - x), minf(32.0, zone.end.y - y)),
+				tile_index,
+				Color(0.52, 0.78, 0.9, 0.98) if deep else Color(0.62, 0.82, 0.9, 0.92),
+			)
+	draw_rect(zone, Color("7fd9ed") if deep else Color("52a9c7"), false, 3.0)
+
+
+func _draw_metro_wall(wall_rect: Rect2) -> void:
+	if METRO_TILESET == null or METRO_TILESET.get_size() != Vector2(256, 256):
+		draw_rect(wall_rect, Color("39423d"))
+		draw_rect(wall_rect, Color("59635c"), false, 2.0)
+		return
+	for y in range(int(wall_rect.position.y), int(wall_rect.end.y), 32):
+		for x in range(int(wall_rect.position.x), int(wall_rect.end.x), 32):
+			var tile_index := 2 + posmod(floori(float(x + y) / 32.0), 4)
+			_draw_metro_tile(Rect2(x, y, 32, 32), tile_index, Color(0.78, 0.8, 0.8, 0.98))
+	draw_rect(wall_rect, Color("6f7e83"), false, 2.0)
+
+
+func _draw_metro_tile(destination: Rect2, tile_index: int, modulate := Color.WHITE) -> void:
+	draw_texture_rect_region(
+		METRO_TILESET,
+		destination,
+		Rect2((tile_index % 8) * 32, floori(float(tile_index) / 8.0) * 32, 32, 32),
+		modulate,
+	)
+
+
+func _draw_metro_props() -> void:
+	var placements := [
+		[0, Vector2(224, 280), 112.0], [2, Vector2(672, 330), 112.0],
+		[3, Vector2(1120, 350), 112.0], [7, Vector2(1600, 300), 112.0],
+		[1, Vector2(760, 760), 104.0], [8, Vector2(1090, 820), 96.0],
+		[9, Vector2(1360, 720), 128.0], [7, Vector2(1664, 1100), 112.0],
+		[2, Vector2(1920, 1120), 112.0], [1, Vector2(480, 1120), 104.0],
+	]
+	for placement in placements:
+		_draw_metro_prop(int(placement[0]), placement[1], float(placement[2]))
+
+
+func _draw_metro_prop(index: int, center: Vector2, draw_size: float) -> void:
+	if METRO_PROPS == null or METRO_PROPS.get_size() != Vector2(512, 384):
+		draw_rect(Rect2(center - Vector2.ONE * 24.0, Vector2.ONE * 48.0), Color("33434a"))
+		return
+	draw_texture_rect_region(
+		METRO_PROPS,
+		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
+		Rect2((index % 4) * 128, floori(float(index) / 4.0) * 128, 128, 128),
+	)
 
 
 func _draw_sanatorium_passages() -> void:
@@ -1498,15 +1578,21 @@ func _draw_sanatorium_passages() -> void:
 
 
 func _draw_zones() -> void:
+	var metro := run_config != null and run_config.world_id == "metro"
+	if metro:
+		var metro_index := 0
+		for region in run_config.map_regions():
+			var room_rect: Rect2 = region.rect
+			_draw_metro_room(room_rect, metro_index)
+			draw_rect(room_rect, Color("527f91"), false, 2.0)
+			draw_string(UI_FONT, room_rect.position + Vector2(24, 42), str(region.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("86b9ce"))
+			metro_index += 1
+		return
 	var room_index := 0
 	for room in SanatoriumLayout.rooms():
-		var metro := run_config != null and run_config.world_id == "metro"
-		if metro:
-			draw_rect(room.rect, Color("142b40"))
-		else:
-			_draw_sanatorium_room(room.rect, room_index)
-		draw_rect(room.rect, Color("3a7090") if metro else Color("27332f"), false, 2.0)
-		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("86b9ce") if metro else Color("617269"))
+		_draw_sanatorium_room(room.rect, room_index)
+		draw_rect(room.rect, Color("27332f"), false, 2.0)
+		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
 		room_index += 1
 
 

@@ -69,5 +69,10 @@
 | `art_ui_hub_section_icons` | `assets/art/ui/hub_section_icons.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 corridor prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 七格 32×32、透明边缘与限色 | review |
 | `art_icon_o1_remaining_equipment` | `assets/art/icons/equipment/`、`assets/art/icons/unique/` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 补齐 11 件装备图标、32×32、透明边缘与限色 | review |
 | `art_material_o1_metro` | `assets/art/icons/materials/` | 定向生成原创 | OpenAI image generation / Dreadbound O1 inventory prompt | `docs/o1-corridor-inventory-grid.md` | 商业生成与修改权 | 三种地铁材料图标、32×32、透明边缘与限色 | review |
+| `art_metro_tileset` | `assets/art/worlds/metro/metro_tileset.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 8×8 分格、32×32 Tile、色键与紫边清理、限色 | review |
+| `art_metro_props` | `assets/art/worlds/metro/metro_props.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 4×3 分格、128×128 Prop、透明边缘与限色 | review |
+| `art_enemy_drowned` | `assets/art/characters/metro/drowned_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
+| `art_enemy_inspector` | `assets/art/characters/metro/inspector_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
+| `art_enemy_signal_anchor` | `assets/art/characters/metro/signal_anchor_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 metro prompt | `docs/o1-metro-environment.md` | 商业生成与修改权 | 色键移除、4×6 帧格、64×64 Nearest | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。

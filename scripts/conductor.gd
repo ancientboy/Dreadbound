@@ -1,6 +1,8 @@
 class_name Conductor
 extends Orderly
 
+const INSPECTOR_SPRITESHEET: Texture2D = preload("res://assets/art/characters/metro/inspector_spritesheet.png")
+
 var noise_provider: Callable
 var route_provider: Callable
 var _charge_windup := 0.0
@@ -19,6 +21,22 @@ func _ready() -> void:
 	movement_speed = 54.0
 	super._ready()
 	add_to_group("metro_enemies")
+
+
+func _setup_body_sprite() -> void:
+	if INSPECTOR_SPRITESHEET == null or INSPECTOR_SPRITESHEET.get_size() != Vector2(288, 256):
+		push_warning("Inspector sprite sheet unavailable or invalid; using visible fallback silhouette.")
+		return
+	_body_sprite = Sprite2D.new()
+	_body_sprite.name = "BodySprite"
+	_body_sprite.texture = INSPECTOR_SPRITESHEET
+	_body_sprite.hframes = 6
+	_body_sprite.vframes = 4
+	_body_sprite.position = Vector2(0, -28)
+	_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_body_sprite.z_index = 1
+	add_child(_body_sprite)
+	_sync_body_sprite(0.0)
 
 
 func _physics_process(delta: float) -> void:
