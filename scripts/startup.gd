@@ -10,6 +10,9 @@ var profile_button: Button
 
 
 func _ready() -> void:
+	var home_theme := Theme.new()
+	home_theme.default_font = UI_FONT
+	theme = home_theme
 	get_viewport().size_changed.connect(_apply_responsive_ui)
 	_build_home()
 	_apply_responsive_ui()
@@ -92,21 +95,34 @@ func _build_home() -> void:
 	subtitle.add_theme_color_override("font_color", Color("a9c3bc"))
 	content.add_child(subtitle)
 
-	var actions := HBoxContainer.new()
+	var actions := BoxContainer.new()
 	actions.name = "HomeActions"
 	actions.add_theme_constant_override("separation", 12)
 	content.add_child(actions)
 	primary_button = Button.new()
 	primary_button.name = "EnterGame"
-	primary_button.text = "继续进入终末回廊  →" if not ProfileManager.active_profile_id.is_empty() else "建立行者档案并开始  →"
-	primary_button.custom_minimum_size = Vector2(320, 58)
+	primary_button.text = "进入终末回廊  →" if not ProfileManager.active_profile_id.is_empty() else "建立行者档案，进入终末回廊  →"
+	primary_button.custom_minimum_size = Vector2(360, 64)
 	primary_button.add_theme_font_size_override("font_size", 18)
+	primary_button.add_theme_color_override("font_color", Color("03110f"))
+	primary_button.add_theme_color_override("font_hover_color", Color("03110f"))
+	primary_button.add_theme_color_override("font_pressed_color", Color("dffff8"))
+	primary_button.add_theme_stylebox_override("normal", _button_style(Color("62e5cd"), Color("8af5e1")))
+	primary_button.add_theme_stylebox_override("hover", _button_style(Color("87f0dc"), Color("c0fff2")))
+	primary_button.add_theme_stylebox_override("pressed", _button_style(Color("17695f"), Color("79e7d2")))
+	primary_button.add_theme_stylebox_override("focus", _button_style(Color("62e5cd"), Color("e3fff9"), 3))
 	primary_button.pressed.connect(_enter_game)
 	actions.add_child(primary_button)
 	profile_button = Button.new()
 	profile_button.name = "OpenProfiles"
 	profile_button.text = "选择 / 管理行者档案"
-	profile_button.custom_minimum_size = Vector2(250, 58)
+	profile_button.custom_minimum_size = Vector2(260, 64)
+	profile_button.add_theme_font_size_override("font_size", 17)
+	profile_button.add_theme_color_override("font_color", Color("b9d9d2"))
+	profile_button.add_theme_color_override("font_hover_color", Color("e9fff9"))
+	profile_button.add_theme_stylebox_override("normal", _button_style(Color("0b1d1c"), Color("37645e")))
+	profile_button.add_theme_stylebox_override("hover", _button_style(Color("12312e"), Color("68b5a8")))
+	profile_button.add_theme_stylebox_override("pressed", _button_style(Color("081514"), Color("4c8e83")))
 	profile_button.pressed.connect(_open_profiles)
 	actions.add_child(profile_button)
 
@@ -169,6 +185,19 @@ func _add_feature(title: String, body: String) -> void:
 	panel.add_child(description)
 
 
+func _button_style(background: Color, border: Color, border_width: int = 1) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 14
+	style.content_margin_bottom = 14
+	return style
+
+
 func _add_world_card(code: String, title: String, english: String, intro: String, fear: String) -> void:
 	var panel := VBoxContainer.new()
 	panel.custom_minimum_size = Vector2(0, 184)
@@ -209,9 +238,10 @@ func _apply_responsive_ui() -> void:
 	world_grid.columns = 1 if compact else 2
 	var title := content.get_node("HeroTitle") as Label
 	title.add_theme_font_size_override("font_size", 38 if compact else 58)
-	var actions := content.get_node("HomeActions") as HBoxContainer
-	primary_button.custom_minimum_size.x = 0 if compact else 320
-	profile_button.custom_minimum_size.x = 0 if compact else 250
+	var actions := content.get_node("HomeActions") as BoxContainer
+	actions.vertical = compact
+	primary_button.custom_minimum_size.x = 0 if compact else 360
+	profile_button.custom_minimum_size.x = 0 if compact else 260
 	primary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	profile_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.custom_minimum_size.x = 0
