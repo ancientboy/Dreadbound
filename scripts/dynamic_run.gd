@@ -3,6 +3,11 @@ extends RefCounted
 
 const ROOM_MODULES := ["入口大厅", "病房甲区", "护理站", "隔离病房", "实验档案室", "地下维护区", "药品库", "撤离通道"]
 const METRO_ROOM_MODULES := ["检票大厅", "废弃商街", "北站台", "南站台", "淹水隧道", "信号机房", "维修走廊", "售票档案室", "换乘天桥", "零号换乘层"]
+const METRO_BEACON_POSITIONS := [Vector2(704, 256), Vector2(1184, 480), Vector2(1760, 704)]
+const METRO_NORTH_SWITCH := Vector2(1792, 288)
+const METRO_SOUTH_SWITCH := Vector2(1600, 1088)
+const METRO_NORTH_EXIT := Vector2(2048, 352)
+const METRO_SOUTH_EXIT := Vector2(224, 1184)
 const CONTENT_SLOTS := [
 	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
 	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),
@@ -29,6 +34,7 @@ var crawler_spawns: Array[Vector2] = []
 var orderly_spawns: Array[Vector2] = []
 var side_contracts: Array[String] = []
 var causal_chain := ""
+var metro_route_positions := {}
 
 
 func _init(run_seed: int, requested_world := "sanatorium") -> void:
@@ -62,6 +68,21 @@ func _generate() -> void:
 		mission_title = "档案回收" if mission_id == "archive_recovery" else "异常切除"
 		objective_noun = "实验记录" if mission_id == "archive_recovery" else "异常节点"
 	objective_count = rng.randi_range(2, 4)
+	if world_id == "metro":
+		# The metro has authored pressure routes.  Randomising these made rising water
+		# cosmetic because a critical goal could spawn behind any future flood line.
+		objective_count = METRO_BEACON_POSITIONS.size()
+		objective_positions.assign(METRO_BEACON_POSITIONS)
+		power_position = METRO_NORTH_SWITCH
+		boss_position = Vector2(1184, 800)
+		exit_position = METRO_NORTH_EXIT
+		metro_route_positions = {
+			"north": {"switch": METRO_NORTH_SWITCH, "exit": METRO_NORTH_EXIT},
+			"south": {"switch": METRO_SOUTH_SWITCH, "exit": METRO_SOUTH_EXIT},
+		}
+		_populate_enemy_spawns(rng)
+		_populate_contracts(rng)
+		return
 	var slots: Array[Vector2] = []
 	slots.assign(CONTENT_SLOTS)
 	_shuffle_with_rng(slots, rng)
@@ -70,6 +91,11 @@ func _generate() -> void:
 	power_position = slots.pop_back()
 	boss_position = slots.pop_back()
 	exit_position = slots.pop_back()
+	_populate_enemy_spawns(rng)
+	_populate_contracts(rng)
+
+
+func _populate_enemy_spawns(rng: RandomNumberGenerator) -> void:
 	var enemy_slots: Array[Vector2] = []
 	for slot in CONTENT_SLOTS:
 		if slot.distance_to(Vector2(224, 360)) > 430.0:
@@ -81,6 +107,9 @@ func _generate() -> void:
 		crawler_spawns.append(_jitter(enemy_slots[(index + 4) % enemy_slots.size()], rng, 68.0))
 	for index in range(2):
 		orderly_spawns.append(_jitter(enemy_slots[(index + 7) % enemy_slots.size()], rng, 42.0))
+
+
+func _populate_contracts(rng: RandomNumberGenerator) -> void:
 	var contracts: Array[String] = []
 	contracts.assign(SIDE_CONTRACTS)
 	_shuffle_with_rng(contracts, rng)
@@ -94,6 +123,8 @@ func validate() -> bool:
 	if room_order.size() != modules.size() or room_order[0] != modules[0] or room_order[-1] != modules[-1]:
 		return false
 	if objective_positions.size() != objective_count or objective_count < 2 or objective_count > 4:
+		return false
+	if world_id == "metro" and (metro_route_positions.size() != 2 or objective_positions != METRO_BEACON_POSITIONS):
 		return false
 	var reached := {0: true}
 	for _pass in range(room_order.size()):

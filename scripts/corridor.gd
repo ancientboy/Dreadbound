@@ -138,7 +138,7 @@ func _activate_target(id: String) -> void:
 
 
 func _update_hub_actions(target: Dictionary) -> void:
-	var has_target := not target.is_empty() and target.id != "curator"
+	var has_target: bool = not target.is_empty() and target.id != "curator"
 	$HubActions.visible = has_target
 	if not has_target:
 		return

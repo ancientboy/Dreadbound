@@ -11,6 +11,8 @@ enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
 const MAP_SIZE := Vector2(2304.0, 1440.0)
 const INTERACTION_DISTANCE := 86.0
+const METRO_SHALLOW_ZONES := [Rect2(480, 704, 416, 192), Rect2(960, 704, 480, 192), Rect2(1504, 960, 704, 320)]
+const METRO_DEEP_ZONES := [Rect2(960, 704, 480, 192), Rect2(1504, 960, 704, 320)]
 
 @onready var player: Player = $Player
 @onready var objective: Label = $Interface/TopBar/Objective
@@ -63,6 +65,9 @@ var metro_tide_level := 0
 var metro_tide_timer := 0.0
 var metro_noise := 0
 var metro_train_window := -1.0
+var metro_route := ""
+var metro_water_damage_timer := 0.0
+var metro_water_state := 0
 
 
 func _ready() -> void:
@@ -174,7 +179,10 @@ func _process(delta: float) -> void:
 	var target := _nearest_interactable()
 	prompt_panel.visible = target != null
 	if target:
-		prompt.text = target.get_prompt(collected_records.size(), power_restored, total_records)
+		if run_config.world_id == "metro" and not metro_route.is_empty() and target.kind == ObjectiveInteractable.Kind.EXIT and target.objective_id != "metro_exit_%s" % metro_route:
+			prompt.text = "列车未停靠此站 // 前往%s站台" % ("北" if metro_route == "north" else "南")
+		else:
+			prompt.text = target.get_prompt(collected_records.size(), power_restored, total_records)
 		if wants_to_interact:
 			_handle_interaction(target)
 
@@ -187,17 +195,16 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 				target.mark_complete()
 				if collected_records.size() == total_records:
 					mission_phase = MissionPhase.RESTORE_POWER
-					_show_notification("%s已集齐：前往信号机房重置道岔" % run_config.objective_noun if run_config.world_id == "metro" else "三份记录已集齐：前往地下维护区恢复电力", 4.0)
+					_show_notification("%s已集齐：选择北站台高架慢线或南站台淹没快线" % run_config.objective_noun if run_config.world_id == "metro" else "三份记录已集齐：前往地下维护区恢复电力", 4.0)
 		ObjectiveInteractable.Kind.POWER:
 			if collected_records.size() == total_records and not power_restored:
-				power_restored = true
-				mission_phase = MissionPhase.EVACUATE
-				target.mark_complete()
-				boss.activate(player)
 				if run_config.world_id == "metro":
-					metro_train_window = 90.0
-					_show_notification("道岔已重置：末班列车将在南站台停靠 90 秒。\n可击破车长回声取得回收箱，或立刻登车撤离。", 6.0)
+					_activate_metro_route(target)
 				else:
+					power_restored = true
+					mission_phase = MissionPhase.EVACUATE
+					target.mark_complete()
+					boss.activate(player)
 					_show_notification("警报：电力恢复，缝合主任已苏醒！\n出口现已开放，战斗或绕行撤离", 5.0)
 				_play_cue(150.0, 0.35)
 				if run_config.causal_chain == "spore_bloom" and event_results.any(func(result): return "污染药柜：强行开启" in result):
@@ -205,7 +212,7 @@ func _handle_interaction(target: ObjectiveInteractable) -> void:
 					_show_notification("因果回响：孢子污染沿供电管线扩散，额外威胁苏醒", 4.5)
 				queue_redraw()
 		ObjectiveInteractable.Kind.EXIT:
-			if power_restored and (run_config.world_id != "metro" or metro_train_window > 0.0):
+			if power_restored and (run_config.world_id != "metro" or (target.objective_id == "metro_exit_%s" % metro_route and metro_train_window > 0.0)):
 				_complete_mission()
 	_update_mission_ui()
 
@@ -421,7 +428,8 @@ func _update_mission_ui() -> void:
 		var tide_names := ["干燥", "浸水", "深水"]
 		var train := "未校准" if metro_train_window < 0.0 else "%ds" % ceili(metro_train_window)
 		progress.text = "%s %d/%d · 潮位%s · 噪音%d · 车次%s" % [run_config.objective_noun, collected_records.size(), total_records, tide_names[metro_tide_level], metro_noise, train]
-		objective.text = "当前目标：%s" % ("校准车次信标" if mission_phase == MissionPhase.COLLECT_RECORDS else ("前往信号机房重置道岔" if mission_phase == MissionPhase.RESTORE_POWER else "前往南站台，在车门关闭前登车"))
+		var route_text := "选择北/南站台道岔" if metro_route.is_empty() else ("赶往%s站台，在车门关闭前登车" % ("北" if metro_route == "north" else "南"))
+		objective.text = "当前目标：%s" % ("校准车次信标" if mission_phase == MissionPhase.COLLECT_RECORDS else ("选择撤离站台" if mission_phase == MissionPhase.RESTORE_POWER else route_text))
 		return
 	progress.text = "%s %d/%d  ·  电力%s" % [run_config.objective_noun, collected_records.size(), total_records, "已恢复" if power_restored else "中断"]
 	match mission_phase:
@@ -438,8 +446,14 @@ func _update_mission_ui() -> void:
 func _create_mission_interactables() -> void:
 	for index in range(total_records):
 		_add_interactable(ObjectiveInteractable.Kind.RECORD, "objective_%02d" % index, "%s %d" % [run_config.objective_noun, index + 1], run_config.objective_positions[index])
-	_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "供电稳定节点", run_config.power_position)
-	_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "动态撤离出口", run_config.exit_position)
+	if run_config.world_id == "metro":
+		_add_interactable(ObjectiveInteractable.Kind.POWER, "metro_north_switch", "北站台道岔 · 高架慢线", run_config.metro_route_positions.north.switch)
+		_add_interactable(ObjectiveInteractable.Kind.POWER, "metro_south_switch", "南站台道岔 · 淹没快线", run_config.metro_route_positions.south.switch)
+		_add_interactable(ObjectiveInteractable.Kind.EXIT, "metro_exit_north", "北站台末班车", run_config.metro_route_positions.north.exit)
+		_add_interactable(ObjectiveInteractable.Kind.EXIT, "metro_exit_south", "南站台末班车", run_config.metro_route_positions.south.exit)
+	else:
+		_add_interactable(ObjectiveInteractable.Kind.POWER, "basement_power", "供电稳定节点", run_config.power_position)
+		_add_interactable(ObjectiveInteractable.Kind.EXIT, "extraction_gate", "动态撤离出口", run_config.exit_position)
 
 
 func _create_patients() -> void:
@@ -651,10 +665,10 @@ func _add_interactable(kind: ObjectiveInteractable.Kind, id: String, label: Stri
 
 func _update_metro_pressure(delta: float) -> void:
 	metro_tide_timer += delta
-	if metro_tide_timer >= 75.0 and metro_tide_level < 2:
+	if metro_tide_timer >= 45.0 and metro_tide_level < 2:
 		metro_tide_timer = 0.0
 		metro_tide_level += 1
-		_show_notification("潮位上升：%s区域正在改变路线与敌人速度。" % ["浸水" if metro_tide_level == 1 else "深水"], 4.0)
+		_show_notification("潮位上升：%s区域%s。" % ["浸水" if metro_tide_level == 1 else "深水", "会减速；高架路线仍可通行" if metro_tide_level == 1 else "开始持续伤害，低层捷径已不可取"], 4.0)
 		queue_redraw()
 	if metro_train_window > 0.0:
 		metro_train_window -= delta
@@ -663,6 +677,59 @@ func _update_metro_pressure(delta: float) -> void:
 			metro_noise += 1
 			_show_notification("错过末班车：备用道岔响应，补救车次开放 35 秒。", 5.0)
 	_update_mission_ui()
+	_update_metro_water_state(delta)
+
+
+func _activate_metro_route(target: ObjectiveInteractable) -> void:
+	metro_route = "north" if target.objective_id == "metro_north_switch" else "south"
+	power_restored = true
+	mission_phase = MissionPhase.EVACUATE
+	target.mark_complete()
+	for item in interactables:
+		if item.kind == ObjectiveInteractable.Kind.POWER and item != target:
+			item.mark_complete()
+	boss.activate(player)
+	metro_train_window = 115.0 if metro_route == "north" else 70.0
+	if metro_route == "north":
+		metro_noise += 1
+		_show_notification("高架慢线已校准：北站台 115 秒窗口。路线更长，但可避开深水。\n车长回声是可选回收目标，不必击杀。", 6.0)
+	else:
+		metro_noise += 2
+		_spawn_crawler_wave()
+		_show_notification("淹没快线已校准：南站台 70 秒窗口。路线更短，但必须穿过积水。\n车长回声是可选回收目标，不必击杀。", 6.0)
+	queue_redraw()
+
+
+func _metro_water_depth_at(position: Vector2) -> int:
+	if metro_tide_level <= 0:
+		return 0
+	for zone in METRO_SHALLOW_ZONES:
+		if zone.has_point(position):
+			if metro_tide_level >= 2:
+				return 2 if METRO_DEEP_ZONES.any(func(deep_zone): return deep_zone.has_point(position)) else 1
+			return 1
+	return 0
+
+
+func _update_metro_water_state(delta: float) -> void:
+	var next_state := _metro_water_depth_at(player.global_position)
+	if next_state != metro_water_state:
+		metro_water_state = next_state
+		if metro_water_state == 1:
+			_show_notification("进入浸水区：移动速度降低。", 2.0)
+		elif metro_water_state == 2:
+			_show_notification("进入深水区：持续受损，尽快离开或使用兴奋剂冲刺。", 2.5)
+		else:
+			_show_notification("已回到干燥高地。", 1.5)
+		queue_redraw()
+	player.environment_speed_multiplier = 0.68 if metro_water_state == 1 else (0.46 if metro_water_state == 2 else 1.0)
+	if metro_water_state == 2:
+		metro_water_damage_timer += delta
+		if metro_water_damage_timer >= 1.2:
+			metro_water_damage_timer = 0.0
+			player.take_damage(4, player.global_position - Vector2(0, 1))
+	else:
+		metro_water_damage_timer = 0.0
 
 
 func _create_feedback_layer() -> void:
@@ -751,10 +818,21 @@ func _draw() -> void:
 	var metro := run_config != null and run_config.world_id == "metro"
 	draw_rect(Rect2(Vector2.ZERO, MAP_SIZE), Color("10223a") if metro else (Color("15201c") if power_restored else Color("101514")))
 	if metro:
-		# Flooded rail-lines and intermittent tide bands make the shared graybox read as a distinct disaster world.
+		# Tide is a playable surface, not background decoration: these are the low routes
+		# that slow the walker at level 1 and become damaging deep water at level 2.
 		for y in range(96, int(MAP_SIZE.y), 168):
-			draw_rect(Rect2(32, y, MAP_SIZE.x - 64, 52), Color(0.05, 0.28, 0.42, 0.48))
-			draw_line(Vector2(32, y + 12), Vector2(MAP_SIZE.x - 32, y + 12), Color(0.28, 0.72, 0.9, 0.35), 2.0)
+			draw_line(Vector2(32, y + 12), Vector2(MAP_SIZE.x - 32, y + 12), Color(0.28, 0.72, 0.9, 0.22), 2.0)
+		if metro_tide_level > 0:
+			for zone in METRO_SHALLOW_ZONES:
+				var deep := metro_tide_level >= 2 and METRO_DEEP_ZONES.any(func(deep_zone): return deep_zone == zone)
+				draw_rect(zone, Color("174d6d") if deep else Color("17607b"), true)
+				draw_rect(zone, Color("7fd9ed") if deep else Color("52a9c7"), false, 3.0)
+				for x in range(int(zone.position.x) + 20, int(zone.end.x), 46):
+					draw_line(Vector2(x, zone.position.y + 18), Vector2(x + 20, zone.position.y + 18), Color(0.68, 0.94, 1.0, 0.38), 2.0)
+		if metro_route == "north":
+			draw_line(DynamicRunConfig.METRO_NORTH_SWITCH, DynamicRunConfig.METRO_NORTH_EXIT, Color("a4f6cf"), 5.0)
+		elif metro_route == "south":
+			draw_line(DynamicRunConfig.METRO_SOUTH_SWITCH, DynamicRunConfig.METRO_SOUTH_EXIT, Color("f0b568"), 5.0)
 	_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():

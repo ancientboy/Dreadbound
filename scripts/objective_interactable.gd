@@ -23,10 +23,10 @@ func get_prompt(records_found: int, power_online: bool, records_required := 3) -
 		Kind.POWER:
 			if records_found < records_required:
 				return "尚未解锁 // 需要全部目标（%d/%d）" % [records_found, records_required]
-			return "[E] 恢复疗养院电力"
+			return "[E] 启动%s" % display_name
 		Kind.EXIT:
 			if not power_online:
-				return "尚未解锁 // 疗养院电力中断"
+				return "尚未解锁 // 撤离线路未校准"
 			return "[E] 撤离并返回终末回廊"
 	return "[E] 交互"
 

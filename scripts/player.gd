@@ -44,6 +44,7 @@ var sedatives := 0
 var sedative_duration := 0.0
 var stimulants := 0
 var stimulant_duration := 0.0
+var environment_speed_multiplier := 1.0
 var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _audio: AudioStreamPlayer
@@ -110,7 +111,7 @@ func _physics_process(delta: float) -> void:
 		wants_to_switch = mobile_controls.consume_switch_weapon() or wants_to_switch
 		wants_to_switch_item = mobile_controls.consume_switch_item() or wants_to_switch_item
 
-	velocity = input_direction * movement_speed * (1.22 if stimulant_duration > 0.0 else 1.0)
+	velocity = input_direction * movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
 		facing = input_direction.normalized()
 	if wants_to_attack:
