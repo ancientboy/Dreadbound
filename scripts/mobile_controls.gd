@@ -210,4 +210,13 @@ func _draw() -> void:
 		draw_arc(trait_center, 38.0, 0.0, TAU, 36, Color("e8b45f"), 3.0)
 		if _trait_touch != -1:
 			draw_circle(trait_center, 30.0, Color(0.9, 0.65, 0.2, 0.25))
-		draw_string(UI_FONT, trait_center + Vector2(-20, 6), "吹哨", HORIZONTAL_ALIGNMENT_CENTER, 40, 14, Color("f0c873"))
+		var scene := get_tree().current_scene
+		var remaining := float(scene.get("whistle_cooldown")) if scene and scene.get("whistle_cooldown") != null else 0.0
+		var trait_text := "吹哨" if remaining <= 0.0 else "%ds" % ceili(remaining)
+		draw_string(UI_FONT, trait_center + Vector2(-20, 6), trait_text, HORIZONTAL_ALIGNMENT_CENTER, 40, 14, Color("f0c873"))
+	if player and player.pathway_effects:
+		var y := 114.0
+		for status in player.pathway_effects.statuses():
+			var suffix := " %.1fs" % float(status.remaining) if float(status.remaining) >= 0.0 else ""
+			draw_string(UI_FONT, Vector2(22, y), "%s%s" % [str(status.name), suffix], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, status.color)
+			y += 22.0

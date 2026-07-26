@@ -10,8 +10,11 @@ const UPGRADE_INFO := {
 }
 const PATH_BUTTONS := {
 	"steadfast_guard": "SteadfastGuard", "steadfast_mender": "SteadfastMender",
+	"steadfast_barrier": "SteadfastBarrier",
 	"armorer_calibration": "ArmorerCalibration", "armorer_mobility": "ArmorerMobility",
+	"armorer_alternation": "ArmorerAlternation",
 	"resonant_sense": "ResonantSense", "resonant_bargain": "ResonantBargain",
+	"resonant_ingestion": "ResonantIngestion",
 }
 
 @onready var currency: Label = $Margin/Layout/Header/Currency
@@ -68,6 +71,7 @@ func _ready() -> void:
 	_create_warehouse_panel()
 	_create_mobile_terminal_panel()
 	_create_curator_controls()
+	_create_respec_control()
 	_refresh()
 	if not GameState.corridor_intro_seen:
 		GameState.corridor_intro_seen = true
@@ -100,6 +104,10 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 		if column:
 			var column_width: float = compact_column_widths[index] if compact else [220.0, 220.0, 280.0, 260.0][index]
 			column.custom_minimum_size = Vector2(column_width, column.custom_minimum_size.y)
+	for child in $Margin/Layout/Columns/Paths.get_children():
+		if child is Button:
+			child.custom_minimum_size.y = 40.0 if compact else 44.0
+			child.add_theme_font_size_override("font_size", 12 if compact else 13)
 	var compact_action_widths := [110.0, 150.0, 160.0, 190.0, 110.0]
 	var normal_action_widths := [140.0, 180.0, 190.0, 260.0, 140.0]
 	var actions := $Margin/Layout/Actions
@@ -256,7 +264,10 @@ func _refresh() -> void:
 		var missing_requirement := not str(node.get("requires", "")).is_empty() and not GameState.unlocked_path_nodes.has(str(node.requires))
 		var anchor_text := "锚定 %s：%d 碎片 + %d 因果残片\n" % [path_name, int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards), int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments)] if anchor_needed else ""
 		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else anchor_text + ("前置节点未锚定" if missing_requirement else ("已选择%s" % GameState.get_pathway_name() if locked_path else "%s · %d 碎片" % [str(node.description), int(node.cost)]))]
-		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards) if anchor_needed else 0) or GameState.causality_fragments < (int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments) if anchor_needed else 0)
+		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards) if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments) if anchor_needed else 0)
+	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
+	if respec:
+		respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty() or GameState.causality_fragments < 2
 	world_button.text = "传说门选择副本"
 	deploy_button.text = "请在回廊进入传说门"
 	$HubActions/Deploy.text = "进入%s" % _world_name()
@@ -487,6 +498,16 @@ func _create_curator_controls() -> void:
 	archive.add_child(reset)
 
 
+func _create_respec_control() -> void:
+	var button := Button.new()
+	button.name = "RespecPathway"
+	button.custom_minimum_size = Vector2(0, 44)
+	button.text = "有限重构职业 · 2 因果残片（仅一次）"
+	button.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty()
+	button.pressed.connect(_respec_pathway)
+	$Margin/Layout/Columns/Paths.add_child(button)
+
+
 func _toggle_curator_trial() -> void:
 	if GameState.get_curator_trial().is_empty():
 		_accept_trial()
@@ -567,6 +588,8 @@ func _refresh_mobile_terminal() -> void:
 		var locked_path := not GameState.selected_pathway.is_empty() and GameState.selected_pathway != str(node.path)
 		var missing_requirement := not str(node.get("requires", "")).is_empty() and not GameState.unlocked_path_nodes.has(str(node.requires))
 		var cost_text := "%s · %d 碎片" % [str(node.description), int(node.cost)]
+		if int(node.get("fragment_cost", 0)) > 0:
+			cost_text += " + %d 因果残片" % int(node.fragment_cost)
 		if anchor_needed:
 			cost_text = "锚定%s：8 碎片 + 1 因果残片\n%s" % [GameProgress.PATHWAY_NAMES[str(node.path)], cost_text]
 		elif locked_path:
@@ -574,9 +597,15 @@ func _refresh_mobile_terminal() -> void:
 		elif missing_requirement:
 			cost_text = "需先锚定前置节点"
 		button.text = "%s%s\n%s" % ["✓ " if unlocked else "", str(node.name), "已锚定" if unlocked else cost_text]
-		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (8 if anchor_needed else 0) or GameState.causality_fragments < (1 if anchor_needed else 0)
+		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (8 if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (1 if anchor_needed else 0)
 		button.pressed.connect(_unlock_path_node.bind(node_id))
 		content.add_child(button)
+	var respec := Button.new()
+	respec.custom_minimum_size = Vector2(0, 52)
+	respec.text = "有限重构职业 · 2 因果残片（仅一次）"
+	respec.disabled = GameState.pathway_respec_used or GameState.selected_pathway.is_empty() or GameState.causality_fragments < 2
+	respec.pressed.connect(_respec_pathway)
+	content.add_child(respec)
 	var actions := HBoxContainer.new()
 	actions.position = Vector2(14, mobile_terminal_panel.size.y - 66)
 	actions.size = Vector2(panel_width - 28, 52)
@@ -636,6 +665,11 @@ func _dismiss_trial() -> void:
 func _reset_curator_profile() -> void:
 	GameState.reset_curator_profile()
 	feedback.text = "阈值司仪观察已重置；装备、货币与职业成长未改变。"
+	_refresh()
+
+
+func _respec_pathway() -> void:
+	feedback.text = "职业锚点已重构；返还已购节点一半回响碎片。" if GameState.respec_pathway() else "无法重构：每个存档仅限一次，并需要 2 因果残片。"
 	_refresh()
 
 

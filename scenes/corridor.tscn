@@ -165,6 +165,11 @@ custom_minimum_size = Vector2(0, 57)
 layout_mode = 2
 text = "坚守者：缝合"
 
+[node name="SteadfastBarrier" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "坚守者：应急屏障"
+
 [node name="ArmorerCalibration" type="Button" parent="Margin/Layout/Columns/Paths"]
 custom_minimum_size = Vector2(0, 57)
 layout_mode = 2
@@ -175,6 +180,11 @@ custom_minimum_size = Vector2(0, 57)
 layout_mode = 2
 text = "武装师：机动装填"
 
+[node name="ArmorerAlternation" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "武装师：交替校准"
+
 [node name="ResonantSense" type="Button" parent="Margin/Layout/Columns/Paths"]
 custom_minimum_size = Vector2(0, 57)
 layout_mode = 2
@@ -184,6 +194,11 @@ text = "共鸣者：余响感知"
 custom_minimum_size = Vector2(0, 57)
 layout_mode = 2
 text = "共鸣者：代价交换"
+
+[node name="ResonantIngestion" type="Button" parent="Margin/Layout/Columns/Paths"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "共鸣者：异常摄取"
 
 [node name="Vitality" type="Button" parent="Margin/Layout/Columns/Upgrades"]
 custom_minimum_size = Vector2(0, 68)

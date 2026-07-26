@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 9
+const SAVE_VERSION := 10
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
@@ -17,10 +17,13 @@ const LOADOUTS := {
 const PATH_NODES := {
 	"steadfast_guard": {"path": "steadfast", "name": "坚守者：守望", "cost": 5, "description": "生命上限 +12 · 解锁耐受/恢复 Lv.4–6"},
 	"steadfast_mender": {"path": "steadfast", "name": "坚守者：缝合", "cost": 8, "requires": "steadfast_guard", "description": "绷带恢复 +8"},
+	"steadfast_barrier": {"path": "steadfast", "name": "坚守者：应急屏障", "cost": 3, "fragment_cost": 1, "requires": "steadfast_mender", "description": "低生命治疗后获得 4 秒减伤"},
 	"armorer_calibration": {"path": "armorer", "name": "武装师：校准", "cost": 5, "description": "全部武器伤害 +3 · 解锁武器/机动 Lv.4–6"},
 	"armorer_mobility": {"path": "armorer", "name": "武装师：机动装填", "cost": 8, "requires": "armorer_calibration", "description": "移动速度 +10 · 手枪伤害 +2"},
+	"armorer_alternation": {"path": "armorer", "name": "武装师：交替校准", "cost": 3, "fragment_cost": 1, "requires": "armorer_mobility", "description": "切换武器后下一击 +20%"},
 	"resonant_sense": {"path": "resonant", "name": "共鸣者：余响感知", "cost": 5, "description": "移动速度 +8 · 生命上限 -3 · 解锁机动/武器 Lv.4–6"},
 	"resonant_bargain": {"path": "resonant", "name": "共鸣者：代价交换", "cost": 8, "requires": "resonant_sense", "description": "全部武器伤害 +5 · 生命上限 -6"},
+	"resonant_ingestion": {"path": "resonant", "name": "共鸣者：异常摄取", "cost": 3, "fragment_cost": 1, "requires": "resonant_bargain", "description": "高风险事件 +2 碎片并累积异化"},
 }
 const PATHWAY_NAMES := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}
 
@@ -40,6 +43,7 @@ var selected_world := "sanatorium"
 var player_profile := _default_player_profile()
 var unlocked_path_nodes: Array[String] = []
 var selected_pathway := ""
+var pathway_respec_used := false
 
 
 func _ready() -> void:
@@ -60,11 +64,15 @@ func get_player_stats() -> Dictionary:
 
 
 static func _default_player_profile() -> Dictionary:
-	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "north_routes": 0, "south_routes": 0, "missed_trains": 0, "whistle_uses": 0, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": []}
+	return {"runs": 0, "successful_runs": 0, "metro_runs": 0, "quiet_successes": 0, "noise_actions": 0, "events_taken": 0, "threats_cleared": 0, "north_routes": 0, "south_routes": 0, "missed_trains": 0, "whistle_uses": 0, "pathway_stats": {}, "last_observation": "尚无足够行动数据。", "recent_runs": [], "active_trial": "", "dismissed_trials": [], "completed_trials": []}
 
 
 func has_equipment_trait(trait_id: String) -> bool:
 	return EquipmentDatabase.has_trait(equipped, trait_id)
+
+
+func has_path_node(node_id: String) -> bool:
+	return unlocked_path_nodes.has(node_id)
 
 
 func get_curator_trial() -> Dictionary:
@@ -158,13 +166,30 @@ func unlock_path_node(node_id: String) -> bool:
 		return false
 	var anchor_echo_cost := int(PATHWAY_ANCHOR_COST.echo_shards) if selected_pathway.is_empty() else 0
 	var anchor_fragment_cost := int(PATHWAY_ANCHOR_COST.causality_fragments) if selected_pathway.is_empty() else 0
-	if echo_shards < int(node.cost) + anchor_echo_cost or causality_fragments < anchor_fragment_cost:
+	var fragment_cost := int(node.get("fragment_cost", 0)) + anchor_fragment_cost
+	if echo_shards < int(node.cost) + anchor_echo_cost or causality_fragments < fragment_cost:
 		return false
 	echo_shards -= int(node.cost) + anchor_echo_cost
-	causality_fragments -= anchor_fragment_cost
+	causality_fragments -= fragment_cost
 	if selected_pathway.is_empty():
 		selected_pathway = path_id
 	unlocked_path_nodes.append(node_id)
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func respec_pathway() -> bool:
+	if pathway_respec_used or selected_pathway.is_empty() or causality_fragments < 2:
+		return false
+	var refund := 0
+	for node_id in unlocked_path_nodes:
+		refund += int(PATH_NODES[node_id].cost) / 2
+	causality_fragments -= 2
+	echo_shards += refund
+	unlocked_path_nodes.clear()
+	selected_pathway = ""
+	pathway_respec_used = true
 	save_progress()
 	progress_changed.emit()
 	return true
@@ -203,6 +228,17 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 	if route == "south": player_profile.south_routes = int(player_profile.get("south_routes", 0)) + 1
 	player_profile.missed_trains = int(player_profile.get("missed_trains", 0)) + (1 if bool(run_summary.get("missed_train", false)) else 0)
 	player_profile.whistle_uses = int(player_profile.get("whistle_uses", 0)) + int(run_summary.get("whistle_uses", 0))
+	var pathway_id := selected_pathway if not selected_pathway.is_empty() else "unbound"
+	var pathway_stats: Dictionary = player_profile.get("pathway_stats", {})
+	var world_id := str(run_summary.get("world", "sanatorium"))
+	var key := "%s:%s" % [pathway_id, world_id]
+	var stats: Dictionary = pathway_stats.get(key, {"runs": 0, "successes": 0, "duration": 0.0, "shards": 0})
+	stats.runs = int(stats.runs) + 1
+	stats.successes = int(stats.successes) + (1 if success else 0)
+	stats.duration = float(stats.duration) + float(run_summary.get("duration", 0.0))
+	stats.shards = int(stats.shards) + carried_shards
+	pathway_stats[key] = stats
+	player_profile.pathway_stats = pathway_stats
 	if success and int(run_summary.get("noise", 0)) <= 3:
 		player_profile.quiet_successes = int(player_profile.get("quiet_successes", 0)) + 1
 	player_profile.last_observation = _build_observation(success, enemies_defeated, events_resolved, run_summary)
@@ -313,7 +349,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used}))
 	return true
 
 
@@ -352,6 +388,7 @@ func load_progress() -> void:
 		if PATH_NODES.has(str(node_id)):
 			unlocked_path_nodes.append(str(node_id))
 	selected_pathway = str(parsed.get("selected_pathway", ""))
+	pathway_respec_used = bool(parsed.get("pathway_respec_used", false))
 	if selected_pathway not in PATHWAY_NAMES:
 		selected_pathway = str(PATH_NODES[unlocked_path_nodes[0]].path) if not unlocked_path_nodes.is_empty() else ""
 	equipment_inventory.clear()
@@ -385,6 +422,7 @@ func reset_progress() -> void:
 	player_profile = _default_player_profile()
 	unlocked_path_nodes.clear()
 	selected_pathway = ""
+	pathway_respec_used = false
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

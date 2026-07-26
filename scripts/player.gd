@@ -50,12 +50,16 @@ var environment_speed_multiplier := 1.0
 var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _audio: AudioStreamPlayer
+var pathway_effects: PathwayEffects
 
 
 func _ready() -> void:
 	_audio = AudioStreamPlayer.new()
 	add_child(_audio)
 	_apply_permanent_upgrades()
+	pathway_effects = PathwayEffects.new()
+	pathway_effects.setup(self, get_node_or_null("/root/GameState") as GameProgress)
+	add_child(pathway_effects)
 	health = max_health
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
@@ -95,6 +99,7 @@ func _physics_process(delta: float) -> void:
 	_heal_flash = maxf(_heal_flash - delta, 0.0)
 	sedative_duration = maxf(sedative_duration - delta, 0.0)
 	stimulant_duration = maxf(stimulant_duration - delta, 0.0)
+	pathway_effects.tick(delta)
 	if _dead:
 		velocity = Vector2.ZERO
 		return
@@ -142,6 +147,7 @@ func try_attack() -> bool:
 	if current_weapon == Weapon.SHOTGUN:
 		return _try_shotgun_attack()
 	var state := get_node_or_null("/root/GameState")
+	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
 	_attack_timer = attack_cooldown + (0.12 if insulated else 0.0)
 	_play_tone(115.0, 0.08)
@@ -152,7 +158,7 @@ func try_attack() -> bool:
 			continue
 		var offset: Vector2 = target.global_position - global_position
 		if offset.length() <= attack_range and facing.dot(offset.normalized()) >= 0.25:
-			var damage := int(attack_damage * 1.35) if insulated and (target is Conductor or target is LastTrainBoss or target is SignalAnchor) else attack_damage
+			var damage := int(attack_damage * pathway_multiplier * (1.35 if insulated and (target is Conductor or target is LastTrainBoss or target is SignalAnchor) else 1.0))
 			target.take_damage(damage, global_position)
 	queue_redraw()
 	return true
@@ -187,7 +193,9 @@ func _try_ranged_attack() -> bool:
 	_shot_end = facing * ranged_range
 	if best_target:
 		_shot_end = best_target.global_position - global_position
-		best_target.take_damage(ranged_damage, global_position)
+		best_target.take_damage(int(ranged_damage * pathway_effects.consume_attack_multiplier()), global_position)
+	else:
+		pathway_effects.consume_attack_multiplier()
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -201,13 +209,14 @@ func _try_shotgun_attack() -> bool:
 	shells -= 1
 	_play_tone(190.0, 0.14)
 	noise_generated.emit(4)
+	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
 		var offset: Vector2 = target.global_position - global_position
 		if offset.length() <= shotgun_range and facing.dot(offset.normalized()) >= 0.72:
 			var falloff := clampf(1.25 - offset.length() / shotgun_range * 0.55, 0.7, 1.0)
-			target.take_damage(int(shotgun_damage * falloff), global_position)
+			target.take_damage(int(shotgun_damage * falloff * pathway_multiplier), global_position)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -216,6 +225,7 @@ func _try_shotgun_attack() -> bool:
 func take_damage(amount: int, source_position: Vector2) -> bool:
 	if _dead or _invulnerability_timer > 0.0:
 		return false
+	amount = maxi(1, int(amount * pathway_effects.incoming_damage_multiplier()))
 	health = maxi(health - amount, 0)
 	_play_tone(82.0, 0.16)
 	_invulnerability_timer = 0.65
@@ -255,6 +265,7 @@ func add_ammo(amount: int) -> bool:
 
 func switch_weapon() -> void:
 	current_weapon = (int(current_weapon) + 1) % 3 as Weapon
+	pathway_effects.on_weapon_switched()
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 
@@ -319,8 +330,10 @@ func use_stimulant() -> bool:
 func use_bandage() -> bool:
 	if _dead or bandages <= 0 or health >= max_health:
 		return false
+	var health_before := health
 	bandages -= 1
-	health = mini(health + bandage_heal, max_health)
+	health = mini(health + int(bandage_heal * pathway_effects.healing_multiplier()), max_health)
+	pathway_effects.on_bandage_used(health_before, max_health)
 	_heal_flash = 0.3
 	_play_tone(690.0, 0.12)
 	health_changed.emit(health, max_health)

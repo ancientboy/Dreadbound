@@ -78,6 +78,8 @@ var signal_anchors: Array[SignalAnchor] = []
 var whistle_cooldown := 0.0
 var whistle_uses := 0
 var metro_missed_train := false
+var run_elapsed := 0.0
+var pathway_status_label: Label
 
 
 func _ready() -> void:
@@ -170,6 +172,9 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	if notification:
 		notification.position = Vector2((viewport_size.x - minf(720.0, viewport_size.x - 64.0)) * 0.5, 104)
 		notification.size = Vector2(minf(720.0, viewport_size.x - 64.0), 76)
+	if pathway_status_label:
+		pathway_status_label.position = Vector2((viewport_size.x - minf(720.0, viewport_size.x - 64.0)) * 0.5, 178)
+		pathway_status_label.size = Vector2(minf(720.0, viewport_size.x - 64.0), 28)
 	if reward_panel:
 		_layout_centered_panel(reward_panel, viewport_size, Vector2(940, 410), Vector2(32, 140))
 		_layout_reward_contents()
@@ -236,11 +241,13 @@ func _on_map_expanded_changed(expanded: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	run_elapsed += delta
 	whistle_cooldown = maxf(whistle_cooldown - delta, 0.0)
 	if _notification_timer > 0.0:
 		_notification_timer -= delta
 		if _notification_timer <= 0.0 and notification:
-			notification.visible = false
+				notification.visible = false
+	_update_pathway_status()
 	_director_tick += delta
 	_recent_damage = maxf(_recent_damage - delta * 0.08, 0.0)
 	if _director_tick >= 1.0 and mission_phase < MissionPhase.COMPLETE:
@@ -345,7 +352,7 @@ func _return_to_corridor(abandoned := false) -> void:
 	_run_settled = true
 	var state := get_node_or_null("/root/GameState")
 	if state:
-		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses}
+		var summary := {"action_code": run_config.action_code, "mission": run_config.mission_title, "causal_chain": run_config.causal_chain, "director_log": director.decision_log, "world": run_config.world_id, "noise": metro_noise, "tide_level": metro_tide_level, "metro_route": metro_route, "missed_train": metro_missed_train, "whistle_uses": whistle_uses, "duration": run_elapsed, "anomaly_pressure": player.pathway_effects.anomaly_pressure}
 		state.settle_run(not abandoned and mission_phase == MissionPhase.COMPLETE, collected_records.size(), player.echo_shards, enemies_defeated, event_results.size(), run_equipment_rewards, summary)
 	get_tree().change_scene_to_file("res://scenes/corridor.tscn")
 
@@ -443,6 +450,10 @@ func _open_risk_event(risk_event: RiskEvent) -> void:
 func _resolve_active_event(take_risk: bool) -> void:
 	if active_event == null:
 		return
+	var pathway_bonus := player.pathway_effects.on_risk_event(take_risk)
+	if pathway_bonus > 0:
+		player.add_echo_shards(pathway_bonus)
+		_show_notification("异常摄取：额外获得 %d 碎片，异化压力升至 %d。" % [pathway_bonus, player.pathway_effects.anomaly_pressure], 3.0)
 	match active_event.event_id:
 		"medicine_cabinet":
 			if take_risk:
@@ -906,8 +917,28 @@ func _create_feedback_layer() -> void:
 	notification.add_theme_constant_override("shadow_offset_x", 2)
 	notification.add_theme_constant_override("shadow_offset_y", 2)
 	$Interface.add_child(notification)
+	pathway_status_label = Label.new()
+	pathway_status_label.position = Vector2(365, 168)
+	pathway_status_label.size = Vector2(550, 28)
+	pathway_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pathway_status_label.add_theme_font_override("font", UI_FONT)
+	pathway_status_label.add_theme_font_size_override("font_size", 15)
+	pathway_status_label.add_theme_color_override("font_color", Color("d4c079"))
+	$Interface.add_child(pathway_status_label)
 	_sound_player = AudioStreamPlayer.new()
 	add_child(_sound_player)
+
+
+func _update_pathway_status() -> void:
+	if pathway_status_label == null or player == null or player.pathway_effects == null:
+		return
+	var parts: Array[String] = []
+	for status in player.pathway_effects.statuses():
+		parts.append("%s%s" % [str(status.name), " %.1fs" % float(status.remaining) if float(status.remaining) >= 0.0 else ""])
+	if whistle_cooldown > 0.0 and GameState.has_equipment_trait("noise_lure"):
+		parts.append("站务员哨 %.1fs" % whistle_cooldown)
+	pathway_status_label.text = "  ·  ".join(parts)
+	pathway_status_label.visible = not parts.is_empty()
 
 
 func _create_reward_panel() -> void:
@@ -1000,6 +1031,8 @@ func _draw() -> void:
 	for wall in _wall_rectangles():
 		draw_rect(wall, Color("39423d"))
 		draw_rect(wall, Color("59635c"), false, 2.0)
+	if metro and player and GameState.has_equipment_trait("noise_lure") and whistle_cooldown <= 0.0:
+		draw_arc(player.global_position, 280.0, 0.0, TAU, 72, Color(0.91, 0.7, 0.3, 0.22), 2.0)
 
 
 func _draw_grid() -> void:
