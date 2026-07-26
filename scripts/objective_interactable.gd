@@ -1,7 +1,7 @@
 class_name ObjectiveInteractable
 extends Node2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 
 enum Kind { RECORD, POWER, EXIT }
 

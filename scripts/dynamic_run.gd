@@ -8,6 +8,16 @@ const METRO_NORTH_SWITCH := Vector2(1792, 288)
 const METRO_SOUTH_SWITCH := Vector2(1600, 1088)
 const METRO_NORTH_EXIT := Vector2(2048, 352)
 const METRO_SOUTH_EXIT := Vector2(224, 1184)
+const WORLD_MAP_SIZE := Vector2(2304.0, 1440.0)
+const METRO_MAP_REGIONS := [
+	{"id": "ticket_hall", "name": "检票大厅", "rect": Rect2(64, 96, 400, 352)},
+	{"id": "market", "name": "废弃商街", "rect": Rect2(512, 160, 416, 288)},
+	{"id": "signal", "name": "信号机房", "rect": Rect2(1024, 256, 352, 288)},
+	{"id": "north_platform", "name": "北站台", "rect": Rect2(1536, 128, 672, 352)},
+	{"id": "flooded_tunnel", "name": "淹水隧道", "rect": Rect2(928, 640, 576, 288)},
+	{"id": "south_platform", "name": "南站台", "rect": Rect2(1536, 960, 672, 352)},
+	{"id": "transfer", "name": "换乘天桥", "rect": Rect2(64, 992, 640, 288)},
+]
 const CONTENT_SLOTS := [
 	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
 	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),
@@ -136,6 +146,27 @@ func validate() -> bool:
 
 func room_role(index: int) -> String:
 	return room_order[index % room_order.size()]
+
+
+# Mission scenes own gameplay; the shared HUD consumes this small presentation
+# contract. New worlds add data here instead of making a second HUD or map popup.
+func map_title() -> String:
+	return "潮没末班线" if world_id == "metro" else "废弃疗养院"
+
+
+func map_size() -> Vector2:
+	return WORLD_MAP_SIZE
+
+
+func map_regions() -> Array[Dictionary]:
+	if world_id == "metro":
+		return METRO_MAP_REGIONS.duplicate(true)
+	var regions: Array[Dictionary] = []
+	var index := 0
+	for room in SanatoriumLayout.rooms():
+		regions.append({"id": room.id, "name": room_role(index), "rect": room.rect})
+		index += 1
+	return regions
 
 
 func _shuffle_with_rng(array: Array, rng: RandomNumberGenerator) -> void:

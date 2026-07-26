@@ -39,8 +39,12 @@ func _run_test() -> void:
 	var item := EquipmentDatabase.get_item(reward_id)
 	assert(state.equipped[item.slot] == reward_id)
 	state.equipment_inventory.append(reward_id)
+	var before_echo := state.echo_shards
+	var before_fragments := state.causality_fragments
+	var salvage_rewards := state.get_disassembly_rewards(item)
 	assert(state.disassemble_item(reward_id))
-	assert(state.echo_shards > 13)
+	assert(state.echo_shards == before_echo + int(salvage_rewards.echo_shards))
+	assert(state.causality_fragments == before_fragments + int(salvage_rewards.causality_fragments))
 	state.reset_progress()
 	state.free()
 	print("Loot test passed: enemy drop, fixed chest choices, extraction banking, equip, salvage")

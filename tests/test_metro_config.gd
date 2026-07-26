@@ -16,5 +16,8 @@ func _run_test() -> void:
  assert(metro.objective_positions == DynamicRunConfig.METRO_BEACON_POSITIONS)
  assert(metro.metro_route_positions.north.exit == DynamicRunConfig.METRO_NORTH_EXIT)
  assert(metro.metro_route_positions.south.exit == DynamicRunConfig.METRO_SOUTH_EXIT)
+ assert(metro.map_title() == "潮没末班线")
+ assert(metro.map_size() == DynamicRunConfig.WORLD_MAP_SIZE)
+ assert(metro.map_regions().size() == 7)
  print("Metro config test passed: seeded pressure route, dual stations, contracts and action code")
  quit()

@@ -1,6 +1,6 @@
 extends Control
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 
 const UPGRADE_INFO := {
 	"vitality": ["耐受训练", "生命上限 +10"],
@@ -33,6 +33,8 @@ var walk_phase := 0.0
 var _move_touch := -1
 var _touch_origin := Vector2.ZERO
 var _touch_direction := Vector2.ZERO
+var _hub_action_touch := -1
+var mobile_terminal_panel: ColorRect
 const WALK_SPEED := 330.0
 const TERMINAL_POSITION := Vector2(640, 285)
 const CURATOR_POSITION := Vector2(640, 416)
@@ -59,8 +61,11 @@ func _ready() -> void:
 	$Margin/Layout/Actions/CloseTerminal.pressed.connect(_close_terminal)
 	$Margin/Layout/Actions/Reset.pressed.connect(_reset_progress)
 	$Margin/Layout/Actions/Warehouse.pressed.connect(_open_warehouse)
-	world_button.pressed.connect(_toggle_world)
+	# World selection lives at the physical legendary gates, never inside the terminal.
+	world_button.visible = false
+	deploy_button.visible = false
 	_create_warehouse_panel()
+	_create_mobile_terminal_panel()
 	_refresh()
 	if not GameState.corridor_intro_seen:
 		GameState.corridor_intro_seen = true
@@ -72,7 +77,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if $Margin.visible or warehouse_panel.visible:
+	if _terminal_is_open() or warehouse_panel.visible:
 		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if _move_touch != -1:
@@ -96,16 +101,26 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if $Margin.visible or (warehouse_panel and warehouse_panel.visible):
+	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible):
 		return
 	if event is InputEventScreenTouch:
-		if event.pressed and event.position.x < size.x * 0.55:
+		if event.pressed and event.position.distance_to(_hub_action_center()) <= 76.0:
+			_hub_action_touch = event.index
+			var target := _nearby_target()
+			if not target.is_empty():
+				_activate_target(target.id)
+			queue_redraw()
+		elif event.pressed and event.position.x < size.x * 0.55:
 			_move_touch = event.index
 			_touch_origin = event.position
 			_touch_direction = Vector2.ZERO
 		elif not event.pressed and event.index == _move_touch:
 			_move_touch = -1
 			_touch_direction = Vector2.ZERO
+			queue_redraw()
+		elif not event.pressed and event.index == _hub_action_touch:
+			_hub_action_touch = -1
+			queue_redraw()
 	elif event is InputEventScreenDrag and event.index == _move_touch:
 		_touch_direction = (event.position - _touch_origin).limit_length(92.0) / 92.0
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -158,7 +173,8 @@ func _refresh() -> void:
 		var button := get_node("Margin/Layout/Columns/Upgrades/%s" % upgrade_id.capitalize()) as Button
 		var level := int(GameState.upgrades[upgrade_id])
 		var cost := GameState.get_upgrade_cost(upgrade_id)
-		button.text = "%s  Lv.%d/%d\n%s%s" % [UPGRADE_INFO[upgrade_id][0], level, GameProgress.UPGRADE_MAX_LEVEL, UPGRADE_INFO[upgrade_id][1], "  ·  %d 碎片" % cost if cost > 0 else "  ·  已满级"]
+		var maximum := GameState.get_upgrade_max_level(upgrade_id)
+		button.text = "%s  Lv.%d/%d\n%s%s" % [UPGRADE_INFO[upgrade_id][0], level, maximum, UPGRADE_INFO[upgrade_id][1], "  ·  %d 碎片" % cost if cost > 0 else "  ·  已满级"]
 		button.disabled = cost == 0 or GameState.echo_shards < cost
 	for loadout_id in GameProgress.LOADOUTS:
 		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
@@ -166,13 +182,17 @@ func _refresh() -> void:
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
 	for node_id in GameProgress.PATH_NODES:
 		var node: Dictionary = GameProgress.PATH_NODES[node_id]
-		var path_name: String = {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}.get(str(node.path), "未知途径")
+		var path_name: String = GameProgress.PATHWAY_NAMES.get(str(node.path), "未知途径")
 		var button := get_node("Margin/Layout/Columns/Paths/%s" % PATH_BUTTONS[node_id]) as Button
 		var unlocked := GameState.unlocked_path_nodes.has(node_id)
-		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else "%s · %d 碎片" % [str(node.description), int(node.cost)]]
-		button.disabled = unlocked or GameState.echo_shards < int(node.cost)
-	world_button.text = "切换至%s" % ("废弃疗养院" if GameState.selected_world == "metro" else "潮没末班线")
-	deploy_button.text = "投送：%s" % _world_name()
+		var anchor_needed := GameState.selected_pathway.is_empty()
+		var locked_path := not GameState.selected_pathway.is_empty() and GameState.selected_pathway != str(node.path)
+		var missing_requirement := not str(node.get("requires", "")).is_empty() and not GameState.unlocked_path_nodes.has(str(node.requires))
+		var anchor_text := "锚定 %s：%d 碎片 + %d 因果残片\n" % [path_name, int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards), int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments)] if anchor_needed else ""
+		button.text = "%s%s\n%s" % ["✓ " if unlocked else "%s · " % path_name, str(node.name), "已锚定" if unlocked else anchor_text + ("前置节点未锚定" if missing_requirement else ("已选择%s" % GameState.get_pathway_name() if locked_path else "%s · %d 碎片" % [str(node.description), int(node.cost)]))]
+		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (int(GameProgress.PATHWAY_ANCHOR_COST.echo_shards) if anchor_needed else 0) or GameState.causality_fragments < (int(GameProgress.PATHWAY_ANCHOR_COST.causality_fragments) if anchor_needed else 0)
+	world_button.text = "传说门选择副本"
+	deploy_button.text = "请在回廊进入传说门"
 	$HubActions/Deploy.text = "进入%s" % _world_name()
 	if GameState.last_run.is_empty():
 		report.text = "尚无行动记录。\n疗养院连接等待校准。"
@@ -182,6 +202,8 @@ func _refresh() -> void:
 		var dynamic: Dictionary = run.get("dynamic_run", {})
 		report.text = "%s\n行动代码  %s\n任务契约  %s\n目标完成  %d\n风险事件  %d/2\n现场碎片  %d\n装备回收  %d\n清除威胁  %d\n\n司仪观察：%s" % ["撤离成功" if run.success else "行动失败", dynamic.get("action_code", "旧版行动"), dynamic.get("mission", "档案回收"), run.records, run.get("events_resolved", 0), run.carried_shards, gear_count, run.enemies_defeated, str(GameState.player_profile.get("last_observation", "尚无足够行动数据。"))]
 	queue_redraw()
+	if mobile_terminal_panel and mobile_terminal_panel.visible:
+		_refresh_mobile_terminal()
 
 
 func _purchase(upgrade_id: String) -> void:
@@ -195,7 +217,7 @@ func _select_loadout(loadout_id: String) -> void:
 
 func _unlock_path_node(node_id: String) -> void:
 	var node: Dictionary = GameProgress.PATH_NODES[node_id]
-	feedback.text = "%s已锚定：%s" % [str(node.name), str(node.description)] if GameState.unlock_path_node(node_id) else "无法锚定该节点：需要更多回响碎片，或它已生效。"
+	feedback.text = "%s已锚定：%s" % [str(node.name), str(node.description)] if GameState.unlock_path_node(node_id) else "无法锚定：需先选择该职业、满足前置节点，并支付回响碎片与首次锚定的因果残片。"
 
 
 func _deploy() -> void:
@@ -216,10 +238,8 @@ func _deploy_world(world: String) -> void:
 
 
 func _toggle_world() -> void:
-	GameState.selected_world = "metro" if GameState.selected_world == "sanatorium" else "sanatorium"
-	GameState.save_progress()
-	feedback.text = "投送目标已切换：%s" % _world_name()
-	_refresh()
+	# Kept as a safe no-op for old saves. Legendary gates own world selection now.
+	feedback.text = "请返回回廊，靠近对应传说门进入副本。"
 
 
 func _world_name() -> String:
@@ -266,10 +286,12 @@ func _draw() -> void:
 	draw_circle(walker_position + walker_facing * 23 + Vector2(0, bob), 4, Color("72f1d7"))
 	for y in range(10, int(size.y), 8):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.4, 0.8, 0.7, 0.012), 1.0)
-	if $Margin.visible:
+	if _terminal_is_open():
 		draw_rect(Rect2(30, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
 		draw_rect(Rect2(378, 112, 330, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
 		draw_rect(Rect2(726, 112, size.x - 756, size.y - 220), Color(0.015, 0.055, 0.049, 0.88))
+	else:
+		_draw_mobile_hub_controls()
 
 
 func _draw_legend_gate(position: Vector2, color: Color, title: String, subtitle: String) -> void:
@@ -283,7 +305,11 @@ func _draw_legend_gate(position: Vector2, color: Color, title: String, subtitle:
 
 
 func _open_terminal() -> void:
-	$Margin.visible = true
+	$Background.color = Color(0.004, 0.024, 0.021, 0.985)
+	$Margin.visible = not _is_portrait()
+	if _is_portrait():
+		_refresh_mobile_terminal()
+		mobile_terminal_panel.visible = true
 	$HubTitle.visible = false
 	$HubHint.visible = false
 	$HubActions.visible = false
@@ -292,6 +318,9 @@ func _open_terminal() -> void:
 
 func _close_terminal() -> void:
 	$Margin.visible = false
+	$Background.color = Color(0.015, 0.032, 0.031, 0)
+	if mobile_terminal_panel:
+		mobile_terminal_panel.visible = false
 	$HubTitle.visible = true
 	$HubHint.visible = true
 	$HubActions.visible = false
@@ -350,6 +379,153 @@ func _create_warehouse_panel() -> void:
 	warehouse_panel.add_child(close)
 
 
+func _is_portrait() -> bool:
+	return size.y > size.x * 1.12
+
+
+func _terminal_is_open() -> bool:
+	return $Margin.visible or (mobile_terminal_panel and mobile_terminal_panel.visible)
+
+
+func _mobile_panel_width() -> float:
+	return minf(size.x - 28.0, 760.0)
+
+
+func _create_mobile_terminal_panel() -> void:
+	mobile_terminal_panel = ColorRect.new()
+	mobile_terminal_panel.name = "MobileTerminal"
+	mobile_terminal_panel.color = Color(0.006, 0.028, 0.025, 0.995)
+	mobile_terminal_panel.visible = false
+	mobile_terminal_panel.z_index = 140
+	add_child(mobile_terminal_panel)
+
+
+func _refresh_mobile_terminal() -> void:
+	if mobile_terminal_panel == null:
+		return
+	for child in mobile_terminal_panel.get_children():
+		child.queue_free()
+	var panel_width := _mobile_panel_width()
+	mobile_terminal_panel.position = Vector2((size.x - panel_width) * 0.5, 12.0)
+	mobile_terminal_panel.size = Vector2(panel_width, size.y - 24.0)
+	var header := Label.new()
+	header.position = Vector2(18, 16)
+	header.size = Vector2(panel_width - 36, 34)
+	header.text = "行者整备终端"
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_theme_font_size_override("font_size", 24)
+	header.add_theme_color_override("font_color", Color("62dec6"))
+	mobile_terminal_panel.add_child(header)
+	var currency_label := Label.new()
+	currency_label.position = Vector2(18, 52)
+	currency_label.size = Vector2(panel_width - 36, 27)
+	currency_label.text = "回响碎片 %d  ·  因果残片 %d" % [GameState.echo_shards, GameState.causality_fragments]
+	currency_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	currency_label.add_theme_font_size_override("font_size", 16)
+	mobile_terminal_panel.add_child(currency_label)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(14, 88)
+	scroll.size = Vector2(panel_width - 28, mobile_terminal_panel.size.y - 164)
+	mobile_terminal_panel.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.custom_minimum_size = Vector2(panel_width - 50, 0)
+	content.add_theme_constant_override("separation", 10)
+	scroll.add_child(content)
+	_mobile_terminal_section(content, "漂泊者档案", stats.text)
+	_mobile_terminal_section(content, "上次行动", report.text)
+	_mobile_terminal_section(content, "出发整备", "在这里调整配置；副本入口请返回回廊使用对应传说门。")
+	for loadout_id in GameProgress.LOADOUTS:
+		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 56)
+		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
+		button.pressed.connect(_select_loadout.bind(loadout_id))
+		content.add_child(button)
+	_mobile_terminal_section(content, "永久强化", "选择强化，下一次投送生效。")
+	for upgrade_id in UPGRADE_INFO:
+		var level := int(GameState.upgrades[upgrade_id])
+		var cost := GameState.get_upgrade_cost(upgrade_id)
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 60)
+		button.text = "%s  Lv.%d/%d\n%s" % [UPGRADE_INFO[upgrade_id][0], level, GameState.get_upgrade_max_level(upgrade_id), "%s · %d 碎片" % [UPGRADE_INFO[upgrade_id][1], cost] if cost > 0 else "已满级"]
+		button.disabled = cost == 0 or GameState.echo_shards < cost
+		button.pressed.connect(_purchase.bind(upgrade_id))
+		content.add_child(button)
+	_mobile_terminal_section(content, "阈值途径 · 职业成长", "首次锚定消耗 8 回响碎片 + 1 因果残片，并选定一条职业路线；该职业会开放两项基础强化的 Lv.4–6。因果残片可通过分解回响/异常装备获得。")
+	for node_id in GameProgress.PATH_NODES:
+		var node: Dictionary = GameProgress.PATH_NODES[node_id]
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 60)
+		var unlocked := GameState.unlocked_path_nodes.has(node_id)
+		var anchor_needed := GameState.selected_pathway.is_empty()
+		var locked_path := not GameState.selected_pathway.is_empty() and GameState.selected_pathway != str(node.path)
+		var missing_requirement := not str(node.get("requires", "")).is_empty() and not GameState.unlocked_path_nodes.has(str(node.requires))
+		var cost_text := "%s · %d 碎片" % [str(node.description), int(node.cost)]
+		if anchor_needed:
+			cost_text = "锚定%s：8 碎片 + 1 因果残片\n%s" % [GameProgress.PATHWAY_NAMES[str(node.path)], cost_text]
+		elif locked_path:
+			cost_text = "已选择%s职业" % GameState.get_pathway_name()
+		elif missing_requirement:
+			cost_text = "需先锚定前置节点"
+		button.text = "%s%s\n%s" % ["✓ " if unlocked else "", str(node.name), "已锚定" if unlocked else cost_text]
+		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (8 if anchor_needed else 0) or GameState.causality_fragments < (1 if anchor_needed else 0)
+		button.pressed.connect(_unlock_path_node.bind(node_id))
+		content.add_child(button)
+	var actions := HBoxContainer.new()
+	actions.position = Vector2(14, mobile_terminal_panel.size.y - 66)
+	actions.size = Vector2(panel_width - 28, 52)
+	actions.add_theme_constant_override("separation", 10)
+	mobile_terminal_panel.add_child(actions)
+	var warehouse := Button.new()
+	warehouse.text = "装备仓库"
+	warehouse.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	warehouse.pressed.connect(_open_warehouse)
+	actions.add_child(warehouse)
+	var close := Button.new()
+	close.text = "返回回廊"
+	close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	close.pressed.connect(_close_terminal)
+	actions.add_child(close)
+
+
+func _mobile_terminal_section(parent: VBoxContainer, title: String, body: String) -> void:
+	var heading := Label.new()
+	heading.text = title
+	heading.add_theme_font_size_override("font_size", 19)
+	heading.add_theme_color_override("font_color", Color("6cd7c0"))
+	parent.add_child(heading)
+	var text := Label.new()
+	text.text = body
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 15)
+	text.add_theme_color_override("font_color", Color("a7bbb4"))
+	parent.add_child(text)
+
+
+func _hub_stick_center() -> Vector2:
+	return Vector2(106.0, size.y - 108.0)
+
+
+func _hub_action_center() -> Vector2:
+	return Vector2(size.x - 104.0, size.y - 106.0)
+
+
+func _draw_mobile_hub_controls() -> void:
+	var stick := _hub_stick_center()
+	var action := _hub_action_center()
+	var knob := stick + _touch_direction * 58.0
+	draw_circle(stick, 72.0, Color(0.025, 0.12, 0.1, 0.8))
+	draw_arc(stick, 72.0, 0.0, TAU, 48, Color("478f80"), 3.0)
+	draw_circle(knob, 28.0, Color("5acdb5"))
+	draw_circle(action, 58.0, Color(0.035, 0.16, 0.14, 0.92))
+	draw_arc(action, 58.0, 0.0, TAU, 48, Color("69e4cd"), 4.0)
+	if _hub_action_touch != -1:
+		draw_circle(action, 48.0, Color(0.35, 0.92, 0.8, 0.28))
+	draw_string(UI_FONT, action + Vector2(-12, 9), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("8bf1db"))
+	draw_string(UI_FONT, stick + Vector2(-27, 104), "移动", HORIZONTAL_ALIGNMENT_CENTER, 54, 14, Color("8db8ad"))
+	draw_string(UI_FONT, action + Vector2(-27, 84), "交互", HORIZONTAL_ALIGNMENT_CENTER, 54, 14, Color("8db8ad"))
+
+
 func _open_warehouse() -> void:
 	selected_equipment_id = ""
 	_refresh_warehouse()
@@ -392,8 +568,10 @@ func _equip_selected() -> void:
 
 
 func _salvage_selected() -> void:
+	var item := EquipmentDatabase.get_item(selected_equipment_id)
+	var rewards := GameState.get_disassembly_rewards(item)
 	if GameState.disassemble_item(selected_equipment_id):
-		feedback.text = "装备已拆解为回响碎片。"
+		feedback.text = "已拆解 %s：+%d 回响碎片%s" % [str(item.name), int(rewards.echo_shards), " · +%d 因果残片" % int(rewards.causality_fragments) if int(rewards.causality_fragments) > 0 else ""]
 		selected_equipment_id = ""
 		_refresh_warehouse()
 		_refresh()

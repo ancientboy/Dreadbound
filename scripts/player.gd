@@ -392,3 +392,10 @@ func _draw() -> void:
 		draw_line(facing * 10.0, facing * 34.0, Color("5c7771"), 7.0)
 	draw_circle(Vector2(-12, 3), 3.5, Color("36dbc0"))
 	draw_circle(Vector2(-12, 3), 7.0, Color(0.21, 0.86, 0.75, 0.13))
+	# Keep combat readability close to the character while the top HUD remains the detailed status view.
+	var health_ratio := clampf(float(health) / float(max_health), 0.0, 1.0)
+	var bar_rect := Rect2(-23, -43, 46, 6)
+	draw_rect(bar_rect.grow(2.0), Color(0.005, 0.014, 0.012, 0.9), true)
+	draw_rect(bar_rect, Color("283832"), true)
+	var health_color := Color("5edb9b").lerp(Color("e56e66"), 1.0 - health_ratio)
+	draw_rect(Rect2(bar_rect.position, Vector2(bar_rect.size.x * health_ratio, bar_rect.size.y)), health_color, true)

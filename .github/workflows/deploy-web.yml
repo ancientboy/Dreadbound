@@ -42,11 +42,19 @@ jobs:
         run: |
           set -o pipefail
           GODOT="./Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          timeout 60 "$GODOT" --headless --path . --editor --quit
+          # Fresh runners import fonts and Web assets on first boot; 60 seconds was too short.
+          timeout 180 "$GODOT" --headless --path . --editor --quit
           for test_script in tests/test_*.gd; do
             echo "Running ${test_script}"
             log_file="$(mktemp)"
-            timeout 30 "$GODOT" --headless --path . --script "$test_script" 2>&1 | tee "$log_file"
+            timeout 90 "$GODOT" --headless --path . --script "$test_script" 2>&1 | tee "$log_file"
+            exit_code=${PIPESTATUS[0]}
+            if [ "$exit_code" -ne 0 ]; then
+              if [ "$exit_code" -eq 124 ]; then
+                echo "Gameplay check timed out after 90 seconds: ${test_script}"
+              fi
+              exit "$exit_code"
+            fi
             if grep -Eq 'ERROR|SCRIPT ERROR|Parse Error|Assertion failed' "$log_file"; then
               echo "Godot reported an error in ${test_script}"
               exit 1

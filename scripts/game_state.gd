@@ -3,10 +3,11 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
-const UPGRADE_COSTS := [4, 7, 11]
+const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
+const PATHWAY_ANCHOR_COST := {"echo_shards": 8, "causality_fragments": 1}
 const LOADOUTS := {
 	"scavenger": {"name": "搜救配置", "weapon": "melee", "ammo": 6, "bandages": 1, "shells": 2, "sedatives": 0, "stimulants": 0, "description": "撬棍 · 6 发弹药 · 1 份绷带"},
 	"marksman": {"name": "警戒配置", "weapon": "ranged", "ammo": 14, "bandages": 0, "shells": 0, "sedatives": 1, "stimulants": 0, "description": "手枪 · 14 发弹药 · 1 支镇静剂"},
@@ -14,13 +15,14 @@ const LOADOUTS := {
 	"breacher": {"name": "破门配置", "weapon": "shotgun", "ammo": 2, "bandages": 0, "shells": 6, "sedatives": 0, "stimulants": 1, "description": "霰弹枪 · 6 发霰弹 · 1 支兴奋剂"},
 }
 const PATH_NODES := {
-	"steadfast_guard": {"path": "steadfast", "name": "坚守者：守望", "cost": 5, "description": "生命上限 +12"},
-	"steadfast_mender": {"path": "steadfast", "name": "坚守者：缝合", "cost": 8, "description": "绷带恢复 +8"},
-	"armorer_calibration": {"path": "armorer", "name": "武装师：校准", "cost": 5, "description": "全部武器伤害 +3"},
-	"armorer_mobility": {"path": "armorer", "name": "武装师：机动装填", "cost": 8, "description": "移动速度 +10 · 手枪伤害 +2"},
-	"resonant_sense": {"path": "resonant", "name": "共鸣者：余响感知", "cost": 5, "description": "移动速度 +8 · 生命上限 -3"},
-	"resonant_bargain": {"path": "resonant", "name": "共鸣者：代价交换", "cost": 8, "description": "全部武器伤害 +5 · 生命上限 -6"},
+	"steadfast_guard": {"path": "steadfast", "name": "坚守者：守望", "cost": 5, "description": "生命上限 +12 · 解锁耐受/恢复 Lv.4–6"},
+	"steadfast_mender": {"path": "steadfast", "name": "坚守者：缝合", "cost": 8, "requires": "steadfast_guard", "description": "绷带恢复 +8"},
+	"armorer_calibration": {"path": "armorer", "name": "武装师：校准", "cost": 5, "description": "全部武器伤害 +3 · 解锁武器/机动 Lv.4–6"},
+	"armorer_mobility": {"path": "armorer", "name": "武装师：机动装填", "cost": 8, "requires": "armorer_calibration", "description": "移动速度 +10 · 手枪伤害 +2"},
+	"resonant_sense": {"path": "resonant", "name": "共鸣者：余响感知", "cost": 5, "description": "移动速度 +8 · 生命上限 -3 · 解锁机动/武器 Lv.4–6"},
+	"resonant_bargain": {"path": "resonant", "name": "共鸣者：代价交换", "cost": 8, "requires": "resonant_sense", "description": "全部武器伤害 +5 · 生命上限 -6"},
 }
+const PATHWAY_NAMES := {"steadfast": "坚守者", "armorer": "武装师", "resonant": "共鸣者"}
 
 var save_path := "user://dreadbound_progress.json"
 var echo_shards := 0
@@ -37,6 +39,7 @@ var last_action_code := ""
 var selected_world := "sanatorium"
 var player_profile := {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
 var unlocked_path_nodes: Array[String] = []
+var selected_pathway := ""
 
 
 func _ready() -> void:
@@ -84,9 +87,20 @@ func unlock_path_node(node_id: String) -> bool:
 	if not PATH_NODES.has(node_id) or unlocked_path_nodes.has(node_id):
 		return false
 	var node: Dictionary = PATH_NODES[node_id]
-	if echo_shards < int(node.cost):
+	var path_id := str(node.path)
+	if not selected_pathway.is_empty() and selected_pathway != path_id:
 		return false
-	echo_shards -= int(node.cost)
+	var required_node := str(node.get("requires", ""))
+	if not required_node.is_empty() and not unlocked_path_nodes.has(required_node):
+		return false
+	var anchor_echo_cost := int(PATHWAY_ANCHOR_COST.echo_shards) if selected_pathway.is_empty() else 0
+	var anchor_fragment_cost := int(PATHWAY_ANCHOR_COST.causality_fragments) if selected_pathway.is_empty() else 0
+	if echo_shards < int(node.cost) + anchor_echo_cost or causality_fragments < anchor_fragment_cost:
+		return false
+	echo_shards -= int(node.cost) + anchor_echo_cost
+	causality_fragments -= anchor_fragment_cost
+	if selected_pathway.is_empty():
+		selected_pathway = path_id
 	unlocked_path_nodes.append(node_id)
 	save_progress()
 	progress_changed.emit()
@@ -132,7 +146,20 @@ func settle_run(success: bool, records: int, carried_shards: int, enemies_defeat
 
 func get_upgrade_cost(upgrade_id: String) -> int:
 	var level := int(upgrades.get(upgrade_id, 0))
-	return 0 if level >= UPGRADE_MAX_LEVEL else UPGRADE_COSTS[level]
+	var maximum := get_upgrade_max_level(upgrade_id)
+	return 0 if level >= maximum else UPGRADE_COSTS[level]
+
+
+func get_upgrade_max_level(upgrade_id: String) -> int:
+	if selected_pathway == "steadfast" and upgrade_id in ["vitality", "recovery"]:
+		return 6
+	if selected_pathway in ["armorer", "resonant"] and upgrade_id in ["mobility", "weapons"]:
+		return 6
+	return UPGRADE_MAX_LEVEL
+
+
+func get_pathway_name() -> String:
+	return str(PATHWAY_NAMES.get(selected_pathway, "未锚定"))
 
 
 func purchase_upgrade(upgrade_id: String) -> bool:
@@ -179,17 +206,24 @@ func disassemble_item(item_id: String) -> bool:
 		return false
 	var item := EquipmentDatabase.get_item(item_id)
 	equipment_inventory.remove_at(index)
-	echo_shards += 1 + int(item.get("quality_rank", 0)) * 2
+	var rewards := get_disassembly_rewards(item)
+	echo_shards += int(rewards.echo_shards)
+	causality_fragments += int(rewards.causality_fragments)
 	save_progress()
 	progress_changed.emit()
 	return true
+
+
+func get_disassembly_rewards(item: Dictionary) -> Dictionary:
+	var rank := int(item.get("quality_rank", 0))
+	return {"echo_shards": 2 + rank * 3, "causality_fragments": maxi(rank - 1, 0)}
 
 
 func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway}))
 	return true
 
 
@@ -207,7 +241,7 @@ func load_progress() -> void:
 	var saved_upgrades = parsed.get("upgrades", {})
 	if saved_upgrades is Dictionary:
 		for upgrade_id in upgrades:
-			upgrades[upgrade_id] = clampi(int(saved_upgrades.get(upgrade_id, 0)), 0, UPGRADE_MAX_LEVEL)
+			upgrades[upgrade_id] = clampi(int(saved_upgrades.get(upgrade_id, 0)), 0, UPGRADE_COSTS.size())
 	var saved_run = parsed.get("last_run", {})
 	last_run = saved_run if saved_run is Dictionary else {}
 	var saved_loadout := str(parsed.get("selected_loadout", "scavenger"))
@@ -227,6 +261,9 @@ func load_progress() -> void:
 	for node_id in parsed.get("unlocked_path_nodes", []):
 		if PATH_NODES.has(str(node_id)):
 			unlocked_path_nodes.append(str(node_id))
+	selected_pathway = str(parsed.get("selected_pathway", ""))
+	if selected_pathway not in PATHWAY_NAMES:
+		selected_pathway = str(PATH_NODES[unlocked_path_nodes[0]].path) if not unlocked_path_nodes.is_empty() else ""
 	equipment_inventory.clear()
 	for item_id in parsed.get("equipment_inventory", ["service_crowbar", "medical_tag"]):
 		if EquipmentDatabase.ITEMS.has(str(item_id)):
@@ -257,6 +294,7 @@ func reset_progress() -> void:
 	selected_world = "sanatorium"
 	player_profile = {"runs": 0, "successful_runs": 0, "metro_runs": 0, "noise_actions": 0, "events_taken": 0, "last_observation": "尚无足够行动数据。"}
 	unlocked_path_nodes.clear()
+	selected_pathway = ""
 	if FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	progress_changed.emit()

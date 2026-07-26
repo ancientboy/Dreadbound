@@ -1,7 +1,7 @@
 class_name MobileControls
 extends Control
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 
 const STICK_RADIUS := 82.0
 const KNOB_RADIUS := 34.0

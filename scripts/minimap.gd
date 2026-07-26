@@ -3,7 +3,7 @@ extends Control
 
 signal expanded_changed(expanded: bool)
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 const MINI_RADIUS := 68.0
 
 var player: Player
@@ -72,33 +72,48 @@ func _draw_minimap() -> void:
 
 func _draw_expanded_map() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.005, 0.015, 0.014, 0.93))
-	var panel := Rect2(size * 0.5 - Vector2(430, 270), Vector2(860, 540))
+	var panel_size := Vector2(minf(860.0, size.x - 28.0), minf(540.0, size.y - 28.0))
+	var panel := Rect2(size * 0.5 - panel_size * 0.5, panel_size)
 	draw_rect(panel, Color(0.025, 0.065, 0.058, 0.98))
 	draw_rect(panel, Color(0.24, 0.74, 0.64, 0.85), false, 3.0)
-	draw_string(UI_FONT, panel.position + Vector2(32, 48), "废弃疗养院 // 探索地图", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("62dec7"))
-	draw_string(UI_FONT, panel.position + Vector2(panel.size.x - 190, 44), "点击任意位置关闭", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("6f958c"))
+	var map_title := run_config.map_title() if run_config else "行动地图"
+	draw_string(UI_FONT, panel.position + Vector2(24, 42), "%s // 探索地图" % map_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("62dec7"))
+	draw_string(UI_FONT, panel.position + Vector2(panel.size.x - 160, 40), "点击关闭", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("6f958c"))
 	_draw_map_contents(Rect2(panel.position + Vector2(54, 78), panel.size - Vector2(108, 130)), true)
 	draw_circle(panel.position + Vector2(62, panel.size.y - 26), 5.0, Color("55e8ce"))
 	draw_string(UI_FONT, panel.position + Vector2(76, panel.size.y - 21), "当前位置", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("7fb1a6"))
 
 
 func _draw_map_contents(target_rect: Rect2, show_labels: bool) -> void:
-	var scale_factor := minf(target_rect.size.x / SanatoriumLayout.MAP_SIZE.x, target_rect.size.y / SanatoriumLayout.MAP_SIZE.y)
-	var drawn_size := SanatoriumLayout.MAP_SIZE * scale_factor
+	var world_size := run_config.map_size() if run_config else Vector2(2304.0, 1440.0)
+	var scale_factor := minf(target_rect.size.x / world_size.x, target_rect.size.y / world_size.y)
+	var drawn_size := world_size * scale_factor
 	var origin := target_rect.get_center() - drawn_size * 0.5
-	var room_index := 0
-	for room in SanatoriumLayout.rooms():
-		var room_rect := Rect2(origin + room.rect.position * scale_factor, room.rect.size * scale_factor)
-		var reveal := fog.get_reveal_progress(room.id) if is_instance_valid(fog) else 0.0
+	var regions: Array[Dictionary] = run_config.map_regions() if run_config else []
+	for region in regions:
+		var region_rect: Rect2 = region.rect
+		var room_rect := Rect2(origin + region_rect.position * scale_factor, region_rect.size * scale_factor)
+		var reveal := fog.get_world_reveal_at(region_rect.get_center()) if is_instance_valid(fog) else 0.0
 		var fill := Color(0.11, 0.28, 0.24, 0.88) if reveal > 0.0 else Color(0.035, 0.065, 0.06, 0.92)
 		draw_rect(room_rect, fill)
 		draw_rect(room_rect, Color(0.29, 0.55, 0.48, 0.8 if reveal > 0.0 else 0.3), false, 2.0 if show_labels else 1.0)
 		if show_labels:
-			var dynamic_name: String = run_config.room_role(room_index) if run_config else str(room.name)
-			var name: String = dynamic_name if reveal > 0.0 else "未探索"
+			var name: String = str(region.name) if reveal > 0.0 else "未探索"
 			draw_string(UI_FONT, room_rect.position + Vector2(6, 18), name, HORIZONTAL_ALIGNMENT_LEFT, room_rect.size.x - 12, 13, Color(0.54, 0.72, 0.66, 0.9))
-		room_index += 1
+	if run_config and show_labels:
+		for objective_position in run_config.objective_positions:
+			var marker_position := origin + objective_position * scale_factor
+			draw_circle(marker_position, 4.0, Color("e4bd67"))
+		if run_config.world_id == "metro":
+			_draw_route_marker(origin, scale_factor, run_config.metro_route_positions.north.exit, "北")
+			_draw_route_marker(origin, scale_factor, run_config.metro_route_positions.south.exit, "南")
 	if is_instance_valid(player):
 		var marker := origin + player.global_position * scale_factor
 		draw_circle(marker, 7.0 if show_labels else 3.5, Color("55e8ce"))
 		draw_arc(marker, 12.0 if show_labels else 6.0, 0.0, TAU, 24, Color(0.33, 0.91, 0.81, 0.35), 2.0)
+
+
+func _draw_route_marker(origin: Vector2, scale_factor: float, world_position: Vector2, label: String) -> void:
+	var marker_position := origin + world_position * scale_factor
+	draw_circle(marker_position, 5.0, Color("79c4e1"))
+	draw_string(UI_FONT, marker_position + Vector2(8, -6), "%s站台" % label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("9dd9ee"))

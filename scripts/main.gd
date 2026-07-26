@@ -1,6 +1,6 @@
 extends Node2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const PICKUP_SCENE: PackedScene = preload("res://scenes/entities/pickup.tscn")
 const CRAWLER_SCENE: PackedScene = preload("res://scenes/entities/crawler.tscn")

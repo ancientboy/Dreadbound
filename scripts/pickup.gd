@@ -1,7 +1,7 @@
 class_name ResourcePickup
 extends Node2D
 
-const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.woff")
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChinese.ttf")
 
 enum Kind { BANDAGE, ECHO_SHARD, AMMO, SHELLS, SEDATIVE, STIMULANT }
 
