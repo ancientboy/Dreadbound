@@ -47,5 +47,10 @@
 | `art_icon_balanced_pistol` | `assets/art/icons/equipment/balanced_pistol.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
 | `art_icon_breach_shotgun` | `assets/art/icons/equipment/breach_shotgun.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 32×32 裁切、透明边缘与限色 | review |
 | `art_vfx_combat_core` | `assets/art/vfx/combat_core.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 2 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、八格 64×64、透明边缘与限色 | review |
+| `art_sanatorium_tileset` | `assets/art/worlds/sanatorium/sanatorium_tileset.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 8×8 分格、32×32 Tile、色键与饱和边缘清理 | review |
+| `art_sanatorium_props` | `assets/art/worlds/sanatorium/sanatorium_props.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 4×3 分格、128×128 Prop、透明边缘整理 | review |
+| `art_enemy_crawler` | `assets/art/characters/sanatorium/crawler_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、64×48 Nearest | review |
+| `art_enemy_orderly` | `assets/art/characters/sanatorium/orderly_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
+| `art_npc_threshold_curator` | `assets/art/characters/corridor/threshold_curator_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 batch 3 prompt | `docs/o1-sanatorium-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、96×96 Boss 级 NPC | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。

@@ -2,6 +2,7 @@ class_name Crawler
 extends CharacterBody2D
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+const CRAWLER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/sanatorium/crawler_spritesheet.png")
 
 @export var movement_speed := 148.0
 @export var max_health := 35
@@ -19,11 +20,15 @@ var _attack_windup := 0.0
 var _last_seen_position := Vector2.ZERO
 var _memory_timer := 0.0
 var enemy_label := "爬行者"
+var _walk_animation_time := 0.0
+var _facing := Vector2.DOWN
+var _body_sprite: Sprite2D
 
 
 func _ready() -> void:
 	add_to_group("enemies")
 	add_to_group("crawlers")
+	_setup_body_sprite()
 	health = max_health
 	queue_redraw()
 
@@ -36,9 +41,11 @@ func _physics_process(delta: float) -> void:
 	_memory_timer = maxf(_memory_timer - delta, 0.0)
 	if not is_instance_valid(target) or target.health <= 0:
 		velocity = Vector2.ZERO
+		_sync_body_sprite(delta)
 		return
 	if _stagger_timer > 0.0:
 		velocity = Vector2.ZERO
+		_sync_body_sprite(delta)
 		queue_redraw()
 		return
 	var distance := global_position.distance_to(target.global_position)
@@ -64,6 +71,7 @@ func _physics_process(delta: float) -> void:
 			_get_combat_fx().attack_telegraph(global_position, attack_range + 14.0, _attack_windup, Color("c77b62"))
 		if _attack_timer <= 0.0 and _attack_windup <= 0.0:
 			_attack_timer = attack_cooldown
+	_sync_body_sprite(delta)
 	move_and_slide()
 	if had_hurt_flash:
 		queue_redraw()
@@ -82,13 +90,48 @@ func take_damage(amount: int, source_position: Vector2) -> void:
 		queue_redraw()
 
 
+func _setup_body_sprite() -> void:
+	if CRAWLER_SPRITESHEET == null or CRAWLER_SPRITESHEET.get_size() != Vector2(384, 192):
+		push_warning("Crawler sprite sheet unavailable or invalid; using visible fallback silhouette.")
+		return
+	_body_sprite = Sprite2D.new()
+	_body_sprite.name = "BodySprite"
+	_body_sprite.texture = CRAWLER_SPRITESHEET
+	_body_sprite.hframes = 6
+	_body_sprite.vframes = 4
+	_body_sprite.position = Vector2(0, -20)
+	_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_body_sprite.z_index = 1
+	add_child(_body_sprite)
+	_sync_body_sprite(0.0)
+
+
+func _sync_body_sprite(delta: float) -> void:
+	if velocity.length() > 2.0:
+		_facing = velocity.normalized()
+		_walk_animation_time += delta
+	else:
+		_walk_animation_time = 0.0
+	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+		return
+	var row := 0
+	if absf(_facing.x) > absf(_facing.y):
+		row = 2 if _facing.x > 0.0 else 1
+	elif _facing.y < 0.0:
+		row = 3
+	var frame := int(_walk_animation_time * 11.0) % 6 if velocity.length() > 2.0 else 0
+	_body_sprite.frame_coords = Vector2i(frame, row)
+	_body_sprite.modulate = Color("ffb5ad") if _hurt_flash > 0.0 else Color.WHITE
+
+
 func _draw() -> void:
 	var color := Color("b65a55") if _hurt_flash > 0.0 else Color("59665e")
-	_draw_body_ellipse(Vector2.ZERO, Vector2(24, 11), color)
-	for side in [-1, 1]:
-		draw_line(Vector2(side * 10, -3), Vector2(side * 29, -15), color, 5.0)
-		draw_line(Vector2(side * 12, 4), Vector2(side * 31, 17), color, 5.0)
-	draw_circle(Vector2(0, -7), 7.0, Color("777f78"))
+	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+		_draw_body_ellipse(Vector2.ZERO, Vector2(24, 11), color)
+		for side in [-1, 1]:
+			draw_line(Vector2(side * 10, -3), Vector2(side * 29, -15), color, 5.0)
+			draw_line(Vector2(side * 12, 4), Vector2(side * 31, 17), color, 5.0)
+		draw_circle(Vector2(0, -7), 7.0, Color("777f78"))
 	if health < max_health:
 		draw_rect(Rect2(-22, -31, 44, 4), Color("261b1a"))
 		draw_rect(Rect2(-22, -31, 44.0 * float(health) / max_health, 4), Color("9f3e38"))

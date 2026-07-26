@@ -10,6 +10,8 @@ const DROWNED_SCENE: PackedScene = preload("res://scenes/entities/drowned.tscn")
 const CONDUCTOR_SCENE: PackedScene = preload("res://scenes/entities/conductor.tscn")
 const LAST_TRAIN_SCENE: PackedScene = preload("res://scenes/entities/last_train_boss.tscn")
 const SIGNAL_ANCHOR_SCENE: PackedScene = preload("res://scenes/entities/signal_anchor.tscn")
+const SANATORIUM_TILESET: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_tileset.png")
+const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_props.png")
 
 enum MissionPhase { COLLECT_RECORDS, RESTORE_POWER, EVACUATE, COMPLETE, FAILED }
 
@@ -1455,8 +1457,13 @@ func _draw() -> void:
 	_draw_grid()
 	_draw_zones()
 	for wall in _wall_rectangles():
-		draw_rect(wall, Color("39423d"))
-		draw_rect(wall, Color("59635c"), false, 2.0)
+		if metro:
+			draw_rect(wall, Color("39423d"))
+			draw_rect(wall, Color("59635c"), false, 2.0)
+		else:
+			_draw_sanatorium_wall(wall)
+	if not metro:
+		_draw_sanatorium_props()
 	if metro and player and GameState.has_equipment_trait("noise_lure") and whistle_cooldown <= 0.0:
 		draw_arc(player.global_position, 280.0, 0.0, TAU, 72, Color(0.91, 0.7, 0.3, 0.22), 2.0)
 
@@ -1472,10 +1479,71 @@ func _draw_zones() -> void:
 	var room_index := 0
 	for room in SanatoriumLayout.rooms():
 		var metro := run_config != null and run_config.world_id == "metro"
-		draw_rect(room.rect, Color("142b40") if metro else Color("18211f"))
+		if metro:
+			draw_rect(room.rect, Color("142b40"))
+		else:
+			_draw_sanatorium_room(room.rect, room_index)
 		draw_rect(room.rect, Color("3a7090") if metro else Color("27332f"), false, 2.0)
 		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("86b9ce") if metro else Color("617269"))
 		room_index += 1
+
+
+func _draw_sanatorium_room(room_rect: Rect2, room_index: int) -> void:
+	draw_rect(room_rect, Color("171b19"))
+	if SANATORIUM_TILESET == null or SANATORIUM_TILESET.get_size() != Vector2(256, 256):
+		return
+	var source_index := room_index % 4
+	for y in range(int(room_rect.position.y), int(room_rect.end.y), 32):
+		for x in range(int(room_rect.position.x), int(room_rect.end.x), 32):
+			var variant := (source_index + floori(float(x + y) / 32.0)) % 4
+			draw_texture_rect_region(
+				SANATORIUM_TILESET,
+				Rect2(x, y, minf(32.0, room_rect.end.x - x), minf(32.0, room_rect.end.y - y)),
+				Rect2(variant * 32, 0, 32, 32),
+				Color(0.74, 0.77, 0.71, 0.82)
+			)
+
+
+func _draw_sanatorium_wall(wall_rect: Rect2) -> void:
+	draw_rect(wall_rect, Color("303734"))
+	if SANATORIUM_TILESET == null or SANATORIUM_TILESET.get_size() != Vector2(256, 256):
+		draw_rect(wall_rect, Color("59635c"), false, 2.0)
+		return
+	for y in range(int(wall_rect.position.y), int(wall_rect.end.y), 32):
+		for x in range(int(wall_rect.position.x), int(wall_rect.end.x), 32):
+			draw_texture_rect_region(
+				SANATORIUM_TILESET,
+				Rect2(x, y, minf(32.0, wall_rect.end.x - x), minf(32.0, wall_rect.end.y - y)),
+				Rect2(2 * 32, 1 * 32, 32, 32),
+				Color(0.78, 0.8, 0.75, 0.94)
+			)
+	draw_rect(wall_rect, Color("6b766e"), false, 2.0)
+
+
+func _draw_sanatorium_props() -> void:
+	var placements := [
+		[0, Vector2(176, 210), 104.0], [0, Vector2(336, 210), 104.0],
+		[4, Vector2(576, 206), 112.0], [2, Vector2(768, 220), 96.0],
+		[6, Vector2(1152, 400), 120.0], [3, Vector2(1304, 408), 96.0],
+		[5, Vector2(1568, 1096), 112.0], [7, Vector2(1792, 1190), 96.0],
+		[8, Vector2(1680, 302), 104.0], [9, Vector2(2050, 302), 96.0],
+		[10, Vector2(1110, 800), 112.0], [11, Vector2(318, 1192), 112.0],
+	]
+	for placement in placements:
+		_draw_sanatorium_prop(int(placement[0]), placement[1], float(placement[2]))
+
+
+func _draw_sanatorium_prop(index: int, center: Vector2, draw_size: float) -> void:
+	if SANATORIUM_PROPS == null or SANATORIUM_PROPS.get_size() != Vector2(512, 384):
+		draw_rect(Rect2(center - Vector2.ONE * 24.0, Vector2.ONE * 48.0), Color("39433f"))
+		return
+	var column := index % 4
+	var row := floori(float(index) / 4.0)
+	draw_texture_rect_region(
+		SANATORIUM_PROPS,
+		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
+		Rect2(column * 128, row * 128, 128, 128)
+	)
 
 
 func _create_collision_walls() -> void:

@@ -39,6 +39,12 @@ func melee_swing_styled(origin: Vector2, direction: Vector2, radius: float, colo
 	_kick_camera(2.0)
 
 
+static func melee_arc_rotation(direction: Vector2) -> float:
+	# The authored crescent points left in atlas space. Rotate its visual axis
+	# half a turn so the open edge and travel direction both face the strike.
+	return direction.angle() + PI
+
+
 func pistol_shot(origin: Vector2, end: Vector2) -> void:
 	pistol_shot_styled(origin, end, Color("6fe8c8"), Color("f5e6b2"))
 
@@ -127,7 +133,7 @@ func _draw() -> void:
 		match String(event.kind):
 			"arc":
 				var direction: Vector2 = event.payload
-				_draw_fx_cell(0, event.origin + direction * event.radius * 0.52, event.radius * 1.16, direction.angle(), Color(1.0, 1.0, 1.0, fade))
+				_draw_fx_cell(0, event.origin + direction * event.radius * 0.52, event.radius * 1.16, melee_arc_rotation(direction), Color(1.0, 1.0, 1.0, fade))
 			"tracer", "pellet":
 				var start_pos: Vector2 = event.origin.lerp(event.payload, progress * 0.24)
 				var end_pos: Vector2 = event.origin.lerp(event.payload, minf(1.0, progress * 1.45 + 0.18))

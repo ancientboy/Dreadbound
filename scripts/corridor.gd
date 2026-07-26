@@ -5,6 +5,7 @@ const CORRIDOR_FLOOR_TILE: Texture2D = preload("res://assets/art/worlds/corridor
 const CORRIDOR_TILESET: Texture2D = preload("res://assets/art/worlds/corridor/corridor_tileset.png")
 const CORRIDOR_PROPS: Texture2D = preload("res://assets/art/worlds/corridor/corridor_props.png")
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+const THRESHOLD_CURATOR_SPRITESHEET: Texture2D = preload("res://assets/art/characters/corridor/threshold_curator_spritesheet.png")
 const EQUIPMENT_ICONS := {
 	"service_crowbar": preload("res://assets/art/icons/equipment/service_crowbar.png"),
 	"balanced_pistol": preload("res://assets/art/icons/equipment/balanced_pistol.png"),
@@ -527,8 +528,7 @@ func _draw() -> void:
 	_draw_corridor_prop(1, TERMINAL_POSITION, 128.0)
 	draw_circle(CURATOR_POSITION, 56, Color(0.23, 0.77, 0.67, 0.14))
 	_draw_corridor_prop(4, CURATOR_POSITION + Vector2(0, 20), 128.0, Color(0.82, 0.9, 0.86, 0.88))
-	draw_circle(CURATOR_POSITION + Vector2(0, -14), 13, Color("b3dbd0"))
-	draw_colored_polygon(PackedVector2Array([CURATOR_POSITION + Vector2(-22, 28), CURATOR_POSITION + Vector2(22, 28), CURATOR_POSITION + Vector2(14, -4), CURATOR_POSITION + Vector2(-14, -4)]), Color("355f57"))
+	_draw_threshold_curator()
 	# Each unlocked disaster world has a permanent, visible legendary gate.
 	_draw_legend_gate(SANATORIUM_GATE_POSITION, Color("5ce8cf"), "废弃疗养院", "医疗异化 · 供电撤离")
 	_draw_legend_gate(METRO_GATE_POSITION, Color("6098f5"), "潮没末班线", "涨潮迷失 · 末班撤离")
@@ -581,6 +581,29 @@ func _draw_corridor_prop(index: int, center: Vector2, draw_size: float, modulate
 		Rect2(column * 128, row * 128, 128, 128),
 		modulate
 	)
+
+
+func _draw_threshold_curator() -> void:
+	var bob := sin(Time.get_ticks_msec() * 0.0016) * 2.0
+	if THRESHOLD_CURATOR_SPRITESHEET == null or THRESHOLD_CURATOR_SPRITESHEET.get_size() != Vector2(576, 384):
+		draw_circle(CURATOR_POSITION + Vector2(0, -37 + bob), 18, Color("b3dbd0"))
+		draw_colored_polygon(PackedVector2Array([
+			CURATOR_POSITION + Vector2(-42, 20),
+			CURATOR_POSITION + Vector2(42, 20),
+			CURATOR_POSITION + Vector2(28, -52 + bob),
+			CURATOR_POSITION + Vector2(-28, -52 + bob),
+		]), Color("355f57"))
+		return
+	var frame := floori(Time.get_ticks_msec() / 240.0) % 6
+	# Draw at 128 px—twice the walker's visual height—while retaining the
+	# locked 96×96 source frame used by boss-scale characters.
+	draw_texture_rect_region(
+		THRESHOLD_CURATOR_SPRITESHEET,
+		Rect2(CURATOR_POSITION + Vector2(-64, -116 + bob), Vector2(128, 128)),
+		Rect2(frame * 96, 0, 96, 96),
+		Color(0.9, 0.98, 0.95, 1.0)
+	)
+	draw_circle(CURATOR_POSITION + Vector2(0, -48 + bob), 34, Color(0.2, 0.94, 0.84, 0.055))
 
 
 func _draw_walker_fallback(position: Vector2) -> void:
