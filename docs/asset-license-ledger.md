@@ -36,10 +36,10 @@
 |---|---|---|---|---|---|---|---|
 | `font_ui_chinese_full` | `assets/fonts/DreadboundChineseFull.otf` | 开源字体 | Noto Sans CJK / SIL Open Font License | 见 `assets/fonts/OFL.txt` | OFL-1.1 | 子集/格式整理 | approved |
 | `font_ui_chinese_legacy` | `assets/fonts/DreadboundChinese.ttf` | 开源字体 | 见字体随附许可证 | 见 `assets/fonts/OFL.txt` | OFL-1.1 | 旧版兼容 | approved |
-| `art_home_keyart` | `assets/art/brand/home_keyart.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 1280×720 裁切、Nearest 整理 | review |
+| `art_home_keyart` | `assets/art/brand/home_keyart.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 1280×720 裁切、128 色索引、Nearest 整理 | review |
 | `art_corridor_tileset` | `assets/art/worlds/corridor/corridor_tileset.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键分格、64 Tile、32×32 Nearest | review |
 | `art_player_drifter` | `assets/art/characters/drifter/drifter_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
 | `art_enemy_patient` | `assets/art/characters/sanatorium/patient_spritesheet.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 色键移除、4×6 帧格、48×64 Nearest | review |
-| `art_sanatorium_room_benchmark` | `assets/art/worlds/sanatorium/sanatorium_room_benchmark.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 1280×720 裁切、Nearest 整理 | review |
+| `art_sanatorium_room_benchmark` | `assets/art/worlds/sanatorium/sanatorium_room_benchmark.png` | 定向生成原创 | OpenAI image generation / Dreadbound O1 prompt | `docs/o1-visual-slice.md` | 商业生成与修改权 | 1280×720 裁切、128 色索引、Nearest 整理 | review |
 
 后续每个 O1/O2 资产在进入仓库的同一次提交中增加一行。使用成套素材时仍需逐个 Asset ID 关联，不能只写“某素材网站”。
