@@ -372,16 +372,39 @@ func _apply_idle_pose(delta: float) -> void:
 
 func _apply_walk_pose(speed_ratio: float, delta: float) -> void:
 	super._apply_walk_pose(speed_ratio, delta)
-	var stride := sin(_idle_time * 8.4) * speed_ratio
+	var stride := sin(_player._step_phase * TAU) * speed_ratio
 	var profile_stride := float(_profile["stride"])
 	var coat_sway := float(_profile["coat_sway"])
 	_left_leg.rotation *= profile_stride
 	_right_leg.rotation *= profile_stride
+	_left_lower_leg.rotation *= profile_stride
+	_right_lower_leg.rotation *= profile_stride
 	_left_upper_arm.rotation *= profile_stride
 	_right_upper_arm.rotation *= profile_stride
-	_hips.position.y += absf(stride) * (2.0 + float(_profile["weight"]) * 2.5)
+	_hips.position.y += absf(stride) * (2.5 + float(_profile["weight"]) * 3.0)
 	_near_coat.rotation += stride * 0.045 * coat_sway
 	_far_coat.rotation -= stride * 0.032 * coat_sway
+
+
+func walk_pose_signature() -> PackedFloat32Array:
+	var left_foot := _left_lower_leg.to_global(
+		Vector2(0.0, _left_lower_leg.length)
+	)
+	var right_foot := _right_lower_leg.to_global(
+		Vector2(0.0, _right_lower_leg.length)
+	)
+	return PackedFloat32Array([
+		_left_leg.rotation,
+		_right_leg.rotation,
+		_left_lower_leg.rotation,
+		_right_lower_leg.rotation,
+		left_foot.x,
+		left_foot.y,
+		right_foot.x,
+		right_foot.y,
+		_hips.position.x,
+		_hips.position.y,
+	])
 
 
 func _apply_attack_pose() -> void:

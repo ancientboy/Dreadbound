@@ -44,10 +44,7 @@ func _run_test() -> void:
 		assert(rig.uses_runtime_equipment_only())
 		assert(rig.has_weapon_ik())
 		rig.set_ik_demo_mode(rig.current_ik_demo_mode(), true)
-		player.velocity = Vector2.RIGHT * player.movement_speed
-		await process_frame
-		assert(rig.is_using_true_opposition(), "walk opposition: %s" % style_id)
-		player.velocity = Vector2.ZERO
+		_assert_walk_cycle(player, rig, style_id)
 
 		for facing in FACINGS:
 			player.facing = facing
@@ -163,3 +160,60 @@ func _assert_weapon_hands(
 				== LayeredSkeletonCharacter.IKDemoMode.MELEE
 			)
 			assert(rig.ik_hand_error("organic") < 2.0, style_id)
+
+
+func _assert_walk_cycle(
+	player: Player,
+	rig: ProfessionSkeletonCharacter,
+	style_id: String,
+) -> void:
+	player.set_physics_process(false)
+	rig.set_process(false)
+	player.facing = Vector2.RIGHT
+	player.velocity = Vector2.RIGHT * player.movement_speed
+	var signatures: Array[PackedFloat32Array] = []
+	for phase in [0.0, 0.25, 0.5, 0.75]:
+		player._step_phase = phase
+		for frame in range(5):
+			rig._process(1.0 / 30.0)
+		signatures.append(rig.walk_pose_signature())
+	assert(rig.is_using_true_opposition(), "walk opposition: %s" % style_id)
+	var left_leg_range := _signature_range(signatures, 0)
+	var right_leg_range := _signature_range(signatures, 1)
+	var left_knee_range := _signature_range(signatures, 2)
+	var right_knee_range := _signature_range(signatures, 3)
+	var left_foot_x_range := _signature_range(signatures, 4)
+	var right_foot_x_range := _signature_range(signatures, 6)
+	assert(left_leg_range > 0.18, "left leg cycle too small: %s" % style_id)
+	assert(right_leg_range > 0.18, "right leg cycle too small: %s" % style_id)
+	assert(left_knee_range > 0.06, "left knee cycle missing: %s" % style_id)
+	assert(right_knee_range > 0.06, "right knee cycle missing: %s" % style_id)
+	assert(
+		left_foot_x_range > 2.0,
+		"left foot cycle too small: %s (%0.2f px)" % [
+			style_id,
+			left_foot_x_range,
+		],
+	)
+	assert(
+		right_foot_x_range > 2.0,
+		"right foot cycle too small: %s (%0.2f px)" % [
+			style_id,
+			right_foot_x_range,
+		],
+	)
+	player.velocity = Vector2.ZERO
+	player.set_physics_process(true)
+	rig.set_process(true)
+
+
+func _signature_range(
+	signatures: Array[PackedFloat32Array],
+	index: int,
+) -> float:
+	var minimum := INF
+	var maximum := -INF
+	for signature in signatures:
+		minimum = minf(minimum, signature[index])
+		maximum = maxf(maximum, signature[index])
+	return maximum - minimum

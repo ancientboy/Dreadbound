@@ -367,25 +367,45 @@ func _apply_walk_pose(speed_ratio: float, delta: float) -> void:
 	var contact := pow(absf(cos(phase)), 4.0)
 	var settle := 1.0 - exp(-delta * 18.0)
 	var side_view := _direction == "left" or _direction == "right"
-	var stride_amount := lerpf(0.085, 0.17 if side_view else 0.105, speed_ratio)
-	var knee_amount := lerpf(0.04, 0.13 if side_view else 0.075, speed_ratio)
-	var arm_amount := lerpf(0.07, 0.15 if side_view else 0.095, speed_ratio)
-	_pose_position(_hips, Vector2(0.0, contact * 4.0 * speed_ratio), settle)
+	var stride_amount := lerpf(0.12, 0.29 if side_view else 0.21, speed_ratio)
+	var knee_amount := lerpf(0.08, 0.25 if side_view else 0.18, speed_ratio)
+	var arm_amount := lerpf(0.09, 0.21 if side_view else 0.15, speed_ratio)
+	var travel_axis := Vector2.RIGHT if side_view else Vector2.DOWN
+	var travel_amount := lerpf(6.0, 17.0 if side_view else 12.0, speed_ratio)
+	var lift_amount := lerpf(3.0, 8.0 if side_view else 6.0, speed_ratio)
+	var left_lift := maxf(stride, 0.0)
+	var right_lift := maxf(opposite_stride, 0.0)
+	# The hips transfer weight instead of translating as one rigid block. Each
+	# leg also travels relative to the body, making the planted/support phase
+	# readable after the rig is scaled down to the gameplay camera.
+	_pose_position(
+		_hips,
+		Vector2(stride * 2.4 * speed_ratio, contact * 5.0 * speed_ratio),
+		settle,
+	)
 	_pose_rotation(_left_leg, stride * stride_amount, settle)
 	_pose_rotation(_right_leg, opposite_stride * stride_amount, settle)
-	_pose_rotation(_left_lower_leg, maxf(-stride, 0.0) * knee_amount, settle)
-	_pose_rotation(_right_lower_leg, maxf(stride, 0.0) * knee_amount, settle)
-	_pose_position(_left_leg, Vector2(0.0, maxf(stride, 0.0) * -8.0), settle)
-	_pose_position(_right_leg, Vector2(0.0, maxf(-stride, 0.0) * -8.0), settle)
+	_pose_rotation(_left_lower_leg, left_lift * knee_amount, settle)
+	_pose_rotation(_right_lower_leg, right_lift * knee_amount, settle)
+	_pose_position(
+		_left_leg,
+		travel_axis * stride * travel_amount + Vector2.UP * left_lift * lift_amount,
+		settle,
+	)
+	_pose_position(
+		_right_leg,
+		travel_axis * opposite_stride * travel_amount + Vector2.UP * right_lift * lift_amount,
+		settle,
+	)
 	_pose_rotation(_left_upper_arm, opposite_stride * arm_amount, settle)
 	_pose_rotation(_right_upper_arm, stride * arm_amount, settle)
-	_pose_rotation(_left_forearm, maxf(stride, 0.0) * 0.06, settle)
-	_pose_rotation(_right_forearm, maxf(-stride, 0.0) * -0.06, settle)
-	_pose_rotation(_torso, opposite_stride * 0.018 * speed_ratio, settle)
-	_pose_rotation(_head, stride * 0.01 * speed_ratio, settle)
+	_pose_rotation(_left_forearm, left_lift * 0.09, settle)
+	_pose_rotation(_right_forearm, right_lift * -0.09, settle)
+	_pose_rotation(_torso, opposite_stride * 0.032 * speed_ratio, settle)
+	_pose_rotation(_head, stride * 0.018 * speed_ratio, settle)
 	_pose_rotation(_lantern, -stride * 0.12 * speed_ratio, settle)
-	_pose_rotation(_far_coat, opposite_stride * 0.045 * speed_ratio - 0.02, settle)
-	_pose_rotation(_near_coat, opposite_stride * 0.055 * speed_ratio + 0.02, settle)
+	_pose_rotation(_far_coat, opposite_stride * 0.07 * speed_ratio - 0.02, settle)
+	_pose_rotation(_near_coat, opposite_stride * 0.085 * speed_ratio + 0.02, settle)
 
 
 func _apply_attack_pose() -> void:
@@ -405,6 +425,21 @@ func _apply_ik_pose(_delta: float) -> void:
 	var rig_ratio := _rig_ratio()
 	var recoil := sin((1.0 - _attack_weight) * PI) if _attack_weight > 0.0 else 0.0
 	var chest := Vector2(0.0, -235.0 * rig_ratio)
+	var walk_ratio := clampf(
+		_player.velocity.length() / maxf(_player.movement_speed, 1.0),
+		0.0,
+		1.0,
+	)
+	if walk_ratio > 0.04:
+		var walk_phase := _player._step_phase * TAU
+		var carry_sway := sin(walk_phase)
+		var carry_contact := pow(absf(cos(walk_phase)), 4.0)
+		# IK still owns the hands while a weapon is equipped, but the carried
+		# pose must follow the shoulders and weight transfer of the walk cycle.
+		chest += (
+			side * carry_sway * 7.0 * rig_ratio
+			+ aim * carry_contact * 3.5 * rig_ratio
+		) * walk_ratio
 	_ik_targets.clear()
 	_cast_orb.visible = _ik_mode == IKDemoMode.CAST and _cast_orb_preview_enabled
 	_ik_weapon.visible = _ik_mode in [
