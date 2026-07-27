@@ -43,6 +43,7 @@ enum Weapon { MELEE, RANGED, SHOTGUN }
 enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
 
 @export var movement_speed := 210.0
+@export var use_runtime_progress := true
 @export_group("Character Feel")
 @export var acceleration := 1850.0
 @export var deceleration := 2450.0
@@ -125,6 +126,10 @@ func _ready() -> void:
 
 
 func _apply_permanent_upgrades() -> void:
+	# Isolated presentation scenes keep their authored feel baseline instead of
+	# inheriting saved equipment and passive bonuses.
+	if not use_runtime_progress:
+		return
 	var state := get_node_or_null("/root/GameState")
 	if state == null:
 		return
