@@ -74,9 +74,8 @@ static func validate_catalog() -> Array[String]:
 		var style: Dictionary = COMBAT_STYLES[style_id]
 		if str(style.get("weapon_type", "")) not in ["melee", "ranged", "shotgun"]:
 			errors.append("combat style %s has invalid weapon type" % style_id)
-		var skill: Dictionary = style.get("skill", {})
-		if str(skill.get("name", "")).is_empty() or float(skill.get("range", 0.0)) <= 0.0 or float(skill.get("cooldown", 0.0)) <= 0.0:
-			errors.append("combat style %s has incomplete active skill" % style_id)
+		if not style.has("bonuses"):
+			errors.append("combat style %s has no passive bonuses" % style_id)
 	for material_id in MATERIALS:
 		if str(MATERIALS[material_id].get("world", "")).is_empty():
 			errors.append("material %s has no world" % material_id)
