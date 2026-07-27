@@ -65,7 +65,9 @@ func _run_test() -> void:
 	assert(player_source.contains("environment_water_depth < 2"))
 	assert(player_source.contains("_draw_conductor_railgun"))
 	assert(player_source.contains("PLAYER_STATES_LIGHTING"))
-	assert(player_source.contains("The lamp is body-mounted"))
+	# Exploration lighting was intentionally removed. Keep this older visual
+	# batch from silently reintroducing the player-mounted flashlight.
+	assert(not player_source.contains("_draw_flashlight()"))
 	assert(not player_source.contains("draw_circle(Vector2.ZERO, 28.0"))
 	assert(conductor_source.contains("metro_enemy_skill(\"inspector_charge\""))
 	assert(not conductor_source.contains("draw_line(Vector2.ZERO, _charge_direction * 330.0"))
