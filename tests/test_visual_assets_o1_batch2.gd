@@ -51,10 +51,14 @@ func _run_test() -> void:
 	assert(patient_sprite.hframes == 6 and patient_sprite.vframes == 4)
 	assert(player_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
 	assert(patient_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
-	# The player idles with a small breathing offset, so validate the sprite's
-	# foot anchor instead of freezing that presentation feedback to one exact frame.
+	# Character Feel v2 grounds each animation frame from its actual alpha
+	# footprint. Validate that dynamic foot anchor instead of the legacy -26 px
+	# offset, which only matched the previous sprite sheet.
 	assert(is_equal_approx(player_sprite.position.x, 0.0))
-	assert(absf(player_sprite.position.y + 26.0) <= 1.0)
+	var grounded_idle_y := player._current_body_rest_position().y
+	assert(is_finite(grounded_idle_y))
+	assert(is_equal_approx(grounded_idle_y, player._body_frame_ground_y[0]))
+	assert(grounded_idle_y >= -64.0 and grounded_idle_y <= 8.0)
 	assert(patient_sprite.position == Vector2(0, -26))
 
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
