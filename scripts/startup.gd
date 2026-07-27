@@ -9,6 +9,8 @@ var feature_grid: GridContainer
 var world_grid: GridContainer
 var primary_button: Button
 var profile_button: Button
+var settings_button: Button
+var audio_settings: PanelContainer
 
 
 func _ready() -> void:
@@ -78,6 +80,17 @@ func _build_home() -> void:
 	build.add_theme_font_size_override("font_size", 13)
 	build.add_theme_color_override("font_color", Color("7d9993"))
 	nav.add_child(build)
+	settings_button = Button.new()
+	settings_button.name = "OpenAudioSettings"
+	settings_button.text = "设置"
+	settings_button.tooltip_text = "音乐与音效设置"
+	settings_button.custom_minimum_size = Vector2(92, 38)
+	settings_button.add_theme_font_size_override("font_size", 16)
+	settings_button.add_theme_color_override("font_color", Color("b9d9d2"))
+	settings_button.add_theme_stylebox_override("normal", _button_style(Color("0b1d1c"), Color("37645e")))
+	settings_button.add_theme_stylebox_override("hover", _button_style(Color("12312e"), Color("68b5a8")))
+	settings_button.pressed.connect(_open_audio_settings)
+	nav.add_child(settings_button)
 
 	var divider := ColorRect.new()
 	divider.custom_minimum_size.y = 1
@@ -175,6 +188,7 @@ func _build_home() -> void:
 	footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footer.add_theme_color_override("font_color", Color("607b75"))
 	content.add_child(footer)
+	_build_audio_settings()
 
 
 func _add_feature(title: String, body: String) -> void:
@@ -257,6 +271,58 @@ func _apply_responsive_ui() -> void:
 	profile_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.custom_minimum_size.x = 0
 	queue_redraw()
+
+
+func _build_audio_settings() -> void:
+	audio_settings = PanelContainer.new()
+	audio_settings.name = "AudioSettings"
+	audio_settings.visible = false
+	audio_settings.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	audio_settings.custom_minimum_size = Vector2(330, 0)
+	audio_settings.add_theme_stylebox_override("panel", _button_style(Color("071817"), Color("5bbdab"), 2))
+	add_child(audio_settings)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	audio_settings.add_child(box)
+	var heading := Label.new()
+	heading.text = "声音设置"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 24)
+	heading.add_theme_color_override("font_color", Color("dffff8"))
+	box.add_child(heading)
+	var note := Label.new()
+	note.text = "设置会自动保存在此设备"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.add_theme_color_override("font_color", Color("7d9993"))
+	box.add_child(note)
+	var director := get_node("/root/AudioDirector") as DreadboundAudioDirector
+	var music_toggle := CheckButton.new()
+	music_toggle.name = "MusicToggle"
+	music_toggle.text = "音乐（含环境音）"
+	music_toggle.button_pressed = director.is_music_enabled()
+	music_toggle.add_theme_font_size_override("font_size", 18)
+	music_toggle.toggled.connect(func(enabled: bool): director.set_music_enabled(enabled))
+	box.add_child(music_toggle)
+	var sfx_toggle := CheckButton.new()
+	sfx_toggle.name = "SfxToggle"
+	sfx_toggle.text = "音效"
+	sfx_toggle.button_pressed = director.is_sfx_enabled()
+	sfx_toggle.add_theme_font_size_override("font_size", 18)
+	sfx_toggle.toggled.connect(func(enabled: bool): director.set_sfx_enabled(enabled))
+	box.add_child(sfx_toggle)
+	var close_button := Button.new()
+	close_button.name = "CloseAudioSettings"
+	close_button.text = "完成"
+	close_button.custom_minimum_size.y = 44
+	close_button.add_theme_font_size_override("font_size", 18)
+	close_button.add_theme_color_override("font_color", Color("03110f"))
+	close_button.add_theme_stylebox_override("normal", _button_style(Color("62e5cd"), Color("8af5e1")))
+	close_button.pressed.connect(func(): audio_settings.hide())
+	box.add_child(close_button)
+
+
+func _open_audio_settings() -> void:
+	audio_settings.visible = true
 
 
 func _enter_game() -> void:
