@@ -58,7 +58,18 @@ func _run_test() -> void:
 	assert(player.attack_damage == 35)
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
+	var rig := player.get_node("LayeredSkeletonRig") as LayeredSkeletonCharacter
+	assert(rig != null)
+	assert(rig is Skeleton2D)
+	assert(rig.get_node("Hips/LeftLeg") is Bone2D)
+	assert(rig.get_node("Hips/RightLeg") is Bone2D)
+	assert(rig.get_node("Hips/Torso/LeftUpperArm") is Bone2D)
+	assert(rig.get_node("Hips/Torso/RightUpperArm") is Bone2D)
+	player._step_phase = 0.25
+	player.velocity = Vector2(player.movement_speed, 0.0)
+	await process_frame
+	assert(rig.is_using_true_opposition())
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: grounded frames, planted gait, smooth movement and camera interface")
+	print("Character feel passed: layered skeleton, opposing gait, smooth movement and camera interface")
 	quit()

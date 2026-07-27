@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/test/layered_skeleton_character.tscn" id="2_rig"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -89,6 +90,8 @@ color = Color(0.2, 0.28, 0.27, 1)
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(1152, 720)
 
+[node name="LayeredSkeletonRig" parent="Player" instance=ExtResource("2_rig")]
+
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="Panel" type="PanelContainer" parent="HUD"]
@@ -108,9 +111,9 @@ theme_override_constants/margin_bottom = 14
 theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v2 · GROUNDED WALK"
+text = "CHARACTER FEEL DEMO v3 · 2D SKELETAL RIG"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "WASD / Arrow Keys  Move & turn\nSpace / J  Attack & camera shake"
+text = "WASD / Arrow Keys  True alternating gait\nSpace / J  Skeletal attack & camera shake"
 label_settings = SubResource("Body_settings")
