@@ -18,10 +18,10 @@ func _run_test() -> void:
 	assert(state.echo_shards == 14)
 	assert(state.purchase_upgrade("vitality"))
 	assert(state.echo_shards == 10)
-	assert(state.get_player_stats().max_health == 110)
+	assert(state.get_player_stats().max_health == 115) # starter medical charm is equipped
 	assert(not state.purchase_upgrade("unknown"))
 	assert(state.select_loadout("marksman"))
-	assert(state.get_selected_loadout().ammo == 14)
+	assert(not state.get_selected_loadout().has("ammo"))
 	assert(not state.select_loadout("unknown"))
 	var restored := GameProgress.new()
 	restored.save_path = state.save_path
