@@ -91,6 +91,7 @@ color = Color(0.2, 0.28, 0.27, 1)
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(1152, 720)
+use_runtime_progress = false
 
 [node name="LayeredSkeletonRig" parent="Player" instance=ExtResource("2_rig")]
 
