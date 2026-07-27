@@ -15,8 +15,11 @@ const CUES := {
 	"ui_cancel": ["res://assets/audio/sfx/ui/ui_cancel_01.wav", "UI"],
 	"ui_error": ["res://assets/audio/sfx/ui/ui_error_01.wav", "UI"],
 	"ui_tab": ["res://assets/audio/sfx/ui/ui_tab_01.wav", "UI"],
-	"player_step": ["res://assets/audio/sfx/player/footsteps/player_step_concrete_01.wav", "World"],
-	"player_step_water": ["res://assets/audio/sfx/player/footsteps/player_step_water_01.wav", "World"],
+	# Foley should sit below combat and UI. The old synthesized concrete cue was
+	# overly sharp and played too often, so hard surfaces now use real CC0 stone
+	# steps at a deliberately restrained gain.
+	"player_step": ["res://assets/audio/sfx/player/footsteps/cc0_stone_step_01.ogg", "World", 0.19],
+	"player_step_water": ["res://assets/audio/sfx/player/footsteps/player_step_water_01.wav", "World", 0.22],
 	"player_melee": ["res://assets/audio/sfx/player/combat/player_melee_swing_01.wav", "Combat"],
 	"player_pistol": ["res://assets/audio/sfx/player/combat/player_pistol_fire_01.wav", "Combat"],
 	"player_shotgun": ["res://assets/audio/sfx/player/combat/player_shotgun_fire_01.wav", "Combat"],
@@ -142,12 +145,13 @@ func play(cue_id: String, pitch_jitter := 0.0) -> void:
 		return
 	var spec: Array = CUES[cue_id]
 	var path := _variant_path(str(spec[0]))
+	var gain := float(spec[2]) if spec.size() > 2 else 1.0
 	# Godot's WebAudio worklet is unavailable or permanently suspended in some
 	# Android virtual-browser containers. The web export ships the same original
 	# assets beside the PCK and routes them through a native HTMLAudio fallback.
 	# Desktop/native builds retain Godot's usual mixer and buses.
 	if OS.has_feature("web"):
-		_web_call("play", _web_asset_path(path), "sfx")
+		_web_call("play", _web_asset_path(path), "sfx", gain)
 		_last_cue = cue_id
 		return
 	var stream := load(path) as AudioStream
@@ -156,6 +160,7 @@ func play(cue_id: String, pitch_jitter := 0.0) -> void:
 	var player := _available_player()
 	player.bus = str(spec[1])
 	player.stream = stream
+	player.volume_db = linear_to_db(gain)
 	player.pitch_scale = clampf(1.0 + randf_range(-pitch_jitter, pitch_jitter), 0.82, 1.18)
 	player.play()
 	_last_cue = cue_id
@@ -346,7 +351,7 @@ func _web_asset_path(path: String) -> String:
 	return path.trim_prefix("res://")
 
 
-func _web_call(method: String, value = null, group := "") -> void:
+func _web_call(method: String, value = null, group := "", gain = null) -> void:
 	if not OS.has_feature("web"):
 		return
 	var args := []
@@ -354,4 +359,6 @@ func _web_call(method: String, value = null, group := "") -> void:
 		args.append(JSON.stringify(value))
 	if not group.is_empty():
 		args.append(JSON.stringify(group))
+	if gain != null:
+		args.append(JSON.stringify(gain))
 	JavaScriptBridge.eval("window.DreadboundNativeAudio&&window.DreadboundNativeAudio.%s(%s);" % [method, ",".join(args)], true)

@@ -28,7 +28,7 @@ func _run_test() -> void:
 	for path in REQUIRED:
 		assert(ResourceLoader.exists(path), "audio stream cannot load: %s" % path)
 	for index in range(1, 5):
-		assert(ResourceLoader.exists("res://assets/audio/sfx/player/footsteps/player_step_concrete_%02d.wav" % index))
+		assert(ResourceLoader.exists("res://assets/audio/sfx/player/footsteps/cc0_stone_step_%02d.ogg" % index))
 		assert(ResourceLoader.exists("res://assets/audio/sfx/world/pickup/world_pickup_%02d.wav" % index))
 	var director := root.get_node_or_null("AudioDirector")
 	assert(director != null, "AudioDirector autoload must be available")
@@ -61,13 +61,18 @@ func _run_test() -> void:
 	assert(player_source.contains("DreadboundAudioDirector") and player_source.contains("player_step_water"))
 	assert(fx_source.contains("DreadboundAudioDirector"))
 	assert(main_source.contains("DreadboundAudioDirector"))
+	assert(main_source.contains("OpenInGameAudioSettings"))
+	var corridor_source := FileAccess.get_file_as_string("res://scripts/corridor.gd")
+	assert(corridor_source.contains("OpenCorridorAudioSettings"))
+	var audio_panel_source := FileAccess.get_file_as_string("res://scripts/audio_settings_panel.gd")
+	assert(audio_panel_source.contains("InGameMusicToggle") and audio_panel_source.contains("InGameSfxToggle"))
 	var startup_source := FileAccess.get_file_as_string("res://scripts/startup.gd")
 	assert(startup_source.contains("OpenAudioSettings") and startup_source.contains("MusicToggle") and startup_source.contains("SfxToggle") and startup_source.contains("TestSfx"))
 	var director_source := FileAccess.get_file_as_string("res://scripts/audio_director.gd")
 	assert(director_source.contains("_bind_existing_buttons") and director_source.contains("_bind_buttons_under"))
 	assert(director_source.contains("DreadboundNativeAudio") and director_source.contains("JavaScriptBridge.eval"), "Web export must route audio through the native browser fallback")
 	var workflow_source := FileAccess.get_file_as_string("res://.github/workflows/deploy-web.yml")
-	assert(workflow_source.contains("builds/web/assets/audio") and workflow_source.contains("DreadboundNativeAudio"), "Pages build must publish native fallback audio assets")
+	assert(workflow_source.contains("builds/web/assets/audio") and workflow_source.contains("DreadboundNativeAudio") and workflow_source.contains("Number.isFinite(gain)"), "Pages build must publish native fallback audio assets and honor per-cue gain")
 	director.queue_free()
 	await process_frame
 	print("O2 audio passed: routed loops, core SFX variants, combat styles and browser-safe director")

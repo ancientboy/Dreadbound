@@ -112,6 +112,8 @@ var active_gate_world := "sanatorium"
 var milestone_feedback: TextureRect
 var milestone_caption: Label
 var _shown_heart_id := ""
+var audio_settings_button: Button
+var audio_settings_panel: DreadboundAudioSettingsPanel
 
 
 func _ready() -> void:
@@ -149,6 +151,7 @@ func _ready() -> void:
 	_create_hub_navigation()
 	_create_section_panel()
 	_create_milestone_feedback()
+	_create_audio_settings()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
@@ -203,6 +206,9 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$HubTitle.size = Vector2(maxf(260.0, viewport_size.x - inset * 2.0 - 224.0), 48)
 	$OpenArchive.position = Vector2(viewport_size.x - inset - 202.0, 24)
 	$OpenArchive.size = Vector2(202, 48)
+	if audio_settings_button:
+		audio_settings_button.position = Vector2(viewport_size.x - inset - 518.0, 24)
+		audio_settings_button.size = Vector2(92, 48)
 	if open_mirror_button:
 		open_mirror_button.position = Vector2(viewport_size.x - inset - 414.0, 24)
 		open_mirror_button.size = Vector2(202, 48)
@@ -687,6 +693,20 @@ func _draw_walker_fallback(position: Vector2) -> void:
 	draw_line(position + Vector2(-8, -2), position + Vector2(-11, 8), Color("2b343b"), 7.0)
 	draw_line(position + Vector2(8, -2), position + Vector2(11, 8), Color("2b343b"), 7.0)
 	draw_circle(position + Vector2(-12, -25), 3.0, Color("59e1e6"))
+
+
+func _create_audio_settings() -> void:
+	audio_settings_button = Button.new()
+	audio_settings_button.name = "OpenCorridorAudioSettings"
+	audio_settings_button.text = "声音"
+	audio_settings_button.tooltip_text = "音乐与音效设置"
+	audio_settings_button.add_theme_font_override("font", UI_FONT)
+	audio_settings_button.add_theme_font_size_override("font_size", 16)
+	audio_settings_button.pressed.connect(func(): audio_settings_panel.toggle())
+	add_child(audio_settings_button)
+	audio_settings_panel = DreadboundAudioSettingsPanel.new()
+	add_child(audio_settings_panel)
+	audio_settings_panel.configure(UI_FONT)
 
 
 func _open_terminal() -> void:

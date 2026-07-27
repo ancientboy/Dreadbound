@@ -114,3 +114,4 @@
 | `audio_music_o2` | `assets/audio/music/*.ogg` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | 六首循环：首页、回廊、疗养院探索/Boss、地铁探索/Boss | review |
 | `audio_ambience_o2` | `assets/audio/ambience/*.ogg` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | 五条环境循环：结构、病区、地下室、站台、洪水 | review |
 | `audio_sfx_o2_core` | `assets/audio/sfx/**/*.wav` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | UI、玩家、世界、敌人及十二流派技能；高频脚步/命中/拾取含四个变体 | review |
+| `audio_footsteps_cc0_fantozzi` | `assets/audio/sfx/player/footsteps/cc0_stone_step_*.ogg` | Fantozzi via OpenGameArt | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone，下载于 2026-07-26 | CC0 | 真实石地左右脚步六个源素材中选取四个变体；仅用于硬地步行，播放增益 0.19、间隔 0.42 秒 | review |

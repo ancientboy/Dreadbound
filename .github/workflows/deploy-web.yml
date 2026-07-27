@@ -133,7 +133,7 @@ jobs:
             };
             window.DreadboundNativeAudio = {
               unlock,
-              play(path) { if (unlocked && sfxEnabled) start(make(path, false, 0.9)); },
+              play(path, _group, gain) { if (unlocked && sfxEnabled) start(make(path, false, Number.isFinite(gain) ? gain : 0.9)); },
               loop(path, kind) { replaceLoop(kind === "ambience" ? "ambience" : "music", path); },
               setMusicEnabled(value) { musicEnabled = !!value; if (musicEnabled && unlocked) { start(music); start(ambience); } else { if (music) music.pause(); if (ambience) ambience.pause(); } },
               setSfxEnabled(value) { sfxEnabled = !!value; },

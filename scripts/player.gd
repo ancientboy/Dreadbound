@@ -179,7 +179,9 @@ func _physics_process(delta: float) -> void:
 		_footstep_timer = maxf(_footstep_timer - delta, 0.0)
 		if _footstep_timer <= 0.0:
 			(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_step_water" if environment_water_depth > 0 else "player_step", 0.035)
-			_footstep_timer = 0.34 if environment_water_depth > 0 else 0.27
+			# A measured walking cadence keeps real foley from becoming a loud loop
+			# at the top-down movement speed.
+			_footstep_timer = 0.48 if environment_water_depth > 0 else 0.42
 	else:
 		_walk_animation_time = 0.0
 		_footstep_timer = 0.0
