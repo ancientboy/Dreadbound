@@ -310,6 +310,15 @@ func _build_audio_settings() -> void:
 	sfx_toggle.add_theme_font_size_override("font_size", 18)
 	sfx_toggle.toggled.connect(func(enabled: bool): director.set_sfx_enabled(enabled))
 	box.add_child(sfx_toggle)
+	var test_sfx_button := Button.new()
+	test_sfx_button.name = "TestSfx"
+	test_sfx_button.text = "测试战斗音效"
+	test_sfx_button.custom_minimum_size.y = 40
+	test_sfx_button.add_theme_font_size_override("font_size", 16)
+	test_sfx_button.add_theme_color_override("font_color", Color("dffff8"))
+	test_sfx_button.add_theme_stylebox_override("normal", _button_style(Color("163a34"), Color("3e8275")))
+	test_sfx_button.pressed.connect(func(): director.play_sfx_preview())
+	box.add_child(test_sfx_button)
 	var close_button := Button.new()
 	close_button.name = "CloseAudioSettings"
 	close_button.text = "完成"
