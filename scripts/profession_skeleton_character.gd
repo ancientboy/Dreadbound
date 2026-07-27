@@ -2,6 +2,7 @@ class_name ProfessionSkeletonCharacter
 extends LayeredSkeletonCharacter
 
 const RIG_ROOT := "res://assets/art/characters/professions/rigs"
+const SKIN_ROOT := "res://assets/art/characters/professions/skins"
 const STYLE_IDS := [
 	"barrier_counter",
 	"last_stand",
@@ -39,6 +40,20 @@ const GENERIC_PART_FILES := {
 	"shin_near": "shin_near",
 	"thigh_far": "thigh_far",
 	"shin_far": "shin_far",
+	"coat_near": "coat_near",
+	"coat_far": "coat_far",
+}
+const HUMANOID_SKIN_PART_FILES := {
+	"head": "head",
+	"torso": "torso",
+	"mech_upper": "left_upper_arm",
+	"mech_forearm": "left_forearm",
+	"organic_upper": "right_upper_arm",
+	"organic_forearm": "right_forearm",
+	"thigh_near": "left_thigh",
+	"shin_near": "left_shin",
+	"thigh_far": "right_thigh",
+	"shin_far": "right_shin",
 	"coat_near": "coat_near",
 	"coat_far": "coat_far",
 }
@@ -149,6 +164,10 @@ static func has_rig(rig_id: String) -> bool:
 		return false
 	if rig_id == "sacrifice_medic":
 		return true
+	if rig_id == "base_armorer":
+		return FileAccess.file_exists(
+			"%s/%s/front/rig.json" % [SKIN_ROOT, rig_id]
+		)
 	return FileAccess.file_exists(
 		_atlas_path_for(rig_id)
 	) and FileAccess.file_exists(
@@ -186,6 +205,8 @@ func _apply_profession_profile() -> void:
 func _asset_root() -> String:
 	if _rig_id == "sacrifice_medic":
 		return ASSET_ROOT
+	if _rig_id == "base_armorer":
+		return "%s/%s" % [SKIN_ROOT, _rig_id]
 	return "%s/%s" % [RIG_ROOT, _rig_id]
 
 
@@ -193,24 +214,38 @@ func _apply_direction_assets(direction: String) -> void:
 	var legacy_medic := _rig_id == "sacrifice_medic"
 	var manifest: Dictionary = {}
 	var atlas: Texture2D
+	var individual_skin := false
 	if not legacy_medic:
 		manifest = _load_manifest(direction)
-		atlas = load(_atlas_path_for(_rig_id)) as Texture2D
-		assert(atlas != null, "Missing profession rig atlas: %s" % _asset_root())
+		individual_skin = int(manifest.get("schema_version", 1)) >= 2
+		if not individual_skin:
+			atlas = load(_atlas_path_for(_rig_id)) as Texture2D
+			assert(atlas != null, "Missing profession rig atlas: %s" % _asset_root())
 	for sprite_key in PARTS:
 		var sprite := _sprites[sprite_key] as Sprite2D
 		if sprite_key == "lantern" and not legacy_medic:
 			sprite.texture = null
 			sprite.visible = false
 			continue
-		var file_name: String = sprite_key if legacy_medic else str(
-			GENERIC_PART_FILES.get(sprite_key, "")
-		)
+		var file_name: String = sprite_key
+		if individual_skin:
+			file_name = str(HUMANOID_SKIN_PART_FILES.get(sprite_key, ""))
+		elif not legacy_medic:
+			file_name = str(GENERIC_PART_FILES.get(sprite_key, ""))
 		var texture: Texture2D
 		if legacy_medic:
 			var path := "%s/%s/%s.png" % [_asset_root(), direction, file_name]
 			texture = load(path) as Texture2D
 			assert(texture != null, "Missing profession rig part: %s" % path)
+		elif individual_skin:
+			var part := (manifest["parts"] as Dictionary)[file_name] as Dictionary
+			var path := "%s/%s/%s" % [
+				_asset_root(),
+				direction,
+				str(part["file"]),
+			]
+			texture = load(path) as Texture2D
+			assert(texture != null, "Missing humanoid skin part: %s" % path)
 		else:
 			var part := (manifest["parts"] as Dictionary)[file_name] as Dictionary
 			var region := _json_rect(part["region"])
@@ -222,6 +257,11 @@ func _apply_direction_assets(direction: String) -> void:
 		sprite.visible = true
 	_layout_rig(direction)
 	_apply_depth_order(direction)
+	if individual_skin and direction == "right":
+		(_sprites["thigh_near"] as Sprite2D).z_index = -7
+		(_sprites["shin_near"] as Sprite2D).z_index = -7
+		(_sprites["thigh_far"] as Sprite2D).z_index = 2
+		(_sprites["shin_far"] as Sprite2D).z_index = 2
 	for bone in _animated_bones():
 		bone.rotation = 0.0
 		bone.rest = bone.transform
@@ -234,8 +274,144 @@ func _layout_rig(direction: String) -> void:
 	if _rig_id == "sacrifice_medic":
 		super._layout_rig(direction)
 		return
+	var manifest := _load_manifest(direction)
+	if int(manifest.get("schema_version", 1)) >= 2:
+		_layout_individual_skin_rig(direction, manifest)
+		return
 	_layout_manifest_rig(direction)
 	_lantern.position = Vector2.ZERO
+
+
+func _layout_individual_skin_rig(
+	direction: String,
+	manifest: Dictionary,
+) -> void:
+	var joints := manifest["joints"] as Dictionary
+	var parts := manifest["parts"] as Dictionary
+	var frame_size := _json_vector(manifest["frame_size"])
+	var root := Vector2(frame_size.x * 0.5, frame_size.y)
+	var hips := _json_vector(joints["hips"])
+	var torso_pivot := _json_vector(joints["torso"])
+	_hips.position = hips - root
+	_torso.position = torso_pivot - hips
+	_set_individual_part_offset("torso", parts["torso"])
+
+	var head_pivot := _json_vector(joints["head"])
+	_head.position = head_pivot - torso_pivot
+	_set_individual_part_offset("head", parts["head"])
+
+	_layout_individual_arm(
+		_left_upper_arm,
+		_left_forearm,
+		"mech_upper",
+		"mech_forearm",
+		parts["left_upper_arm"],
+		parts["left_forearm"],
+		_json_vector(joints["left_shoulder"]),
+		_json_vector(joints["left_elbow"]),
+		_json_vector(joints["left_hand"]),
+		torso_pivot,
+	)
+	_layout_individual_arm(
+		_right_upper_arm,
+		_right_forearm,
+		"organic_upper",
+		"organic_forearm",
+		parts["right_upper_arm"],
+		parts["right_forearm"],
+		_json_vector(joints["right_shoulder"]),
+		_json_vector(joints["right_elbow"]),
+		_json_vector(joints["right_hand"]),
+		torso_pivot,
+	)
+	_layout_individual_leg(
+		_left_leg,
+		_left_lower_leg,
+		"thigh_near",
+		"shin_near",
+		parts["left_thigh"],
+		parts["left_shin"],
+		_json_vector(joints["left_hip"]),
+		_json_vector(joints["left_knee"]),
+		_json_vector(joints["left_foot"]),
+		hips,
+	)
+	_layout_individual_leg(
+		_right_leg,
+		_right_lower_leg,
+		"thigh_far",
+		"shin_far",
+		parts["right_thigh"],
+		parts["right_shin"],
+		_json_vector(joints["right_hip"]),
+		_json_vector(joints["right_knee"]),
+		_json_vector(joints["right_foot"]),
+		hips,
+	)
+	var far_coat_pivot := _json_vector(joints["coat_left"])
+	var near_coat_pivot := _json_vector(joints["coat_right"])
+	_far_coat.position = far_coat_pivot - hips
+	_near_coat.position = near_coat_pivot - hips
+	_set_individual_part_offset("coat_far", parts["coat_far"])
+	_set_individual_part_offset("coat_near", parts["coat_near"])
+	_lantern.position = Vector2.ZERO
+
+func _layout_individual_arm(
+	upper: Bone2D,
+	forearm: Bone2D,
+	upper_key: String,
+	forearm_key: String,
+	upper_part: Dictionary,
+	forearm_part: Dictionary,
+	shoulder: Vector2,
+	elbow: Vector2,
+	hand: Vector2,
+	torso_pivot: Vector2,
+) -> void:
+	upper.position = shoulder - torso_pivot
+	forearm.position = Vector2(0.0, elbow.y - shoulder.y)
+	upper.length = maxf(1.0, elbow.y - shoulder.y)
+	forearm.length = maxf(1.0, hand.y - elbow.y)
+	_set_individual_part_offset(upper_key, upper_part)
+	_set_individual_part_offset(
+		forearm_key,
+		forearm_part,
+		Vector2(elbow.x - shoulder.x, 0.0),
+	)
+
+
+func _layout_individual_leg(
+	upper: Bone2D,
+	lower: Bone2D,
+	upper_key: String,
+	lower_key: String,
+	upper_part: Dictionary,
+	lower_part: Dictionary,
+	hip: Vector2,
+	knee: Vector2,
+	foot: Vector2,
+	hips: Vector2,
+) -> void:
+	upper.position = hip - hips
+	lower.position = Vector2(0.0, knee.y - hip.y)
+	upper.length = maxf(1.0, knee.y - hip.y)
+	lower.length = maxf(1.0, foot.y - knee.y)
+	_set_individual_part_offset(upper_key, upper_part)
+	_set_individual_part_offset(
+		lower_key,
+		lower_part,
+		Vector2(knee.x - hip.x, 0.0),
+	)
+
+
+func _set_individual_part_offset(
+	sprite_key: String,
+	part: Dictionary,
+	correction := Vector2.ZERO,
+) -> void:
+	var size := _json_vector(part["size"])
+	var pivot := _json_vector(part["pivot"])
+	(_sprites[sprite_key] as Sprite2D).position = size * 0.5 - pivot + correction
 
 
 func _layout_manifest_rig(direction: String) -> void:

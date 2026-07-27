@@ -128,6 +128,9 @@ func _run_test() -> void:
 
 
 func _assert_generic_asset_contract(style_id: String) -> void:
+	if style_id == "base_armorer":
+		_assert_humanoid_skin_contract(style_id)
+		return
 	var style_root := "%s/%s" % [
 		ProfessionSkeletonCharacter.RIG_ROOT,
 		style_id,
@@ -164,6 +167,50 @@ func _assert_generic_asset_contract(style_id: String) -> void:
 		]:
 			assert(
 				not FileAccess.file_exists("%s/%s.png" % [root_path, forbidden])
+			)
+
+
+func _assert_humanoid_skin_contract(style_id: String) -> void:
+	var required_parts := ProfessionSkeletonCharacter.HUMANOID_SKIN_PART_FILES.values()
+	var skin_root := "%s/%s" % [
+		ProfessionSkeletonCharacter.SKIN_ROOT,
+		style_id,
+	]
+	assert(required_parts.size() == 12)
+	for direction in LayeredSkeletonCharacter.DIRECTIONS:
+		var root_path := "%s/%s" % [skin_root, direction]
+		var manifest_path := "%s/rig.json" % root_path
+		assert(FileAccess.file_exists(manifest_path))
+		var manifest = JSON.parse_string(
+			FileAccess.get_file_as_string(manifest_path)
+		)
+		assert(manifest is Dictionary)
+		assert(int(manifest.get("schema_version", 0)) == 2)
+		assert(str(manifest.get("source", "")) == "individual")
+		assert((manifest.parts as Dictionary).size() == 12)
+		for part_file in required_parts:
+			assert((manifest.parts as Dictionary).has(part_file))
+			var part := (
+				(manifest.parts as Dictionary)[part_file] as Dictionary
+			)
+			assert(part.has("pivot"))
+			assert(part.has("size"))
+			var file_path := "%s/%s" % [root_path, str(part.file)]
+			assert(FileAccess.file_exists(file_path), file_path)
+			var texture := load(file_path) as Texture2D
+			assert(texture != null, file_path)
+			assert(texture.get_width() > 8 and texture.get_height() > 8)
+		for forbidden in [
+			"weapon",
+			"gun",
+			"rifle",
+			"shield",
+			"lantern",
+			"grenade",
+			"backpack",
+		]:
+			assert(
+				not FileAccess.file_exists("%s/%s.webp" % [root_path, forbidden])
 			)
 
 
