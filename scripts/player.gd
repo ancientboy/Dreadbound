@@ -37,11 +37,19 @@ signal selected_item_changed(item_name: String, count: int)
 signal noise_generated(amount: int)
 signal equipment_trait_used(trait_id: String)
 signal skill_changed(skill_name: String, remaining: float, duration: float)
+signal footstep_requested(surface_hint: String, intensity: float)
 
 enum Weapon { MELEE, RANGED, SHOTGUN }
 enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
 
 @export var movement_speed := 210.0
+@export_group("Character Feel")
+@export var acceleration := 1850.0
+@export var deceleration := 2450.0
+@export var movement_smoothing := 18.0
+@export var turn_acceleration_multiplier := 1.35
+@export var stop_speed_threshold := 5.0
+@export_group("")
 @export var max_health := 100
 @export var attack_damage := 35
 @export var attack_range := 76.0
@@ -87,7 +95,13 @@ var relic_profile := {}
 var equipped_weapon_item := ""
 var _relic_hit_counter := 0
 var _walk_animation_time := 0.0
+var _idle_animation_time := 0.0
+var _step_phase := 0.0
+var _was_moving := false
+var _smoothed_move_direction := Vector2.ZERO
 var _body_sprite: Sprite2D
+var _body_sprite_rest_position := Vector2.ZERO
+var _body_sprite_rest_scale := Vector2.ONE
 var _locked_ranged_target: Node2D
 
 
@@ -189,14 +203,18 @@ func _physics_process(delta: float) -> void:
 		wants_to_use_trait = mobile_controls.consume_trait() or wants_to_use_trait
 		wants_to_use_skill = mobile_controls.consume_skill() or wants_to_use_skill
 
-	velocity = input_direction * movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
+	var target_speed := movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
+	_update_movement_velocity(input_direction, target_speed, delta)
 	if input_direction != Vector2.ZERO:
 		facing = input_direction.normalized()
-		_walk_animation_time += delta
+		var speed_ratio := clampf(velocity.length() / maxf(target_speed, 1.0), 0.0, 1.0)
+		_walk_animation_time += delta * lerpf(0.78, 1.12, speed_ratio)
 		_emit_pathway_movement_echo()
 	else:
-		_walk_animation_time = 0.0
+		_idle_animation_time += delta
+	_sync_footsteps(delta, target_speed)
 	_sync_body_sprite()
+	_update_body_feedback(delta, target_speed)
 	_update_ranged_lock()
 	if wants_to_attack:
 		try_attack()
@@ -214,6 +232,71 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if had_visual_effect or velocity.length() > 2.0 or not facing.is_equal_approx(previous_facing):
 		queue_redraw()
+
+
+func _update_movement_velocity(input_direction: Vector2, target_speed: float, delta: float) -> void:
+	var desired_direction := input_direction.limit_length(1.0)
+	if desired_direction == Vector2.ZERO:
+		_smoothed_move_direction = Vector2.ZERO
+	else:
+		var direction_weight := 1.0 - exp(-movement_smoothing * delta)
+		if _smoothed_move_direction == Vector2.ZERO:
+			_smoothed_move_direction = desired_direction
+		elif _smoothed_move_direction.dot(desired_direction) < 0.0:
+			# A deliberate reversal should change intent immediately; velocity
+			# still decelerates through the turn boost instead of snapping.
+			_smoothed_move_direction = desired_direction
+		else:
+			_smoothed_move_direction = _smoothed_move_direction.lerp(desired_direction, direction_weight).normalized()
+	var target_velocity := _smoothed_move_direction * target_speed
+	velocity = smooth_movement_velocity(
+		velocity,
+		target_velocity,
+		acceleration,
+		deceleration,
+		turn_acceleration_multiplier,
+		delta,
+	)
+	if desired_direction == Vector2.ZERO and velocity.length() <= stop_speed_threshold:
+		velocity = Vector2.ZERO
+
+
+static func smooth_movement_velocity(
+	current_velocity: Vector2,
+	target_velocity: Vector2,
+	acceleration_rate: float,
+	deceleration_rate: float,
+	turn_multiplier: float,
+	delta: float,
+) -> Vector2:
+	var response_rate := deceleration_rate if target_velocity == Vector2.ZERO else acceleration_rate
+	if current_velocity != Vector2.ZERO and target_velocity != Vector2.ZERO and current_velocity.dot(target_velocity) < 0.0:
+		response_rate *= turn_multiplier
+	return current_velocity.move_toward(target_velocity, response_rate * delta)
+
+
+func _sync_footsteps(delta: float, target_speed: float) -> void:
+	var speed_ratio := clampf(velocity.length() / maxf(target_speed, 1.0), 0.0, 1.0)
+	var is_moving := speed_ratio > 0.16
+	if is_moving and not _was_moving:
+		_walk_animation_time = 0.0
+		_step_phase = 0.52
+	if is_moving:
+		_step_phase += delta * lerpf(1.55, 2.7, speed_ratio)
+		if _step_phase >= 1.0:
+			_step_phase = fmod(_step_phase, 1.0)
+			footstep_requested.emit(_footstep_surface_hint(), lerpf(0.45, 1.0, speed_ratio))
+	else:
+		_step_phase = 0.0
+	_was_moving = is_moving
+
+
+func _footstep_surface_hint() -> String:
+	if environment_water_depth >= 2:
+		return "deep_water"
+	if environment_water_depth == 1:
+		return "shallow_water"
+	return "default"
 
 
 func _setup_body_sprite() -> void:
@@ -236,6 +319,8 @@ func _setup_body_sprite() -> void:
 	else:
 		_body_sprite.position = Vector2(0, -26)
 		_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_body_sprite_rest_position = _body_sprite.position
+	_body_sprite_rest_scale = _body_sprite.scale
 	_body_sprite.z_index = 1
 	add_child(_body_sprite)
 	_sync_body_sprite()
@@ -256,6 +341,33 @@ func _sync_body_sprite() -> void:
 	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
 	_body_sprite.frame_coords = Vector2i(frame, row)
 	_body_sprite.modulate = Color("ffb5ad") if _hurt_flash > 0.0 else (Color("c8ffdc") if _heal_flash > 0.0 else Color.WHITE)
+
+
+func _update_body_feedback(delta: float, target_speed: float) -> void:
+	if not is_instance_valid(_body_sprite):
+		return
+	var speed_ratio := clampf(velocity.length() / maxf(target_speed, 1.0), 0.0, 1.0)
+	var moving := speed_ratio > 0.04
+	var position_target := _body_sprite_rest_position
+	var scale_target := _body_sprite_rest_scale
+	var rotation_target := 0.0
+	if moving:
+		var stride := sin(_walk_animation_time * TAU * 1.5)
+		position_target.y += absf(stride) * -2.2 * speed_ratio
+		position_target.x += velocity.normalized().x * 1.4 * speed_ratio
+		scale_target *= Vector2(
+			1.0 + absf(stride) * 0.018 * speed_ratio,
+			1.0 - absf(stride) * 0.024 * speed_ratio
+		)
+		rotation_target = clampf(velocity.x / maxf(target_speed, 1.0), -1.0, 1.0) * 0.035
+	else:
+		var breath := sin(_idle_animation_time * 2.2)
+		position_target.y += breath * 0.7
+		scale_target *= Vector2(1.0 - breath * 0.004, 1.0 + breath * 0.007)
+	var feedback_weight := 1.0 - exp(-14.0 * delta)
+	_body_sprite.position = _body_sprite.position.lerp(position_target, feedback_weight)
+	_body_sprite.scale = _body_sprite.scale.lerp(scale_target, feedback_weight)
+	_body_sprite.rotation = lerp_angle(_body_sprite.rotation, rotation_target, feedback_weight)
 
 
 func try_attack() -> bool:
@@ -724,6 +836,7 @@ func _emit_pathway_movement_echo() -> void:
 
 
 func _draw() -> void:
+	_draw_character_shadow()
 	_draw_pathway_state_vfx()
 	var visual := _pathway_visual()
 	if not is_instance_valid(_body_sprite):
@@ -761,6 +874,18 @@ func _draw() -> void:
 			_draw_basic_weapon(0)
 	_draw_deep_water_occlusion()
 	_draw_health_bar()
+
+
+func _draw_character_shadow() -> void:
+	var speed_ratio := clampf(velocity.length() / maxf(movement_speed, 1.0), 0.0, 1.0)
+	var stride := absf(sin(_walk_animation_time * TAU * 1.5)) if speed_ratio > 0.04 else 0.0
+	draw_set_transform(
+		Vector2(0, 9),
+		0.0,
+		Vector2(1.0 + speed_ratio * 0.08, 0.42 - stride * speed_ratio * 0.035),
+	)
+	draw_circle(Vector2.ZERO, 17.0, Color(0.0, 0.0, 0.0, 0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_health_bar() -> void:
