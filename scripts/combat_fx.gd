@@ -167,7 +167,7 @@ func profession_skill(kind: String, position: Vector2, direction := Vector2.DOWN
 func profession_attack(pathway: String, attack_kind: String, position: Vector2, direction := Vector2.DOWN, size := 96.0, reach := 0.0, duration := 0.24) -> void:
 	if not PROFESSION_ATTACK_ATLASES.has(pathway):
 		return
-	var mode_index := {"melee": 0, "ranged": 1, "shotgun": 2}.get(attack_kind, -1)
+	var mode_index: int = int({"melee": 0, "ranged": 1, "shotgun": 2}.get(attack_kind, -1))
 	if mode_index < 0:
 		return
 	var event := _spawn("profession_attack_%s_%d" % [pathway, mode_index], position, direction, size, duration, Color.WHITE)

@@ -700,7 +700,7 @@ func _play_attack_style_vfx(attack_kind: String, reach := 0.0) -> void:
 	if combat_fx == null or not _has_profession_combat_presentation():
 		return
 	var style := _active_combat_style()
-	var pathway := _pathway_visual().id
+	var pathway: String = str(_pathway_visual().id)
 	var mode_size := 128.0 if attack_kind == "shotgun" else (106.0 if attack_kind == "ranged" else 116.0)
 	var visual_reach := reach if reach > 0.0 else (attack_range if attack_kind == "melee" else (ranged_range if attack_kind == "ranged" else shotgun_range))
 	combat_fx.profession_attack(pathway, attack_kind, global_position + facing * 28.0, facing, mode_size, visual_reach, 0.26)
