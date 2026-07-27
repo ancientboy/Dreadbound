@@ -118,6 +118,7 @@ func _run_test() -> void:
 	var skill_demo := instance.get_node("SkillRangeDemo") as SkillRangeDemo
 	assert(skill_demo != null)
 	assert(skill_demo.uses_existing_skill_atlases())
+	assert(rig.is_cast_orb_preview_enabled())
 	var previous_range := 0.0
 	for mode in [
 		SkillRangeDemo.SkillMode.CLOSE_BURST,
@@ -126,6 +127,7 @@ func _run_test() -> void:
 	]:
 		player.facing = Vector2.RIGHT
 		skill_demo.set_skill_mode(mode)
+		assert(not rig.is_cast_orb_preview_enabled())
 		assert(skill_demo.skill_range() > previous_range)
 		previous_range = skill_demo.skill_range()
 		assert(skill_demo.trigger_skill())
@@ -134,6 +136,7 @@ func _run_test() -> void:
 			skill_demo.cast_endpoint().distance_to(player.global_position)
 			>= skill_demo.skill_range() - 0.1
 		)
+		assert(skill_demo.uses_distinct_effect_anchors())
 		skill_demo._phase = "active"
 		skill_demo._phase_time = float(SkillRangeDemo.SKILLS[mode].active) * 0.96
 		skill_demo._advance_phase()
