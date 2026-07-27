@@ -9,6 +9,7 @@ var feature_grid: GridContainer
 var world_grid: GridContainer
 var primary_button: Button
 var profile_button: Button
+var demo_button: Button
 var settings_button: Button
 var audio_settings: PanelContainer
 
@@ -149,6 +150,19 @@ func _build_home() -> void:
 	profile_button.add_theme_stylebox_override("pressed", _button_style(Color("081514"), Color("4c8e83")))
 	profile_button.pressed.connect(_open_profiles)
 	actions.add_child(profile_button)
+	demo_button = Button.new()
+	demo_button.name = "OpenCharacterFeelDemo"
+	demo_button.text = "角色手感 Demo"
+	demo_button.tooltip_text = "无需档案，直接体验新版移动、动画与镜头手感"
+	demo_button.custom_minimum_size = Vector2(220, 64)
+	demo_button.add_theme_font_size_override("font_size", 17)
+	demo_button.add_theme_color_override("font_color", Color("dfc888"))
+	demo_button.add_theme_color_override("font_hover_color", Color("fff0bd"))
+	demo_button.add_theme_stylebox_override("normal", _button_style(Color("1e1a12"), Color("8a7140")))
+	demo_button.add_theme_stylebox_override("hover", _button_style(Color("302716"), Color("d0ad62")))
+	demo_button.add_theme_stylebox_override("pressed", _button_style(Color("151109"), Color("96783e")))
+	demo_button.pressed.connect(_open_character_feel_demo)
+	actions.add_child(demo_button)
 
 	var loop := Label.new()
 	loop.text = "选择整备  →  投送副本  →  探索与抉择  →  撤离结算  →  装备进化与世界变化"
@@ -267,8 +281,10 @@ func _apply_responsive_ui() -> void:
 	actions.vertical = compact
 	primary_button.custom_minimum_size.x = 0 if compact else 360
 	profile_button.custom_minimum_size.x = 0 if compact else 260
+	demo_button.custom_minimum_size.x = 0 if compact else 220
 	primary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	profile_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	demo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.custom_minimum_size.x = 0
 	queue_redraw()
 
@@ -346,3 +362,7 @@ func _enter_game() -> void:
 
 func _open_profiles() -> void:
 	get_tree().change_scene_to_file("res://scenes/profile_gate.tscn")
+
+
+func _open_character_feel_demo() -> void:
+	get_tree().change_scene_to_file("res://scenes/test/character_feel_demo.tscn")
