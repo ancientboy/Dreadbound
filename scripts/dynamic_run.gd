@@ -22,10 +22,15 @@ const METRO_MAP_REGIONS := [
 ]
 const METRO_SECRET_REGION := {"id": "lost_passenger_level", "name": "失踪乘客维护层", "rect": Rect2(1504, 960, 704, 320), "secret": true}
 const SANATORIUM_SECRET_REGION := {"id": "sealed_archive", "name": "封存病历室", "rect": Rect2(1088, 384, 256, 192), "secret": true}
+# Gameplay anchors occupy the open circulation space of each room. They never
+# share the wall bands used by beds, desks, cabinets, or scenery props.
 const CONTENT_SLOTS := [
-	Vector2(352, 416), Vector2(672, 256), Vector2(800, 480), Vector2(1088, 608),
-	Vector2(1184, 480), Vector2(1344, 608), Vector2(1760, 704), Vector2(1952, 288),
-	Vector2(2048, 384), Vector2(1600, 1088), Vector2(1840, 1200), Vector2(224, 1184),
+	Vector2(256, 392), Vector2(608, 392), Vector2(816, 392), Vector2(1072, 576),
+	Vector2(1296, 576), Vector2(1760, 368), Vector2(2048, 368), Vector2(1600, 1120),
+	Vector2(1952, 1120), Vector2(256, 1152),
+]
+const EVENT_SLOTS := [
+	Vector2(352, 352), Vector2(704, 416), Vector2(1136, 512), Vector2(1840, 368),
 ]
 const SIDE_CONTRACTS := ["medicine_cabinet", "echo_ward", "archive_whisper", "power_surge"]
 const CAUSAL_CHAINS := ["spore_bloom", "quiet_signal", "hungry_corridor"]

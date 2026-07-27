@@ -24,9 +24,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if kind != Kind.NPC:
-		return
-	_idle_time += delta
+	if kind == Kind.NPC:
+		_idle_time += delta
 	queue_redraw()
 
 
@@ -67,6 +66,7 @@ func _draw() -> void:
 	var npc_row := _story_npc_row()
 	if npc_row >= 0 and STORY_NPCS_IDLE != null and STORY_NPCS_IDLE.get_size() == Vector2(384, 480):
 		_draw_story_npc(npc_row, color)
+		_draw_label_if_relevant(color)
 		return
 	var metro_prop_index := _metro_prop_index()
 	if metro_prop_index >= 0 and METRO_PROPS != null and METRO_PROPS.get_size() == Vector2(512, 384):
@@ -78,7 +78,7 @@ func _draw() -> void:
 			Color(0.58, 0.62, 0.64, 0.76) if completed else (Color(0.82, 1.0, 0.96) if active else Color.WHITE),
 		)
 		_draw_objective_halo(color)
-		draw_string(UI_FONT, Vector2(-110, 56), display_name, HORIZONTAL_ALIGNMENT_CENTER, 220, 12, color)
+		_draw_label_if_relevant(color)
 		return
 	var objective_index := _objective_sprite_index()
 	if objective_index >= 0 and SANATORIUM_OBJECTIVE_LIGHTING != null and SANATORIUM_OBJECTIVE_LIGHTING.get_size() == Vector2(512, 256):
@@ -101,7 +101,7 @@ func _draw() -> void:
 			draw_rect(Rect2(-19, -27, 38, 54), Color("15211f"))
 			draw_rect(Rect2(-14, -21, 28, 20), color)
 	_draw_objective_halo(color)
-	draw_string(UI_FONT, Vector2(-110, 56), display_name, HORIZONTAL_ALIGNMENT_CENTER, 220, 12, color)
+	_draw_label_if_relevant(color)
 
 
 func _objective_sprite_index() -> int:
@@ -129,6 +129,12 @@ func _draw_objective_halo(color: Color) -> void:
 			Rect2(3 * 128, 128, 128, 128),
 			Color(0.8, 1.0, 0.96, 0.48),
 		)
+
+
+func _draw_label_if_relevant(color: Color) -> void:
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if active or (player != null and global_position.distance_to(player.global_position) <= 180.0):
+		draw_string(UI_FONT, Vector2(-110, 56), display_name, HORIZONTAL_ALIGNMENT_CENTER, 220, 12, color)
 
 
 func _sanatorium_prop_index() -> int:

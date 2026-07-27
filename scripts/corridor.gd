@@ -117,7 +117,6 @@ var curator_contract_content: VBoxContainer
 var audio_settings_button: Button
 var audio_settings_panel: DreadboundAudioSettingsPanel
 var style_buttons := {}
-var avatar_buttons := {}
 var hub_navigation: GridContainer
 var section_panel: ColorRect
 var section_title: Label
@@ -170,7 +169,6 @@ func _ready() -> void:
 	_create_respec_control()
 	_create_style_controls()
 	_create_difficulty_control()
-	_create_avatar_controls()
 	_create_hub_navigation()
 	_create_section_panel()
 	_create_milestone_feedback()
@@ -508,9 +506,6 @@ func _refresh() -> void:
 			var unlocked := GameState.unlocked_combat_styles.has(style_id)
 			style_button.text = "%s%s\n%s" % ["▶ " if GameState.active_combat_style == style_id else ("✓ " if unlocked else ""), str(style.name), "点击切换流派" if unlocked else "%s · 5 回响" % str(style.description)]
 			style_button.disabled = not unlocked and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
-	for avatar_id in avatar_buttons:
-		var avatar_button: Button = avatar_buttons[avatar_id]
-		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（2D骨骼样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
 	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
 	if respec:
 		respec.text = "重构职业 · 1 因果残片（可无限次）"
@@ -691,8 +686,6 @@ func _draw() -> void:
 # The hub follows the same appearance rule as the playable character: an active
 # combat style takes precedence, then the profession, then the original drifter.
 func _walker_body_texture() -> Texture2D:
-	if GameState.player_avatar == "drifter_female":
-		return HIGHRES_DRIFTER_SPRITESHEET
 	var style_texture: Texture2D = COMBAT_STYLE_SPRITESHEETS.get(GameState.active_combat_style)
 	if style_texture != null:
 		return style_texture
@@ -1366,26 +1359,6 @@ func _create_difficulty_control() -> void:
 	$Margin/Layout/Columns/Profile.add_child(button)
 
 
-func _create_avatar_controls() -> void:
-	var parent := $Margin/Layout/Columns/Profile as VBoxContainer
-	var title := Label.new()
-	title.text = "行者外观"
-	title.add_theme_color_override("font_color", Color("6cd7c0"))
-	parent.add_child(title)
-	for avatar_id in ["drifter_male", "drifter_female"]:
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(0, 42)
-		button.pressed.connect(_select_player_avatar.bind(avatar_id))
-		parent.add_child(button)
-		avatar_buttons[avatar_id] = button
-
-
-func _select_player_avatar(avatar_id: String) -> void:
-	if GameState.set_player_avatar(avatar_id):
-		feedback.text = "已切换为%s；回廊和下一次投送会同步显示。" % GameState.get_player_avatar_name()
-		_refresh()
-
-
 func _cycle_difficulty() -> void:
 	var ids := ["standard", "hazard", "nightmare"]
 	var index := (ids.find(GameState.selected_difficulty) + 1) % ids.size()
@@ -1517,13 +1490,6 @@ func _refresh_mobile_terminal() -> void:
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
 		button.pressed.connect(_select_loadout.bind(loadout_id))
 		content.add_child(button)
-	_mobile_terminal_section(content, "行者外观", "外观不影响装备、职业或技能；女性行者用于测试 2D 骨骼动作与独立武器挂点。")
-	for avatar_id in ["drifter_male", "drifter_female"]:
-		var avatar_button := Button.new()
-		avatar_button.custom_minimum_size = Vector2(0, 50)
-		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（2D骨骼样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
-		avatar_button.pressed.connect(_select_player_avatar.bind(avatar_id))
-		content.add_child(avatar_button)
 	_mobile_terminal_section(content, "永久强化", "选择强化，下一次投送生效。")
 	for upgrade_id in UPGRADE_INFO:
 		var level := int(GameState.upgrades[upgrade_id])
@@ -1719,7 +1685,6 @@ func _create_hub_navigation() -> void:
 		["career", "职业", 4],
 		["dungeons", "副本", 5],
 		["terminal", "终端", 6],
-		["avatar", "角色", 3],
 	]
 	for index in range(entries.size()):
 		var entry: Array = entries[index]
@@ -1825,7 +1790,6 @@ func _open_hub_section(section: String) -> void:
 		"career": _build_career_section()
 		"dungeons": _build_dungeon_section()
 		"terminal": _build_exchange_section()
-		"avatar": _build_avatar_section()
 	section_panel.visible = true
 	_layout_section_panel(get_viewport_rect().size)
 
@@ -2263,22 +2227,6 @@ func _build_career_section() -> void:
 				_open_hub_section("career")
 			)
 			section_content.add_child(style_button)
-
-
-func _build_avatar_section() -> void:
-	section_title.text = "角色切换"
-	_section_heading("行者外观", "外观不会改变职业、流派、装备、技能或数值。默认男性行者保持不变；女性行者用于测试 2D 骨骼动作和独立武器挂点。")
-	for avatar_id in ["drifter_male", "drifter_female"]:
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(0, 64)
-		var active: bool = GameState.player_avatar == avatar_id
-		var name := "女性行者（2D骨骼样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"
-		button.text = "%s%s\n%s" % ["▶ " if active else "", name, "当前使用中" if active else "点击切换"]
-		button.pressed.connect(func():
-			_select_player_avatar(avatar_id)
-			_open_hub_section("avatar")
-		)
-		section_content.add_child(button)
 
 
 func _build_dungeon_section() -> void:

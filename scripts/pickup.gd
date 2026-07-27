@@ -91,9 +91,15 @@ func _draw() -> void:
 	else:
 		draw_rect(Rect2(-8, -16 + bob, 16, 32), Color("aeb7b0"))
 		draw_rect(Rect2(-6, -12 + bob, 12, 20), color)
-	var labels := ["绷带", "回响碎片", "手枪弹药", "霰弹", "镇静剂", "兴奋剂", "材料"]
-	var label: String = str(ExchangeEvolution.MATERIALS.get(material_id, {}).get("name", "未知材料")) if kind == Kind.MATERIAL else labels[int(kind)]
-	draw_string(UI_FONT, Vector2(-42, 38), label, HORIZONTAL_ALIGNMENT_CENTER, 84, 12, color)
+	if _is_near_player():
+		var labels := ["绷带", "回响碎片", "手枪弹药", "霰弹", "镇静剂", "兴奋剂", "材料"]
+		var label: String = str(ExchangeEvolution.MATERIALS.get(material_id, {}).get("name", "未知材料")) if kind == Kind.MATERIAL else labels[int(kind)]
+		draw_string(UI_FONT, Vector2(-42, 38), label, HORIZONTAL_ALIGNMENT_CENTER, 84, 12, color)
+
+
+func _is_near_player() -> bool:
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	return player != null and global_position.distance_to(player.global_position) <= 150.0
 
 
 func _atlas_index() -> int:

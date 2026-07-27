@@ -50,14 +50,9 @@ func _run_test() -> void:
 	root.add_child(corridor)
 	await process_frame
 	var navigation := corridor.get_node("IndependentHubNavigation") as GridContainer
-	assert(navigation != null and navigation.get_child_count() == 8)
+	assert(navigation != null and navigation.get_child_count() == 7)
 	for button in navigation.get_children():
 		assert(button is Button and button.icon != null, "hub navigation entry has no atlas icon")
-	var avatar_entry := navigation.get_node_or_null("HubAvatar") as Button
-	assert(avatar_entry != null and avatar_entry.text == "角色", "角色切换入口缺失")
-	corridor._open_hub_section("avatar")
-	assert(corridor.section_title.text == "角色切换")
-	assert(corridor.section_content.get_child_count() >= 4)
 
 	var game_state := root.get_node("GameState")
 	game_state.equipment_inventory.clear()

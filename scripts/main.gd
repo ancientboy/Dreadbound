@@ -306,6 +306,7 @@ func _on_map_expanded_changed(expanded: bool) -> void:
 
 func _process(delta: float) -> void:
 	run_elapsed += delta
+	_separate_enemy_silhouettes()
 	whistle_cooldown = maxf(whistle_cooldown - delta, 0.0)
 	if _notification_timer > 0.0:
 		_notification_timer -= delta
@@ -367,6 +368,27 @@ func _process(delta: float) -> void:
 			prompt.text = target.get_prompt(collected_records.size(), power_restored, total_records)
 		if wants_to_interact:
 			_handle_interaction(target)
+
+
+func _separate_enemy_silhouettes() -> void:
+	# Enemy movement converges on the player. Keep their sprite footprints apart so
+	# adjacent enemies never read as a broken or partially exposed sprite frame.
+	var enemies := get_tree().get_nodes_in_group("enemies")
+	for first_index in range(enemies.size()):
+		var first := enemies[first_index] as CharacterBody2D
+		if first == null:
+			continue
+		for second_index in range(first_index + 1, enemies.size()):
+			var second := enemies[second_index] as CharacterBody2D
+			if second == null:
+				continue
+			var offset := second.global_position - first.global_position
+			var distance := offset.length()
+			if distance <= 0.01 or distance >= 62.0:
+				continue
+			var push := offset / distance * (62.0 - distance) * 0.5
+			first.global_position -= push
+			second.global_position += push
 
 
 func _handle_interaction(target: ObjectiveInteractable) -> void:
@@ -729,7 +751,7 @@ func _create_persistent_narrative() -> void:
 			ObjectiveInteractable.Kind.NPC,
 			"sanatorium_memory",
 			str(narrative_chapter.get("npc_title", "失忆病人 · 沈岚")),
-			Vector2(800, 480),
+			Vector2(816, 432),
 		)
 		if bool(narrative_chapter.get("hidden_open", false)):
 			_add_interactable(ObjectiveInteractable.Kind.NPC, "sanatorium_archive", "隐藏病历室 · 周衡", Vector2(1184, 480))
@@ -1119,12 +1141,12 @@ func _create_risk_events() -> void:
 		var start := absi(run_config.seed) % authored.size()
 		for index in range(mini(2, authored.size())):
 			var event: Dictionary = authored[(start + index) % authored.size()]
-			var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
+			var at: Vector2 = DynamicRunConfig.EVENT_SLOTS[(absi(run_config.seed) + index) % DynamicRunConfig.EVENT_SLOTS.size()]
 			_add_behavior_event(str(event.id), event, at)
 		return
 	for index in range(run_config.side_contracts.size()):
 		var event_id: String = run_config.side_contracts[index]
-		var at: Vector2 = DynamicRunConfig.CONTENT_SLOTS[(absi(run_config.seed) + index * 5) % DynamicRunConfig.CONTENT_SLOTS.size()]
+		var at: Vector2 = DynamicRunConfig.EVENT_SLOTS[(absi(run_config.seed) + index) % DynamicRunConfig.EVENT_SLOTS.size()]
 		if run_config.world_id == "metro":
 			var metro_events := world_rules.event_ids()
 			var metro_id: String = metro_events[(absi(run_config.seed) + index) % metro_events.size()]
@@ -1819,13 +1841,21 @@ func _draw_sanatorium_wall(wall_rect: Rect2) -> void:
 
 
 func _draw_sanatorium_props() -> void:
+	# Props form functional room clusters: furnishings stay on walls, while the
+	# center lanes remain clear for movement, combat, and readable objectives.
 	var placements := [
-		[0, Vector2(176, 210), 104.0], [0, Vector2(336, 210), 104.0],
-		[4, Vector2(576, 206), 112.0], [2, Vector2(768, 220), 96.0],
-		[6, Vector2(1152, 400), 120.0], [3, Vector2(1304, 408), 96.0],
-		[5, Vector2(1568, 1096), 112.0], [7, Vector2(1792, 1190), 96.0],
-		[8, Vector2(1680, 302), 104.0], [9, Vector2(2050, 302), 96.0],
-		[10, Vector2(1110, 800), 112.0], [11, Vector2(318, 1192), 112.0],
+		# Entrance: reception furniture, not a pile in the center.
+		[0, Vector2(176, 222), 96.0], [0, Vector2(336, 222), 96.0],
+		# Patient wing: beds and storage line the top wall; the lower half is clear.
+		[4, Vector2(568, 212), 96.0], [4, Vector2(712, 212), 96.0], [2, Vector2(844, 214), 88.0],
+		# Nurse station: one work island with a rear utility cabinet.
+		[6, Vector2(1080, 350), 108.0], [3, Vector2(1324, 350), 88.0],
+		# Archive: shelving is deliberately held against the back wall.
+		[8, Vector2(1760, 210), 96.0], [9, Vector2(2048, 210), 96.0],
+		# Basement: machinery sits in the service bay rather than the travel lane.
+		[5, Vector2(1584, 1088), 104.0], [7, Vector2(2000, 1120), 88.0],
+		# Extraction retains a single clear landmark.
+		[11, Vector2(288, 1120), 96.0],
 	]
 	for placement in placements:
 		_draw_sanatorium_prop(int(placement[0]), placement[1], float(placement[2]))

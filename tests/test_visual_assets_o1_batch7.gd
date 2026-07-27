@@ -48,10 +48,8 @@ func _run_test() -> void:
 	assert(state != null)
 	var original_pathway := state.selected_pathway
 	var original_style := state.active_combat_style
-	var original_avatar := state.player_avatar
 	state.selected_pathway = ""
 	state.active_combat_style = ""
-	state.player_avatar = "drifter_male"
 	var male_player := load("res://scenes/entities/player.tscn").instantiate() as Player
 	root.add_child(male_player)
 	await process_frame
@@ -60,17 +58,6 @@ func _run_test() -> void:
 	assert(male_sprite.texture.resource_path.ends_with("drifter_spritesheet.png"))
 	male_player.queue_free()
 	await process_frame
-	state.player_avatar = "drifter_female"
-	var base_player := load("res://scenes/entities/player.tscn").instantiate() as Player
-	root.add_child(base_player)
-	await process_frame
-	var female_rig := base_player.get_node_or_null("FemaleDrifterRig") as FemaleDrifterRig
-	assert(female_rig != null)
-	assert(female_rig.get_node_or_null("RightForearm/WeaponMount/Weapon") is Sprite2D)
-	assert(female_rig.get_node_or_null("Torso") != null)
-	base_player.queue_free()
-	await process_frame
-	state.player_avatar = "drifter_male"
 	var profession_paths := {
 		"steadfast": "steadfast_spritesheet.png",
 		"armorer": "armorer_spritesheet.png",
@@ -130,7 +117,7 @@ func _run_test() -> void:
 	var npc_source := FileAccess.get_file_as_string("res://scripts/objective_interactable.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	assert(player_source.contains("_profession_body_texture"))
-	assert(player_source.contains("FemaleDrifterRig"))
+	assert(not player_source.contains("FemaleDrifterRig"))
 	assert(player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
 	assert(not player_source.contains("_draw_combat_style_form"))
 	assert(player_source.contains("_play_attack_style_vfx"))
@@ -140,7 +127,6 @@ func _run_test() -> void:
 
 	state.selected_pathway = original_pathway
 	state.active_combat_style = original_style
-	state.player_avatar = original_avatar
 	fx.queue_free()
 	print("O1 batch 7 passed: three profession bodies, twelve forms/skills and five authored story NPCs")
 	quit()

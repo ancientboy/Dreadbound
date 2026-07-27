@@ -19,10 +19,6 @@ func _run_test() -> void:
 	state.active_combat_style = ""
 	state.selected_pathway = original_pathway
 	state.active_combat_style = original_style
-	var original_avatar := state.player_avatar
-	state.player_avatar = "drifter_female"
-	assert(corridor._walker_body_texture().resource_path.ends_with("drifter_highres_spritesheet.png"))
-	state.player_avatar = original_avatar
 	assert(not corridor.get_node("Margin").visible)
 	assert(not corridor.get_node("HubActions").visible)
 	assert(corridor.get_node("OpenArchive").visible)

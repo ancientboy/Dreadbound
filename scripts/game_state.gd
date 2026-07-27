@@ -173,7 +173,7 @@ func get_difficulty() -> Dictionary:
 
 
 func set_player_avatar(avatar_id: String) -> bool:
-	if avatar_id not in ["drifter_male", "drifter_female"]:
+	if avatar_id != "drifter_male":
 		return false
 	player_avatar = avatar_id
 	save_progress()
@@ -182,7 +182,7 @@ func set_player_avatar(avatar_id: String) -> bool:
 
 
 func get_player_avatar_name() -> String:
-	return "女性行者" if player_avatar == "drifter_female" else "男性行者"
+	return "男性行者"
 
 
 func set_difficulty(difficulty_id: String) -> bool:
@@ -1158,9 +1158,9 @@ func load_progress() -> void:
 	active_combat_style = str(parsed.get("active_combat_style", ""))
 	if not unlocked_combat_styles.has(active_combat_style):
 		active_combat_style = ""
-	player_avatar = str(parsed.get("player_avatar", "drifter_male"))
-	if player_avatar not in ["drifter_male", "drifter_female"]:
-		player_avatar = "drifter_male"
+	# The former female rig prototype used invalid perspective data. Existing saves
+	# are deliberately migrated back to the stable original drifter.
+	player_avatar = "drifter_male"
 	var saved_heart: Variant = parsed.get("heart_aspect", {})
 	heart_aspect = saved_heart.duplicate(true) if saved_heart is Dictionary else {}
 	var saved_upgrades = parsed.get("upgrades", {})
