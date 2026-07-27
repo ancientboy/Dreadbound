@@ -319,8 +319,7 @@ func _process(delta: float) -> void:
 	_recent_damage = maxf(_recent_damage - delta * 0.08, 0.0)
 	if _director_tick >= 1.0 and mission_phase < MissionPhase.COMPLETE:
 		_director_tick = 0.0
-		var ammo_ratio := float(player.ammo + player.shells) / float(player.max_ammo + player.max_shells)
-		var decision := director.update(1.0, float(player.health) / player.max_health, ammo_ratio, _unrevealed_room_count(), _recent_damage, enemies_defeated >= 3)
+		var decision := director.update(1.0, float(player.health) / player.max_health, 1.0, _unrevealed_room_count(), _recent_damage, enemies_defeated >= 3)
 		if decision == "relief":
 			_add_pickup(ResourcePickup.Kind.BANDAGE, player.global_position + player.facing * 92.0)
 			_show_notification("导演干预：检测到资源短缺，附近出现一次补给机会", 3.5)
@@ -487,8 +486,7 @@ func _on_inventory_changed(bandages: int, echo_shards: int) -> void:
 
 
 func _on_weapon_changed(weapon_name: String, ammo: int) -> void:
-	var supply := "霰弹 %d/%d" % [player.shells, player.max_shells] if player.current_weapon == Player.Weapon.SHOTGUN else "弹药 %d/%d" % [ammo, player.max_ammo]
-	weapon_status.text = "武器 %s  ·  %s" % [weapon_name, supply]
+	weapon_status.text = "武器 %s  ·  无耐久 · 无弹药库存" % weapon_name
 
 
 func _on_utility_changed(sedatives: int, duration: float) -> void:
@@ -509,7 +507,7 @@ func _refresh_currency_status() -> void:
 
 
 func _on_skill_changed(skill_name: String, remaining: float, _duration: float) -> void:
-	if skill_name != "未选择流派":
+	if skill_name != "未装备护符":
 		$Interface/TopBar/Controls.text = "%s%s" % [skill_name, " %.0fs" % ceili(remaining) if remaining > 0.0 else " 就绪"]
 
 
@@ -589,7 +587,6 @@ func _resolve_active_event(take_risk: bool) -> void:
 		"medicine_cabinet":
 			if take_risk:
 				player.add_bandages(1)
-				player.add_ammo(8)
 				player.take_damage(15, player.global_position)
 				event_results.append("污染药柜：强行开启")
 			else:
@@ -608,11 +605,9 @@ func _resolve_active_event(take_risk: bool) -> void:
 				player.take_damage(8, player.global_position)
 				event_results.append("低语档案：接受记忆")
 			else:
-				player.add_ammo(3)
 				event_results.append("低语档案：烧毁副本")
 		"power_surge":
 			if take_risk:
-				player.add_shells(3)
 				_spawn_crawler_wave()
 				event_results.append("过载回路：导出能量")
 			else:
@@ -634,7 +629,6 @@ func _resolve_active_event(take_risk: bool) -> void:
 				event_results.append("错误报站：忽略")
 		"help_carriage":
 			if take_risk:
-				player.add_ammo(6)
 				_spawn_crawler_wave()
 				event_results.append("求救车厢：开门")
 			else:
@@ -657,7 +651,7 @@ func _resolve_active_event(take_risk: bool) -> void:
 				if cost_level >= 3:
 					player.take_damage(10, player.global_position)
 			else:
-				player.add_ammo(2 + cost_level)
+				pass # safe choices no longer manufacture ammunition
 			event_results.append("%s：%s" % [str(behavior_data.get("title", "高压选择")), str(selected.get("label", "已选择"))])
 	active_event.mark_resolved()
 	var selected_choice: Dictionary = {}
@@ -670,7 +664,7 @@ func _resolve_active_event(take_risk: bool) -> void:
 		"cost_level": int(selected_choice.get("cost_level", 1)),
 		"anonymous": "anonymous" in str(behavior_data.get("event_type", "")) or "anonymous" in event_type,
 		"public": "public" in str(behavior_data.get("event_type", "")) or "public" in event_type,
-		"resources_at_choice": player.echo_shards + player.ammo + player.shells,
+		"resources_at_choice": player.echo_shards,
 		"time_pressure": metro_train_window if run_config.world_id == "metro" else run_elapsed,
 	}
 	GameState.record_human_choice(event_type, resolved_event_id, str(selected_choice.get("label", "risk" if take_risk else "safe")), context, {"summary": event_results[-1]})
@@ -1030,8 +1024,6 @@ func _drop_for_enemy(enemy: Node, roll: float) -> ResourcePickup:
 	var kind_names := {
 		"bandage": ResourcePickup.Kind.BANDAGE,
 		"echo_shard": ResourcePickup.Kind.ECHO_SHARD,
-		"ammo": ResourcePickup.Kind.AMMO,
-		"shells": ResourcePickup.Kind.SHELLS,
 		"sedative": ResourcePickup.Kind.SEDATIVE,
 		"stimulant": ResourcePickup.Kind.STIMULANT,
 		"material": ResourcePickup.Kind.MATERIAL,
@@ -1127,11 +1119,11 @@ func _create_pickups() -> void:
 	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(800, 224), 2)
 	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1280, 352), 3)
 	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1840, 1200), 4)
-	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(576, 416), 6)
-	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(1344, 608), 8)
-	_add_pickup(ResourcePickup.Kind.AMMO, Vector2(2112, 224), 8)
-	_add_pickup(ResourcePickup.Kind.SHELLS, Vector2(1248, 800), 4)
-	_add_pickup(ResourcePickup.Kind.SHELLS, Vector2(2032, 1056), 3)
+	_add_pickup(ResourcePickup.Kind.BANDAGE, Vector2(576, 416), 1)
+	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1344, 608), 3)
+	_add_pickup(ResourcePickup.Kind.SEDATIVE, Vector2(2112, 224), 1)
+	_add_pickup(ResourcePickup.Kind.ECHO_SHARD, Vector2(1248, 800), 4)
+	_add_pickup(ResourcePickup.Kind.STIMULANT, Vector2(2032, 1056), 1)
 	_add_pickup(ResourcePickup.Kind.SEDATIVE, Vector2(864, 768), 1)
 	_add_pickup(ResourcePickup.Kind.SEDATIVE, Vector2(1792, 704), 1)
 	_add_pickup(ResourcePickup.Kind.STIMULANT, Vector2(1536, 1040), 1)
