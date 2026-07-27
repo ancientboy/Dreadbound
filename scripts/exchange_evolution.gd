@@ -20,18 +20,18 @@ const AFFIXES := {
 }
 
 const COMBAT_STYLES := {
-	"barrier_counter": {"path": "steadfast", "name": "屏障反击", "requires": "steadfast_barrier", "description": "应急屏障持续更久，并提高近战反击。", "bonuses": {"max_health": 6, "melee_damage": 3}},
-	"last_stand": {"path": "steadfast", "name": "濒死不灭", "requires": "steadfast_barrier", "description": "低生命时获得额外减伤。", "bonuses": {"max_health": 10}},
-	"sacrifice_medic": {"path": "steadfast", "name": "牺牲治疗", "requires": "steadfast_barrier", "description": "强化治疗与救援，但降低个人火力。", "bonuses": {"bandage_heal": 12, "ranged_damage": -2}},
-	"choke_control": {"path": "steadfast", "name": "通道控制", "requires": "steadfast_barrier", "description": "扩大近战封锁范围。", "bonuses": {"attack_range": 22.0, "melee_damage": 2}},
-	"weakpoint_sniper": {"path": "armorer", "name": "弱点狙击", "requires": "armorer_alternation", "description": "提高远程射程与单点伤害。", "bonuses": {"ranged_damage": 6, "ranged_range": 80.0}},
-	"heavy_suppression": {"path": "armorer", "name": "重火力压制", "requires": "armorer_alternation", "description": "强化霰弹与群体压制。", "bonuses": {"shotgun_damage": 7, "shotgun_range": 28.0}},
-	"demolition_traps": {"path": "armorer", "name": "爆破陷阱", "requires": "armorer_alternation", "description": "以准备换取全武器爆发。", "bonuses": {"melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3}},
-	"relic_engineer": {"path": "armorer", "name": "遗物改造", "requires": "armorer_alternation", "description": "提高装备升级与进化形态的收益。", "bonuses": {"movement_speed": 5.0}},
-	"psychic_sense": {"path": "resonant", "name": "精神感知", "requires": "resonant_ingestion", "description": "扩大感知并提高机动。", "bonuses": {"movement_speed": 10.0, "ranged_range": 35.0}},
-	"anomaly_ingestion": {"path": "resonant", "name": "异常摄取", "requires": "resonant_ingestion", "description": "高风险选择产生更多资源，治疗代价加深。", "bonuses": {"melee_damage": 4, "shotgun_damage": 4}},
-	"echo_summoner": {"path": "resonant", "name": "回响召唤", "requires": "resonant_ingestion", "description": "以回响维持持续战斗能力。", "bonuses": {"max_health": 5, "bandage_heal": 5}},
-	"aberrant_form": {"path": "resonant", "name": "异化形态", "requires": "resonant_ingestion", "description": "牺牲生命上限换取高额伤害与速度。", "bonuses": {"max_health": -10, "movement_speed": 12.0, "melee_damage": 7, "ranged_damage": 5, "shotgun_damage": 5}},
+	"barrier_counter": {"path": "steadfast", "name": "屏障反击", "requires": "steadfast_barrier", "description": "应急屏障持续更久，并提高近战反击。", "weapon_type": "melee", "skill": {"name": "壁垒震返", "shape": "self", "range": 118.0, "radius": 118.0, "damage_multiplier": 1.45, "cooldown": 7.0}, "bonuses": {"max_health": 6, "melee_damage": 3}},
+	"last_stand": {"path": "steadfast", "name": "濒死不灭", "requires": "steadfast_barrier", "description": "低生命时获得额外减伤。", "weapon_type": "shotgun", "skill": {"name": "余命轰鸣", "shape": "cone", "range": 255.0, "radius": 0.0, "damage_multiplier": 1.55, "cooldown": 9.0}, "bonuses": {"max_health": 10}},
+	"sacrifice_medic": {"path": "steadfast", "name": "牺牲治疗", "requires": "steadfast_barrier", "description": "强化治疗与救援，但降低个人火力。", "weapon_type": "ranged", "skill": {"name": "血灯缝合", "shape": "target", "range": 330.0, "radius": 92.0, "damage_multiplier": 1.10, "cooldown": 8.0, "self_heal": 14}, "bonuses": {"bandage_heal": 12, "ranged_damage": -2}},
+	"choke_control": {"path": "steadfast", "name": "通道控制", "requires": "steadfast_barrier", "description": "扩大近战封锁范围。", "weapon_type": "melee", "skill": {"name": "封锁横扫", "shape": "cone", "range": 176.0, "radius": 0.0, "damage_multiplier": 1.75, "cooldown": 6.0}, "bonuses": {"attack_range": 22.0, "melee_damage": 2}},
+	"weakpoint_sniper": {"path": "armorer", "name": "弱点狙击", "requires": "armorer_alternation", "description": "提高远程射程与单点伤害。", "weapon_type": "ranged", "skill": {"name": "贯芯标记", "shape": "line", "range": 610.0, "radius": 24.0, "damage_multiplier": 2.30, "cooldown": 8.0}, "bonuses": {"ranged_damage": 6, "ranged_range": 80.0}},
+	"heavy_suppression": {"path": "armorer", "name": "重火力压制", "requires": "armorer_alternation", "description": "强化霰弹与群体压制。", "weapon_type": "shotgun", "skill": {"name": "镇压齐射", "shape": "cone", "range": 330.0, "radius": 0.0, "damage_multiplier": 1.65, "cooldown": 7.5}, "bonuses": {"shotgun_damage": 7, "shotgun_range": 28.0}},
+	"demolition_traps": {"path": "armorer", "name": "爆破陷阱", "requires": "armorer_alternation", "description": "以准备换取全武器爆发。", "weapon_type": "shotgun", "skill": {"name": "定点爆破", "shape": "target", "range": 390.0, "radius": 112.0, "damage_multiplier": 1.85, "cooldown": 10.0}, "bonuses": {"melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3}},
+	"relic_engineer": {"path": "armorer", "name": "遗物改造", "requires": "armorer_alternation", "description": "提高装备升级与进化形态的收益。", "weapon_type": "ranged", "skill": {"name": "遗物过载", "shape": "line", "range": 460.0, "radius": 42.0, "damage_multiplier": 1.70, "cooldown": 9.0}, "bonuses": {"movement_speed": 5.0}},
+	"psychic_sense": {"path": "resonant", "name": "精神感知", "requires": "resonant_ingestion", "description": "扩大感知并提高机动。", "weapon_type": "ranged", "skill": {"name": "灵视穿刺", "shape": "line", "range": 520.0, "radius": 34.0, "damage_multiplier": 1.65, "cooldown": 7.0}, "bonuses": {"movement_speed": 10.0, "ranged_range": 35.0}},
+	"anomaly_ingestion": {"path": "resonant", "name": "异常摄取", "requires": "resonant_ingestion", "description": "高风险选择产生更多资源，治疗代价加深。", "weapon_type": "melee", "skill": {"name": "吞噬脉冲", "shape": "self", "range": 142.0, "radius": 142.0, "damage_multiplier": 1.80, "cooldown": 8.5}, "bonuses": {"melee_damage": 4, "shotgun_damage": 4}},
+	"echo_summoner": {"path": "resonant", "name": "回响召唤", "requires": "resonant_ingestion", "description": "以回响维持持续战斗能力。", "weapon_type": "ranged", "skill": {"name": "回响降临", "shape": "target", "range": 440.0, "radius": 126.0, "damage_multiplier": 1.55, "cooldown": 9.5}, "bonuses": {"max_health": 5, "bandage_heal": 5}},
+	"aberrant_form": {"path": "resonant", "name": "异化形态", "requires": "resonant_ingestion", "description": "牺牲生命上限换取高额伤害与速度。", "weapon_type": "melee", "skill": {"name": "畸变突袭", "shape": "line", "range": 245.0, "radius": 52.0, "damage_multiplier": 2.10, "cooldown": 6.5, "dash": 54.0}, "bonuses": {"max_health": -10, "movement_speed": 12.0, "melee_damage": 7, "ranged_damage": 5, "shotgun_damage": 5}},
 }
 
 const EVOLUTIONS := {
@@ -70,6 +70,13 @@ static func validate_catalog() -> Array[String]:
 	var errors: Array[String] = []
 	if COMBAT_STYLES.size() != 12:
 		errors.append("combat styles must contain exactly twelve entries")
+	for style_id in COMBAT_STYLES:
+		var style: Dictionary = COMBAT_STYLES[style_id]
+		if str(style.get("weapon_type", "")) not in ["melee", "ranged", "shotgun"]:
+			errors.append("combat style %s has invalid weapon type" % style_id)
+		var skill: Dictionary = style.get("skill", {})
+		if str(skill.get("name", "")).is_empty() or float(skill.get("range", 0.0)) <= 0.0 or float(skill.get("cooldown", 0.0)) <= 0.0:
+			errors.append("combat style %s has incomplete active skill" % style_id)
 	for material_id in MATERIALS:
 		if str(MATERIALS[material_id].get("world", "")).is_empty():
 			errors.append("material %s has no world" % material_id)

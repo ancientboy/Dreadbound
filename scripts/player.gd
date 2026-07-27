@@ -104,6 +104,7 @@ var _body_sprite_rest_position := Vector2.ZERO
 var _body_sprite_rest_scale := Vector2.ONE
 var _body_frame_ground_y := PackedFloat32Array()
 var _locked_ranged_target: Node2D
+var _skill_pose_timer := 0.0
 
 
 func _ready() -> void:
@@ -129,6 +130,7 @@ func _apply_permanent_upgrades() -> void:
 		return
 	var loadout: Dictionary = state.get_selected_loadout()
 	current_weapon = Weapon.SHOTGUN if loadout.weapon == "shotgun" else (Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE)
+	_apply_profession_default_weapon()
 	var stats: Dictionary = state.get_player_stats()
 	max_health = int(stats.max_health)
 	movement_speed = float(stats.movement_speed)
@@ -143,6 +145,14 @@ func _apply_permanent_upgrades() -> void:
 	ammo = clampi(int(loadout.ammo), 0, max_ammo)
 	bandages = clampi(int(loadout.bandages), 0, max_bandages)
 	shells = clampi(int(loadout.get("shells", 0)), 0, max_shells)
+	# A profession can change the opening weapon independently of the old
+	# loadout preset. Keep that mapped weapon usable even when the preset did not
+	# originally carry its ammunition type.
+	if not _active_combat_style().is_empty():
+		if current_weapon == Weapon.RANGED:
+			ammo = maxi(ammo, 6)
+		elif current_weapon == Weapon.SHOTGUN:
+			shells = maxi(shells, 2)
 	sedatives = clampi(int(loadout.get("sedatives", 0)), 0, 2)
 	stimulants = clampi(int(loadout.get("stimulants", 0)), 0, 2)
 
@@ -152,6 +162,23 @@ func _weapon_attack_type() -> String:
 		Weapon.RANGED: return "ranged"
 		Weapon.SHOTGUN: return "shotgun"
 	return "melee"
+
+
+func _apply_profession_default_weapon() -> void:
+	var style := _profession_style_definition()
+	var weapon_type := str(style.get("weapon_type", ""))
+	current_weapon = weapon_for_attack_type(weapon_type, current_weapon)
+
+
+static func weapon_for_attack_type(attack_type: String, fallback := Weapon.MELEE) -> Weapon:
+	match attack_type:
+		"ranged":
+			return Weapon.RANGED
+		"shotgun":
+			return Weapon.SHOTGUN
+		"melee":
+			return Weapon.MELEE
+	return fallback
 
 
 func _sync_active_weapon_equipment() -> void:
@@ -172,6 +199,7 @@ func _physics_process(delta: float) -> void:
 	var previous_facing := facing
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_skill_cooldown = maxf(_skill_cooldown - delta, 0.0)
+	_skill_pose_timer = maxf(_skill_pose_timer - delta, 0.0)
 	if not _active_combat_style().is_empty():
 		skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
 	_attack_flash = maxf(_attack_flash - delta, 0.0)
@@ -407,6 +435,11 @@ func _update_body_feedback(delta: float, target_speed: float) -> void:
 		var breath := sin(_idle_animation_time * 2.2)
 		position_target.y += maxf(breath, 0.0) * 0.25
 		scale_target *= Vector2(1.0 - breath * 0.004, 1.0 + breath * 0.007)
+	if _skill_pose_timer > 0.0:
+		var pose_strength := clampf(_skill_pose_timer / 0.24, 0.0, 1.0)
+		position_target -= facing * 2.8 * pose_strength
+		scale_target *= Vector2(1.0 + 0.025 * pose_strength, 1.0 - 0.018 * pose_strength)
+		rotation_target += facing.x * 0.035 * pose_strength
 	var feedback_weight := 1.0 - exp(-14.0 * delta)
 	_body_sprite.position = _body_sprite.position.lerp(position_target, feedback_weight)
 	_body_sprite.scale = _body_sprite.scale.lerp(scale_target, feedback_weight)
@@ -800,18 +833,104 @@ func _active_combat_style() -> String:
 	return str(state.active_combat_style) if state != null else ""
 
 
-# Compatibility stubs keep legacy HUD/mobile callers inert while the separate
-# active-skill action is retired. Combat expression now comes from the three
-# weapon modes and the selected profession/form instead.
 func get_skill_name() -> String:
-	return "未选择流派"
+	var skill := _profession_skill_definition()
+	return str(skill.get("name", "未选择流派"))
 
 
 func get_skill_cooldown() -> float:
-	return 0.0
+	return _skill_cooldown
 
 
 func use_active_skill() -> bool:
+	if _dead or _skill_cooldown > 0.0:
+		return false
+	var style_id := _active_combat_style()
+	var skill := _profession_skill_definition()
+	if style_id.is_empty() or skill.is_empty():
+		return false
+	var skill_range := float(skill.get("range", 0.0))
+	var radius := float(skill.get("radius", 0.0))
+	var shape := str(skill.get("shape", "self"))
+	var skill_center := global_position
+	if shape == "target":
+		skill_center += facing * skill_range
+	elif shape in ["cone", "line"]:
+		skill_center += facing * skill_range * 0.55
+	var base_damage := _damage_for_attack_type(str(_profession_style_definition().get("weapon_type", "melee")))
+	var damage := maxi(1, int(float(base_damage) * float(skill.get("damage_multiplier", 1.0))))
+	var hit_count := 0
+	for target in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(target) or not target.has_method("take_damage"):
+			continue
+		var offset: Vector2 = target.global_position - global_position
+		if not _skill_hits_offset(offset, shape, skill_range, radius):
+			continue
+		target.take_damage(damage, global_position)
+		hit_count += 1
+		combat_fx.impact(target.global_position, offset, damage >= base_damage * 2)
+	var self_heal := int(skill.get("self_heal", 0))
+	if self_heal > 0 and health > 0:
+		health = mini(max_health, health + self_heal)
+		health_changed.emit(health, max_health)
+	var dash := float(skill.get("dash", 0.0))
+	if dash > 0.0:
+		global_position += facing * dash
+	_skill_cooldown = float(skill.get("cooldown", 1.0))
+	_skill_duration = _skill_cooldown
+	_skill_pose_timer = 0.24
+	if shape in ["cone", "line"]:
+		var pathway := str(_profession_style_definition().get("path", ""))
+		var attack_type := str(_profession_style_definition().get("weapon_type", "melee"))
+		combat_fx.profession_attack(
+			pathway,
+			attack_type,
+			global_position + facing * 28.0,
+			facing,
+			138.0 if shape == "cone" else 108.0,
+			skill_range,
+			0.34,
+		)
+	combat_fx.profession_skill(style_id, skill_center, facing, maxf(96.0, radius * 1.6), 0.52)
+	var mastery_type := "melee_hits" if _weapon_attack_type() == "melee" else "ranged_hits"
+	_record_equipment_mastery("multi_hits" if hit_count > 1 else mastery_type, hit_count)
+	skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
+	queue_redraw()
+	return true
+
+
+func _profession_style_definition() -> Dictionary:
+	return ExchangeEvolution.COMBAT_STYLES.get(_active_combat_style(), {})
+
+
+func _profession_skill_definition() -> Dictionary:
+	return _profession_style_definition().get("skill", {})
+
+
+func _damage_for_attack_type(attack_type: String) -> int:
+	match attack_type:
+		"ranged":
+			return ranged_damage
+		"shotgun":
+			return shotgun_damage
+	return attack_damage
+
+
+func _skill_hits_offset(offset: Vector2, shape: String, skill_range: float, radius: float) -> bool:
+	var distance := offset.length()
+	if distance <= 0.001:
+		return shape == "self"
+	match shape:
+		"self":
+			return distance <= radius
+		"cone":
+			return distance <= skill_range and facing.dot(offset.normalized()) >= 0.62
+		"line":
+			if distance > skill_range or facing.dot(offset.normalized()) <= 0.0:
+				return false
+			return absf(offset.cross(facing)) <= radius
+		"target":
+			return offset.distance_to(facing * skill_range) <= radius
 	return false
 
 
@@ -854,14 +973,10 @@ func play_profession_skill(style_id: String) -> void:
 func _play_attack_style_vfx(attack_kind: String, reach := 0.0) -> void:
 	if combat_fx == null or not _has_profession_combat_presentation():
 		return
-	var style := _active_combat_style()
 	var pathway: String = str(_pathway_visual().id)
 	var mode_size := 128.0 if attack_kind == "shotgun" else (106.0 if attack_kind == "ranged" else 116.0)
 	var visual_reach := reach if reach > 0.0 else (attack_range if attack_kind == "melee" else (ranged_range if attack_kind == "ranged" else shotgun_range))
 	combat_fx.profession_attack(pathway, attack_kind, global_position + facing * 28.0, facing, mode_size, visual_reach, 0.26)
-	if not style.is_empty():
-		var style_size := 116.0 if style in ["choke_control", "heavy_suppression", "demolition_traps"] else 92.0
-		combat_fx.profession_skill(style, global_position + facing * 24.0, facing, style_size, 0.34)
 
 
 func _emit_pathway_movement_echo() -> void:
