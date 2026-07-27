@@ -4,7 +4,6 @@ const REVIEW_ASSETS := {
 	"art_player_profession_steadfast": ["res://assets/art/characters/professions/steadfast_spritesheet.png", Vector2i(288, 256)],
 	"art_player_profession_armorer": ["res://assets/art/characters/professions/armorer_spritesheet.png", Vector2i(288, 256)],
 	"art_player_profession_resonant": ["res://assets/art/characters/professions/resonant_spritesheet.png", Vector2i(288, 256)],
-	"art_player_combat_style_forms": ["res://assets/art/characters/professions/combat_style_forms.png", Vector2i(512, 384)],
 	"art_vfx_profession_skills": ["res://assets/art/vfx/profession_skills.png", Vector2i(512, 384)],
 	"art_npc_story_cast": ["res://assets/art/characters/npcs/story_npcs_idle.png", Vector2i(384, 480)],
 }
@@ -14,6 +13,15 @@ const STYLE_ORDER := [
 	"weakpoint_sniper", "heavy_suppression", "demolition_traps", "relic_engineer",
 	"psychic_sense", "anomaly_ingestion", "echo_summoner", "aberrant_form",
 ]
+
+const STYLE_SPRITESHEETS := {
+	"barrier_counter": "barrier_counter_spritesheet.png", "last_stand": "last_stand_spritesheet.png",
+	"sacrifice_medic": "sacrifice_medic_spritesheet.png", "choke_control": "choke_control_spritesheet.png",
+	"weakpoint_sniper": "weakpoint_sniper_spritesheet.png", "heavy_suppression": "heavy_suppression_spritesheet.png",
+	"demolition_traps": "demolition_traps_spritesheet.png", "relic_engineer": "relic_engineer_spritesheet.png",
+	"psychic_sense": "psychic_sense_spritesheet.png", "anomaly_ingestion": "anomaly_ingestion_spritesheet.png",
+	"echo_summoner": "echo_summoner_spritesheet.png", "aberrant_form": "aberrant_form_spritesheet.png",
+}
 
 
 func _init() -> void:
@@ -55,6 +63,17 @@ func _run_test() -> void:
 		assert(sprite.texture.resource_path.ends_with(profession_paths[pathway]))
 		player.queue_free()
 		await process_frame
+	for style_id in STYLE_ORDER:
+		state.active_combat_style = style_id
+		var style_player := load("res://scenes/entities/player.tscn").instantiate() as Player
+		root.add_child(style_player)
+		await process_frame
+		var style_sprite := style_player.get_node_or_null("BodySprite") as Sprite2D
+		assert(style_sprite != null and style_sprite.texture != null)
+		assert(style_sprite.texture.resource_path.ends_with("styles/%s" % STYLE_SPRITESHEETS[style_id]))
+		assert(style_sprite.hframes == 6 and style_sprite.vframes == 4)
+		style_player.queue_free()
+		await process_frame
 
 	var fx := CombatFX.new()
 	root.add_child(fx)
@@ -87,7 +106,8 @@ func _run_test() -> void:
 	var npc_source := FileAccess.get_file_as_string("res://scripts/objective_interactable.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	assert(player_source.contains("_profession_body_texture"))
-	assert(player_source.contains("_draw_combat_style_form"))
+	assert(player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
+	assert(not player_source.contains("_draw_combat_style_form"))
 	assert(player_source.contains("_play_attack_style_vfx"))
 	assert(npc_source.contains("STORY_NPCS_IDLE"))
 	assert(npc_source.contains("_story_npc_row"))

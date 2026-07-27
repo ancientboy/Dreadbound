@@ -5,10 +5,19 @@ const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drif
 const STEADFAST_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/steadfast_spritesheet.png")
 const ARMORER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/armorer_spritesheet.png")
 const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/resonant_spritesheet.png")
-const COMBAT_STYLE_FORM_ATLASES := {
-	"steadfast": preload("res://assets/art/characters/professions/combat_style_forms_steadfast.png"),
-	"armorer": preload("res://assets/art/characters/professions/combat_style_forms_armorer.png"),
-	"resonant": preload("res://assets/art/characters/professions/combat_style_forms_resonant.png"),
+const COMBAT_STYLE_SPRITESHEETS := {
+	"barrier_counter": preload("res://assets/art/characters/professions/styles/barrier_counter_spritesheet.png"),
+	"last_stand": preload("res://assets/art/characters/professions/styles/last_stand_spritesheet.png"),
+	"sacrifice_medic": preload("res://assets/art/characters/professions/styles/sacrifice_medic_spritesheet.png"),
+	"choke_control": preload("res://assets/art/characters/professions/styles/choke_control_spritesheet.png"),
+	"weakpoint_sniper": preload("res://assets/art/characters/professions/styles/weakpoint_sniper_spritesheet.png"),
+	"heavy_suppression": preload("res://assets/art/characters/professions/styles/heavy_suppression_spritesheet.png"),
+	"demolition_traps": preload("res://assets/art/characters/professions/styles/demolition_traps_spritesheet.png"),
+	"relic_engineer": preload("res://assets/art/characters/professions/styles/relic_engineer_spritesheet.png"),
+	"psychic_sense": preload("res://assets/art/characters/professions/styles/psychic_sense_spritesheet.png"),
+	"anomaly_ingestion": preload("res://assets/art/characters/professions/styles/anomaly_ingestion_spritesheet.png"),
+	"echo_summoner": preload("res://assets/art/characters/professions/styles/echo_summoner_spritesheet.png"),
+	"aberrant_form": preload("res://assets/art/characters/professions/styles/aberrant_form_spritesheet.png"),
 }
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 const ADVANCED_WEAPONS: Texture2D = preload("res://assets/art/weapons/advanced_weapons.png")
@@ -581,6 +590,10 @@ func _pathway_visual() -> Dictionary:
 
 func _profession_body_texture() -> Texture2D:
 	var state := get_node_or_null("/root/GameState")
+	var style := str(state.active_combat_style) if state != null else ""
+	var style_texture: Texture2D = COMBAT_STYLE_SPRITESHEETS.get(style)
+	if style_texture != null:
+		return style_texture
 	var pathway := str(state.selected_pathway) if state != null else ""
 	match pathway:
 		"steadfast":
@@ -636,7 +649,6 @@ func _emit_pathway_movement_echo() -> void:
 
 func _draw() -> void:
 	_draw_flashlight()
-	_draw_combat_style_form()
 	_draw_pathway_state_vfx()
 	var visual := _pathway_visual()
 	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
@@ -697,35 +709,6 @@ func _draw_flashlight() -> void:
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_player_state_cell(0, chest, 25.0, facing.angle(), Color(0.9, 0.9, 0.8, 0.9))
-
-
-func _draw_combat_style_form() -> void:
-	var style_order := [
-		"barrier_counter", "last_stand", "sacrifice_medic", "choke_control",
-		"weakpoint_sniper", "heavy_suppression", "demolition_traps", "relic_engineer",
-		"psychic_sense", "anomaly_ingestion", "echo_summoner", "aberrant_form",
-	]
-	var style_index := style_order.find(_active_combat_style())
-	if style_index < 0:
-		return
-	var pathway: String = ["steadfast", "armorer", "resonant"][clampi(floori(float(style_index) / 4.0), 0, 2)]
-	var atlas: Texture2D = COMBAT_STYLE_FORM_ATLASES.get(pathway)
-	if atlas == null or atlas.get_size() != Vector2(512, 512):
-		return
-	var direction_column := 0
-	if absf(facing.x) > absf(facing.y):
-		direction_column = 2 if facing.x > 0.0 else 1
-	elif facing.y < 0.0:
-		direction_column = 3
-	var tint := Color(1.0, 1.0, 1.0, 0.76)
-	if style_index in [9, 11] and pathway_effects != null:
-		tint.a = 0.64 + minf(float(pathway_effects.anomaly_pressure) * 0.05, 0.24)
-	draw_texture_rect_region(
-		atlas,
-		Rect2(-64, -91, 128, 128),
-		Rect2(direction_column * 128, (style_index % 4) * 128, 128, 128),
-		tint,
-	)
 
 
 func _draw_pathway_state_vfx() -> void:
