@@ -14,8 +14,8 @@ func _run_test() -> void:
 	var crawler: Crawler = get_nodes_in_group("crawlers")[0]
 	var drop: ResourcePickup = mission._drop_for_enemy(crawler, 0.1)
 	assert(drop != null)
-	assert(drop.kind == ResourcePickup.Kind.AMMO)
-	assert(drop.amount == 3)
+	assert(drop.kind == ResourcePickup.Kind.BANDAGE)
+	assert(drop.amount == 1)
 	var chest: RewardChest = mission._spawn_reward_chest(mission.player.global_position)
 	assert(chest.candidates.size() == 3)
 	var unique := {}
