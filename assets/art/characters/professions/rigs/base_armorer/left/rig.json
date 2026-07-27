@@ -295,7 +295,7 @@
       ]
     }
   },
-  "atlas": "../atlas.png",
+  "atlas": "../atlas.webp",
   "atlas_size": [
     2048,
     601

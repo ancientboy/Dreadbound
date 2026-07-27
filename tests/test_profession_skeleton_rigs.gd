@@ -132,7 +132,9 @@ func _assert_generic_asset_contract(style_id: String) -> void:
 		ProfessionSkeletonCharacter.RIG_ROOT,
 		style_id,
 	]
-	assert(FileAccess.file_exists("%s/atlas.png" % style_root))
+	assert(FileAccess.file_exists(
+		ProfessionSkeletonCharacter._atlas_path_for(style_id)
+	))
 	for direction in LayeredSkeletonCharacter.DIRECTIONS:
 		var root_path := "%s/%s" % [style_root, direction]
 		assert(FileAccess.file_exists("%s/rig.json" % root_path))

@@ -150,10 +150,15 @@ static func has_rig(rig_id: String) -> bool:
 	if rig_id == "sacrifice_medic":
 		return true
 	return FileAccess.file_exists(
-		"%s/%s/atlas.png" % [RIG_ROOT, rig_id]
+		_atlas_path_for(rig_id)
 	) and FileAccess.file_exists(
 		"%s/%s/front/rig.json" % [RIG_ROOT, rig_id]
 	)
+
+
+static func _atlas_path_for(rig_id: String) -> String:
+	var extension := "webp" if rig_id in BASE_RIG_IDS else "png"
+	return "%s/%s/atlas.%s" % [RIG_ROOT, rig_id, extension]
 
 
 func _apply_profession_profile() -> void:
@@ -190,7 +195,7 @@ func _apply_direction_assets(direction: String) -> void:
 	var atlas: Texture2D
 	if not legacy_medic:
 		manifest = _load_manifest(direction)
-		atlas = load("%s/atlas.png" % _asset_root()) as Texture2D
+		atlas = load(_atlas_path_for(_rig_id)) as Texture2D
 		assert(atlas != null, "Missing profession rig atlas: %s" % _asset_root())
 	for sprite_key in PARTS:
 		var sprite := _sprites[sprite_key] as Sprite2D
