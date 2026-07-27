@@ -7,6 +7,29 @@ position = Vector2(0, 8)
 z_index = 2
 script = ExtResource("1_script")
 
+[node name="IKWeapon" type="Node2D" parent="."]
+visible = false
+z_index = 7
+
+[node name="Body" type="Polygon2D" parent="IKWeapon"]
+polygon = PackedVector2Array(-40, -12, 46, -8, 46, 8, -40, 12)
+color = Color(0.36, 0.43, 0.45, 1)
+
+[node name="Grip" type="Polygon2D" parent="IKWeapon"]
+polygon = PackedVector2Array(-22, 7, -6, 7, -10, 31, -27, 27)
+color = Color(0.12, 0.15, 0.16, 1)
+
+[node name="Foregrip" type="Polygon2D" parent="IKWeapon"]
+visible = false
+polygon = PackedVector2Array(56, -25, 79, -25, 79, -7, 56, -7)
+color = Color(0.12, 0.15, 0.16, 1)
+
+[node name="CastOrb" type="Polygon2D" parent="."]
+visible = false
+z_index = 8
+polygon = PackedVector2Array(0, -42, 30, -30, 42, 0, 30, 30, 0, 42, -30, 30, -42, 0, -30, -30)
+color = Color(0.35, 0.95, 0.82, 0.78)
+
 [node name="Hips" type="Bone2D" parent="."]
 autocalculate_length_and_angle = false
 length = 1.0

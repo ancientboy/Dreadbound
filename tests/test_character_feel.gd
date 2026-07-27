@@ -60,6 +60,9 @@ func _run_test() -> void:
 	assert(player._body_frame_ground_y.size() == 24)
 	var rig := player.get_node("LayeredSkeletonRig") as LayeredSkeletonCharacter
 	assert(rig != null)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Pistol") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Rifle") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Cast") is Button)
 	assert(rig is Skeleton2D)
 	assert(rig.get_node("Hips/LeftLeg") is Bone2D)
 	assert(rig.get_node("Hips/LeftLeg/LowerLeg") is Bone2D)
@@ -71,17 +74,32 @@ func _run_test() -> void:
 	assert(rig.get_node("Hips/Torso/RightUpperArm/RightForearm") is Bone2D)
 	assert(rig.is_fully_articulated())
 	assert(rig.has_compact_proportions())
+	assert(rig.has_weapon_ik())
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.DOWN) == "front")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.UP) == "back")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.LEFT) == "left")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.RIGHT) == "right")
+	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.FREE, true)
 	player._step_phase = 0.25
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
 	await process_frame
 	assert(rig.current_direction() == "right")
 	assert(rig.is_using_true_opposition())
+	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.PISTOL, true)
+	player.velocity = Vector2.ZERO
+	await process_frame
+	assert(rig.current_ik_demo_mode() == LayeredSkeletonCharacter.IKDemoMode.PISTOL)
+	assert(rig.ik_hand_error("organic") < 2.0)
+	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.RIFLE, true)
+	await process_frame
+	assert(rig.ik_hand_error("organic") < 2.0)
+	assert(rig.ik_hand_error("mech") < 2.0)
+	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST, true)
+	await process_frame
+	assert(rig.ik_hand_error("organic") < 2.0)
+	assert(rig.ik_hand_error("mech") < 2.0)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: four-direction Sacrifice Medic rig, connected joints and opposing gait")
+	print("Character feel passed: four-direction rig with pistol, rifle and casting arm IK")
 	quit()
