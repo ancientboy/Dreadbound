@@ -129,8 +129,7 @@ func _apply_permanent_upgrades() -> void:
 	if state == null:
 		return
 	var loadout: Dictionary = state.get_selected_loadout()
-	current_weapon = Weapon.SHOTGUN if loadout.weapon == "shotgun" else (Weapon.RANGED if loadout.weapon == "ranged" else Weapon.MELEE)
-	_apply_profession_default_weapon()
+	current_weapon = Weapon.MELEE # weapon enum now selects free slot 1 / 2 / 3.
 	var stats: Dictionary = state.get_player_stats()
 	max_health = int(stats.max_health)
 	movement_speed = float(stats.movement_speed)
@@ -142,26 +141,16 @@ func _apply_permanent_upgrades() -> void:
 	ranged_range = float(stats.get("ranged_range", ranged_range))
 	shotgun_range = float(stats.get("shotgun_range", shotgun_range))
 	_sync_active_weapon_equipment()
-	ammo = clampi(int(loadout.ammo), 0, max_ammo)
+	ammo = max_ammo # retained only for old HUD/save compatibility; weapons have no ammo inventory.
 	bandages = clampi(int(loadout.bandages), 0, max_bandages)
-	shells = clampi(int(loadout.get("shells", 0)), 0, max_shells)
-	# A profession can change the opening weapon independently of the old
-	# loadout preset. Keep that mapped weapon usable even when the preset did not
-	# originally carry its ammunition type.
-	if not _active_combat_style().is_empty():
-		if current_weapon == Weapon.RANGED:
-			ammo = maxi(ammo, 6)
-		elif current_weapon == Weapon.SHOTGUN:
-			shells = maxi(shells, 2)
+	shells = max_shells # no shell pickups or reserve tracking.
 	sedatives = clampi(int(loadout.get("sedatives", 0)), 0, 2)
 	stimulants = clampi(int(loadout.get("stimulants", 0)), 0, 2)
 
 
 func _weapon_attack_type() -> String:
-	match current_weapon:
-		Weapon.RANGED: return "ranged"
-		Weapon.SHOTGUN: return "shotgun"
-	return "melee"
+	var item := EquipmentDatabase.get_item(equipped_weapon_item)
+	return str(item.get("weapon_type", "melee"))
 
 
 func _apply_profession_default_weapon() -> void:
@@ -187,7 +176,7 @@ func _sync_active_weapon_equipment() -> void:
 		equipped_weapon_item = ""
 		relic_profile = {}
 		return
-	equipped_weapon_item = state.get_equipped_weapon_for_attack(_weapon_attack_type())
+	equipped_weapon_item = state.get_equipped_weapon_at_slot(int(current_weapon))
 	relic_profile = EquipmentDatabase.relic_growth_profile(
 		equipped_weapon_item,
 		state.get_relic_growth(equipped_weapon_item),
@@ -449,10 +438,17 @@ func _update_body_feedback(delta: float, target_speed: float) -> void:
 func try_attack() -> bool:
 	if _dead or _attack_timer > 0.0:
 		return false
-	if current_weapon == Weapon.RANGED:
-		return _try_ranged_attack()
-	if current_weapon == Weapon.SHOTGUN:
-		return _try_shotgun_attack()
+	if equipped_weapon_item.is_empty():
+		return false
+	match _weapon_attack_type():
+		"ranged":
+			return _try_ranged_attack()
+		"shotgun":
+			return _try_shotgun_attack()
+		"arcane":
+			return _try_ranged_attack()
+		_:
+			pass
 	var state := get_node_or_null("/root/GameState")
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	_play_attack_style_vfx("melee")
@@ -488,11 +484,8 @@ func use_equipment_trait() -> bool:
 
 
 func _try_ranged_attack() -> bool:
-	if ammo <= 0:
-		return false
 	_attack_timer = ranged_cooldown
 	_attack_flash = 0.11
-	ammo -= 1
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_pistol", 0.025)
 	noise_generated.emit(3)
 	_update_ranged_lock()
@@ -538,11 +531,8 @@ func _try_ranged_attack() -> bool:
 
 
 func _try_shotgun_attack() -> bool:
-	if shells <= 0:
-		return false
 	_attack_timer = shotgun_cooldown
 	_attack_flash = 0.16
-	shells -= 1
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_shotgun", 0.02)
 	noise_generated.emit(4)
 	var visual := _pathway_visual()
@@ -625,8 +615,6 @@ func switch_weapon() -> void:
 	_sync_active_weapon_equipment()
 	pathway_effects.on_weapon_switched()
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_switch", 0.025)
-	if _active_combat_style() == "relic_engineer":
-		combat_fx.profession_skill("relic_engineer", global_position, facing, 92.0, 0.44)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 
@@ -834,8 +822,10 @@ func _active_combat_style() -> String:
 
 
 func get_skill_name() -> String:
-	var skill := _profession_skill_definition()
-	return str(skill.get("name", "未选择流派"))
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if state == null:
+		return "未装备护符"
+	return str(EquipmentDatabase.active_charm_skill(str(state.equipped.get("charm", ""))).get("name", "未装备护符"))
 
 
 func get_skill_cooldown() -> float:
@@ -845,55 +835,24 @@ func get_skill_cooldown() -> float:
 func use_active_skill() -> bool:
 	if _dead or _skill_cooldown > 0.0:
 		return false
-	var style_id := _active_combat_style()
-	var skill := _profession_skill_definition()
-	if style_id.is_empty() or skill.is_empty():
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if state == null:
 		return false
-	var skill_range := float(skill.get("range", 0.0))
-	var radius := float(skill.get("radius", 0.0))
-	var shape := str(skill.get("shape", "self"))
-	var skill_center := global_position
-	if shape == "target":
-		skill_center += facing * skill_range
-	elif shape in ["cone", "line"]:
-		skill_center += facing * skill_range * 0.55
-	var base_damage := _damage_for_attack_type(str(_profession_style_definition().get("weapon_type", "melee")))
-	var damage := maxi(1, int(float(base_damage) * float(skill.get("damage_multiplier", 1.0))))
-	var hit_count := 0
-	for target in get_tree().get_nodes_in_group("enemies"):
-		if not is_instance_valid(target) or not target.has_method("take_damage"):
-			continue
-		var offset: Vector2 = target.global_position - global_position
-		if not _skill_hits_offset(offset, shape, skill_range, radius):
-			continue
-		target.take_damage(damage, global_position)
-		hit_count += 1
-		combat_fx.impact(target.global_position, offset, damage >= base_damage * 2)
-	var self_heal := int(skill.get("self_heal", 0))
-	if self_heal > 0 and health > 0:
-		health = mini(max_health, health + self_heal)
+	var charm_id := str(state.equipped.get("charm", ""))
+	var skill := EquipmentDatabase.active_charm_skill(charm_id)
+	if skill.is_empty():
+		return false
+	var kind := str(skill.get("kind", ""))
+	if kind in ["heal", "cleanse"]:
+		health = mini(max_health, health + int(skill.get("amount", 0)))
 		health_changed.emit(health, max_health)
-	var dash := float(skill.get("dash", 0.0))
-	if dash > 0.0:
-		global_position += facing * dash
+		combat_fx.status_burst(global_position, "heal")
+	elif kind == "lure":
+		equipment_trait_used.emit("noise_lure")
+		combat_fx.profession_skill("echo_summoner", global_position, facing, 104.0, 0.4)
 	_skill_cooldown = float(skill.get("cooldown", 1.0))
 	_skill_duration = _skill_cooldown
 	_skill_pose_timer = 0.24
-	if shape in ["cone", "line"]:
-		var pathway := str(_profession_style_definition().get("path", ""))
-		var attack_type := str(_profession_style_definition().get("weapon_type", "melee"))
-		combat_fx.profession_attack(
-			pathway,
-			attack_type,
-			global_position + facing * 28.0,
-			facing,
-			138.0 if shape == "cone" else 108.0,
-			skill_range,
-			0.34,
-		)
-	combat_fx.profession_skill(style_id, skill_center, facing, maxf(96.0, radius * 1.6), 0.52)
-	var mastery_type := "melee_hits" if _weapon_attack_type() == "melee" else "ranged_hits"
-	_record_equipment_mastery("multi_hits" if hit_count > 1 else mastery_type, hit_count)
 	skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
 	queue_redraw()
 	return true
@@ -936,7 +895,7 @@ func _skill_hits_offset(offset: Vector2, shape: String, skill_range: float, radi
 
 func _update_ranged_lock() -> void:
 	_locked_ranged_target = null
-	if current_weapon != Weapon.RANGED or _dead:
+	if _weapon_attack_type() not in ["ranged", "arcane"] or _dead:
 		if combat_fx != null:
 			combat_fx.set_target_lock(null)
 		return
