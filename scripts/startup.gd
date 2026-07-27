@@ -38,7 +38,7 @@ func _draw() -> void:
 		draw_line(Vector2(x, horizon), Vector2(size.x * 0.5 + (x - size.x * 0.5) * 2.4, size.y), Color(0.18, 0.55, 0.5, 0.08), 1.0)
 	for y in range(int(horizon), int(size.y) + 44, 44):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.18, 0.55, 0.5, 0.06), 1.0)
-	draw_string(UI_FONT, Vector2(28, size.y - 24), "THE CORRIDOR REMEMBERS", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("3d756e"))
+	draw_string(UI_FONT, Vector2(28, size.y - 24), "回廊记得一切", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("3d756e"))
 
 
 func _build_home() -> void:
@@ -76,7 +76,7 @@ func _build_home() -> void:
 	nav_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nav.add_child(nav_spacer)
 	var build := Label.new()
-	build.text = "PLAYABLE ALPHA · O1 VISUAL SLICE"
+	build.text = "可游玩测试版"
 	build.add_theme_font_size_override("font_size", 13)
 	build.add_theme_color_override("font_color", Color("7d9993"))
 	nav.add_child(build)
@@ -98,7 +98,7 @@ func _build_home() -> void:
 	content.add_child(divider)
 
 	var eyebrow := Label.new()
-	eyebrow.text = "ORIGINAL HORROR EXTRACTION ROGUELITE"
+	eyebrow.text = "原创恐怖撤离游戏"
 	eyebrow.add_theme_font_size_override("font_size", 13)
 	eyebrow.add_theme_color_override("font_color", Color("d0ad62"))
 	content.add_child(eyebrow)
@@ -167,7 +167,7 @@ func _build_home() -> void:
 	_add_feature("03  有代价的撤离", "材料必须成功撤离才会入库；唯一物品只存在一件，失联、归属和重复首领都有明确规则。")
 
 	var worlds_title := Label.new()
-	worlds_title.text = "CURRENT DISASTER WORLDS  //  当前可进入"
+	worlds_title.text = "当前可进入世界"
 	worlds_title.add_theme_font_size_override("font_size", 18)
 	worlds_title.add_theme_color_override("font_color", Color("d0ad62"))
 	content.add_child(worlds_title)
@@ -230,7 +230,7 @@ func _add_world_card(code: String, title: String, english: String, intro: String
 	panel.add_theme_constant_override("separation", 6)
 	world_grid.add_child(panel)
 	var code_label := Label.new()
-	code_label.text = "%s  //  %s" % [code, english.to_upper()]
+	code_label.text = code
 	code_label.add_theme_color_override("font_color", Color("668d85"))
 	panel.add_child(code_label)
 	var heading := Label.new()

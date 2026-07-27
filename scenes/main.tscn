@@ -33,7 +33,7 @@ offset_right = 370.0
 offset_bottom = 33.0
 theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
 theme_override_font_sizes/font_size = 16
-text = "DREADBOUND // 疗养院任务灰盒"
+text = "疗养院任务"
 
 [node name="Objective" type="Label" parent="Interface/TopBar"]
 offset_left = 18.0
@@ -74,6 +74,16 @@ theme_override_font_sizes/font_size = 14
 text = "绷带 0/3  ·  碎片 0"
 horizontal_alignment = 2
 
+[node name="Currency" type="Label" parent="Interface/TopBar"]
+offset_left = 390.0
+offset_top = 9.0
+offset_right = 760.0
+offset_bottom = 32.0
+theme_override_colors/font_color = Color(0.72, 0.62, 0.32, 1)
+theme_override_font_sizes/font_size = 14
+text = "回响 0 · 因果 0 · 余烬 0"
+horizontal_alignment = 2
+
 [node name="Weapon" type="Label" parent="Interface/TopBar"]
 offset_left = 310.0
 offset_top = 34.0
@@ -91,7 +101,7 @@ offset_right = 1210.0
 offset_bottom = 45.0
 theme_override_colors/font_color = Color(0.42, 0.54, 0.5, 1)
 theme_override_font_sizes/font_size = 14
-text = "攻击 · R武器 · F道具 · Q使用 · E交互"
+text = "攻击 · G技能 · R武器 · F道具 · Q使用 · E交互"
 horizontal_alignment = 2
 
 [node name="Abandon" type="Button" parent="Interface/TopBar"]

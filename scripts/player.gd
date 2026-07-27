@@ -35,6 +35,7 @@ signal utility_changed(sedatives: int, duration: float)
 signal selected_item_changed(item_name: String, count: int)
 signal noise_generated(amount: int)
 signal equipment_trait_used(trait_id: String)
+signal skill_changed(skill_name: String, remaining: float, duration: float)
 
 enum Weapon { MELEE, RANGED, SHOTGUN }
 enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
@@ -58,6 +59,8 @@ enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
 var health := 100
 var facing := Vector2.DOWN
 var _attack_timer := 0.0
+var _skill_cooldown := 0.0
+var _skill_duration := 0.0
 var _attack_flash := 0.0
 var _invulnerability_timer := 0.0
 var _hurt_flash := 0.0
@@ -151,6 +154,9 @@ func _physics_process(delta: float) -> void:
 	var had_visual_effect := _attack_flash > 0.0 or _hurt_flash > 0.0 or _heal_flash > 0.0
 	var previous_facing := facing
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
+	_skill_cooldown = maxf(_skill_cooldown - delta, 0.0)
+	if not _active_combat_style().is_empty():
+		skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
 	_attack_flash = maxf(_attack_flash - delta, 0.0)
 	_invulnerability_timer = maxf(_invulnerability_timer - delta, 0.0)
 	_hurt_flash = maxf(_hurt_flash - delta, 0.0)
@@ -169,6 +175,7 @@ func _physics_process(delta: float) -> void:
 	var wants_to_switch := Input.is_action_just_pressed("switch_weapon")
 	var wants_to_switch_item := Input.is_action_just_pressed("switch_item")
 	var wants_to_use_trait := Input.is_action_just_pressed("use_trait")
+	var wants_to_use_skill := Input.is_action_just_pressed("use_skill")
 	var mobile_controls := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
 	if mobile_controls:
 		if mobile_controls.movement_vector != Vector2.ZERO:
@@ -178,6 +185,7 @@ func _physics_process(delta: float) -> void:
 		wants_to_switch = mobile_controls.consume_switch_weapon() or wants_to_switch
 		wants_to_switch_item = mobile_controls.consume_switch_item() or wants_to_switch_item
 		wants_to_use_trait = mobile_controls.consume_trait() or wants_to_use_trait
+		wants_to_use_skill = mobile_controls.consume_skill() or wants_to_use_skill
 
 	velocity = input_direction * movement_speed * environment_speed_multiplier * (1.22 if stimulant_duration > 0.0 else 1.0)
 	if input_direction != Vector2.ZERO:
@@ -197,6 +205,8 @@ func _physics_process(delta: float) -> void:
 		switch_item()
 	if wants_to_use_trait:
 		use_equipment_trait()
+	if wants_to_use_skill:
+		use_active_skill()
 	_collect_nearby_pickups()
 	move_and_slide()
 	if had_visual_effect or velocity.length() > 2.0 or not facing.is_equal_approx(previous_facing):
@@ -608,6 +618,78 @@ func _profession_body_texture() -> Texture2D:
 func _active_combat_style() -> String:
 	var state := get_node_or_null("/root/GameState")
 	return str(state.active_combat_style) if state != null else ""
+
+
+const SKILL_DATA := {
+	"barrier_counter": {"name": "壁垒反击", "cooldown": 12.0}, "last_stand": {"name": "绝境坚守", "cooldown": 16.0},
+	"sacrifice_medic": {"name": "代偿治疗", "cooldown": 14.0}, "choke_control": {"name": "扼制领域", "cooldown": 13.0},
+	"weakpoint_sniper": {"name": "弱点标定", "cooldown": 10.0}, "heavy_suppression": {"name": "重火力压制", "cooldown": 12.0},
+	"demolition_traps": {"name": "爆破陷阱", "cooldown": 13.0}, "relic_engineer": {"name": "遗物调校", "cooldown": 11.0},
+	"psychic_sense": {"name": "灵觉扫描", "cooldown": 14.0}, "anomaly_ingestion": {"name": "异常摄取", "cooldown": 15.0},
+	"echo_summoner": {"name": "回响召唤", "cooldown": 14.0}, "aberrant_form": {"name": "异化突变", "cooldown": 16.0},
+}
+
+
+func get_skill_name() -> String:
+	return str(SKILL_DATA.get(_active_combat_style(), {}).get("name", "未选择流派"))
+
+
+func get_skill_cooldown() -> float:
+	return _skill_cooldown
+
+
+func use_active_skill() -> bool:
+	var style := _active_combat_style()
+	if _dead or style.is_empty() or _skill_cooldown > 0.0 or not SKILL_DATA.has(style):
+		return false
+	var data: Dictionary = SKILL_DATA[style]
+	_skill_duration = float(data.cooldown)
+	_skill_cooldown = _skill_duration
+	combat_fx.profession_skill(style, global_position + facing * 18.0, facing, 128.0, 0.56)
+	match style:
+		"barrier_counter": _invulnerability_timer = maxf(_invulnerability_timer, 2.4)
+		"last_stand", "sacrifice_medic":
+			health = mini(max_health, health + int(max_health * (0.30 if style == "last_stand" else 0.24)))
+			health_changed.emit(health, max_health)
+			_heal_flash = 0.42
+		"choke_control": _damage_enemies(110.0, attack_damage * 0.75, 0.0, 0.5)
+		"weakpoint_sniper": _damage_enemies(ranged_range, ranged_damage * 2.7, 0.88, 0.0)
+		"heavy_suppression": _damage_enemies(shotgun_range, shotgun_damage * 1.15, 0.55, 0.0)
+		"demolition_traps": _damage_enemies(150.0, attack_damage * 1.65, -1.0, 0.0)
+		"relic_engineer":
+			ammo = mini(max_ammo, ammo + 7)
+			shells = mini(max_shells, shells + 3)
+			weapon_changed.emit(get_weapon_name(), ammo)
+		"psychic_sense":
+			for target in get_tree().get_nodes_in_group("enemies"):
+				if is_instance_valid(target) and target is Node2D:
+					combat_fx.status_burst((target as Node2D).global_position, "freeze")
+		"anomaly_ingestion":
+			_damage_enemies(124.0, attack_damage * 1.25, -1.0, 0.0)
+			add_echo_shards(1)
+		"echo_summoner": _damage_enemies(190.0, attack_damage * 1.05, -1.0, 0.0)
+		"aberrant_form":
+			_damage_enemies(132.0, attack_damage * 1.8, -1.0, 0.0)
+			_invulnerability_timer = maxf(_invulnerability_timer, 0.8)
+	skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
+	queue_redraw()
+	return true
+
+
+func _damage_enemies(radius: float, damage: float, forward_dot: float, control_duration: float) -> void:
+	var hits := 0
+	for target in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(target) or not target.has_method("take_damage") or not target is Node2D:
+			continue
+		var offset: Vector2 = (target as Node2D).global_position - global_position
+		if offset.length() > radius or (forward_dot >= 0.0 and facing.dot(offset.normalized()) < forward_dot):
+			continue
+		target.take_damage(int(damage), global_position)
+		combat_fx.impact((target as Node2D).global_position, offset, true)
+		if control_duration > 0.0:
+			_apply_control_status(target, "freeze", control_duration)
+		hits += 1
+	_record_equipment_mastery("multi_hits" if hits > 1 else "melee_hits", hits)
 
 
 func play_profession_skill(style_id: String) -> void:

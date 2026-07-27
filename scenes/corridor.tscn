@@ -48,7 +48,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.25, 0.88, 0.78, 1)
 theme_override_font_sizes/font_size = 30
-text = "终末回廊 // 行者整备终端"
+text = "终末回廊"
 
 [node name="Currency" type="Label" parent="Margin/Layout/Header"]
 layout_mode = 2
@@ -266,7 +266,7 @@ offset_right = 650.0
 offset_bottom = 76.0
 theme_override_colors/font_color = Color(0.38, 0.95, 0.82, 1)
 theme_override_font_sizes/font_size = 30
-text = "终末回廊 // 独立整备空间"
+text = "终末回廊"
 
 [node name="OpenArchive" type="Button" parent="."]
 layout_mode = 1

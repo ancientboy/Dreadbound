@@ -730,7 +730,7 @@ func _create_warehouse_panel() -> void:
 	var title := Label.new()
 	title.position = Vector2(30, 22)
 	title.size = Vector2(990, 48)
-	title.text = "异常装备回收仓库 // EQUIPMENT ARCHIVE"
+	title.text = "异常装备回收仓库"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", Color("62dec6"))
@@ -862,7 +862,7 @@ func _create_human_mirror_panel() -> void:
 	title.name = "Title"
 	title.position = Vector2(28, 20)
 	title.size = Vector2(700, 46)
-	title.text = "人性镜鉴 // HUMAN MIRROR"
+	title.text = "人性镜鉴"
 	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color("7ddcf2"))
 	mirror_panel.add_child(title)
@@ -916,7 +916,7 @@ func _refresh_human_mirror() -> void:
 		box.add_theme_constant_override("separation", 4)
 		mirror_content.add_child(box)
 		var heading := Label.new()
-		heading.text = "%s ↔ %s  //  %s  ·  置信度 %d%%  ·  样本 %d" % [
+		heading.text = "%s ↔ %s：%s · 置信度 %d%% · 样本 %d" % [
 			str(poles.negative), str(poles.positive), str(result.get("pole", "尚未形成")),
 			int(round(float(result.get("confidence", 0.0)) * 100.0)), int(result.get("sample_size", 0)),
 		]
@@ -1395,9 +1395,9 @@ func _curator_profile_text() -> String:
 	lines.append("世界简报：%s" % "；".join(GameState.world_briefing()))
 	lines.append("成长计划：%s" % " → ".join(GameState.get_growth_plan()))
 	if not GameState.heart_aspect.is_empty():
-		lines.append("心相：%s // %s" % [str(GameState.heart_aspect.name), str(GameState.heart_aspect.description)])
+		lines.append("心相：%s：%s" % [str(GameState.heart_aspect.name), str(GameState.heart_aspect.description)])
 	if not trial.is_empty():
-		lines.append("试炼：%s // %s // 奖励 %s" % [trial.title, trial.description, trial.reward_text])
+		lines.append("试炼：%s：%s · 奖励 %s" % [trial.title, trial.description, trial.reward_text])
 	var recent: Array = profile.get("recent_runs", [])
 	for run in recent:
 		lines.append("%s · %s · 噪音%d · 事件%d" % ["地铁" if str(run.get("world", "")) == "metro" else "疗养院", "撤离" if bool(run.get("success", false)) else "失联", int(run.get("noise", 0)), int(run.get("events", 0))])
@@ -1690,7 +1690,7 @@ func _create_icon_card(icon_texture: Texture2D, title_text: String, subtitle_tex
 
 
 func _build_material_section() -> void:
-	section_title.text = "材料背包 // MATERIAL VAULT"
+	section_title.text = "材料背包"
 	_section_heading("独立容量", "材料不占用装备仓库格位；每种材料上限 %d。副本中拾取的材料只有成功撤离后才会入库。" % GameProgress.MAX_MATERIAL_STACK)
 	var grid := GridContainer.new()
 	grid.name = "MaterialGrid"
@@ -1749,7 +1749,7 @@ func _select_material(material_id: String) -> void:
 
 
 func _build_collection_section() -> void:
-	section_title.text = "唯一藏品与成长遗物 // UNIQUE COLLECTION"
+	section_title.text = "唯一藏品与成长遗物"
 	var acquired := 0
 	for item_id in EquipmentDatabase.ITEMS:
 		var item: Dictionary = EquipmentDatabase.ITEMS[item_id]
@@ -1783,7 +1783,7 @@ func _build_collection_section() -> void:
 
 
 func _build_world_archive_section() -> void:
-	section_title.text = "世界与叙事档案 // WORLD CODEX"
+	section_title.text = "世界与叙事档案"
 	var identity := narrative_catalog.identity()
 	_section_heading(str(identity.get("title", "Dreadbound")), "%s\n\n%s" % [str(identity.get("genre", "")), str(identity.get("positioning", ""))])
 	var curator_row := HBoxContainer.new()
@@ -1874,7 +1874,7 @@ func _open_codex_entry(entry_id: String) -> void:
 func _build_dungeon_codex(world_id: String) -> void:
 	var world := narrative_catalog.dungeon(world_id)
 	var dungeon_state: Dictionary = GameState.persistent_dungeons.dungeons.get(world_id, {})
-	section_title.text = "%s // %s" % [str(world.get("name", world_id)), str(world.get("english_name", ""))]
+	section_title.text = str(world.get("name", world_id))
 	_add_archive_illustration(world_id, dungeon_state)
 	_section_heading("投送简介", str(world.get("short_intro", "")))
 	_section_heading("完整故事", str(world.get("full_story", "")))
@@ -1957,7 +1957,7 @@ func _truth_unlock_hint(unlock: Dictionary) -> String:
 
 
 func _build_career_section() -> void:
-	section_title.text = "职业锚点与战斗流派 // CAREER"
+	section_title.text = "职业锚点与战斗流派"
 	_section_heading("当前职业", "%s · 当前流派：%s" % [GameState.get_pathway_name(), str(ExchangeEvolution.COMBAT_STYLES.get(GameState.active_combat_style, {}).get("name", "未选择"))])
 	if not GameState.heart_aspect.is_empty():
 		var heart_ids := ["watch", "last_breath", "broken_oath", "seek_gap", "contain_abyss", "finale"]
@@ -2007,7 +2007,7 @@ func _build_career_section() -> void:
 
 
 func _build_dungeon_section() -> void:
-	section_title.text = "灾难副本与投送 // DUNGEONS"
+	section_title.text = "灾难副本与投送"
 	_section_heading("当前投送", "%s · %s\n副本选择、难度和出发集中在此入口。" % [_world_name(), str(GameState.get_difficulty().name)])
 	for world_id in ["sanatorium", "metro"]:
 		var world := narrative_catalog.dungeon(world_id)
@@ -2044,7 +2044,7 @@ func _build_dungeon_section() -> void:
 
 
 func _build_exchange_section() -> void:
-	section_title.text = "异常兑换与合成终端 // EXCHANGE"
+	section_title.text = "异常兑换与合成终端"
 	_section_heading("轮换 %d" % GameState.exchange_cycle, "终端只处理兑换与合成；装备管理、材料查看、职业成长和副本投送均已拆分到独立入口。")
 	for offer in GameState.get_exchange_offers():
 		var offer_button := Button.new()
@@ -2217,8 +2217,8 @@ func _select_equipment(item_id: String) -> void:
 	var affix_name := str(ExchangeEvolution.AFFIXES.get(affix_id, {}).get("name", "无"))
 	var evolution := GameState.current_equipment_evolution(item_id)
 	var evolution_name := str(evolution.get("name", "尚未进化"))
-	warehouse_detail.text = "%s // %s\n评级 %d · 强化 Lv.%d/5\n词条：%s · 进化：%s\n槽位：%s\n\n%s\n\n%s%s%s" % [
-		item.quality, item.name, item.rating, upgrade_level, affix_name, evolution_name,
+	warehouse_detail.text = "%s\n评级 %d · 强化 Lv.%d/5\n词条：%s · 进化：%s\n槽位：%s\n\n%s\n\n%s%s%s" % [
+		item.quality, item.rating, upgrade_level, affix_name, evolution_name,
 		EquipmentDatabase.slot_label(item_id), item.description,
 		_equipment_progression_guide(item_id), growth, equipped_mark,
 	]
@@ -2326,7 +2326,7 @@ func _show_evolution_paths(item_id: String) -> void:
 	for child in section_content.get_children():
 		child.queue_free()
 	var item := EquipmentDatabase.get_item(item_id)
-	section_title.text = "%s // 三条进化路径" % str(item.get("name", item_id))
+	section_title.text = "%s：三条进化路径" % str(item.get("name", item_id))
 	_section_heading("进化规则", "路径由玩家明确选择，不再自动采用第一条。每次进化消耗 1 因果残片；当前持有 %d。行为进度来自装备实际战斗记录。" % GameState.causality_fragments)
 	var available_map := {}
 	for branch in GameState.available_evolutions(item_id):

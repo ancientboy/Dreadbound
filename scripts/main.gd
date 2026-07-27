@@ -47,6 +47,7 @@ const METRO_HIDDEN_ARCHIVE_POSITION := Vector2(1888, 1136)
 @onready var fog_of_war: FogOfWar = $FogOfWar
 @onready var minimap: SanatoriumMinimap = $Interface/Minimap
 @onready var inventory_status: Label = $Interface/TopBar/Inventory
+@onready var currency_status: Label = $Interface/TopBar/Currency
 @onready var weapon_status: Label = $Interface/TopBar/Weapon
 @onready var abandon_button: Button = $Interface/TopBar/Abandon
 @onready var return_button: Button = $Interface/CompletePanel/Return
@@ -160,6 +161,7 @@ func _ready() -> void:
 	player.selected_item_changed.connect(_on_selected_item_changed)
 	player.noise_generated.connect(_on_player_noise_generated)
 	player.equipment_trait_used.connect(_on_equipment_trait_used)
+	player.skill_changed.connect(_on_skill_changed)
 	abandon_button.pressed.connect(_on_abandon_pressed)
 	return_button.pressed.connect(_return_to_corridor)
 	event_choice_a.pressed.connect(_resolve_active_event.bind(true))
@@ -168,6 +170,7 @@ func _ready() -> void:
 	_on_inventory_changed(player.bandages, player.echo_shards)
 	_on_weapon_changed(player.get_weapon_name(), player.ammo)
 	_on_selected_item_changed(player.get_selected_item_name(), player.get_selected_item_count())
+	_refresh_currency_status()
 	_update_mission_ui()
 	_create_feedback_layer()
 	_create_reward_panel()
@@ -175,7 +178,7 @@ func _ready() -> void:
 	_loot_rng.randomize()
 	if not GameState.corridor_unlocked:
 		_show_notification("首次连接：左侧摇杆移动 · 攻击键战斗 · E键交互\n右上角地图可查看探索路线", 7.0)
-	$Interface/TopBar/Title.text = "%s // %s" % [run_config.mission_title, run_config.action_code]
+	$Interface/TopBar/Title.text = run_config.mission_title
 	if run_config.world_id == "metro":
 		var contract_note := "\n司仪契约：%s" % str(curator_contract.title) if not curator_contract.is_empty() else ""
 		var chapter_note := "\n%s：%s" % [str(narrative_chapter.get("title", "")), str(narrative_chapter.get("briefing", ""))]
@@ -200,20 +203,21 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	title.position = Vector2(16, 7)
 	title.size = Vector2(width * 0.46, 24)
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	$Interface/TopBar/Inventory.position = Vector2(width * 0.46, 7)
-	$Interface/TopBar/Inventory.size = Vector2(width * 0.17, 24)
-	$Interface/TopBar/Health.position = Vector2(width * 0.63, 7)
+	currency_status.position = Vector2(width * 0.46, 7)
+	currency_status.size = Vector2(width * 0.28, 24)
+	$Interface/TopBar/Health.position = Vector2(width * 0.74, 7)
 	$Interface/TopBar/Health.size = Vector2(width * 0.14, 24)
-	controls.position = Vector2(width * 0.77, 7)
-	controls.size = Vector2(width * 0.21 - 12, 24)
+	controls.position = Vector2(width * 0.88, 7)
+	controls.size = Vector2(width * 0.10 - 12, 24)
 	controls.visible = width >= 1050.0
-	$Interface/TopBar/Objective.position = Vector2(16, 39)
-	$Interface/TopBar/Objective.size = Vector2(width * 0.48, 24)
+	$Interface/TopBar/Inventory.position = Vector2(16, 39)
+	$Interface/TopBar/Inventory.size = Vector2(width * 0.46, 24)
+	$Interface/TopBar/Objective.position = Vector2(width * 0.46, 39)
+	$Interface/TopBar/Objective.size = Vector2(width * 0.34, 24)
 	$Interface/TopBar/Objective.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	$Interface/TopBar/Weapon.position = Vector2(width * 0.48, 39)
-	$Interface/TopBar/Weapon.size = Vector2(width * 0.22, 24)
-	$Interface/TopBar/Progress.position = Vector2(width * 0.70, 39)
-	$Interface/TopBar/Progress.size = Vector2(width * 0.28 - 12, 24)
+	$Interface/TopBar/Weapon.position = Vector2(width * 0.80, 39)
+	$Interface/TopBar/Weapon.size = Vector2(width * 0.18 - 12, 24)
+	$Interface/TopBar/Progress.visible = false
 	$Interface/TopBar/Progress.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	abandon_button.position = Vector2(0, 82)
 	abandon_button.size = Vector2(142, 40)
@@ -356,9 +360,9 @@ func _process(delta: float) -> void:
 	prompt_panel.visible = target != null
 	if target:
 		if target.kind == ObjectiveInteractable.Kind.SECRET and not GameState.dungeon_hidden_open("metro", "lost_passenger_level"):
-			prompt.text = "维护层封闭 // 林雾说下一次潮汐会改变门锁"
+			prompt.text = "维护层封闭，林雾说下一次潮汐会改变门锁"
 		elif run_config.world_id == "metro" and not metro_route.is_empty() and target.kind == ObjectiveInteractable.Kind.EXIT and target.objective_id != "metro_exit_%s" % metro_route:
-			prompt.text = "列车未停靠此站 // 前往%s站台" % ("北" if metro_route == "north" else "南")
+			prompt.text = "列车未停靠此站，请前往%s站台" % ("北" if metro_route == "north" else "南")
 		else:
 			prompt.text = target.get_prompt(collected_records.size(), power_restored, total_records)
 		if wants_to_interact:
@@ -454,7 +458,8 @@ func _on_player_health_changed(current: int, maximum: int) -> void:
 
 
 func _on_inventory_changed(bandages: int, echo_shards: int) -> void:
-	inventory_status.text = "绷带%d 镇静%d 兴奋%d · 碎片%d" % [bandages, player.sedatives, player.stimulants, echo_shards]
+	inventory_status.text = "绷带 %d · 镇静 %d · 兴奋 %d · 本次回响 %d" % [bandages, player.sedatives, player.stimulants, echo_shards]
+	_refresh_currency_status()
 
 
 func _on_weapon_changed(weapon_name: String, ammo: int) -> void:
@@ -463,7 +468,7 @@ func _on_weapon_changed(weapon_name: String, ammo: int) -> void:
 
 
 func _on_utility_changed(sedatives: int, duration: float) -> void:
-	inventory_status.text = "绷带%d 镇静%d 兴奋%d · 碎片%d" % [player.bandages, sedatives, player.stimulants, player.echo_shards]
+	inventory_status.text = "绷带 %d · 镇静 %d · 兴奋 %d · 本次回响 %d" % [player.bandages, sedatives, player.stimulants, player.echo_shards]
 	if duration > 0.0:
 		inventory_status.tooltip_text = "镇静效果 %.0f 秒" % duration
 	else:
@@ -471,7 +476,17 @@ func _on_utility_changed(sedatives: int, duration: float) -> void:
 
 
 func _on_selected_item_changed(item_name: String, count: int) -> void:
-	inventory_status.text = "当前 %s×%d · 绷%d 镇%d 兴%d" % [item_name, count, player.bandages, player.sedatives, player.stimulants]
+	inventory_status.text = "当前 %s ×%d · 绷带 %d · 镇静 %d · 兴奋 %d" % [item_name, count, player.bandages, player.sedatives, player.stimulants]
+
+
+func _refresh_currency_status() -> void:
+	if currency_status:
+		currency_status.text = "回响 %d · 因果 %d · 余烬 %d" % [GameState.echo_shards, GameState.causality_fragments, GameState.synthesis_embers]
+
+
+func _on_skill_changed(skill_name: String, remaining: float, _duration: float) -> void:
+	if skill_name != "未选择流派":
+		$Interface/TopBar/Controls.text = "%s%s" % [skill_name, " %.0fs" % ceili(remaining) if remaining > 0.0 else " 就绪"]
 
 
 func _on_player_died() -> void:
@@ -1512,7 +1527,7 @@ func _create_reward_panel() -> void:
 	var title := Label.new()
 	title.position = Vector2(30, 25)
 	title.size = Vector2(880, 55)
-	title.text = "异常回收协议 // 选择一项奖励"
+	title.text = "异常回收协议：选择一项奖励"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_override("font", UI_FONT)
 	title.add_theme_font_size_override("font_size", 27)
@@ -1724,7 +1739,7 @@ func _draw_metro_maintenance_level(secret_rect: Rect2) -> void:
 				Rect2((index % 4) * 128, floori(float(index) / 4.0) * 128, 128, 128),
 			)
 	draw_rect(secret_rect, Color("8d68b3"), false, 3.0)
-	draw_string(UI_FONT, secret_rect.position + Vector2(24, 38), "失踪乘客维护层 // 名单与排水记录", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 18, Color("d9b8ef"))
+	draw_string(UI_FONT, secret_rect.position + Vector2(24, 38), "失踪乘客维护层：名单与排水记录", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 18, Color("d9b8ef"))
 
 
 func _draw_metro_prop(index: int, center: Vector2, draw_size: float) -> void:

@@ -68,6 +68,10 @@ use_trait={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":84)]
 }
+use_skill={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":71)]
+}
 
 [rendering]
 renderer/rendering_method="gl_compatibility"

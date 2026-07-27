@@ -103,7 +103,7 @@ func _draw_expanded_map() -> void:
 	draw_rect(panel, Color(0.025, 0.065, 0.058, 0.98))
 	draw_rect(panel, Color(0.24, 0.74, 0.64, 0.85), false, 3.0)
 	var map_title := run_config.map_title() if run_config else "行动地图"
-	draw_string(UI_FONT, panel.position + Vector2(24, 42), "%s // 探索地图" % map_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("62dec7"))
+	draw_string(UI_FONT, panel.position + Vector2(24, 42), "%s探索地图" % map_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("62dec7"))
 	draw_string(UI_FONT, panel.position + Vector2(panel.size.x - 160, 40), "点击关闭", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("6f958c"))
 	_draw_map_contents(Rect2(panel.position + Vector2(54, 78), panel.size - Vector2(108, 130)), true)
 	draw_circle(panel.position + Vector2(62, panel.size.y - 26), 5.0, Color("55e8ce"))
