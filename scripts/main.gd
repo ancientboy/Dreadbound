@@ -55,8 +55,6 @@ const METRO_HIDDEN_ARCHIVE_POSITION := Vector2(1888, 1136)
 @onready var event_description: Label = $Interface/EventPanel/Description
 @onready var event_choice_a: Button = $Interface/EventPanel/ChoiceA
 @onready var event_choice_b: Button = $Interface/EventPanel/ChoiceB
-var audio_settings_button: Button
-var audio_settings_panel: DreadboundAudioSettingsPanel
 
 var mission_phase := MissionPhase.COLLECT_RECORDS
 var collected_records: Dictionary = {}
@@ -173,7 +171,6 @@ func _ready() -> void:
 	_update_mission_ui()
 	_create_feedback_layer()
 	_create_reward_panel()
-	_create_audio_settings()
 	_apply_responsive_ui()
 	_loot_rng.randomize()
 	if not GameState.corridor_unlocked:
@@ -220,9 +217,6 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$Interface/TopBar/Progress.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	abandon_button.position = Vector2(0, 82)
 	abandon_button.size = Vector2(142, 40)
-	if audio_settings_button:
-		audio_settings_button.position = Vector2(width - 104, 82)
-		audio_settings_button.size = Vector2(104, 40)
 	_layout_centered_panel(complete_panel, viewport_size, Vector2(600, 276), Vector2(32, 150))
 	_layout_centered_panel(event_panel, viewport_size, Vector2(680, 380), Vector2(32, 150))
 	_layout_complete_contents()
@@ -238,20 +232,6 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	if reward_panel:
 		_layout_centered_panel(reward_panel, viewport_size, Vector2(720, 610), Vector2(24, 48))
 		_layout_reward_contents()
-
-
-func _create_audio_settings() -> void:
-	audio_settings_button = Button.new()
-	audio_settings_button.name = "OpenInGameAudioSettings"
-	audio_settings_button.text = "声音"
-	audio_settings_button.tooltip_text = "音乐与音效设置"
-	audio_settings_button.add_theme_font_override("font", UI_FONT)
-	audio_settings_button.add_theme_font_size_override("font_size", 16)
-	audio_settings_button.pressed.connect(func(): audio_settings_panel.toggle())
-	$Interface/TopBar.add_child(audio_settings_button)
-	audio_settings_panel = DreadboundAudioSettingsPanel.new()
-	$Interface.add_child(audio_settings_panel)
-	audio_settings_panel.configure(UI_FONT)
 
 
 func _layout_centered_panel(panel: Control, viewport_size: Vector2, preferred: Vector2, padding: Vector2) -> void:
