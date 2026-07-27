@@ -91,7 +91,7 @@ func unlock() -> void:
 	if _unlocked:
 		return
 	_unlocked = true
-	_web_call("unlock()")
+	_web_call("unlock")
 	# A previously muted browser session can leave the Master bus muted even though
 	# the two in-game toggles report as enabled. Reconcile every route when the
 	# user supplies the trusted gesture that unlocks WebAudio.
