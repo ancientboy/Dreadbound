@@ -3,20 +3,20 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 23
+const SAVE_VERSION := 24
 const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
 const MAX_MATERIAL_STACK := 999
 const MAX_LOOT_HISTORY := 40
-const EQUIPMENT_SLOTS := ["weapon_melee", "weapon_ranged", "weapon_shotgun", "charm"]
+const EQUIPMENT_SLOTS := ["weapon_1", "weapon_2", "weapon_3", "offhand", "charm", "trinket_1", "trinket_2"]
 const UPGRADE_COSTS := [4, 7, 11, 16, 22, 29]
 const PATHWAY_ANCHOR_COST := {"echo_shards": 8, "causality_fragments": 1}
 const LOADOUTS := {
-	"scavenger": {"name": "搜救配置", "weapon": "melee", "ammo": 6, "bandages": 1, "shells": 2, "sedatives": 0, "stimulants": 0, "description": "撬棍 · 6 发弹药 · 1 份绷带"},
-	"marksman": {"name": "警戒配置", "weapon": "ranged", "ammo": 14, "bandages": 0, "shells": 0, "sedatives": 1, "stimulants": 0, "description": "手枪 · 14 发弹药 · 1 支镇静剂"},
-	"medic": {"name": "应急配置", "weapon": "melee", "ammo": 3, "bandages": 2, "shells": 0, "sedatives": 1, "stimulants": 0, "description": "撬棍 · 2 份绷带 · 1 支镇静剂"},
-	"breacher": {"name": "破门配置", "weapon": "shotgun", "ammo": 2, "bandages": 0, "shells": 6, "sedatives": 0, "stimulants": 1, "description": "霰弹枪 · 6 发霰弹 · 1 支兴奋剂"},
+	"scavenger": {"name": "搜救配置", "weapon": "melee", "bandages": 1, "sedatives": 0, "stimulants": 0, "description": "近战开局 · 1 份绷带"},
+	"marksman": {"name": "警戒配置", "weapon": "ranged", "bandages": 0, "sedatives": 1, "stimulants": 0, "description": "远程武器 · 1 支镇静剂"},
+	"medic": {"name": "应急配置", "weapon": "melee", "bandages": 2, "sedatives": 1, "stimulants": 0, "description": "近战武器 · 2 份绷带 · 1 支镇静剂"},
+	"breacher": {"name": "破门配置", "weapon": "shotgun", "bandages": 0, "sedatives": 0, "stimulants": 1, "description": "重型武器 · 1 支兴奋剂"},
 }
 const PATH_NODES := {
 	"steadfast_guard": {"path": "steadfast", "name": "坚守者：守望", "cost": 5, "description": "生命上限 +12 · 解锁耐受/恢复 Lv.4–6"},
@@ -54,7 +54,7 @@ var selected_loadout := "scavenger"
 var corridor_unlocked := false
 var corridor_intro_seen := false
 var equipment_inventory: Array[String] = ["service_crowbar", "medical_tag"]
-var equipped := {"weapon_melee": "", "weapon_ranged": "", "weapon_shotgun": "", "charm": ""}
+var equipped := {"weapon_1": "service_crowbar", "weapon_2": "", "weapon_3": "", "offhand": "", "charm": "medical_tag", "trinket_1": "", "trinket_2": ""}
 var active_run_seed := 0
 var last_action_code := ""
 var selected_world := "sanatorium"
@@ -824,9 +824,27 @@ func equip_item(item_id: String) -> bool:
 	if item.is_empty():
 		return false
 	var equipment_slot := EquipmentDatabase.equipment_slot(item_id)
-	if equipment_slot not in EQUIPMENT_SLOTS:
+	if equipment_slot == "weapon":
+		# The issued crowbar is a starter fallback, not a fourth permanent slot.
+		if item_id != "service_crowbar" and str(equipped.get("weapon_1", "")) == "service_crowbar":
+			equipped.weapon_1 = item_id
+			save_progress()
+			progress_changed.emit()
+			return true
+		for slot in weapon_slots():
+			if str(equipped.get(slot, "")).is_empty():
+				equipped[slot] = item_id
+				save_progress()
+				progress_changed.emit()
+				return true
+		equipped.weapon_1 = item_id
+	elif equipment_slot in ["charm", "offhand"]:
+		equipped[equipment_slot] = item_id
+	elif equipment_slot == "trinket":
+		var trinket_slot := "trinket_1" if str(equipped.trinket_1).is_empty() else "trinket_2"
+		equipped[trinket_slot] = item_id
+	else:
 		return false
-	equipped[equipment_slot] = item_id
 	save_progress()
 	progress_changed.emit()
 	return true
@@ -846,14 +864,19 @@ func is_item_equipped(item_id: String) -> bool:
 
 
 func get_equipped_weapon_for_attack(attack_type: String) -> String:
-	var exact := str(equipped.get("weapon_%s" % attack_type, ""))
-	if not exact.is_empty():
-		return exact
-	for slot in ["weapon_melee", "weapon_ranged", "weapon_shotgun"]:
+	for slot in weapon_slots():
 		var item_id := str(equipped.get(slot, ""))
 		if not item_id.is_empty() and EquipmentDatabase.supports_attack(item_id, attack_type):
 			return item_id
 	return ""
+
+
+func weapon_slots() -> Array[String]:
+	return ["weapon_1", "weapon_2", "weapon_3"]
+
+
+func get_equipped_weapon_at_slot(slot_index: int) -> String:
+	return str(equipped.get("weapon_%d" % (posmod(slot_index, 3) + 1), ""))
 
 
 func disassemble_item(item_id: String) -> bool:
@@ -1104,6 +1127,8 @@ func load_progress() -> void:
 		migrations.append("v22：近战、精确与重型武器独立装备槽")
 	if loaded_version < 23:
 		migrations.append("v23：新增可选女性行者外观")
+	if loaded_version < 24:
+		migrations.append("v24：三自由武器槽、副手、单一主动护符；移除弹药掉落与装备耐久")
 	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
@@ -1215,17 +1240,22 @@ func load_progress() -> void:
 		equipment_inventory.assign(["service_crowbar", "medical_tag"])
 	persistent_dungeons.reconcile_inventory(equipment_inventory)
 	var saved_equipped = parsed.get("equipped", {})
-	equipped = {"weapon_melee": "", "weapon_ranged": "", "weapon_shotgun": "", "charm": ""}
+	equipped = {"weapon_1": "", "weapon_2": "", "weapon_3": "", "offhand": "", "charm": "", "trinket_1": "", "trinket_2": ""}
 	if saved_equipped is Dictionary:
-		var legacy_weapon := str(saved_equipped.get("weapon", ""))
-		if equipment_inventory.has(legacy_weapon):
-			var migrated_slot := EquipmentDatabase.equipment_slot(legacy_weapon)
-			if migrated_slot in EQUIPMENT_SLOTS:
-				equipped[migrated_slot] = legacy_weapon
-		for slot in EQUIPMENT_SLOTS:
-			var item_id := str(saved_equipped.get(slot, ""))
-			if equipment_inventory.has(item_id) and EquipmentDatabase.equipment_slot(item_id) == slot:
-				equipped[slot] = item_id
+		var weapon_index := 1
+		for legacy_slot in ["weapon", "weapon_melee", "weapon_ranged", "weapon_shotgun", "weapon_1", "weapon_2", "weapon_3"]:
+			var item_id := str(saved_equipped.get(legacy_slot, ""))
+			if equipment_inventory.has(item_id) and EquipmentDatabase.equipment_slot(item_id) == "weapon" and weapon_index <= 3:
+				equipped["weapon_%d" % weapon_index] = item_id
+				weapon_index += 1
+		for slot in ["offhand", "charm", "trinket_1", "trinket_2"]:
+			var equipped_id := str(saved_equipped.get(slot, ""))
+			if equipment_inventory.has(equipped_id):
+				equipped[slot] = equipped_id
+	if str(equipped.weapon_1).is_empty() and equipment_inventory.has("service_crowbar"):
+		equipped.weapon_1 = "service_crowbar"
+	if str(equipped.charm).is_empty() and equipment_inventory.has("medical_tag"):
+		equipped.charm = "medical_tag"
 
 
 func reset_progress() -> void:
@@ -1255,7 +1285,7 @@ func _clear_runtime_progress() -> void:
 	corridor_unlocked = false
 	corridor_intro_seen = false
 	equipment_inventory.assign(["service_crowbar", "medical_tag"])
-	equipped = {"weapon_melee": "", "weapon_ranged": "", "weapon_shotgun": "", "charm": ""}
+	equipped = {"weapon_1": "service_crowbar", "weapon_2": "", "weapon_3": "", "offhand": "", "charm": "medical_tag", "trinket_1": "", "trinket_2": ""}
 	active_run_seed = 0
 	last_action_code = ""
 	selected_world = "sanatorium"
