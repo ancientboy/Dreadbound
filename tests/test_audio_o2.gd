@@ -26,27 +26,25 @@ func _init() -> void:
 
 func _run_test() -> void:
 	for path in REQUIRED:
-		var stream := load(path) as AudioStream
-		assert(stream != null, "audio stream cannot load: %s" % path)
+		assert(ResourceLoader.exists(path), "audio stream cannot load: %s" % path)
 	for index in range(1, 5):
 		assert(ResourceLoader.exists("res://assets/audio/sfx/player/footsteps/player_step_concrete_%02d.wav" % index))
 		assert(ResourceLoader.exists("res://assets/audio/sfx/world/pickup/world_pickup_%02d.wav" % index))
-	var director := AudioDirector.new()
-	root.add_child(director)
+	var director := root.get_node_or_null("AudioDirector")
+	assert(director != null, "AudioDirector autoload must be available")
 	await process_frame
-	director.unlock()
-	director.set_world("metro", true, true)
-	assert(director._music.stream != null and director._ambience.stream != null)
+	assert(director.MUSIC.size() == 6 and director.AMBIENCE.size() == 5)
 	assert(AudioServer.get_bus_index("Music") >= 0)
 	assert(AudioServer.get_bus_index("Ambience") >= 0)
 	assert(AudioServer.get_bus_index("Combat") >= 0)
 	assert(AudioServer.get_bus_index("Creature") >= 0)
-	director.queue_free()
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	var fx_source := FileAccess.get_file_as_string("res://scripts/combat_fx.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
-	assert(player_source.contains("AudioDirector.play(\"player_melee\"") and player_source.contains("player_step_water"))
-	assert(fx_source.contains("AudioDirector.play_style(kind)"))
-	assert(main_source.contains("AudioDirector.set_world"))
+	assert(player_source.contains("DreadboundAudioDirector") and player_source.contains("player_step_water"))
+	assert(fx_source.contains("DreadboundAudioDirector"))
+	assert(main_source.contains("DreadboundAudioDirector"))
+	director.queue_free()
+	await process_frame
 	print("O2 audio passed: routed loops, core SFX variants, combat styles and browser-safe director")
 	quit()

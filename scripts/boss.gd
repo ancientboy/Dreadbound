@@ -34,7 +34,7 @@ func _ready() -> void:
 func activate(player: Player) -> void:
 	target = player
 	active = true
-	AudioDirector.play_at("director_windup", global_position, 0.02)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_at("director_windup", global_position, 0.02)
 	visible = true
 	set_physics_process(true)
 	queue_redraw()
@@ -82,7 +82,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _execute_attack() -> void:
-	AudioDirector.play_at("director_attack", global_position, 0.025)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_at("director_attack", global_position, 0.025)
 	var distance := global_position.distance_to(target.global_position)
 	if _attack_index % 2 == 0:
 		_get_combat_fx().sanatorium_enemy_skill("director_sweep", global_position, global_position.direction_to(target.global_position), 176.0, 0.4)

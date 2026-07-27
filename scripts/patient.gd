@@ -63,12 +63,12 @@ func _physics_process(delta: float) -> void:
 			_attack_windup = maxf(_attack_windup - delta, 0.0)
 			if _attack_windup <= 0.0 and global_position.distance_to(target.global_position) <= attack_range + 12.0:
 				_attack_timer = attack_cooldown
-				AudioDirector.play_at("patient_attack", global_position, 0.03)
+				(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_at("patient_attack", global_position, 0.03)
 				_get_combat_fx().sanatorium_enemy_skill("patient_claw", global_position, facing, 82.0, 0.26)
 				target.take_damage(attack_damage, global_position)
 		elif _attack_timer <= 0.0:
 			_attack_windup = 0.32
-			AudioDirector.play_at("patient_windup", global_position, 0.025)
+			(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_at("patient_windup", global_position, 0.025)
 			_get_combat_fx().attack_telegraph(global_position, attack_range + 18.0, _attack_windup, Color("d66c59"))
 			_get_combat_fx().sanatorium_enemy_skill("patient_grasp", global_position, facing, 72.0, _attack_windup)
 		if _attack_timer <= 0.0 and _attack_windup <= 0.0:

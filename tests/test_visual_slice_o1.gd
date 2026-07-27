@@ -30,8 +30,8 @@ func _init() -> void:
 	var file := FileAccess.open(MANIFEST_PATH, FileAccess.READ)
 	assert(file != null)
 	var manifest: Dictionary = JSON.parse_string(file.get_as_text())
-	assert(str(manifest.get("production_stage", "")) == "O1")
-	assert(str(manifest.get("production_status", "")) == "visual_slice_review")
+	assert(str(manifest.get("production_stage", "")) in ["O1", "O2"])
+	assert(str(manifest.get("production_status", "")) in ["visual_slice_review", "audio_system_integration"])
 
 	var entries := {}
 	for entry_value in manifest.get("assets", []):

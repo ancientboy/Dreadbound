@@ -12,7 +12,7 @@ var profile_button: Button
 
 
 func _ready() -> void:
-	AudioDirector.set_world("home")
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).set_world("home")
 	var home_theme := Theme.new()
 	home_theme.default_font = UI_FONT
 	theme = home_theme

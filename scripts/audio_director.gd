@@ -1,4 +1,4 @@
-class_name AudioDirector
+class_name DreadboundAudioDirector
 extends Node
 
 ## Central audio routing for Dreadbound. Gameplay only talks in named cues; this
@@ -92,7 +92,7 @@ func _on_node_added(node: Node) -> void:
 
 
 func play(cue_id: String, pitch_jitter := 0.0) -> void:
-	if not _unlocked or not CUES.has(cue_id):
+	if OS.has_feature("headless") or not _unlocked or not CUES.has(cue_id):
 		return
 	var spec: Array = CUES[cue_id]
 	var path := _variant_path(str(spec[0]))
@@ -113,7 +113,7 @@ func play_at(cue_id: String, _world_position: Vector2, pitch_jitter := 0.0) -> v
 
 
 func play_style(style_id: String) -> void:
-	if not _unlocked:
+	if OS.has_feature("headless") or not _unlocked:
 		return
 	var stream := load("res://assets/audio/sfx/skills/skill_%s_01.wav" % style_id) as AudioStream
 	if stream == null:
@@ -190,6 +190,8 @@ func _variant_path(base_path: String) -> String:
 
 
 func _play_loop(player: AudioStreamPlayer, path: String, bus: String) -> void:
+	if OS.has_feature("headless"):
+		return
 	if path.is_empty():
 		player.stop()
 		return

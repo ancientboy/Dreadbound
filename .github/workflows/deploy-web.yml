@@ -55,7 +55,11 @@ jobs:
               fi
               exit "$exit_code"
             fi
-            if grep -Eq 'ERROR|SCRIPT ERROR|Parse Error|Assertion failed' "$log_file"; then
+            # Godot's headless script runner can report its global resource-cache
+            # cleanup diagnostic after otherwise-successful audio tests. Keep the
+            # real engine/script failures fatal without rejecting that known exit
+            # message.
+            if grep -E 'ERROR|SCRIPT ERROR|Parse Error|Assertion failed' "$log_file" | grep -Ev 'resources still in use at exit|ObjectDB instances were leaked at exit' >/dev/null; then
               echo "Godot reported an error in ${test_script}"
               exit 1
             fi

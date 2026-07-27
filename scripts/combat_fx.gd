@@ -101,7 +101,7 @@ func impact(position: Vector2, direction: Vector2, heavy := false) -> void:
 
 
 func status_burst(position: Vector2, status: String) -> void:
-	AudioDirector.play_status(status)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_status(status)
 	var color := Color("a4eaff") if status == "freeze" else Color("c59cff")
 	_spawn("status", position, Vector2.ZERO, 26.0, 0.42, color)
 	_kick_camera(2.4)
@@ -154,7 +154,7 @@ func profession_skill(kind: String, position: Vector2, direction := Vector2.DOWN
 	}.get(kind, -1))
 	if skill_index < 0:
 		return
-	AudioDirector.play_style(kind)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_style(kind)
 	_spawn("profession_skill_%d" % skill_index, position, direction, size, duration, Color.WHITE)
 
 

@@ -178,7 +178,7 @@ func _physics_process(delta: float) -> void:
 		_emit_pathway_movement_echo()
 		_footstep_timer = maxf(_footstep_timer - delta, 0.0)
 		if _footstep_timer <= 0.0:
-			AudioDirector.play("player_step_water" if environment_water_depth > 0 else "player_step", 0.035)
+			(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_step_water" if environment_water_depth > 0 else "player_step", 0.035)
 			_footstep_timer = 0.34 if environment_water_depth > 0 else 0.27
 	else:
 		_walk_animation_time = 0.0
@@ -242,7 +242,7 @@ func try_attack() -> bool:
 	_play_attack_style_vfx("melee")
 	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
 	_attack_timer = attack_cooldown + (0.12 if insulated else 0.0)
-	AudioDirector.play("player_melee", 0.035)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_melee", 0.035)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
 	combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
@@ -276,7 +276,7 @@ func _try_ranged_attack() -> bool:
 	_attack_timer = ranged_cooldown
 	_attack_flash = 0.11
 	ammo -= 1
-	AudioDirector.play("player_pistol", 0.025)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_pistol", 0.025)
 	noise_generated.emit(3)
 	var candidates: Array[Dictionary] = []
 	for target in get_tree().get_nodes_in_group("enemies"):
@@ -318,7 +318,7 @@ func _try_shotgun_attack() -> bool:
 	_attack_timer = shotgun_cooldown
 	_attack_flash = 0.16
 	shells -= 1
-	AudioDirector.play("player_shotgun", 0.02)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_shotgun", 0.02)
 	noise_generated.emit(4)
 	var visual := _pathway_visual()
 	_play_attack_style_vfx("shotgun")
@@ -355,7 +355,7 @@ func take_damage(amount: int, source_position: Vector2) -> bool:
 		return false
 	amount = maxi(1, int(amount * pathway_effects.incoming_damage_multiplier()))
 	health = maxi(health - amount, 0)
-	AudioDirector.play("player_hit", 0.04)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_hit", 0.04)
 	_invulnerability_timer = 0.65
 	_hurt_flash = 0.18
 	var knockback := source_position.direction_to(global_position)
@@ -366,7 +366,7 @@ func take_damage(amount: int, source_position: Vector2) -> bool:
 	if health == 0:
 		_dead = true
 		velocity = Vector2.ZERO
-		AudioDirector.play("player_death")
+		(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_death")
 		died.emit()
 	queue_redraw()
 	return true
@@ -398,7 +398,7 @@ func switch_weapon() -> void:
 	current_weapon = (int(current_weapon) + 1) % 3 as Weapon
 	_sync_active_weapon_equipment()
 	pathway_effects.on_weapon_switched()
-	AudioDirector.play("player_switch", 0.025)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_switch", 0.025)
 	if _active_combat_style() == "relic_engineer":
 		combat_fx.profession_skill("relic_engineer", global_position, facing, 92.0, 0.44)
 	weapon_changed.emit(get_weapon_name(), ammo)
@@ -487,7 +487,7 @@ func use_sedative() -> bool:
 	sedative_duration = 12.0
 	utility_changed.emit(sedatives, sedative_duration)
 	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
-	AudioDirector.play("player_heal", 0.02)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_heal", 0.02)
 	return true
 
 
@@ -511,7 +511,7 @@ func use_stimulant() -> bool:
 	stimulant_duration = 10.0
 	utility_changed.emit(sedatives, sedative_duration)
 	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
-	AudioDirector.play("player_heal", 0.025)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_heal", 0.025)
 	return true
 
 
@@ -526,7 +526,7 @@ func use_bandage() -> bool:
 	if style in ["barrier_counter", "sacrifice_medic", "echo_summoner"]:
 		combat_fx.profession_skill(style, global_position, facing, 104.0, 0.52)
 	_heal_flash = 0.3
-	AudioDirector.play("player_heal", 0.02)
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_heal", 0.02)
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
 	selected_item_changed.emit(get_selected_item_name(), get_selected_item_count())
