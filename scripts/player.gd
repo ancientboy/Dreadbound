@@ -68,7 +68,6 @@ var environment_water_depth := 0
 var selected_item := Consumable.BANDAGE
 var _shot_end := Vector2.ZERO
 var _movement_echo_timer := 0.0
-var _footstep_timer := 0.0
 var pathway_effects: PathwayEffects
 var combat_fx: CombatFX
 var relic_profile := {}
@@ -176,15 +175,8 @@ func _physics_process(delta: float) -> void:
 		facing = input_direction.normalized()
 		_walk_animation_time += delta
 		_emit_pathway_movement_echo()
-		_footstep_timer = maxf(_footstep_timer - delta, 0.0)
-		if _footstep_timer <= 0.0:
-			(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_step_water" if environment_water_depth > 0 else "player_step", 0.035)
-			# A measured walking cadence keeps real foley from becoming a loud loop
-			# at the top-down movement speed.
-			_footstep_timer = 0.48 if environment_water_depth > 0 else 0.42
 	else:
 		_walk_animation_time = 0.0
-		_footstep_timer = 0.0
 	_sync_body_sprite()
 	if wants_to_attack:
 		try_attack()
