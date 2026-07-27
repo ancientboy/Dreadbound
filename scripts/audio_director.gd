@@ -91,6 +91,7 @@ func unlock() -> void:
 	if _unlocked:
 		return
 	_unlocked = true
+	_web_call("unlock()")
 	# A previously muted browser session can leave the Master bus muted even though
 	# the two in-game toggles report as enabled. Reconcile every route when the
 	# user supplies the trusted gesture that unlocks WebAudio.
@@ -141,6 +142,14 @@ func play(cue_id: String, pitch_jitter := 0.0) -> void:
 		return
 	var spec: Array = CUES[cue_id]
 	var path := _variant_path(str(spec[0]))
+	# Godot's WebAudio worklet is unavailable or permanently suspended in some
+	# Android virtual-browser containers. The web export ships the same original
+	# assets beside the PCK and routes them through a native HTMLAudio fallback.
+	# Desktop/native builds retain Godot's usual mixer and buses.
+	if OS.has_feature("web"):
+		_web_call("play", _web_asset_path(path), "sfx")
+		_last_cue = cue_id
+		return
 	var stream := load(path) as AudioStream
 	if stream == null:
 		return
@@ -165,7 +174,12 @@ func play_style(style_id: String) -> void:
 		unlock()
 	if not _sfx_enabled:
 		return
-	var stream := load("res://assets/audio/sfx/skills/skill_%s_01.wav" % style_id) as AudioStream
+	var path := "res://assets/audio/sfx/skills/skill_%s_01.wav" % style_id
+	if OS.has_feature("web"):
+		_web_call("play", _web_asset_path(path), "sfx")
+		_last_cue = "style:%s" % style_id
+		return
+	var stream := load(path) as AudioStream
 	if stream == null:
 		return
 	var player := _available_player()
@@ -210,6 +224,7 @@ func get_volume(bus: String) -> float:
 func set_music_enabled(enabled: bool) -> void:
 	_music_enabled = enabled
 	_set_buses_muted(MUSIC_BUSES, not enabled)
+	_web_call("setMusicEnabled", enabled)
 	_save_settings()
 
 
@@ -220,6 +235,7 @@ func is_music_enabled() -> bool:
 func set_sfx_enabled(enabled: bool) -> void:
 	_sfx_enabled = enabled
 	_set_buses_muted(SFX_BUSES, not enabled)
+	_web_call("setSfxEnabled", enabled)
 	_save_settings()
 
 
@@ -270,6 +286,11 @@ func _play_loop(player: AudioStreamPlayer, path: String, bus: String) -> void:
 		return
 	if path.is_empty():
 		player.stop()
+		if OS.has_feature("web"):
+			_web_call("loop", "", bus.to_lower())
+		return
+	if OS.has_feature("web"):
+		_web_call("loop", _web_asset_path(path), bus.to_lower())
 		return
 	var stream := load(path) as AudioStream
 	if stream == null or player.stream == stream:
@@ -319,3 +340,18 @@ func _set_buses_muted(bus_names: Array, muted: bool) -> void:
 		var bus_index := AudioServer.get_bus_index(str(bus_name))
 		if bus_index >= 0:
 			AudioServer.set_bus_mute(bus_index, muted)
+
+
+func _web_asset_path(path: String) -> String:
+	return path.trim_prefix("res://")
+
+
+func _web_call(method: String, value = null, group := "") -> void:
+	if not OS.has_feature("web"):
+		return
+	var args := []
+	if value != null:
+		args.append(JSON.stringify(value))
+	if not group.is_empty():
+		args.append(JSON.stringify(group))
+	JavaScriptBridge.eval("window.DreadboundNativeAudio&&window.DreadboundNativeAudio.%s(%s);" % [method, ",".join(args)], true)

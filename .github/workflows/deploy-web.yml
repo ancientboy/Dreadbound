@@ -73,8 +73,13 @@ jobs:
           printf '{"revision":"%s"}\n' "$GITHUB_SHA" > builds/web/version.json
           python3 - <<'PY'
           from pathlib import Path
+          import shutil
 
           page = Path("builds/web/index.html")
+          # Godot packages imported audio in the PCK. Keep a public copy for the
+          # native HTMLAudio fallback used by Android virtual-browser containers
+          # whose WebAudio worklet never resumes.
+          shutil.copytree("assets/audio", "builds/web/assets/audio", dirs_exist_ok=True)
           html = page.read_text()
           updater = """<script>
           (() => {
@@ -89,7 +94,53 @@ jobs:
               .catch(() => {});
           })();
           </script>"""
-          page.write_text(html.replace("</head>", updater + "\n</head>"))
+          native_audio = """<script>
+          (() => {
+            const base = "assets/audio/";
+            let unlocked = false, musicEnabled = true, sfxEnabled = true;
+            let music = null, ambience = null;
+            const source = (path) => encodeURI(String(path || "").replace(/^res:\\/\\//, ""));
+            const make = (path, loop, volume) => {
+              if (!path) return null;
+              const audio = new Audio(source(path));
+              audio.preload = "auto"; audio.loop = loop; audio.volume = volume;
+              return audio;
+            };
+            const start = (audio) => {
+              if (!audio) return;
+              const result = audio.play();
+              if (result) result.catch(() => {});
+            };
+            const unlock = () => {
+              if (unlocked) return;
+              unlocked = true;
+              // A real media play inside the browser's native gesture handler
+              // establishes audio permission before Godot processes the touch.
+              const primer = make(base + "sfx/ui/ui_confirm_01.wav", false, 0.001);
+              start(primer);
+              setTimeout(() => { if (primer) { primer.pause(); primer.currentTime = 0; } }, 250);
+              if (musicEnabled) { start(music); start(ambience); }
+            };
+            for (const event of ["pointerdown", "touchstart", "keydown"]) {
+              document.addEventListener(event, unlock, { capture: true, passive: event !== "keydown" });
+            }
+            const replaceLoop = (kind, path) => {
+              const previous = kind === "music" ? music : ambience;
+              if (previous) previous.pause();
+              const next = make(path, true, kind === "music" ? 0.62 : 0.46);
+              if (kind === "music") music = next; else ambience = next;
+              if (unlocked && musicEnabled) start(next);
+            };
+            window.DreadboundNativeAudio = {
+              unlock,
+              play(path) { if (unlocked && sfxEnabled) start(make(path, false, 0.9)); },
+              loop(path, kind) { replaceLoop(kind === "ambience" ? "ambience" : "music", path); },
+              setMusicEnabled(value) { musicEnabled = !!value; if (musicEnabled && unlocked) { start(music); start(ambience); } else { if (music) music.pause(); if (ambience) ambience.pause(); } },
+              setSfxEnabled(value) { sfxEnabled = !!value; },
+            };
+          })();
+          </script>"""
+          page.write_text(html.replace("</head>", updater + native_audio + "\n</head>"))
           PY
 
       - name: Configure GitHub Pages

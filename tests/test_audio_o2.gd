@@ -65,6 +65,9 @@ func _run_test() -> void:
 	assert(startup_source.contains("OpenAudioSettings") and startup_source.contains("MusicToggle") and startup_source.contains("SfxToggle") and startup_source.contains("TestSfx"))
 	var director_source := FileAccess.get_file_as_string("res://scripts/audio_director.gd")
 	assert(director_source.contains("_bind_existing_buttons") and director_source.contains("_bind_buttons_under"))
+	assert(director_source.contains("DreadboundNativeAudio") and director_source.contains("JavaScriptBridge.eval"), "Web export must route audio through the native browser fallback")
+	var workflow_source := FileAccess.get_file_as_string("res://.github/workflows/deploy-web.yml")
+	assert(workflow_source.contains("builds/web/assets/audio") and workflow_source.contains("DreadboundNativeAudio"), "Pages build must publish native fallback audio assets")
 	director.queue_free()
 	await process_frame
 	print("O2 audio passed: routed loops, core SFX variants, combat styles and browser-safe director")
