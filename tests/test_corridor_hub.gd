@@ -5,9 +5,20 @@ func _init() -> void:
 
 
 func _run_test() -> void:
+	var state := get_node("/root/GameState")
+	var original_pathway := state.selected_pathway
+	var original_style := state.active_combat_style
 	var corridor = load("res://scenes/corridor.tscn").instantiate()
 	root.add_child(corridor)
 	await process_frame
+	state.selected_pathway = "armorer"
+	state.active_combat_style = ""
+	assert(corridor._walker_body_texture().resource_path.ends_with("armorer_spritesheet.png"))
+	state.active_combat_style = "heavy_suppression"
+	assert(corridor._walker_body_texture().resource_path.ends_with("heavy_suppression_spritesheet.png"))
+	state.active_combat_style = ""
+	state.selected_pathway = original_pathway
+	state.active_combat_style = original_style
 	assert(not corridor.get_node("Margin").visible)
 	assert(not corridor.get_node("HubActions").visible)
 	assert(corridor.get_node("OpenArchive").visible)
