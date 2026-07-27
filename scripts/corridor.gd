@@ -41,6 +41,8 @@ const EQUIPMENT_ICONS := {
 	"cyan_mark": preload("res://assets/art/icons/equipment/cyan_mark.png"),
 	"waterproof_pulse": preload("res://assets/art/icons/equipment/waterproof_pulse.png"),
 	"station_whistle": preload("res://assets/art/icons/equipment/station_whistle.png"),
+	"riot_shield": preload("res://assets/art/icons/equipment/riot_shield.svg"),
+	"field_codex": preload("res://assets/art/icons/equipment/field_codex.svg"),
 	"insulated_crowbar": preload("res://assets/art/icons/equipment/insulated_crowbar.png"),
 	"last_ticket": preload("res://assets/art/icons/equipment/last_ticket.png"),
 	"nullpoint_sidearm": preload("res://assets/art/icons/equipment/nullpoint_sidearm.png"),
