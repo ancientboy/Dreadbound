@@ -58,7 +58,7 @@ func _run_test() -> void:
 	root.add_child(corridor)
 	await process_frame
 	assert(corridor.get_node("IndependentHubNavigation") != null)
-	assert(corridor.get_node("IndependentHubNavigation").get_child_count() == 7)
+	assert(corridor.get_node("IndependentHubNavigation").get_child_count() == 8)
 	corridor._open_hub_section("materials")
 	assert(corridor.section_panel.visible)
 	assert(corridor.section_title.text.contains("材料背包"))
@@ -70,11 +70,13 @@ func _run_test() -> void:
 	assert(corridor.section_title.text.contains("灾难副本"))
 	corridor._open_hub_section("terminal")
 	assert(corridor.section_title.text.contains("异常兑换"))
+	corridor._open_hub_section("avatar")
+	assert(corridor.section_title.text.contains("角色切换"))
 
 	corridor.queue_free()
 	state.reset_progress()
 	migrated.reset_progress()
 	state.free()
 	migrated.free()
-	print("V21 passed: typed enemy pools, difficulty/affix material bonus, rare pity, guaranteed boss core, extraction banking, unique protection, save migration and seven independent hub entries")
+	print("V21 passed: typed enemy pools, difficulty/affix material bonus, rare pity, guaranteed boss core, extraction banking, unique protection, save migration and eight independent hub entries")
 	quit()
