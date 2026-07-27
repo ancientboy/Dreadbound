@@ -28,8 +28,12 @@ func _run_test() -> void:
 	assert(mission.power_restored)
 	assert(boss.active and boss.visible)
 	assert(mission.mission_phase == mission.MissionPhase.EVACUATE)
-	player.current_weapon = Player.Weapon.SHOTGUN
-	player.shells = 2
+	var state := root.get_node("GameState") as GameProgress
+	if not state.equipment_inventory.has("breach_shotgun"):
+		state.equipment_inventory.append("breach_shotgun")
+	state.equipped.weapon_1 = "breach_shotgun"
+	player.current_weapon = Player.Weapon.MELEE
+	player._sync_active_weapon_equipment()
 	player.facing = Vector2.RIGHT
 	orderly.global_position = player.global_position + Vector2(120, 20)
 	var other: Orderly = orderlies[1]
@@ -37,7 +41,7 @@ func _run_test() -> void:
 	var first_health := orderly.health
 	var second_health := other.health
 	assert(player.try_attack())
-	assert(player.shells == 1)
+	assert(player.shells == player.max_shells)
 	assert(orderly.health < first_health and other.health < second_health)
 	assert(player.add_sedatives(1))
 	assert(player.use_sedative())
@@ -51,5 +55,5 @@ func _run_test() -> void:
 	assert(player.selected_item == Player.Consumable.STIMULANT)
 	assert(player.use_selected_item())
 	assert(player.stimulant_duration > 0.0)
-	print("Vertical slice test passed: Orderly, boss, shotgun, selectable consumables")
+	print("Vertical slice test passed: Orderly, boss, no-ammo shotgun, selectable consumables")
 	quit()
