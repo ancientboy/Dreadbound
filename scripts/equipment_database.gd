@@ -2,16 +2,18 @@ class_name EquipmentDatabase
 extends RefCounted
 
 const ITEMS := {
-	"service_crowbar": {"name": "制式撬棍", "quality": "制式", "quality_rank": 0, "slot": "weapon", "weapon_type": "melee", "rating": 92, "description": "近战伤害 +3", "melee_damage": 3},
-	"balanced_pistol": {"name": "平衡手枪", "quality": "改装", "quality_rank": 1, "slot": "weapon", "weapon_type": "ranged", "rating": 118, "description": "手枪伤害 +5", "ranged_damage": 5},
-	"breach_shotgun": {"name": "破门霰弹枪", "quality": "改装", "quality_rank": 1, "slot": "weapon", "weapon_type": "shotgun", "rating": 126, "description": "霰弹伤害 +6", "shotgun_damage": 6},
+	"service_crowbar": {"name": "制式撬棍", "quality": "制式", "quality_rank": 0, "slot": "weapon", "weapon_type": "melee", "tags": ["melee", "blunt", "breach"], "rating": 92, "trait": "breach_stagger", "description": "短横扫 · 破门/打断 · 近战伤害 +3", "melee_damage": 3},
+	"balanced_pistol": {"name": "平衡手枪", "quality": "改装", "quality_rank": 1, "slot": "weapon", "weapon_type": "ranged", "tags": ["ranged", "precision"], "rating": 118, "trait": "steady_aim", "description": "精确弹道 · 弱点射击 · 手枪伤害 +5", "ranged_damage": 5},
+	"breach_shotgun": {"name": "破门霰弹枪", "quality": "改装", "quality_rank": 1, "slot": "weapon", "weapon_type": "shotgun", "tags": ["heavy", "suppression"], "rating": 126, "trait": "door_breach", "description": "扇形压制 · 强击退 · 霰弹伤害 +6", "shotgun_damage": 6},
 	"echo_edge": {"name": "回响切割器", "quality": "回响", "quality_rank": 2, "slot": "weapon", "weapon_type": "melee", "rating": 154, "description": "近战伤害 +8 · 移速 +4", "melee_damage": 8, "movement_speed": 4.0},
-	"medical_tag": {"name": "旧医疗铭牌", "quality": "制式", "quality_rank": 0, "slot": "charm", "rating": 88, "description": "生命上限 +5", "max_health": 5},
-	"calming_coil": {"name": "镇静线圈", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 116, "description": "生命上限 +8 · 绷带恢复 +3", "max_health": 8, "bandage_heal": 3},
+	"medical_tag": {"name": "旧医疗铭牌", "quality": "制式", "quality_rank": 0, "slot": "charm", "rating": 88, "active_skill": {"name": "应急缝合", "kind": "heal", "amount": 22, "cooldown": 18.0}, "description": "主动：应急缝合 · 生命上限 +5", "max_health": 5},
+	"calming_coil": {"name": "镇静线圈", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 116, "active_skill": {"name": "镇静脉冲", "kind": "cleanse", "amount": 12, "cooldown": 16.0}, "description": "主动：镇静脉冲 · 生命上限 +8 · 绷带恢复 +3", "max_health": 8, "bandage_heal": 3},
 	"ward_echo": {"name": "病房回响体", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 148, "description": "生命上限 +12 · 移速 +3", "max_health": 12, "movement_speed": 3.0},
 	"cyan_mark": {"name": "异常青印", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 176, "description": "全武器伤害 +5 · 生命上限 -8", "max_health": -8, "melee_damage": 5, "ranged_damage": 5, "shotgun_damage": 5},
 	"waterproof_pulse": {"name": "防水脉冲腕带", "quality": "改装", "quality_rank": 1, "slot": "charm", "rating": 124, "trait": "reduce_water_penalty", "description": "浸水减速降低 35% · 生命上限 -3", "max_health": -3},
-	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "trait": "noise_lure", "description": "T / 吹哨主动诱引附近敌人 · 冷却 12 秒 · 武器伤害 +3", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
+	"station_whistle": {"name": "站务员哨", "quality": "回响", "quality_rank": 2, "slot": "charm", "rating": 151, "trait": "noise_lure", "active_skill": {"name": "猎犬哨", "kind": "lure", "cooldown": 12.0}, "description": "主动：猎犬哨 · 诱引附近敌人 · 全武器伤害 +3", "melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3},
+	"riot_shield": {"name": "折叠防暴盾", "quality": "改装", "quality_rank": 1, "slot": "offhand", "rating": 132, "tags": ["guard", "shield"], "trait": "guard_window", "description": "副手 · 格挡后短暂减伤 · 生命上限 +8", "max_health": 8},
+	"field_codex": {"name": "野战法典", "quality": "回响", "quality_rank": 2, "slot": "offhand", "rating": 146, "tags": ["echo", "arcane"], "description": "副手 · 回响武器强化 · 移速 +4", "movement_speed": 4.0},
 	"insulated_crowbar": {"name": "绝缘撬棍", "quality": "回响", "quality_rank": 2, "slot": "weapon", "weapon_type": "melee", "rating": 158, "trait": "signal_anchor_damage", "description": "对检票员/车长近战伤害 +35% · 冷却 +0.12 秒 · 生命上限 -4", "melee_damage": 11, "max_health": -4},
 	"last_ticket": {"name": "末班票根", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 182, "trait": "missed_train_recovery", "description": "首次错过车次时补救窗口延长 15 秒 · 生命上限 +6", "max_health": 6},
 	"nullpoint_sidearm": {"name": "零点标记枪", "quality": "异常", "quality_rank": 3, "slot": "weapon", "weapon_type": "ranged", "rating": 186, "trait": "weakpoint_mark", "tags": ["weakpoint", "precision"], "description": "远距命中积累弱点标记 · 手枪伤害 +10 · 生命上限 -4", "ranged_damage": 10, "max_health": -4},
@@ -19,8 +21,8 @@ const ITEMS := {
 	"volatile_edge": {"name": "失控回响刃", "quality": "异常", "quality_rank": 3, "slot": "weapon", "weapon_type": "melee", "rating": 188, "trait": "anomaly_edge", "tags": ["anomaly", "melee"], "description": "近战伤害 +13 · 生命上限 -9", "melee_damage": 13, "max_health": -9},
 	"archive_lens": {"name": "活档案透镜", "quality": "异常", "quality_rank": 3, "slot": "charm", "rating": 180, "trait": "hidden_sense", "tags": ["sense", "archive"], "description": "更容易感知隐藏区域 · 移速 +7 · 生命上限 +3", "movement_speed": 7.0, "max_health": 3},
 	"linye_pass": {"name": "林雾的失踪乘客通行牌", "quality": "剧情唯一", "quality_rank": 4, "slot": "charm", "rating": 205, "trait": "lost_passenger_guide", "unique": true, "max_health": 8, "movement_speed": 5.0, "description": "世界唯一 · 维护层向导留下的通行牌；生命上限 +8、移动速度 +5。再次进入末班线时会唤起林雾的记忆。"},
-	"director_reaper": {"name": "主任的缝合镰", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "weapon_type": "melee", "rating": 218, "series": "缝合遗物", "unique": true, "growth_max": 5, "melee_damage": 14, "description": "成长武器 · 世界唯一 · 近战伤害 +14；再次击败疗养院首领只提供成长层数。"},
-	"conductor_railgun": {"name": "末班导轨枪", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "weapon_type": "ranged", "attack_types": ["ranged", "shotgun"], "rating": 224, "series": "末班遗物", "unique": true, "growth_max": 5, "ranged_damage": 11, "shotgun_damage": 5, "description": "成长武器 · 世界唯一 · 手枪伤害 +11、霰弹伤害 +5；再次击败车长回声只提供成长层数。"},
+	"director_reaper": {"name": "主任的缝合镰", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "weapon_type": "melee", "tags": ["melee", "anomaly", "control"], "rating": 218, "series": "缝合遗物", "unique": true, "growth_max": 5, "melee_damage": 14, "trait": "stitch_pull", "description": "成长武器 · 缝线拉扯与定身 · 近战伤害 +14。"},
+	"conductor_railgun": {"name": "末班导轨枪", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "weapon_type": "ranged", "tags": ["ranged", "precision", "heavy"], "rating": 224, "series": "末班遗物", "unique": true, "growth_max": 5, "ranged_damage": 11, "trait": "rail_pierce", "description": "成长武器 · 蓄能贯穿线与电磁麻痹 · 手枪伤害 +11。"},
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
@@ -103,16 +105,13 @@ static func get_item(item_id: String) -> Dictionary:
 
 static func equipment_slot(item_id: String) -> String:
 	var item := get_item(item_id)
-	if str(item.get("slot", "")) != "weapon":
-		return str(item.get("slot", ""))
-	return "weapon_%s" % str(item.get("weapon_type", "melee"))
+	return str(item.get("slot", ""))
 
 
 static func slot_label(item_id: String) -> String:
 	match equipment_slot(item_id):
-		"weapon_melee": return "近战武器"
-		"weapon_ranged": return "精确武器"
-		"weapon_shotgun": return "重型武器"
+		"weapon": return "自由武器槽"
+		"offhand": return "副手"
 		"charm": return "护符"
 	return "未知"
 
@@ -121,8 +120,11 @@ static func supports_attack(item_id: String, attack_type: String) -> bool:
 	var item := get_item(item_id)
 	if str(item.get("slot", "")) != "weapon":
 		return false
-	var attack_types: Array = item.get("attack_types", [str(item.get("weapon_type", "melee"))])
-	return attack_types.has(attack_type)
+	return str(item.get("weapon_type", "melee")) == attack_type
+
+
+static func active_charm_skill(item_id: String) -> Dictionary:
+	return get_item(item_id).get("active_skill", {}).duplicate(true)
 
 
 static func reward_pool() -> Array[String]:
