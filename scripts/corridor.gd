@@ -11,6 +11,7 @@ const STORY_NPC_PORTRAITS: Texture2D = preload("res://assets/art/characters/npcs
 const ARCHIVE_ILLUSTRATIONS: Texture2D = preload("res://assets/art/narrative/archive_illustrations.png")
 const MILESTONE_FEEDBACK: Texture2D = preload("res://assets/art/vfx/milestone_feedback.png")
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+const HIGHRES_DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_highres_spritesheet.png")
 const STEADFAST_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/steadfast_spritesheet.png")
 const ARMORER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/armorer_spritesheet.png")
 const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/resonant_spritesheet.png")
@@ -112,6 +113,7 @@ var _hub_action_touch := -1
 var mobile_terminal_panel: ColorRect
 var curator_offer_box: VBoxContainer
 var style_buttons := {}
+var avatar_buttons := {}
 var hub_navigation: GridContainer
 var section_panel: ColorRect
 var section_title: Label
@@ -163,6 +165,7 @@ func _ready() -> void:
 	_create_respec_control()
 	_create_style_controls()
 	_create_difficulty_control()
+	_create_avatar_controls()
 	_create_hub_navigation()
 	_create_section_panel()
 	_create_milestone_feedback()
@@ -470,6 +473,9 @@ func _refresh() -> void:
 			var unlocked := GameState.unlocked_combat_styles.has(style_id)
 			style_button.text = "%s%s\n%s" % ["▶ " if GameState.active_combat_style == style_id else ("✓ " if unlocked else ""), str(style.name), "点击切换流派" if unlocked else "%s · 5 回响" % str(style.description)]
 			style_button.disabled = not unlocked and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
+	for avatar_id in avatar_buttons:
+		var avatar_button: Button = avatar_buttons[avatar_id]
+		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（高精样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
 	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
 	if respec:
 		respec.text = "重构职业 · 1 因果残片（可无限次）"
@@ -620,7 +626,16 @@ func _draw() -> void:
 		walker_row = 3
 	var walker_frame := int(walk_phase / TAU * 6.0) % 6 if walker_velocity.length() > 2.0 else 0
 	var walker_spritesheet := _walker_body_texture()
-	if walker_spritesheet != null and walker_spritesheet.get_size() == Vector2(288, 256):
+	if walker_spritesheet != null and walker_spritesheet.get_size() == Vector2(1536, 1024):
+		# Keep the feet pinned to the same hub position as the legacy 48×64 sprite.
+		# The larger destination rect preserves the high-detail silhouette instead
+		# of downsampling it into a pseudo-pixel character.
+		draw_texture_rect_region(
+			walker_spritesheet,
+			Rect2(walker_position + Vector2(-70, -132 + bob), Vector2(140, 140)),
+			Rect2(walker_frame * 256, walker_row * 256, 256, 256)
+		)
+	elif walker_spritesheet != null and walker_spritesheet.get_size() == Vector2(288, 256):
 		draw_texture_rect_region(
 			walker_spritesheet,
 			Rect2(walker_position + Vector2(-24, -58 + bob), Vector2(48, 64)),
@@ -641,6 +656,8 @@ func _draw() -> void:
 # The hub follows the same appearance rule as the playable character: an active
 # combat style takes precedence, then the profession, then the original drifter.
 func _walker_body_texture() -> Texture2D:
+	if GameState.player_avatar == "drifter_female":
+		return HIGHRES_DRIFTER_SPRITESHEET
 	var style_texture: Texture2D = COMBAT_STYLE_SPRITESHEETS.get(GameState.active_combat_style)
 	if style_texture != null:
 		return style_texture
@@ -1204,6 +1221,26 @@ func _create_difficulty_control() -> void:
 	$Margin/Layout/Columns/Profile.add_child(button)
 
 
+func _create_avatar_controls() -> void:
+	var parent := $Margin/Layout/Columns/Profile as VBoxContainer
+	var title := Label.new()
+	title.text = "行者外观"
+	title.add_theme_color_override("font_color", Color("6cd7c0"))
+	parent.add_child(title)
+	for avatar_id in ["drifter_male", "drifter_female"]:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 42)
+		button.pressed.connect(_select_player_avatar.bind(avatar_id))
+		parent.add_child(button)
+		avatar_buttons[avatar_id] = button
+
+
+func _select_player_avatar(avatar_id: String) -> void:
+	if GameState.set_player_avatar(avatar_id):
+		feedback.text = "已切换为%s；回廊和下一次投送会同步显示。" % GameState.get_player_avatar_name()
+		_refresh()
+
+
 func _cycle_difficulty() -> void:
 	var ids := ["standard", "hazard", "nightmare"]
 	var index := (ids.find(GameState.selected_difficulty) + 1) % ids.size()
@@ -1333,6 +1370,13 @@ func _refresh_mobile_terminal() -> void:
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
 		button.pressed.connect(_select_loadout.bind(loadout_id))
 		content.add_child(button)
+	_mobile_terminal_section(content, "行者外观", "外观不影响装备、职业或技能；女性行者用于测试高精角色效果。")
+	for avatar_id in ["drifter_male", "drifter_female"]:
+		var avatar_button := Button.new()
+		avatar_button.custom_minimum_size = Vector2(0, 50)
+		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（高精样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
+		avatar_button.pressed.connect(_select_player_avatar.bind(avatar_id))
+		content.add_child(avatar_button)
 	_mobile_terminal_section(content, "永久强化", "选择强化，下一次投送生效。")
 	for upgrade_id in UPGRADE_INFO:
 		var level := int(GameState.upgrades[upgrade_id])

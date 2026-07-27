@@ -1,6 +1,7 @@
 extends SceneTree
 
 const REVIEW_ASSETS := {
+	"art_player_drifter_highres": ["res://assets/art/characters/drifter/drifter_highres_spritesheet.png", Vector2i(1536, 1024)],
 	"art_player_profession_steadfast": ["res://assets/art/characters/professions/steadfast_spritesheet.png", Vector2i(288, 256)],
 	"art_player_profession_armorer": ["res://assets/art/characters/professions/armorer_spritesheet.png", Vector2i(288, 256)],
 	"art_player_profession_resonant": ["res://assets/art/characters/professions/resonant_spritesheet.png", Vector2i(288, 256)],
@@ -47,6 +48,31 @@ func _run_test() -> void:
 	assert(state != null)
 	var original_pathway := state.selected_pathway
 	var original_style := state.active_combat_style
+	var original_avatar := state.player_avatar
+	state.selected_pathway = ""
+	state.active_combat_style = ""
+	state.player_avatar = "drifter_male"
+	var male_player := load("res://scenes/entities/player.tscn").instantiate() as Player
+	root.add_child(male_player)
+	await process_frame
+	var male_sprite := male_player.get_node_or_null("BodySprite") as Sprite2D
+	assert(male_sprite != null and male_sprite.texture != null)
+	assert(male_sprite.texture.resource_path.ends_with("drifter_spritesheet.png"))
+	male_player.queue_free()
+	await process_frame
+	state.player_avatar = "drifter_female"
+	var base_player := load("res://scenes/entities/player.tscn").instantiate() as Player
+	root.add_child(base_player)
+	await process_frame
+	var base_sprite := base_player.get_node_or_null("BodySprite") as Sprite2D
+	assert(base_sprite != null and base_sprite.texture != null)
+	assert(base_sprite.texture.resource_path.ends_with("drifter_highres_spritesheet.png"))
+	assert(base_sprite.hframes == 6 and base_sprite.vframes == 4)
+	assert(base_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR)
+	assert(base_sprite.scale == Vector2(0.55, 0.55))
+	base_player.queue_free()
+	await process_frame
+	state.player_avatar = "drifter_male"
 	var profession_paths := {
 		"steadfast": "steadfast_spritesheet.png",
 		"armorer": "armorer_spritesheet.png",
@@ -115,6 +141,7 @@ func _run_test() -> void:
 
 	state.selected_pathway = original_pathway
 	state.active_combat_style = original_style
+	state.player_avatar = original_avatar
 	fx.queue_free()
 	print("O1 batch 7 passed: three profession bodies, twelve forms/skills and five authored story NPCs")
 	quit()

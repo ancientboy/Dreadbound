@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 22
+const SAVE_VERSION := 23
 const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
@@ -95,6 +95,7 @@ var equipment_mastery := {}
 var unlocked_combat_styles: Array[String] = []
 var active_combat_style := ""
 var heart_aspect := {}
+var player_avatar := "drifter_male"
 
 
 func _ready() -> void:
@@ -169,6 +170,19 @@ static func _default_world_materials() -> Dictionary:
 
 func get_difficulty() -> Dictionary:
 	return DIFFICULTIES.get(selected_difficulty, DIFFICULTIES.standard).duplicate(true)
+
+
+func set_player_avatar(avatar_id: String) -> bool:
+	if avatar_id not in ["drifter_male", "drifter_female"]:
+		return false
+	player_avatar = avatar_id
+	save_progress()
+	progress_changed.emit()
+	return true
+
+
+func get_player_avatar_name() -> String:
+	return "女性行者" if player_avatar == "drifter_female" else "男性行者"
 
 
 func set_difficulty(difficulty_id: String) -> bool:
@@ -1063,7 +1077,7 @@ func save_progress() -> bool:
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "synthesis_embers": synthesis_embers, "world_materials": world_materials, "loot_history": loot_history, "known_recipes": known_recipes, "exchange_cycle": exchange_cycle, "exchange_purchases": exchange_purchases, "pending_synthesis": pending_synthesis, "synthesis_counter": synthesis_counter, "synthesis_pity": synthesis_pity, "equipment_levels": equipment_levels, "equipment_affixes": equipment_affixes, "equipment_evolutions": equipment_evolutions, "equipment_mastery": equipment_mastery, "unlocked_combat_styles": unlocked_combat_styles, "active_combat_style": active_combat_style, "heart_aspect": heart_aspect, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
+	file.store_string(JSON.stringify({"version": SAVE_VERSION, "echo_shards": echo_shards, "causality_fragments": causality_fragments, "synthesis_embers": synthesis_embers, "world_materials": world_materials, "loot_history": loot_history, "known_recipes": known_recipes, "exchange_cycle": exchange_cycle, "exchange_purchases": exchange_purchases, "pending_synthesis": pending_synthesis, "synthesis_counter": synthesis_counter, "synthesis_pity": synthesis_pity, "equipment_levels": equipment_levels, "equipment_affixes": equipment_affixes, "equipment_evolutions": equipment_evolutions, "equipment_mastery": equipment_mastery, "unlocked_combat_styles": unlocked_combat_styles, "active_combat_style": active_combat_style, "heart_aspect": heart_aspect, "player_avatar": player_avatar, "upgrades": upgrades, "last_run": last_run, "selected_loadout": selected_loadout, "corridor_unlocked": corridor_unlocked, "corridor_intro_seen": corridor_intro_seen, "equipment_inventory": equipment_inventory, "equipped": equipped, "active_run_seed": active_run_seed, "last_action_code": last_action_code, "selected_world": selected_world, "selected_difficulty": selected_difficulty, "relic_growth": relic_growth, "player_profile": player_profile, "unlocked_path_nodes": unlocked_path_nodes, "selected_pathway": selected_pathway, "pathway_respec_used": pathway_respec_used, "claimed_milestones": claimed_milestones, "action_ledger": action_ledger.to_dict(), "world_state": world_state.to_dict(), "last_reflection": last_reflection, "reflection_history": reflection_history, "reflection_disputes": reflection_disputes, "active_counter_contract": active_counter_contract, "persistent_dungeons": persistent_dungeons.to_dict(), "active_dungeon_chapter": active_dungeon_chapter}))
 	last_save_health = {"status": "saved", "loaded_version": SAVE_VERSION, "current_version": SAVE_VERSION, "migrations": []}
 	return true
 
@@ -1088,6 +1102,8 @@ func load_progress() -> void:
 		migrations.append("v21：怪物掉落池、材料背包、唯一藏品与掉落档案")
 	if loaded_version < 22:
 		migrations.append("v22：近战、精确与重型武器独立装备槽")
+	if loaded_version < 23:
+		migrations.append("v23：新增可选女性行者外观")
 	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
@@ -1142,6 +1158,9 @@ func load_progress() -> void:
 	active_combat_style = str(parsed.get("active_combat_style", ""))
 	if not unlocked_combat_styles.has(active_combat_style):
 		active_combat_style = ""
+	player_avatar = str(parsed.get("player_avatar", "drifter_male"))
+	if player_avatar not in ["drifter_male", "drifter_female"]:
+		player_avatar = "drifter_male"
 	var saved_heart: Variant = parsed.get("heart_aspect", {})
 	heart_aspect = saved_heart.duplicate(true) if saved_heart is Dictionary else {}
 	var saved_upgrades = parsed.get("upgrades", {})
@@ -1272,6 +1291,7 @@ func _clear_runtime_progress() -> void:
 	unlocked_combat_styles.clear()
 	active_combat_style = ""
 	heart_aspect = {}
+	player_avatar = "drifter_male"
 	last_save_health = {"status": "new", "loaded_version": 0, "current_version": SAVE_VERSION, "migrations": []}
 
 

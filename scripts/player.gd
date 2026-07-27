@@ -2,6 +2,7 @@ class_name Player
 extends CharacterBody2D
 
 const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
+const HIGHRES_DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_highres_spritesheet.png")
 const STEADFAST_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/steadfast_spritesheet.png")
 const ARMORER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/armorer_spritesheet.png")
 const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/resonant_spritesheet.png")
@@ -215,7 +216,7 @@ func _physics_process(delta: float) -> void:
 
 func _setup_body_sprite() -> void:
 	var body_texture := _profession_body_texture()
-	if body_texture == null or body_texture.get_size() != Vector2(288, 256):
+	if body_texture == null or not _is_valid_body_spritesheet(body_texture):
 		push_warning("Drifter sprite sheet unavailable or invalid; using visible fallback silhouette.")
 		return
 	_body_sprite = Sprite2D.new()
@@ -223,11 +224,23 @@ func _setup_body_sprite() -> void:
 	_body_sprite.texture = body_texture
 	_body_sprite.hframes = 6
 	_body_sprite.vframes = 4
-	_body_sprite.position = Vector2(0, -26)
-	_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if body_texture == HIGHRES_DRIFTER_SPRITESHEET:
+		# The high-detail sheet is intentionally rendered at half scale.  This keeps
+		# the original collision footprint while making the coat, materials and
+		# lighting readable in the actual top-down game camera.
+		_body_sprite.position = Vector2(0, -57)
+		_body_sprite.scale = Vector2(0.55, 0.55)
+		_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	else:
+		_body_sprite.position = Vector2(0, -26)
+		_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_body_sprite.z_index = 1
 	add_child(_body_sprite)
 	_sync_body_sprite()
+
+
+func _is_valid_body_spritesheet(texture: Texture2D) -> bool:
+	return texture.get_size() == Vector2(288, 256) or texture.get_size() == Vector2(1536, 1024)
 
 
 func _sync_body_sprite() -> void:
@@ -600,6 +613,11 @@ func _pathway_visual() -> Dictionary:
 
 func _profession_body_texture() -> Texture2D:
 	var state := get_node_or_null("/root/GameState")
+	# The female sample deliberately overrides only the body art.  All weapons,
+	# collision, combat skills and profession bonuses keep their normal behavior
+	# so it can be evaluated across the full game without altering the male set.
+	if state != null and state.player_avatar == "drifter_female":
+		return HIGHRES_DRIFTER_SPRITESHEET
 	var style := str(state.active_combat_style) if state != null else ""
 	var style_texture: Texture2D = COMBAT_STYLE_SPRITESHEETS.get(style)
 	if style_texture != null:
