@@ -19,6 +19,18 @@ const PARTS := [
 	"lantern",
 ]
 
+# The generated rig pieces deliberately include covered joint tabs.  These
+# values keep those tabs inside the neighbouring piece instead of treating
+# their full bitmap height as visible anatomy.
+const HEAD_COLLAR_INSET := 132.0
+const HIP_TOP_INSET := 16.0
+const LEG_KNEE_OVERLAP := 68.0
+const LOWER_LEG_TOP_INSET := 34.0
+const FOOT_BASELINE_OFFSET := 10.0
+const ARM_ELBOW_OVERLAP := 70.0
+const FOREARM_TOP_INSET := 42.0
+const HAND_ATTACHMENT_INSET := 62.0
+
 @export var visual_scale := 0.055
 
 @onready var _player := get_parent() as Player
@@ -126,13 +138,19 @@ func _layout_rig(direction: String) -> void:
 	var leg_length := maxf(
 		thigh_near_size.y + shin_near_size.y,
 		thigh_far_size.y + shin_far_size.y,
-	) - 48.0
+	) - (
+		HIP_TOP_INSET
+		+ LEG_KNEE_OVERLAP
+		+ LOWER_LEG_TOP_INSET
+		- FOOT_BASELINE_OFFSET
+	)
 	_hips.position = Vector2(0.0, -leg_length)
 	_torso.position = Vector2.ZERO
 	(_sprites["torso"] as Sprite2D).position = Vector2(0.0, -torso_size.y * 0.5 + 14.0)
-	# Both generated pieces contain a long hidden neck tab. Sink the head deeply
-	# into the collar so the overlap remains invisible during head rotation.
-	_head.position = Vector2(0.0, -torso_size.y + 92.0)
+	# Sink the long neck tab into the collar. Only the short painted neck between
+	# the jaw and collar remains visible; the rest is still available as overlap
+	# when the head turns.
+	_head.position = Vector2(0.0, -torso_size.y + HEAD_COLLAR_INSET)
 	(_sprites["head"] as Sprite2D).position = Vector2(0.0, -head_size.y * 0.5 + 14.0)
 	var hip_spread := 13.0 if side_view else 34.0
 	_layout_leg(
@@ -167,17 +185,20 @@ func _layout_rig(direction: String) -> void:
 		_sprites["organic_forearm"],
 		Vector2(shoulder_spread, shoulder_y),
 	)
-	_lantern.position = Vector2(12.0 if direction != "right" else -12.0, mech_forearm_size.y - 34.0)
+	_lantern.position = Vector2(
+		12.0 if direction != "right" else -12.0,
+		mech_forearm_size.y - HAND_ATTACHMENT_INSET,
+	)
 	(_sprites["lantern"] as Sprite2D).position = Vector2(0.0, lantern_size.y * 0.5 - 24.0)
 	var coat_spread := 25.0 if side_view else 54.0
 	_far_coat.position = Vector2(coat_spread, -12.0)
 	_near_coat.position = Vector2(-coat_spread, -12.0)
 	(_sprites["coat_far"] as Sprite2D).position = Vector2(0.0, coat_far_size.y * 0.5 - 18.0)
 	(_sprites["coat_near"] as Sprite2D).position = Vector2(0.0, coat_near_size.y * 0.5 - 18.0)
-	_left_upper_arm.length = mech_upper_size.y - 28.0
-	_left_forearm.length = mech_forearm_size.y - 28.0
-	_right_upper_arm.length = organic_upper_size.y - 28.0
-	_right_forearm.length = organic_forearm_size.y - 28.0
+	_left_upper_arm.length = mech_upper_size.y - ARM_ELBOW_OVERLAP
+	_left_forearm.length = mech_forearm_size.y - HAND_ATTACHMENT_INSET
+	_right_upper_arm.length = organic_upper_size.y - ARM_ELBOW_OVERLAP
+	_right_forearm.length = organic_forearm_size.y - HAND_ATTACHMENT_INSET
 
 
 func _layout_leg(
@@ -189,12 +210,12 @@ func _layout_leg(
 ) -> void:
 	var upper_size := Vector2(upper_sprite.texture.get_size())
 	var lower_size := Vector2(lower_sprite.texture.get_size())
-	upper.position = Vector2(x, -16.0)
+	upper.position = Vector2(x, -HIP_TOP_INSET)
 	upper_sprite.position = Vector2(0.0, upper_size.y * 0.5 - 14.0)
-	lower.position = Vector2(0.0, upper_size.y - 28.0)
-	lower_sprite.position = Vector2(0.0, lower_size.y * 0.5 - 14.0)
-	upper.length = upper_size.y - 28.0
-	lower.length = lower_size.y - 28.0
+	lower.position = Vector2(0.0, upper_size.y - LEG_KNEE_OVERLAP)
+	lower_sprite.position = Vector2(0.0, lower_size.y * 0.5 - LOWER_LEG_TOP_INSET)
+	upper.length = upper_size.y - LEG_KNEE_OVERLAP
+	lower.length = lower_size.y - LOWER_LEG_TOP_INSET
 
 
 func _layout_arm(
@@ -208,8 +229,8 @@ func _layout_arm(
 	var forearm_size := Vector2(forearm_sprite.texture.get_size())
 	upper.position = shoulder
 	upper_sprite.position = Vector2(0.0, upper_size.y * 0.5 - 14.0)
-	forearm.position = Vector2(0.0, upper_size.y - 28.0)
-	forearm_sprite.position = Vector2(0.0, forearm_size.y * 0.5 - 14.0)
+	forearm.position = Vector2(0.0, upper_size.y - ARM_ELBOW_OVERLAP)
+	forearm_sprite.position = Vector2(0.0, forearm_size.y * 0.5 - FOREARM_TOP_INSET)
 
 
 func _apply_depth_order(direction: String) -> void:
@@ -374,4 +395,23 @@ func is_fully_articulated() -> bool:
 		and _right_forearm != null
 		and _lantern != null
 		and _sprites.size() == PARTS.size()
+	)
+
+
+func has_compact_proportions() -> bool:
+	var torso_height := _texture_size("torso").y
+	var mech_upper_height := _texture_size("mech_upper").y
+	var thigh_height := _texture_size("thigh_near").y
+	return (
+		is_equal_approx(_head.position.y, -torso_height + HEAD_COLLAR_INSET)
+		and is_equal_approx(
+			_left_forearm.position.y,
+			mech_upper_height - ARM_ELBOW_OVERLAP,
+		)
+		and is_equal_approx(
+			_left_lower_leg.position.y,
+			thigh_height - LEG_KNEE_OVERLAP,
+		)
+		and ARM_ELBOW_OVERLAP * visual_scale >= 3.0
+		and LEG_KNEE_OVERLAP * visual_scale >= 3.0
 	)

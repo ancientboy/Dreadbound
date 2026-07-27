@@ -70,6 +70,7 @@ func _run_test() -> void:
 	assert(rig.get_node("Hips/Torso/RightUpperArm") is Bone2D)
 	assert(rig.get_node("Hips/Torso/RightUpperArm/RightForearm") is Bone2D)
 	assert(rig.is_fully_articulated())
+	assert(rig.has_compact_proportions())
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.DOWN) == "front")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.UP) == "back")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.LEFT) == "left")
