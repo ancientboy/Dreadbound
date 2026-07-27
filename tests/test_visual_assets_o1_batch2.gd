@@ -51,7 +51,10 @@ func _run_test() -> void:
 	assert(patient_sprite.hframes == 6 and patient_sprite.vframes == 4)
 	assert(player_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
 	assert(patient_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
-	assert(player_sprite.position == Vector2(0, -26))
+	# The player idles with a small breathing offset, so validate the sprite's
+	# foot anchor instead of freezing that presentation feedback to one exact frame.
+	assert(is_equal_approx(player_sprite.position.x, 0.0))
+	assert(absf(player_sprite.position.y + 26.0) <= 1.0)
 	assert(patient_sprite.position == Vector2(0, -26))
 
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
