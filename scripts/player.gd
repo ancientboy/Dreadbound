@@ -44,6 +44,11 @@ enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
 
 @export var movement_speed := 210.0
 @export var use_runtime_progress := true
+@export_group("Demo Loadout")
+@export var demo_weapon_slots: Array[String] = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
+@export var demo_offhand_item := "riot_shield"
+@export var demo_charm_item := "medical_tag"
+@export_group("")
 @export_group("Character Feel")
 @export var acceleration := 1850.0
 @export var deceleration := 2450.0
@@ -126,9 +131,10 @@ func _ready() -> void:
 
 
 func _apply_permanent_upgrades() -> void:
-	# Isolated presentation scenes keep their authored feel baseline instead of
-	# inheriting saved equipment and passive bonuses.
+	# Presentation scenes use a fixed loadout with the same equipment rules as the
+	# game. They must not inherit a player's save file or alter it.
 	if not use_runtime_progress:
+		_apply_demo_loadout()
 		return
 	var state := get_node_or_null("/root/GameState")
 	if state == null:
@@ -151,6 +157,28 @@ func _apply_permanent_upgrades() -> void:
 	shells = max_shells # no shell pickups or reserve tracking.
 	sedatives = clampi(int(loadout.get("sedatives", 0)), 0, 2)
 	stimulants = clampi(int(loadout.get("stimulants", 0)), 0, 2)
+
+
+func _apply_demo_loadout() -> void:
+	current_weapon = Weapon.MELEE
+	var demo_equipped := {
+		"weapon_1": demo_weapon_slots[0] if demo_weapon_slots.size() > 0 else "",
+		"weapon_2": demo_weapon_slots[1] if demo_weapon_slots.size() > 1 else "",
+		"weapon_3": demo_weapon_slots[2] if demo_weapon_slots.size() > 2 else "",
+		"offhand": demo_offhand_item,
+		"charm": demo_charm_item,
+	}
+	var bonuses := EquipmentDatabase.get_bonuses(demo_equipped)
+	max_health += int(bonuses.max_health)
+	movement_speed += float(bonuses.movement_speed)
+	attack_damage += int(bonuses.melee_damage)
+	ranged_damage += int(bonuses.ranged_damage)
+	shotgun_damage += int(bonuses.shotgun_damage)
+	bandage_heal += int(bonuses.bandage_heal)
+	equipped_weapon_item = str(demo_equipped.weapon_1)
+	relic_profile = {}
+	ammo = max_ammo # Compatibility-only display value; the demo has no ammo reserve.
+	shells = max_shells
 
 
 func _weapon_attack_type() -> String:
