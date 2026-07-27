@@ -72,7 +72,7 @@ func _run_test() -> void:
 	var corridor_source := FileAccess.get_file_as_string("res://scripts/corridor.gd")
 	var pickup_source := FileAccess.get_file_as_string("res://scripts/pickup.gd")
 	assert(player_source.contains("if visual.id != \"resonant\""))
-	assert(player_source.contains("_draw_flashlight()"))
+	assert(not player_source.contains("_draw_flashlight()"))
 	assert(player_source.contains("director_reaper_growth.png"))
 	assert(main_source.contains("_draw_sanatorium_passages()"))
 	assert(main_source.find("_draw_sanatorium_passages()") < main_source.find("_draw_grid()"))

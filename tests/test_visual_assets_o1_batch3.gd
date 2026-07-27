@@ -4,6 +4,7 @@ const MANIFEST_PATH := "res://content/alpha_asset_manifest.json"
 const REVIEW_ASSETS := {
 	"art_sanatorium_tileset": ["res://assets/art/worlds/sanatorium/sanatorium_tileset.png", Vector2i(256, 256)],
 	"art_sanatorium_props": ["res://assets/art/worlds/sanatorium/sanatorium_props.png", Vector2i(512, 384)],
+	"art_sanatorium_lower_wall_props": ["res://assets/art/worlds/sanatorium/sanatorium_lower_wall_props.png", Vector2i(512, 128)],
 	"art_enemy_crawler": ["res://assets/art/characters/sanatorium/crawler_spritesheet.png", Vector2i(384, 192)],
 	"art_enemy_orderly": ["res://assets/art/characters/sanatorium/orderly_spritesheet.png", Vector2i(288, 256)],
 	"art_npc_threshold_curator": ["res://assets/art/characters/corridor/threshold_curator_spritesheet.png", Vector2i(576, 384)],
@@ -60,6 +61,7 @@ func _run_test() -> void:
 	var corridor_source := FileAccess.get_file_as_string("res://scripts/corridor.gd")
 	assert(main_source.contains("sanatorium_tileset.png"))
 	assert(main_source.contains("sanatorium_props.png"))
+	assert(main_source.contains("sanatorium_lower_wall_props.png"))
 	assert(corridor_source.contains("threshold_curator_spritesheet.png"))
 	assert(corridor_source.contains("Vector2(128, 128)"))
 

@@ -173,6 +173,7 @@ func _ready() -> void:
 	_create_section_panel()
 	_create_milestone_feedback()
 	_create_audio_settings()
+	_apply_hub_ui_chrome()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
@@ -775,6 +776,80 @@ func _create_audio_settings() -> void:
 	audio_settings_panel = DreadboundAudioSettingsPanel.new()
 	add_child(audio_settings_panel)
 	audio_settings_panel.configure(UI_FONT)
+
+
+# The hub UI is deliberately code-native: translucent panels, hairline borders,
+# and a restrained cyan signal are more coherent with the world than large UI art
+# that would quickly look like a separate website layered over the game.
+func _ui_box(fill: Color, border: Color, border_width := 1, radius := 3) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = fill
+	box.border_color = border
+	box.border_width_left = border_width
+	box.border_width_top = border_width
+	box.border_width_right = border_width
+	box.border_width_bottom = border_width
+	box.corner_radius_top_left = radius
+	box.corner_radius_top_right = radius
+	box.corner_radius_bottom_left = radius
+	box.corner_radius_bottom_right = radius
+	box.content_margin_left = 16.0
+	box.content_margin_right = 16.0
+	return box
+
+
+func _apply_archive_button_chrome(button: Button, accent := Color("65e7d2")) -> void:
+	if button == null:
+		return
+	button.add_theme_font_override("font", UI_FONT)
+	button.add_theme_color_override("font_color", Color("cfe6df"))
+	button.add_theme_color_override("font_hover_color", Color("e8fffa"))
+	button.add_theme_color_override("font_pressed_color", accent)
+	button.add_theme_color_override("font_disabled_color", Color("657773"))
+	button.add_theme_stylebox_override("normal", _ui_box(Color(0.025, 0.06, 0.057, 0.82), Color(0.2, 0.49, 0.44, 0.45)))
+	button.add_theme_stylebox_override("hover", _ui_box(Color(0.045, 0.14, 0.125, 0.94), Color(accent, 0.92), 1, 3))
+	button.add_theme_stylebox_override("pressed", _ui_box(Color(0.02, 0.1, 0.088, 0.96), Color(accent, 1.0), 2, 3))
+	button.add_theme_stylebox_override("disabled", _ui_box(Color(0.02, 0.035, 0.034, 0.72), Color(0.22, 0.3, 0.29, 0.34)))
+
+
+func _apply_panel_chrome(panel: ColorRect, accent := Color("65e7d2")) -> void:
+	if panel == null or panel.get_node_or_null("SignalFrame") != null:
+		return
+	panel.color = Color(0.006, 0.024, 0.024, 0.94)
+	var frame := Panel.new()
+	frame.name = "SignalFrame"
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_theme_stylebox_override("panel", _ui_box(Color(0.005, 0.018, 0.019, 0.18), Color(accent, 0.68), 1, 4))
+	panel.add_child(frame)
+	panel.move_child(frame, 0)
+	var signal_line := ColorRect.new()
+	signal_line.name = "SignalLine"
+	signal_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	signal_line.color = Color(accent, 0.8)
+	signal_line.position = Vector2(22, 14)
+	signal_line.size = Vector2(96, 2)
+	panel.add_child(signal_line)
+	panel.move_child(signal_line, 1)
+
+
+func _apply_hub_ui_chrome() -> void:
+	$HubTitle.add_theme_color_override("font_color", Color("6bf0d8"))
+	$HubTitle.add_theme_font_override("font", UI_FONT)
+	_apply_archive_button_chrome($OpenArchive)
+	for button in $HubActions.get_children():
+		if button is Button:
+			_apply_archive_button_chrome(button as Button)
+	if audio_settings_button:
+		_apply_archive_button_chrome(audio_settings_button)
+	if open_mirror_button:
+		_apply_archive_button_chrome(open_mirror_button, Color("7ddcf2"))
+	_apply_panel_chrome(run_archive_panel)
+	_apply_panel_chrome(mirror_panel, Color("7ddcf2"))
+	if run_archive_panel:
+		_apply_archive_button_chrome(run_archive_panel.get_node_or_null("Close") as Button)
+	if mirror_panel:
+		_apply_archive_button_chrome(mirror_panel.get_node_or_null("Close") as Button, Color("7ddcf2"))
 
 
 func _open_terminal() -> void:

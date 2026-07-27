@@ -724,7 +724,6 @@ func _emit_pathway_movement_echo() -> void:
 
 
 func _draw() -> void:
-	_draw_flashlight()
 	_draw_pathway_state_vfx()
 	var visual := _pathway_visual()
 	if not is_instance_valid(_body_sprite):
@@ -772,25 +771,6 @@ func _draw_health_bar() -> void:
 	draw_rect(bar_rect, Color("283832"), true)
 	var health_color := Color("5edb9b").lerp(Color("e56e66"), 1.0 - health_ratio)
 	draw_rect(Rect2(bar_rect.position, Vector2(bar_rect.size.x * health_ratio, bar_rect.size.y)), health_color, true)
-
-
-func _draw_flashlight() -> void:
-	# The lamp is body-mounted. It provides readable forward illumination without
-	# competing with the weapon for the character's hand or silhouette.
-	if PLAYER_STATES_LIGHTING == null or PLAYER_STATES_LIGHTING.get_size() != Vector2(512, 256):
-		var beam := PackedVector2Array([facing * 12.0, facing.rotated(-0.38) * 150.0, facing.rotated(0.38) * 150.0])
-		draw_colored_polygon(beam, Color(0.72, 0.78, 0.58, 0.07))
-		return
-	var chest := Vector2(0, -28) + facing * 5.0
-	draw_set_transform(chest + facing * 78.0, facing.angle(), Vector2.ONE)
-	draw_texture_rect_region(
-		PLAYER_STATES_LIGHTING,
-		Rect2(-82, -52, 164, 104),
-		Rect2(128, 0, 128, 128),
-		Color(0.82, 0.86, 0.72, 0.24),
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	_draw_player_state_cell(0, chest, 25.0, facing.angle(), Color(0.9, 0.9, 0.8, 0.9))
 
 
 func _draw_pathway_state_vfx() -> void:

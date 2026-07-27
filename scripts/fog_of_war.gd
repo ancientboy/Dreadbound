@@ -4,8 +4,9 @@ extends Node2D
 signal room_revealed(room_id: String)
 signal exploration_changed
 
-@export var reveal_duration := 1.35
-@export var corridor_reveal_duration := 0.72
+# Exploration is no longer visually gated.  The node remains as a shared map
+# visibility source so the minimap and encounter director see the whole level.
+const EXPLORATION_FOG_ENABLED := false
 
 var player: Player
 var reveal_progress: Dictionary = {}
@@ -25,12 +26,13 @@ func _ready() -> void:
 func _reset_exploration() -> void:
 	reveal_progress.clear()
 	for region in _exploration_regions():
-		reveal_progress[region.id] = 0.0
+		reveal_progress[region.id] = 1.0
 	queue_redraw()
+	exploration_changed.emit()
 
 
 func _process(delta: float) -> void:
-	if not is_instance_valid(player):
+	if not EXPLORATION_FOG_ENABLED or not is_instance_valid(player):
 		return
 	var changed := _update_region_reveal(delta)
 	if changed:
@@ -39,32 +41,16 @@ func _process(delta: float) -> void:
 
 
 func _update_region_reveal(delta: float) -> bool:
-	var changed := false
-	var player_in_room := false
-	for region in _exploration_regions():
-		if bool(region.get("room", false)) and region.rect.grow(12.0).has_point(player.global_position):
-			player_in_room = true
-			break
-	for region in _exploration_regions():
-		if not bool(region.get("room", false)) and player_in_room:
-			continue
-		if not region.rect.grow(12.0).has_point(player.global_position):
-			continue
-		var previous: float = reveal_progress[region.id]
-		var duration := reveal_duration if bool(region.get("room", false)) else corridor_reveal_duration
-		var current := minf(previous + delta / duration, 1.0)
-		reveal_progress[region.id] = current
-		changed = changed or not is_equal_approx(previous, current)
-		if bool(region.get("room", false)) and previous < 1.0 and current >= 1.0:
-			room_revealed.emit(str(region.id))
-	return changed
+	return false
 
 
 func get_reveal_progress(room_id: String) -> float:
-	return reveal_progress.get(room_id, 0.0)
+	return 1.0 if not EXPLORATION_FOG_ENABLED else reveal_progress.get(room_id, 0.0)
 
 
 func get_world_reveal_at(world_position: Vector2) -> float:
+	if not EXPLORATION_FOG_ENABLED:
+		return 1.0
 	# Rooms take priority over the broad circulation rectangles below. This keeps
 	# a nearby hallway from revealing the contents of a room before the player
 	# crosses its threshold.
@@ -81,6 +67,8 @@ func get_world_reveal_at(world_position: Vector2) -> float:
 
 
 func _draw() -> void:
+	if not EXPLORATION_FOG_ENABLED:
+		return
 	# Regions, not cells, own discovery state. The tiles below only paint the
 	# overlay: every visible part of a room or a corridor section receives the
 	# same opacity, so there is never a pixel-by-pixel trail behind the player.

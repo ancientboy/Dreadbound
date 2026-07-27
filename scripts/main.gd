@@ -12,6 +12,7 @@ const LAST_TRAIN_SCENE: PackedScene = preload("res://scenes/entities/last_train_
 const SIGNAL_ANCHOR_SCENE: PackedScene = preload("res://scenes/entities/signal_anchor.tscn")
 const SANATORIUM_TILESET: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_tileset.png")
 const SANATORIUM_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_props.png")
+const SANATORIUM_LOWER_WALL_PROPS: Texture2D = preload("res://assets/art/worlds/sanatorium/sanatorium_lower_wall_props.png")
 const SANATORIUM_OBJECTIVE_LIGHTING: Texture2D = preload("res://assets/art/vfx/sanatorium_objective_lighting.png")
 const METRO_TILESET: Texture2D = preload("res://assets/art/worlds/metro/metro_tileset.png")
 const METRO_PROPS: Texture2D = preload("res://assets/art/worlds/metro/metro_props.png")
@@ -1726,13 +1727,20 @@ func _draw_metro_tile(destination: Rect2, tile_index: int, modulate := Color.WHI
 
 func _draw_metro_props() -> void:
 	var placements := [
-		# Keep centre lanes open: props belong to counters, platform walls and
-		# maintenance edges rather than reading as loose obstacles in the route.
-		[0, Vector2(152, 182), 112.0], [2, Vector2(672, 224), 112.0],
-		[3, Vector2(1120, 312), 112.0], [7, Vector2(1640, 188), 112.0],
-		[1, Vector2(760, 694), 104.0], [8, Vector2(1090, 866), 96.0],
-		[9, Vector2(1360, 688), 128.0], [7, Vector2(1664, 1018), 112.0],
-		[2, Vector2(2024, 1018), 112.0], [1, Vector2(600, 1048), 104.0],
+		# Each prop has a named architectural home.  This keeps rail furniture
+		# facing a wall or platform edge instead of becoming loose map icons.
+		# Ticket hall: entry lane, ticket board, no obstacle in the concourse.
+		[0, Vector2(156, 182), 108.0], [3, Vector2(356, 184), 104.0],
+		# Market: a bench and broken kiosk form the rear storefront line.
+		[2, Vector2(604, 224), 108.0], [1, Vector2(836, 224), 104.0],
+		# Signal room: controls and electrical cabinet live on the rear service wall.
+		[5, Vector2(1108, 320), 108.0], [4, Vector2(1292, 320), 100.0],
+		# Platforms: seating and timetable boards align to the platform back edge.
+		[2, Vector2(1660, 188), 108.0], [3, Vector2(2018, 188), 104.0],
+		[2, Vector2(1660, 1018), 108.0], [3, Vector2(2018, 1018), 104.0],
+		# Flood and transfer areas keep equipment in their maintenance bands.
+		[8, Vector2(1064, 682), 108.0], [9, Vector2(1376, 684), 116.0],
+		[0, Vector2(164, 1050), 108.0], [7, Vector2(584, 1050), 100.0],
 	]
 	for placement in placements:
 		_draw_metro_prop(int(placement[0]), placement[1], float(placement[2]))
@@ -1841,25 +1849,35 @@ func _draw_sanatorium_wall(wall_rect: Rect2) -> void:
 
 
 func _draw_sanatorium_props() -> void:
-	# Props form functional room clusters: furnishings stay on walls, while the
-	# center lanes remain clear for movement, combat, and readable objectives.
+	# Props are authored as wall bands rather than arbitrary centre coordinates.
+	# The base atlas is only used along the top/rear walls it was painted for;
+	# the lower-wall atlas provides the missing opposing perspective.
 	var placements := [
-		# Entrance: reception furniture, not a pile in the center.
-		[0, Vector2(176, 222), 96.0], [0, Vector2(336, 222), 96.0],
-		# Patient wing: beds and storage line the top wall; the lower half is clear.
-		[4, Vector2(568, 212), 96.0], [4, Vector2(712, 212), 96.0], [2, Vector2(844, 214), 88.0],
-		# Nurse station: one work island with a rear utility cabinet.
-		[6, Vector2(1080, 350), 108.0], [3, Vector2(1324, 350), 88.0],
-		# Archive: only a mobile cart remains; the cosmetic door is removed until
-		# it can become a real interactive doorway.
-		[9, Vector2(2048, 210), 96.0],
-		# Basement: machinery sits in the service bay rather than the travel lane.
-		[5, Vector2(1584, 1088), 104.0], [7, Vector2(2000, 1120), 88.0],
-		# Extraction retains a single clear landmark.
-		[11, Vector2(288, 1120), 96.0],
+		# Entrance reception: desk + filing, never patient furniture.
+		[2, Vector2(174, 222), 96.0], [3, Vector2(338, 222), 88.0],
+		# Patient wing: beds belong to the ward's rear wall; storage closes the run.
+		[0, Vector2(572, 212), 96.0], [0, Vector2(716, 212), 96.0], [3, Vector2(844, 214), 84.0],
+		# Nurse station: desk, medicine cart and cabinet form a compact rear station.
+		[2, Vector2(1080, 350), 100.0], [9, Vector2(1196, 350), 84.0], [3, Vector2(1322, 350), 82.0],
+		# Archive: paperwork and storage stay on the archive's top wall.
+		[3, Vector2(1816, 210), 88.0], [2, Vector2(2028, 210), 96.0],
+		# Maintenance: power apparatus stays inside the southern service bay.
+		[5, Vector2(1584, 1088), 100.0], [7, Vector2(1992, 1088), 82.0],
+		# Extraction retains one landmark at the wall, leaving the exit approach clear.
+		[11, Vector2(288, 1090), 88.0],
 	]
 	for placement in placements:
 		_draw_sanatorium_prop(int(placement[0]), placement[1], float(placement[2]))
+	var lower_wall_placements := [
+		# Opposing wall anchors: these complete room depth without blocking routes.
+		[2, Vector2(258, 408), 92.0], # entrance desk
+		[1, Vector2(806, 404), 82.0], # ward medicine cabinet
+		[2, Vector2(1160, 596), 92.0], # nurse desk
+		[1, Vector2(1902, 384), 82.0], [3, Vector2(2100, 384), 82.0], # archive
+		[3, Vector2(1624, 1184), 92.0], [1, Vector2(1952, 1184), 82.0], # maintenance
+	]
+	for placement in lower_wall_placements:
+		_draw_sanatorium_lower_wall_prop(int(placement[0]), placement[1], float(placement[2]))
 
 
 func _draw_sanatorium_lights() -> void:
@@ -1892,6 +1910,16 @@ func _draw_sanatorium_prop(index: int, center: Vector2, draw_size: float) -> voi
 		SANATORIUM_PROPS,
 		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
 		Rect2(column * 128, row * 128, 128, 128)
+	)
+
+
+func _draw_sanatorium_lower_wall_prop(index: int, center: Vector2, draw_size: float) -> void:
+	if SANATORIUM_LOWER_WALL_PROPS == null or SANATORIUM_LOWER_WALL_PROPS.get_size() != Vector2(512, 128):
+		return
+	draw_texture_rect_region(
+		SANATORIUM_LOWER_WALL_PROPS,
+		Rect2(center - Vector2.ONE * draw_size * 0.5, Vector2.ONE * draw_size),
+		Rect2(index * 128, 0, 128, 128),
 	)
 
 
