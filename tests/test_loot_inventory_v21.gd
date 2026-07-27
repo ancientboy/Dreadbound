@@ -7,8 +7,8 @@ func _init() -> void:
 
 func _run_test() -> void:
 	var crawler_drop := LootDatabase.roll_enemy("sanatorium", "crawler", 0.10, 0.0, 0.0, 0)
-	assert(str(crawler_drop.kind) == "ammo")
-	assert(int(crawler_drop.amount) == 3)
+	assert(str(crawler_drop.kind) == "bandage")
+	assert(int(crawler_drop.amount) == 1)
 	var patient_material := LootDatabase.roll_enemy("sanatorium", "patient", 0.20, 0.0, 0.0, 0)
 	assert(str(patient_material.kind) == "material")
 	assert(str(patient_material.id) == "tissue_sample")
