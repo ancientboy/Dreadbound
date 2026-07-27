@@ -92,9 +92,21 @@ func _run_test() -> void:
 	assert(rig.current_ik_demo_mode() == LayeredSkeletonCharacter.IKDemoMode.PISTOL)
 	assert(rig.ik_hand_error("organic") < 2.0)
 	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.RIFLE, true)
-	await process_frame
-	assert(rig.ik_hand_error("organic") < 2.0)
-	assert(rig.ik_hand_error("mech") < 2.0)
+	for facing in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
+		player.facing = facing
+		await process_frame
+		assert(
+			rig.ik_hand_error("organic") < 2.0,
+			"Organic rifle hand missed its grip while facing %s" % facing,
+		)
+		assert(
+			rig.ik_hand_error("mech") < 2.0,
+			"Mechanical rifle hand missed its grip while facing %s" % facing,
+		)
+		assert(
+			rig.has_forward_rifle_stance(),
+			"Rifle stance collapsed toward the torso while facing %s" % facing,
+		)
 	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST, true)
 	await process_frame
 	assert(rig.ik_hand_error("organic") < 2.0)

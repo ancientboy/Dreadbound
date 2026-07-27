@@ -37,6 +37,13 @@ const FOOT_BASELINE_OFFSET := 10.0
 const ARM_ELBOW_OVERLAP := 86.0
 const FOREARM_TOP_INSET := 50.0
 const HAND_ATTACHMENT_INSET := 74.0
+const RIFLE_CENTER_FORWARD := 175.0
+const RIFLE_CENTER_FORWARD_AXIAL := 150.0
+const RIFLE_REAR_GRIP_BACK := 46.0
+const RIFLE_FRONT_GRIP_FORWARD := 76.0
+const RIFLE_FRONT_GRIP_FORWARD_AXIAL := 64.0
+const RIFLE_GRIP_DROP := 18.0
+const RIFLE_STOCK_BACK := 102.0
 
 @export var visual_scale := 0.055
 @export var ik_demo_enabled := true
@@ -418,9 +425,29 @@ func _apply_ik_pose(_delta: float) -> void:
 			_pose_rotation(_lantern, -0.04, _ik_blend)
 			_configure_weapon(false, pistol_target, aim)
 		IKDemoMode.RIFLE:
-			var rifle_center := chest + aim * (155.0 - recoil * 18.0)
-			var rear_grip := rifle_center - aim * 46.0 + side * 18.0
-			var front_grip := rifle_center + aim * 68.0 - side * 16.0
+			# Keep the butt at the shoulder while carrying both hands farther
+			# forward. Both grips sit on the support side of the rifle so the
+			# character presents the weapon instead of pinching it to the chest.
+			var side_view := absf(aim.x) > 0.5
+			var center_forward := (
+				RIFLE_CENTER_FORWARD if side_view else RIFLE_CENTER_FORWARD_AXIAL
+			)
+			var front_forward := (
+				RIFLE_FRONT_GRIP_FORWARD
+				if side_view
+				else RIFLE_FRONT_GRIP_FORWARD_AXIAL
+			)
+			var rifle_center := chest + aim * (center_forward - recoil * 18.0)
+			var rear_grip := (
+				rifle_center
+				- aim * RIFLE_REAR_GRIP_BACK
+				+ side * RIFLE_GRIP_DROP
+			)
+			var front_grip := (
+				rifle_center
+				+ aim * front_forward
+				+ side * RIFLE_GRIP_DROP
+			)
 			_apply_arm_ik(
 				_right_upper_arm,
 				_right_forearm,
@@ -533,10 +560,10 @@ func _aim_vector() -> Vector2:
 func _configure_weapon(rifle: bool, target: Vector2, aim: Vector2) -> void:
 	if rifle:
 		_ik_weapon_body.polygon = PackedVector2Array([
-			Vector2(-82.0, -14.0),
-			Vector2(112.0, -10.0),
-			Vector2(112.0, 10.0),
-			Vector2(-82.0, 14.0),
+			Vector2(-RIFLE_STOCK_BACK, -14.0),
+			Vector2(116.0, -10.0),
+			Vector2(116.0, 10.0),
+			Vector2(-RIFLE_STOCK_BACK, 14.0),
 		])
 		_ik_weapon_grip.polygon = PackedVector2Array([
 			Vector2(-58.0, 8.0),
@@ -546,10 +573,10 @@ func _configure_weapon(rifle: bool, target: Vector2, aim: Vector2) -> void:
 		])
 		_ik_weapon_foregrip.visible = true
 		_ik_weapon_foregrip.polygon = PackedVector2Array([
-			Vector2(56.0, -25.0),
-			Vector2(79.0, -25.0),
-			Vector2(79.0, -7.0),
-			Vector2(56.0, -7.0),
+			Vector2(64.0, 7.0),
+			Vector2(88.0, 7.0),
+			Vector2(88.0, 27.0),
+			Vector2(64.0, 27.0),
 		])
 	else:
 		_ik_weapon_body.polygon = PackedVector2Array([
@@ -633,6 +660,24 @@ func has_weapon_ik() -> bool:
 		and _left_forearm.length > 0.0
 		and _right_upper_arm.length > 0.0
 		and _right_forearm.length > 0.0
+	)
+
+
+func has_forward_rifle_stance() -> bool:
+	if _ik_mode != IKDemoMode.RIFLE:
+		return false
+	if not _ik_targets.has("organic") or not _ik_targets.has("mech"):
+		return false
+	var aim := _aim_vector()
+	var shoulder_center := (_left_upper_arm.position + _right_upper_arm.position) * 0.5
+	var rear_reach := ((_ik_targets["organic"] as Vector2) - shoulder_center).dot(aim)
+	var grip_span := (
+		(_ik_targets["mech"] as Vector2) - (_ik_targets["organic"] as Vector2)
+	).dot(aim)
+	var side_view := absf(aim.x) > 0.5
+	return (
+		grip_span >= (120.0 if side_view else 105.0)
+		and (not side_view or rear_reach >= 120.0)
 	)
 
 
