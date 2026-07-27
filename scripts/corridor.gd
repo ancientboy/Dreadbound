@@ -18,7 +18,7 @@ const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/pro
 const COMBAT_STYLE_SPRITESHEETS := {
 	"barrier_counter": preload("res://assets/art/characters/professions/styles/barrier_counter_spritesheet.png"),
 	"last_stand": preload("res://assets/art/characters/professions/styles/last_stand_spritesheet.png"),
-	"sacrifice_medic": preload("res://assets/art/characters/professions/styles/sacrifice_medic_spritesheet.png"),
+	"sacrifice_medic": preload("res://assets/art/characters/professions/styles/sacrifice_medic_walk_spritesheet.png"),
 	"choke_control": preload("res://assets/art/characters/professions/styles/choke_control_spritesheet.png"),
 	"weakpoint_sniper": preload("res://assets/art/characters/professions/styles/weakpoint_sniper_spritesheet.png"),
 	"heavy_suppression": preload("res://assets/art/characters/professions/styles/heavy_suppression_spritesheet.png"),

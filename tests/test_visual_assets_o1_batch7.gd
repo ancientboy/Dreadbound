@@ -17,7 +17,7 @@ const STYLE_ORDER := [
 
 const STYLE_SPRITESHEETS := {
 	"barrier_counter": "barrier_counter_spritesheet.png", "last_stand": "last_stand_spritesheet.png",
-	"sacrifice_medic": "sacrifice_medic_spritesheet.png", "choke_control": "choke_control_spritesheet.png",
+	"sacrifice_medic": "sacrifice_medic_walk_spritesheet.png", "choke_control": "choke_control_spritesheet.png",
 	"weakpoint_sniper": "weakpoint_sniper_spritesheet.png", "heavy_suppression": "heavy_suppression_spritesheet.png",
 	"demolition_traps": "demolition_traps_spritesheet.png", "relic_engineer": "relic_engineer_spritesheet.png",
 	"psychic_sense": "psychic_sense_spritesheet.png", "anomaly_ingestion": "anomaly_ingestion_spritesheet.png",

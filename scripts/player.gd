@@ -9,7 +9,7 @@ const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/pro
 const COMBAT_STYLE_SPRITESHEETS := {
 	"barrier_counter": preload("res://assets/art/characters/professions/styles/barrier_counter_spritesheet.png"),
 	"last_stand": preload("res://assets/art/characters/professions/styles/last_stand_spritesheet.png"),
-	"sacrifice_medic": preload("res://assets/art/characters/professions/styles/sacrifice_medic_spritesheet.png"),
+	"sacrifice_medic": preload("res://assets/art/characters/professions/styles/sacrifice_medic_walk_spritesheet.png"),
 	"choke_control": preload("res://assets/art/characters/professions/styles/choke_control_spritesheet.png"),
 	"weakpoint_sniper": preload("res://assets/art/characters/professions/styles/weakpoint_sniper_spritesheet.png"),
 	"heavy_suppression": preload("res://assets/art/characters/professions/styles/heavy_suppression_spritesheet.png"),
@@ -102,6 +102,7 @@ var _smoothed_move_direction := Vector2.ZERO
 var _body_sprite: Sprite2D
 var _body_sprite_rest_position := Vector2.ZERO
 var _body_sprite_rest_scale := Vector2.ONE
+var _body_frame_ground_y := PackedFloat32Array()
 var _locked_ranged_target: Node2D
 
 
@@ -321,6 +322,7 @@ func _setup_body_sprite() -> void:
 		_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_body_sprite_rest_position = _body_sprite.position
 	_body_sprite_rest_scale = _body_sprite.scale
+	_cache_body_frame_grounding()
 	_body_sprite.z_index = 1
 	add_child(_body_sprite)
 	_sync_body_sprite()
@@ -328,6 +330,44 @@ func _setup_body_sprite() -> void:
 
 func _is_valid_body_spritesheet(texture: Texture2D) -> bool:
 	return texture.get_size() == Vector2(288, 256) or texture.get_size() == Vector2(1536, 1024)
+
+
+func _cache_body_frame_grounding() -> void:
+	_body_frame_ground_y.clear()
+	var image := _body_sprite.texture.get_image()
+	if image == null or image.is_empty():
+		return
+	var frame_width := image.get_width() / _body_sprite.hframes
+	var frame_height := image.get_height() / _body_sprite.vframes
+	for row in range(_body_sprite.vframes):
+		for column in range(_body_sprite.hframes):
+			var alpha_bottom := 0
+			for pixel_y in range(frame_height - 1, -1, -1):
+				var found_opaque_pixel := false
+				for pixel_x in range(frame_width):
+					if image.get_pixel(column * frame_width + pixel_x, row * frame_height + pixel_y).a > 0.08:
+						found_opaque_pixel = true
+						break
+				if found_opaque_pixel:
+					alpha_bottom = pixel_y + 1
+					break
+			_body_frame_ground_y.append(
+				grounded_sprite_y(alpha_bottom, frame_height, _body_sprite.scale.y, 8.0)
+			)
+
+
+static func grounded_sprite_y(alpha_bottom: int, frame_height: int, scale_y: float, ground_y: float) -> float:
+	if alpha_bottom <= 0 or frame_height <= 0:
+		return ground_y
+	return ground_y - (float(alpha_bottom) - float(frame_height) * 0.5) * scale_y
+
+
+func _current_body_rest_position() -> Vector2:
+	var grounded_position := _body_sprite_rest_position
+	var frame_index := _body_sprite.frame_coords.y * _body_sprite.hframes + _body_sprite.frame_coords.x
+	if frame_index >= 0 and frame_index < _body_frame_ground_y.size():
+		grounded_position.y = _body_frame_ground_y[frame_index]
+	return grounded_position
 
 
 func _sync_body_sprite() -> void:
@@ -338,7 +378,7 @@ func _sync_body_sprite() -> void:
 		row = 2 if facing.x > 0.0 else 1
 	elif facing.y < 0.0:
 		row = 3
-	var frame := int(_walk_animation_time * 9.0) % 6 if velocity.length() > 2.0 else 0
+	var frame := int(_step_phase * 6.0) % 6 if velocity.length() > 2.0 else 0
 	_body_sprite.frame_coords = Vector2i(frame, row)
 	_body_sprite.modulate = Color("ffb5ad") if _hurt_flash > 0.0 else (Color("c8ffdc") if _heal_flash > 0.0 else Color.WHITE)
 
@@ -348,21 +388,24 @@ func _update_body_feedback(delta: float, target_speed: float) -> void:
 		return
 	var speed_ratio := clampf(velocity.length() / maxf(target_speed, 1.0), 0.0, 1.0)
 	var moving := speed_ratio > 0.04
-	var position_target := _body_sprite_rest_position
+	var position_target := _current_body_rest_position()
 	var scale_target := _body_sprite_rest_scale
 	var rotation_target := 0.0
 	if moving:
-		var stride := sin(_walk_animation_time * TAU * 1.5)
-		position_target.y += absf(stride) * -2.2 * speed_ratio
-		position_target.x += velocity.normalized().x * 1.4 * speed_ratio
+		var stride := sin(_step_phase * TAU)
+		var foot_contact := pow(absf(cos(_step_phase * TAU)), 4.0)
+		# Keep the feet on the ground. Weight shifts sideways and compresses on
+		# contact instead of lifting the entire character above its shadow.
+		position_target.x += stride * 1.35 * speed_ratio
+		position_target.y += foot_contact * 0.75 * speed_ratio
 		scale_target *= Vector2(
-			1.0 + absf(stride) * 0.018 * speed_ratio,
-			1.0 - absf(stride) * 0.024 * speed_ratio
+			1.0 + foot_contact * 0.012 * speed_ratio,
+			1.0 - foot_contact * 0.014 * speed_ratio
 		)
-		rotation_target = clampf(velocity.x / maxf(target_speed, 1.0), -1.0, 1.0) * 0.035
+		rotation_target = stride * 0.012 * speed_ratio
 	else:
 		var breath := sin(_idle_animation_time * 2.2)
-		position_target.y += breath * 0.7
+		position_target.y += maxf(breath, 0.0) * 0.25
 		scale_target *= Vector2(1.0 - breath * 0.004, 1.0 + breath * 0.007)
 	var feedback_weight := 1.0 - exp(-14.0 * delta)
 	_body_sprite.position = _body_sprite.position.lerp(position_target, feedback_weight)
@@ -878,13 +921,13 @@ func _draw() -> void:
 
 func _draw_character_shadow() -> void:
 	var speed_ratio := clampf(velocity.length() / maxf(movement_speed, 1.0), 0.0, 1.0)
-	var stride := absf(sin(_walk_animation_time * TAU * 1.5)) if speed_ratio > 0.04 else 0.0
+	var foot_contact := pow(absf(cos(_step_phase * TAU)), 4.0) if speed_ratio > 0.04 else 0.0
 	draw_set_transform(
-		Vector2(0, 9),
+		Vector2(0, 8),
 		0.0,
-		Vector2(1.0 + speed_ratio * 0.08, 0.42 - stride * speed_ratio * 0.035),
+		Vector2(1.0 + speed_ratio * 0.06, 0.32 + foot_contact * speed_ratio * 0.025),
 	)
-	draw_circle(Vector2.ZERO, 17.0, Color(0.0, 0.0, 0.0, 0.3))
+	draw_circle(Vector2.ZERO, 14.5, Color(0.0, 0.0, 0.0, 0.26))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

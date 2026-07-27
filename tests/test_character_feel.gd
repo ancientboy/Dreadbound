@@ -41,6 +41,8 @@ func _run_test() -> void:
 		0.02,
 	)
 	assert(boosted_turn.x < normal_turn.x)
+	assert(is_equal_approx(Player.grounded_sprite_y(61, 64, 1.0, 8.0), -21.0))
+	assert(is_equal_approx(Player.grounded_sprite_y(242, 256, 0.55, 8.0), -54.7))
 
 	var demo := load("res://scenes/test/character_feel_demo.tscn") as PackedScene
 	assert(demo != null)
@@ -55,7 +57,8 @@ func _run_test() -> void:
 	assert(player.movement_speed == 210.0)
 	assert(player.attack_damage == 35)
 	assert(player.has_signal("footstep_requested"))
+	assert(player._body_frame_ground_y.size() == 24)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: smoothed movement, turn boost, demo scene and camera interface")
+	print("Character feel passed: grounded frames, planted gait, smooth movement and camera interface")
 	quit()
