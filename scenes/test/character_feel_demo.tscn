@@ -1,0 +1,116 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
+
+[sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
+size = Vector2(440, 34)
+
+[sub_resource type="RectangleShape2D" id="Rectangle_vertical"]
+size = Vector2(34, 300)
+
+[sub_resource type="StyleBoxFlat" id="Panel_style"]
+bg_color = Color(0.025, 0.047, 0.055, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.63, 0.57, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="Title_settings"]
+font_size = 24
+font_color = Color(0.78, 0.98, 0.91, 1)
+
+[sub_resource type="LabelSettings" id="Body_settings"]
+font_size = 17
+font_color = Color(0.74, 0.81, 0.79, 1)
+
+[node name="CharacterFeelDemo" type="Node2D"]
+
+[node name="Floor" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 2304, 0, 2304, 1440, 0, 1440)
+color = Color(0.055, 0.086, 0.09, 1)
+
+[node name="LaneA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(260, 450, 2044, 450, 2044, 590, 260, 590)
+color = Color(0.08, 0.13, 0.13, 1)
+
+[node name="LaneB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(1082, 180, 1222, 180, 1222, 1260, 1082, 1260)
+color = Color(0.08, 0.13, 0.13, 1)
+
+[node name="CenterMark" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(1092, 660, 1212, 660, 1212, 780, 1092, 780)
+color = Color(0.12, 0.25, 0.23, 1)
+
+[node name="ObstacleTop" type="StaticBody2D" parent="."]
+position = Vector2(740, 330)
+
+[node name="Shape" type="CollisionShape2D" parent="ObstacleTop"]
+shape = SubResource("Rectangle_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="ObstacleTop"]
+polygon = PackedVector2Array(-220, -17, 220, -17, 220, 17, -220, 17)
+color = Color(0.2, 0.28, 0.27, 1)
+
+[node name="ObstacleBottom" type="StaticBody2D" parent="."]
+position = Vector2(1560, 1090)
+
+[node name="Shape" type="CollisionShape2D" parent="ObstacleBottom"]
+shape = SubResource("Rectangle_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="ObstacleBottom"]
+polygon = PackedVector2Array(-220, -17, 220, -17, 220, 17, -220, 17)
+color = Color(0.2, 0.28, 0.27, 1)
+
+[node name="ObstacleLeft" type="StaticBody2D" parent="."]
+position = Vector2(430, 900)
+
+[node name="Shape" type="CollisionShape2D" parent="ObstacleLeft"]
+shape = SubResource("Rectangle_vertical")
+
+[node name="Visual" type="Polygon2D" parent="ObstacleLeft"]
+polygon = PackedVector2Array(-17, -150, 17, -150, 17, 150, -17, 150)
+color = Color(0.2, 0.28, 0.27, 1)
+
+[node name="ObstacleRight" type="StaticBody2D" parent="."]
+position = Vector2(1870, 570)
+
+[node name="Shape" type="CollisionShape2D" parent="ObstacleRight"]
+shape = SubResource("Rectangle_vertical")
+
+[node name="Visual" type="Polygon2D" parent="ObstacleRight"]
+polygon = PackedVector2Array(-17, -150, 17, -150, 17, 150, -17, 150)
+color = Color(0.2, 0.28, 0.27, 1)
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+position = Vector2(1152, 720)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="HUD"]
+offset_left = 28.0
+offset_top = 26.0
+offset_right = 450.0
+offset_bottom = 150.0
+theme_override_styles/panel = SubResource("Panel_style")
+
+[node name="Margin" type="MarginContainer" parent="HUD/Panel"]
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="Text" type="VBoxContainer" parent="HUD/Panel/Margin"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "CHARACTER FEEL DEMO v1"
+label_settings = SubResource("Title_settings")
+
+[node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "WASD / Arrow Keys  Move & turn\nSpace / J  Attack & camera shake"
+label_settings = SubResource("Body_settings")

@@ -199,9 +199,12 @@ func _spawn(kind: String, origin: Vector2, payload: Vector2, radius: float, dura
 
 func _kick_camera(amount: float) -> void:
 	if _camera != null:
-		_camera.offset = Vector2(randf_range(-amount, amount), randf_range(-amount, amount))
-		var reset := create_tween()
-		reset.tween_property(_camera, "offset", Vector2.ZERO, 0.08)
+		if _camera.has_method("add_attack_shake"):
+			_camera.call("add_attack_shake", amount)
+		else:
+			_camera.offset = Vector2(randf_range(-amount, amount), randf_range(-amount, amount))
+			var reset := create_tween()
+			reset.tween_property(_camera, "offset", Vector2.ZERO, 0.08)
 
 
 func _draw() -> void:
