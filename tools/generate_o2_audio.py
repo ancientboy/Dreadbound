@@ -94,7 +94,6 @@ def main() -> None:
     short = {
         "sfx/ui/ui_hover_01.wav": (0.10, 680, "metal"), "sfx/ui/ui_confirm_01.wav": (0.18, 920, "metal"),
         "sfx/ui/ui_cancel_01.wav": (0.16, 300, "metal"), "sfx/ui/ui_error_01.wav": (0.25, 170, "warning"), "sfx/ui/ui_tab_01.wav": (0.12, 520, "metal"),
-        "sfx/player/footsteps/player_step_concrete_01.wav": (0.13, 95, "impact"), "sfx/player/footsteps/player_step_water_01.wav": (0.21, 120, "water"),
         "sfx/player/combat/player_melee_swing_01.wav": (0.28, 145, "whoosh"), "sfx/player/combat/player_pistol_fire_01.wav": (0.18, 310, "impact"),
         "sfx/player/combat/player_shotgun_fire_01.wav": (0.32, 92, "impact"), "sfx/player/combat/player_hit_01.wav": (0.24, 75, "impact"),
         "sfx/player/combat/player_death_01.wav": (0.72, 55, "creature"), "sfx/player/combat/player_heal_01.wav": (0.48, 430, "metal"), "sfx/player/combat/player_switch_01.wav": (0.18, 280, "metal"),
@@ -108,7 +107,6 @@ def main() -> None:
         "sfx/creatures/metro/conductor_windup_01.wav": (0.44, 210, "warning"), "sfx/creatures/metro/conductor_attack_01.wav": (0.38, 150, "metal"),
     }
     variants = {
-        "sfx/player/footsteps/player_step_concrete_01.wav", "sfx/player/footsteps/player_step_water_01.wav",
         "sfx/player/combat/player_melee_swing_01.wav", "sfx/player/combat/player_hit_01.wav",
         "sfx/world/pickup/world_pickup_01.wav", "sfx/creatures/sanatorium/patient_attack_01.wav",
         "sfx/creatures/sanatorium/crawler_attack_01.wav", "sfx/creatures/metro/drowned_attack_01.wav",
