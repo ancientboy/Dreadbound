@@ -31,7 +31,7 @@ func _run_test() -> void:
 	var rail_stats := state.get_player_stats()
 	var rail: Dictionary = rail_stats.relic_profile
 	assert(rail_stats.ranged_range == 655.0)
-	assert(rail_stats.shotgun_range == 310.0)
+	assert(rail_stats.shotgun_range == 235.0) # railgun is a single ranged attack profile
 	assert(rail.pierce_targets == 3)
 	assert(rail.status == "paralyze")
 	assert(rail.status_every == 2)
