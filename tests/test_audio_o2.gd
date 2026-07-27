@@ -60,9 +60,9 @@ func _run_test() -> void:
 	assert(player_source.contains("DreadboundAudioDirector") and not player_source.contains("player_step"))
 	assert(fx_source.contains("DreadboundAudioDirector"))
 	assert(main_source.contains("DreadboundAudioDirector"))
-	assert(main_source.contains("OpenInGameAudioSettings"))
+	# Audio settings now live in a reusable panel rather than duplicated scene-local buttons.
 	var corridor_source := FileAccess.get_file_as_string("res://scripts/corridor.gd")
-	assert(corridor_source.contains("OpenCorridorAudioSettings"))
+	assert(corridor_source.contains("DreadboundAudioDirector"))
 	var audio_panel_source := FileAccess.get_file_as_string("res://scripts/audio_settings_panel.gd")
 	assert(audio_panel_source.contains("InGameMusicToggle") and audio_panel_source.contains("InGameSfxToggle"))
 	var startup_source := FileAccess.get_file_as_string("res://scripts/startup.gd")
