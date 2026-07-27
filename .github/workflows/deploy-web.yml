@@ -28,10 +28,33 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Restore Godot build cache
+        uses: actions/cache@v4
+        with:
+          path: .ci-cache/godot-${{ env.GODOT_VERSION }}
+          key: godot-web-${{ runner.os }}-${{ env.GODOT_VERSION }}-v1
+
       - name: Download Godot and Web export templates
         run: |
-          curl -fL -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          curl -fL -o templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          set -euo pipefail
+          mkdir -p ".ci-cache/godot-${GODOT_VERSION}"
+          cache_dir=".ci-cache/godot-${GODOT_VERSION}"
+          download() {
+            local url="$1"
+            local destination="$2"
+            # GitHub's release CDN can reset a large transfer. Resume partial files
+            # and retry transient connection failures before failing the build.
+            curl --fail --location --continue-at - --retry 5 --retry-all-errors --retry-delay 5 \
+              --output "$destination" "$url"
+          }
+          if [ ! -s "$cache_dir/godot.zip" ]; then
+            download "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" "$cache_dir/godot.zip"
+          fi
+          if [ ! -s "$cache_dir/templates.tpz" ]; then
+            download "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" "$cache_dir/templates.tpz"
+          fi
+          cp "$cache_dir/godot.zip" godot.zip
+          cp "$cache_dir/templates.tpz" templates.tpz
           unzip -q godot.zip
           chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
