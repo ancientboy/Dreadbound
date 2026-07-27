@@ -94,6 +94,7 @@ var _direction := "front"
 var _ik_mode := IKDemoMode.FREE
 var _ik_blend := 0.0
 var _ik_targets := {}
+var _cast_orb_preview_enabled := true
 
 
 func _ready() -> void:
@@ -403,7 +404,7 @@ func _apply_ik_pose(_delta: float) -> void:
 	var recoil := sin((1.0 - _attack_weight) * PI) if _attack_weight > 0.0 else 0.0
 	var chest := Vector2(0.0, -235.0)
 	_ik_targets.clear()
-	_cast_orb.visible = _ik_mode == IKDemoMode.CAST
+	_cast_orb.visible = _ik_mode == IKDemoMode.CAST and _cast_orb_preview_enabled
 	_ik_weapon.visible = _ik_mode == IKDemoMode.PISTOL or _ik_mode == IKDemoMode.RIFLE
 	(_sprites["lantern"] as Sprite2D).visible = (
 		_ik_mode == IKDemoMode.FREE or _ik_mode == IKDemoMode.PISTOL
@@ -630,12 +631,23 @@ func current_direction() -> String:
 
 func set_ik_demo_mode(mode: IKDemoMode, immediate := false) -> void:
 	_ik_mode = mode
+	_cast_orb_preview_enabled = _ik_mode == IKDemoMode.CAST
 	if immediate:
 		_ik_blend = 0.0 if _ik_mode == IKDemoMode.FREE else 1.0
 	if _ik_mode == IKDemoMode.FREE:
 		(_sprites["lantern"] as Sprite2D).visible = true
 		_ik_weapon.visible = false
 		_cast_orb.visible = false
+
+
+func set_cast_orb_preview_enabled(enabled: bool) -> void:
+	_cast_orb_preview_enabled = enabled
+	if not enabled:
+		_cast_orb.visible = false
+
+
+func is_cast_orb_preview_enabled() -> bool:
+	return _cast_orb_preview_enabled
 
 
 func current_ik_demo_mode() -> IKDemoMode:
