@@ -112,6 +112,10 @@ var _touch_direction := Vector2.ZERO
 var _hub_action_touch := -1
 var mobile_terminal_panel: ColorRect
 var curator_offer_box: VBoxContainer
+var curator_contract_panel: ColorRect
+var curator_contract_content: VBoxContainer
+var audio_settings_button: Button
+var audio_settings_panel: DreadboundAudioSettingsPanel
 var style_buttons := {}
 var avatar_buttons := {}
 var hub_navigation: GridContainer
@@ -161,6 +165,7 @@ func _ready() -> void:
 	_create_run_archive_panel()
 	_create_human_mirror_panel()
 	_create_mobile_terminal_panel()
+	_create_curator_contract_panel()
 	_create_curator_controls()
 	_create_respec_control()
 	_create_style_controls()
@@ -169,6 +174,7 @@ func _ready() -> void:
 	_create_hub_navigation()
 	_create_section_panel()
 	_create_milestone_feedback()
+	_create_audio_settings()
 	_refresh()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
@@ -223,6 +229,9 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	$HubTitle.size = Vector2(maxf(260.0, viewport_size.x - inset * 2.0 - 224.0), 48)
 	$OpenArchive.position = Vector2(viewport_size.x - inset - 202.0, 24)
 	$OpenArchive.size = Vector2(202, 48)
+	if audio_settings_button:
+		audio_settings_button.position = Vector2(viewport_size.x - inset - 518.0, 24)
+		audio_settings_button.size = Vector2(92, 48)
 	if open_mirror_button:
 		open_mirror_button.position = Vector2(viewport_size.x - inset - 414.0, 24)
 		open_mirror_button.size = Vector2(202, 48)
@@ -239,6 +248,7 @@ func _apply_responsive_ui(override_size := Vector2.ZERO) -> void:
 	_layout_warehouse(viewport_size)
 	_layout_salvage_reward(viewport_size)
 	_layout_run_archive(viewport_size)
+	_layout_curator_contract_panel(viewport_size)
 	_layout_hub_navigation(viewport_size)
 	_layout_section_panel(viewport_size)
 	queue_redraw()
@@ -347,8 +357,31 @@ func _layout_run_archive(viewport_size: Vector2) -> void:
 	close.size = Vector2(230, 48)
 
 
+func _layout_curator_contract_panel(viewport_size: Vector2) -> void:
+	if curator_contract_panel == null:
+		return
+	# This panel is opened from the Curator, not from the terminal.  Reserve a
+	# clear bottom inset even if a caller forgets to hide navigation.
+	var panel_size := Vector2(minf(680.0, viewport_size.x - 32.0), minf(540.0, viewport_size.y - 64.0))
+	curator_contract_panel.size = panel_size
+	curator_contract_panel.position = Vector2((viewport_size.x - panel_size.x) * 0.5, maxf(20.0, (viewport_size.y - panel_size.y) * 0.42))
+	var title := curator_contract_panel.get_node("Title") as Label
+	title.position = Vector2(24, 18)
+	title.size = Vector2(panel_size.x - 48, 40)
+	var hint := curator_contract_panel.get_node("Hint") as Label
+	hint.position = Vector2(28, 62)
+	hint.size = Vector2(panel_size.x - 56, 40)
+	var scroll := curator_contract_panel.get_node("Scroll") as ScrollContainer
+	scroll.position = Vector2(24, 108)
+	scroll.size = Vector2(panel_size.x - 48, panel_size.y - 174)
+	curator_contract_content.custom_minimum_size = Vector2(panel_size.x - 76, 0)
+	var close := curator_contract_panel.get_node("Close") as Button
+	close.position = Vector2((panel_size.x - 220) * 0.5, panel_size.y - 56)
+	close.size = Vector2(220, 42)
+
+
 func _process(delta: float) -> void:
-	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible):
+	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible) or (curator_contract_panel and curator_contract_panel.visible):
 		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if _move_touch != -1:
@@ -372,7 +405,11 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible) or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible):
+	if event.is_action_pressed("ui_cancel"):
+		if _close_top_surface():
+			get_viewport().set_input_as_handled()
+			return
+	if _terminal_is_open() or (warehouse_panel and warehouse_panel.visible) or (run_archive_panel and run_archive_panel.visible) or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible) or (curator_contract_panel and curator_contract_panel.visible):
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.distance_to(_hub_action_center()) <= 76.0:
@@ -416,9 +453,7 @@ func _nearby_target() -> Dictionary:
 func _activate_target(id: String) -> void:
 	match id:
 		"curator":
-			var trial := GameState.get_curator_trial()
-			feedback.text = "%s\n%s" % [str(GameState.player_profile.get("last_observation", "尚无足够行动数据。")), "当前试炼：%s · %s" % [trial.title, trial.description] if not trial.is_empty() else "尚未采纳试炼；可在终端档案区选择。"]
-			_open_terminal()
+			_open_curator_contract_panel()
 		"terminal": _open_terminal()
 		"sanatorium_gate": _deploy_world("sanatorium")
 		"metro_gate": _deploy_world("metro")
@@ -740,6 +775,20 @@ func _draw_walker_fallback(position: Vector2) -> void:
 	draw_circle(position + Vector2(-12, -25), 3.0, Color("59e1e6"))
 
 
+func _create_audio_settings() -> void:
+	audio_settings_button = Button.new()
+	audio_settings_button.name = "OpenCorridorAudioSettings"
+	audio_settings_button.text = "声音"
+	audio_settings_button.tooltip_text = "音乐与音效设置"
+	audio_settings_button.add_theme_font_override("font", UI_FONT)
+	audio_settings_button.add_theme_font_size_override("font_size", 16)
+	audio_settings_button.pressed.connect(func(): audio_settings_panel.toggle())
+	add_child(audio_settings_button)
+	audio_settings_panel = DreadboundAudioSettingsPanel.new()
+	add_child(audio_settings_panel)
+	audio_settings_panel.configure(UI_FONT)
+
+
 func _open_terminal() -> void:
 	$Background.color = Color(0.004, 0.024, 0.021, 0.985)
 	$Margin.visible = not _is_portrait()
@@ -751,6 +800,8 @@ func _open_terminal() -> void:
 	$HubTitle.visible = false
 	$HubHint.visible = false
 	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = false
 	queue_redraw()
 
 
@@ -764,6 +815,8 @@ func _close_terminal() -> void:
 	$HubTitle.visible = true
 	$HubHint.visible = true
 	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = true
 	queue_redraw()
 
 
@@ -1189,6 +1242,98 @@ func _create_mobile_terminal_panel() -> void:
 	add_child(mobile_terminal_panel)
 
 
+func _create_curator_contract_panel() -> void:
+	curator_contract_panel = ColorRect.new()
+	curator_contract_panel.name = "CuratorContractPanel"
+	curator_contract_panel.color = Color(0.006, 0.032, 0.029, 0.995)
+	curator_contract_panel.visible = false
+	curator_contract_panel.z_index = 320
+	add_child(curator_contract_panel)
+	var title := Label.new()
+	title.name = "Title"
+	title.text = "阈值司仪 · 本次契约"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 27)
+	title.add_theme_color_override("font_color", Color("79ead2"))
+	curator_contract_panel.add_child(title)
+	var hint := Label.new()
+	hint.name = "Hint"
+	hint.text = "仅选择本次投送的规则与奖励；装备、职业和档案请使用底部独立入口。"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 15)
+	hint.add_theme_color_override("font_color", Color("9cc6bb"))
+	curator_contract_panel.add_child(hint)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.clip_contents = true
+	curator_contract_panel.add_child(scroll)
+	curator_contract_content = VBoxContainer.new()
+	curator_contract_content.name = "Content"
+	curator_contract_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(curator_contract_content)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "返回回廊"
+	close.pressed.connect(_close_curator_contract_panel)
+	curator_contract_panel.add_child(close)
+
+
+func _open_curator_contract_panel() -> void:
+	_close_hub_surfaces()
+	_refresh_curator_contract_panel()
+	curator_contract_panel.visible = true
+	if hub_navigation:
+		hub_navigation.visible = false
+	$HubTitle.visible = false
+	$HubHint.visible = false
+	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = false
+	_layout_curator_contract_panel(get_viewport_rect().size)
+
+
+func _close_curator_contract_panel() -> void:
+	if curator_contract_panel:
+		curator_contract_panel.visible = false
+	if hub_navigation:
+		hub_navigation.visible = true
+	$HubTitle.visible = true
+	$HubHint.visible = true
+	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = true
+
+
+func _refresh_curator_contract_panel() -> void:
+	if curator_contract_content == null:
+		return
+	for child in curator_contract_content.get_children():
+		child.queue_free()
+	var active := GameState.get_curator_trial()
+	if not active.is_empty():
+		var active_label := Label.new()
+		active_label.text = "已采纳\n%s\n规则：%s\n奖励：%s" % [str(active.title), str(active.get("rule_text", "")), str(active.reward_text)]
+		active_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		active_label.add_theme_font_size_override("font_size", 18)
+		active_label.add_theme_color_override("font_color", Color("b8eee0"))
+		curator_contract_content.add_child(active_label)
+		var defer := Button.new()
+		defer.custom_minimum_size = Vector2(0, 52)
+		defer.text = "暂缓当前契约"
+		defer.pressed.connect(_dismiss_trial)
+		curator_contract_content.add_child(defer)
+		return
+	for offer in GameState.get_curator_contract_offers():
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 82)
+		button.text = "%s  ·  %s\n%s\n规则：%s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", ""))]
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
+		curator_contract_content.add_child(button)
+
+
 func _create_curator_controls() -> void:
 	var archive := $Margin/Layout/Columns/Archive as VBoxContainer
 	curator_offer_box = VBoxContainer.new()
@@ -1288,6 +1433,8 @@ func _refresh_curator_offers() -> void:
 func _choose_curator_contract(trial_id: String) -> void:
 	feedback.text = "阈值司仪：契约已写入本次投送。规则、代价与奖励均可在行动前查看。" if GameState.choose_curator_contract(trial_id) else "该契约已失效；请重新查看司仪档案。"
 	_refresh()
+	if curator_contract_panel and curator_contract_panel.visible:
+		_refresh_curator_contract_panel()
 
 
 func _refresh_mobile_terminal() -> void:
@@ -1513,6 +1660,8 @@ func _accept_trial() -> void:
 func _dismiss_trial() -> void:
 	feedback.text = "阈值司仪：已暂缓该方向，不会重复强制提示。" if GameState.dismiss_curator_trial() else "当前没有可暂缓的试炼。"
 	_refresh()
+	if curator_contract_panel and curator_contract_panel.visible:
+		_refresh_curator_contract_panel()
 
 
 func _reset_curator_profile() -> void:
@@ -1626,8 +1775,38 @@ func _close_hub_surfaces() -> void:
 		mirror_panel.visible = false
 	if section_panel:
 		section_panel.visible = false
+	if curator_contract_panel:
+		curator_contract_panel.visible = false
 	if _terminal_is_open():
 		_close_terminal()
+
+
+func _close_top_surface() -> bool:
+	if audio_settings_panel and audio_settings_panel.visible:
+		audio_settings_panel.hide()
+		return true
+	if curator_contract_panel and curator_contract_panel.visible:
+		_close_curator_contract_panel()
+		return true
+	if salvage_reward_panel and salvage_reward_panel.visible:
+		salvage_reward_panel.visible = false
+		return true
+	if warehouse_panel and warehouse_panel.visible:
+		warehouse_panel.visible = false
+		return true
+	if run_archive_panel and run_archive_panel.visible:
+		run_archive_panel.visible = false
+		return true
+	if mirror_panel and mirror_panel.visible:
+		mirror_panel.visible = false
+		return true
+	if section_panel and section_panel.visible:
+		section_panel.visible = false
+		return true
+	if _terminal_is_open():
+		_close_terminal()
+		return true
+	return false
 
 
 func _open_hub_section(section: String) -> void:

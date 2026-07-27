@@ -26,6 +26,7 @@ func _run_test() -> void:
 	assert(not corridor.get_node("Margin").visible)
 	assert(not corridor.get_node("HubActions").visible)
 	assert(corridor.get_node("OpenArchive").visible)
+	assert(corridor.get_node("OpenCorridorAudioSettings").visible)
 	corridor._open_run_archive()
 	assert(not corridor.run_archive_panel.visible)
 	corridor.walker_position = corridor.TERMINAL_POSITION
@@ -46,6 +47,13 @@ func _run_test() -> void:
 	corridor._close_terminal()
 	assert(not corridor.get_node("Margin").visible)
 	assert(not corridor.get_node("HubActions").visible)
+	corridor._activate_target("curator")
+	assert(corridor.curator_contract_panel.visible)
+	assert(not corridor.get_node("Margin").visible)
+	assert(not corridor.hub_navigation.visible)
+	corridor._close_top_surface()
+	assert(not corridor.curator_contract_panel.visible)
+	assert(corridor.hub_navigation.visible)
 	corridor.walker_position = corridor.SANATORIUM_GATE_POSITION
 	await process_frame
 	assert(corridor._nearby_target().id == "sanatorium_gate")
@@ -79,5 +87,5 @@ func _run_test() -> void:
 	assert(archive_text.contains("末班导轨枪"))
 	assert(archive_text.contains("人性洞察"))
 	assert(archive_text.contains("下一集预告"))
-	print("Corridor hub test passed: terminal, warehouse, and two direct legendary gates")
+	print("Corridor hub test passed: terminal, curator contracts, warehouse, and two direct legendary gates")
 	quit()
