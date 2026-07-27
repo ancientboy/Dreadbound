@@ -55,7 +55,7 @@ func _run_test() -> void:
 	assert(camera != null)
 	assert(camera.position_smoothing_enabled)
 	assert(player.movement_speed == 210.0)
-	assert(player.attack_damage == 35)
+	assert(player.attack_damage == 38) # 35 baseline + the demo crowbar's real +3 bonus.
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
 	var rig := player.get_node("LayeredSkeletonRig") as LayeredSkeletonCharacter
