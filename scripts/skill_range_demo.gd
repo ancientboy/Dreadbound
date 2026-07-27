@@ -136,8 +136,8 @@ func _apply_skill_hit() -> void:
 	var impact_point := _cast_endpoint
 	var radius := 82.0
 	if _mode == SkillMode.CLOSE_BURST:
-		impact_point = _cast_origin + _cast_direction * skill_range() * 0.58
-		radius = 92.0
+		impact_point = effect_anchor()
+		radius = 84.0
 	elif _mode == SkillMode.LONG_RIFT:
 		radius = 108.0
 	for target in _targets:
@@ -163,7 +163,7 @@ func trigger_skill() -> bool:
 	_phase_time = 0.0
 	_hit_applied = false
 	_cooldown_left = float(SKILLS[_mode].cooldown)
-	_rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST)
+	_apply_skill_cast_pose()
 	_player._attack_flash = maxf(_player._attack_flash, 0.08)
 	queue_redraw()
 	return true
@@ -171,8 +171,18 @@ func trigger_skill() -> bool:
 
 func set_skill_mode(mode: SkillMode) -> void:
 	_mode = mode
-	_rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST)
+	_phase = "idle"
+	_phase_time = 0.0
+	_hit_applied = false
+	_apply_skill_cast_pose()
 	queue_redraw()
+
+
+func _apply_skill_cast_pose() -> void:
+	_rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST)
+	# CAST's cyan polygon is only an IK target preview. Real skills use their own
+	# atlas animation below, so keeping it visible made every mode look identical.
+	_rig.set_cast_orb_preview_enabled(false)
 
 
 func current_skill_mode() -> SkillMode:
@@ -204,6 +214,34 @@ func phase_progress() -> float:
 
 func cast_endpoint() -> Vector2:
 	return _cast_endpoint
+
+
+func effect_anchor() -> Vector2:
+	match _mode:
+		SkillMode.CLOSE_BURST:
+			return _cast_origin + _cast_direction * skill_range() * 0.78
+		SkillMode.MID_BOLT:
+			return _cast_origin + _cast_direction * 58.0
+		SkillMode.LONG_RIFT:
+			return _cast_endpoint
+	return _cast_origin
+
+
+func uses_distinct_effect_anchors() -> bool:
+	var close_anchor := (
+		_cast_origin
+		+ _cast_direction * float(SKILLS[SkillMode.CLOSE_BURST].range) * 0.78
+	)
+	var mid_anchor := _cast_origin + _cast_direction * 58.0
+	var long_anchor := (
+		_cast_origin
+		+ _cast_direction * float(SKILLS[SkillMode.LONG_RIFT].range)
+	)
+	return (
+		close_anchor.distance_to(_cast_origin) > 120.0
+		and mid_anchor.distance_to(_cast_origin) < 80.0
+		and long_anchor.distance_to(_cast_origin) >= 590.0
+	)
 
 
 func uses_existing_skill_atlases() -> bool:
@@ -283,16 +321,23 @@ func _draw_targets() -> void:
 
 
 func _draw_close_burst() -> void:
-	var spec: Dictionary = SKILLS[_mode]
 	var progress := phase_progress()
-	var center := _cast_origin + _cast_direction * float(spec.range) * 0.55
+	var center := effect_anchor()
 	if _phase == "windup":
-		var charge_size := lerpf(34.0, 74.0, progress)
+		var charge_size := lerpf(28.0, 58.0, progress)
 		_draw_atlas_cell(STEADFAST_ATLAS, 0, 0, center, charge_size, progress * 0.2)
-		draw_arc(center, 48.0, -0.7, 0.7, 20, Color(0.55, 0.9, 1.0, 0.65), 2.0)
+		draw_arc(
+			_cast_origin,
+			skill_range() * 0.72,
+			_cast_direction.angle() - 0.62,
+			_cast_direction.angle() + 0.62,
+			24,
+			Color(1.0, 0.2, 0.42, 0.7),
+			3.0,
+		)
 	elif _phase == "active":
 		var frame := clampi(floori(progress * 4.0), 0, 3)
-		var size := lerpf(118.0, 224.0, progress)
+		var size := lerpf(92.0, 158.0, progress)
 		_draw_atlas_cell(
 			STEADFAST_ATLAS,
 			frame,
@@ -304,9 +349,9 @@ func _draw_close_burst() -> void:
 		)
 		draw_arc(
 			_cast_origin,
-			float(spec.range) * (0.55 + progress * 0.45),
-			_cast_direction.angle() - 0.72,
-			_cast_direction.angle() + 0.72,
+			skill_range() * (0.72 + progress * 0.28),
+			_cast_direction.angle() - 0.62,
+			_cast_direction.angle() + 0.62,
 			32,
 			Color(1.0, 0.2, 0.42, 0.68 * (1.0 - progress)),
 			5.0,
@@ -315,12 +360,19 @@ func _draw_close_burst() -> void:
 
 func _draw_mid_bolt() -> void:
 	var progress := phase_progress()
+	var muzzle := effect_anchor()
 	if _phase == "windup":
-		var muzzle := _cast_origin + _cast_direction * 48.0
-		_draw_atlas_cell(ARMORER_ATLAS, 1, 0, muzzle, lerpf(46.0, 92.0, progress), _cast_direction.angle())
+		_draw_atlas_cell(
+			ARMORER_ATLAS,
+			1,
+			0,
+			muzzle,
+			lerpf(34.0, 68.0, progress),
+			_cast_direction.angle(),
+		)
 	elif _phase == "active":
 		var eased := 1.0 - pow(1.0 - progress, 2.4)
-		var projectile := _cast_origin.lerp(_cast_endpoint, eased)
+		var projectile := muzzle.lerp(_cast_endpoint, eased)
 		for index in range(4):
 			var trail_position := projectile - _cast_direction * float(index + 1) * 24.0
 			_draw_atlas_cell(
@@ -332,7 +384,7 @@ func _draw_mid_bolt() -> void:
 				_cast_direction.angle(),
 				Color(1.0, 1.0, 1.0, 0.62 - index * 0.11),
 			)
-		draw_line(_cast_origin + _cast_direction * 42.0, projectile, Color(1.0, 0.5, 0.2, 0.48), 3.0)
+		draw_line(muzzle, projectile, Color(1.0, 0.5, 0.2, 0.48), 3.0)
 		if progress > 0.82:
 			_draw_atlas_cell(
 				ARMORER_ATLAS,
@@ -366,8 +418,6 @@ func _draw_long_rift() -> void:
 			Color("8e8cff"),
 			4.0,
 		)
-		var orb := _cast_origin.lerp(_cast_endpoint, progress * 0.26)
-		_draw_atlas_cell(RESONANT_ATLAS, 2, 1, orb, 66.0 + progress * 34.0, progress * 1.8)
 	elif _phase == "active":
 		var frame := clampi(floori(progress * 4.0), 0, 3)
 		_draw_atlas_cell(
@@ -378,7 +428,11 @@ func _draw_long_rift() -> void:
 			lerpf(156.0, 254.0, sin(progress * PI)),
 			0.0,
 		)
-		draw_circle(_cast_endpoint, 92.0 * progress, Color(0.16, 0.12, 0.5, 0.26 * (1.0 - progress)))
+		draw_circle(
+			_cast_endpoint,
+			92.0 * progress,
+			Color(0.16, 0.12, 0.5, 0.26 * (1.0 - progress)),
+		)
 
 
 func _draw_atlas_cell(
