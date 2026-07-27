@@ -38,6 +38,8 @@ func _run_test() -> void:
 	assert(AudioServer.get_bus_index("Ambience") >= 0)
 	assert(AudioServer.get_bus_index("Combat") >= 0)
 	assert(AudioServer.get_bus_index("Creature") >= 0)
+	await process_frame
+	assert(director.get_tree().root.get_meta("dreadbound_audio_bound", false) == false, "Only UI buttons may receive audio bindings")
 	director.set_world("metro", true, true)
 	assert(director._music.stream == null and director._ambience.stream == null, "Web loops must wait for the first trusted interaction")
 	director.unlock()
@@ -51,6 +53,8 @@ func _run_test() -> void:
 	assert(not director.is_sfx_enabled())
 	assert(AudioServer.is_bus_mute(AudioServer.get_bus_index("UI")))
 	director.set_sfx_enabled(true)
+	director.play_sfx_preview()
+	assert(director._last_cue == "player_pistol", "Settings preview must route a real combat cue")
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	var fx_source := FileAccess.get_file_as_string("res://scripts/combat_fx.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
@@ -58,7 +62,9 @@ func _run_test() -> void:
 	assert(fx_source.contains("DreadboundAudioDirector"))
 	assert(main_source.contains("DreadboundAudioDirector"))
 	var startup_source := FileAccess.get_file_as_string("res://scripts/startup.gd")
-	assert(startup_source.contains("OpenAudioSettings") and startup_source.contains("MusicToggle") and startup_source.contains("SfxToggle"))
+	assert(startup_source.contains("OpenAudioSettings") and startup_source.contains("MusicToggle") and startup_source.contains("SfxToggle") and startup_source.contains("TestSfx"))
+	var director_source := FileAccess.get_file_as_string("res://scripts/audio_director.gd")
+	assert(director_source.contains("_bind_existing_buttons") and director_source.contains("_bind_buttons_under"))
 	director.queue_free()
 	await process_frame
 	print("O2 audio passed: routed loops, core SFX variants, combat styles and browser-safe director")
