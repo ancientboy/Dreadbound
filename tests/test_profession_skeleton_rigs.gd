@@ -15,11 +15,49 @@ func _init() -> void:
 
 func _run_test() -> void:
 	assert(ProfessionSkeletonCharacter.STYLE_IDS.size() == 12)
-	assert(ProfessionSkeletonCharacter.PROFESSION_PROFILES.size() == 3)
+	assert(ProfessionSkeletonCharacter.BASE_RIG_IDS.size() == 4)
+	assert(ProfessionSkeletonCharacter.PROFESSION_PROFILES.size() == 4)
 	var state := root.get_node("GameState") as GameProgress
 	var scene := load("res://scenes/entities/player.tscn") as PackedScene
 	assert(scene != null)
 	var tested_directions := 0
+	var base_cases := {
+		"base_drifter": ["", "drifter"],
+		"base_steadfast": ["steadfast", "steadfast"],
+		"base_armorer": ["armorer", "armorer"],
+		"base_resonant": ["resonant", "resonant"],
+	}
+	for rig_id in base_cases:
+		var base_case: Array = base_cases[rig_id]
+		state.selected_pathway = str(base_case[0])
+		state.active_combat_style = ""
+		assert(ProfessionSkeletonCharacter.has_rig(rig_id))
+		_assert_generic_asset_contract(rig_id)
+		var base_player := scene.instantiate() as Player
+		root.add_child(base_player)
+		for frame in range(10):
+			await process_frame
+		var base_rig := (
+			base_player.get_node("ProfessionSkeletonRig")
+			as ProfessionSkeletonCharacter
+		)
+		assert(base_rig != null and base_rig.visible, "missing base rig: %s" % rig_id)
+		assert(base_rig.current_rig_id() == rig_id)
+		assert(base_rig.current_profession_id() == str(base_case[1]))
+		assert(not base_player._body_sprite.visible)
+		assert(base_rig.has_split_body_parts())
+		assert(base_rig.uses_runtime_equipment_only())
+		_assert_walk_cycle(base_player, base_rig, rig_id)
+		for facing in FACINGS:
+			base_player.facing = facing
+			await process_frame
+			tested_directions += 1
+			assert(
+				base_rig.current_direction()
+					== LayeredSkeletonCharacter.direction_from_facing(facing)
+			)
+		base_player.free()
+
 	for style_id in ProfessionSkeletonCharacter.STYLE_IDS:
 		var definition: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
 		state.selected_pathway = str(definition.path)
@@ -80,9 +118,10 @@ func _run_test() -> void:
 			await process_frame
 		player.free()
 
-	assert(tested_directions == 48)
+	assert(tested_directions == 64)
 	print(
-		"Profession skeleton rigs passed: 12 split bodies, 48 directions, "
+		"Profession skeleton rigs passed: 4 base and 12 style split bodies, "
+		+ "64 directions, "
 		+ "three weapon IK modes and cast IK"
 	)
 	quit()

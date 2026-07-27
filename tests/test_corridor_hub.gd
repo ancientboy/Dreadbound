@@ -8,14 +8,38 @@ func _run_test() -> void:
 	var state := root.get_node("GameState") as GameProgress
 	var original_pathway := state.selected_pathway
 	var original_style := state.active_combat_style
+	state.selected_pathway = ""
+	state.active_combat_style = ""
 	var corridor = load("res://scenes/corridor.tscn").instantiate()
 	root.add_child(corridor)
-	await process_frame
+	for frame in range(4):
+		await process_frame
+	assert(corridor.walker_avatar != null)
+	var hub_rig := corridor.walker_avatar.get_node("ProfessionSkeletonRig") as ProfessionSkeletonCharacter
+	assert(hub_rig != null and hub_rig.visible)
+	assert(hub_rig.current_rig_id() == "base_drifter")
+	assert(not corridor.walker_avatar._body_sprite.visible)
+	assert(hub_rig.has_split_body_parts())
+	corridor.set_process(false)
+	corridor.walker_velocity = Vector2.RIGHT * corridor.WALK_SPEED
+	corridor.walker_facing = Vector2.RIGHT
+	corridor.walk_phase = TAU * 0.25
+	corridor._sync_walker_avatar()
+	assert(corridor.walker_avatar.velocity.length() > 2.0)
+	hub_rig._process(1.0 / 30.0)
+	assert(hub_rig.walk_pose_signature()[0] != 0.0)
+	corridor.walker_velocity = Vector2.ZERO
+	corridor._sync_walker_avatar()
+	corridor.set_process(true)
 	state.selected_pathway = "armorer"
 	state.active_combat_style = ""
 	assert(corridor._walker_body_texture().resource_path.ends_with("armorer_spritesheet.png"))
+	await process_frame
+	assert(hub_rig.current_rig_id() == "base_armorer")
 	state.active_combat_style = "heavy_suppression"
 	assert(corridor._walker_body_texture().resource_path.ends_with("heavy_suppression_spritesheet.png"))
+	await process_frame
+	assert(hub_rig.current_rig_id() == "heavy_suppression")
 	state.active_combat_style = ""
 	state.selected_pathway = original_pathway
 	state.active_combat_style = original_style
@@ -45,8 +69,16 @@ func _run_test() -> void:
 	assert(not corridor.get_node("HubActions").visible)
 	corridor._activate_target("curator")
 	assert(corridor.curator_contract_panel.visible)
+	assert(corridor.curator_contract_content.get_child_count() > 0)
 	assert(not corridor.get_node("Margin").visible)
 	assert(not corridor.hub_navigation.visible)
+	state.player_profile.active_trial = ""
+	state.player_profile.completed_trials = GameProgress.CURATOR_TRIALS.keys()
+	state.player_profile.dismissed_trials = []
+	state.player_profile.trial_reward_claims = []
+	corridor._refresh_curator_contract_panel()
+	await process_frame
+	assert(_tree_text(corridor.curator_contract_content).contains("本轮暂无可选契约"))
 	corridor._close_top_surface()
 	assert(not corridor.curator_contract_panel.visible)
 	assert(corridor.hub_navigation.visible)
@@ -85,3 +117,12 @@ func _run_test() -> void:
 	assert(archive_text.contains("下一集预告"))
 	print("Corridor hub test passed: terminal, curator contracts, warehouse, and two direct legendary gates")
 	quit()
+
+
+func _tree_text(node: Node) -> String:
+	var lines: Array[String] = []
+	if node is Label or node is Button:
+		lines.append(str(node.text))
+	for child in node.get_children():
+		lines.append(_tree_text(child))
+	return "\n".join(lines)

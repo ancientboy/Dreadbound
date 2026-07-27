@@ -16,6 +16,18 @@ const STYLE_IDS := [
 	"echo_summoner",
 	"aberrant_form",
 ]
+const BASE_RIG_IDS := [
+	"base_drifter",
+	"base_steadfast",
+	"base_armorer",
+	"base_resonant",
+]
+const BASE_RIG_BY_PATHWAY := {
+	"": "base_drifter",
+	"steadfast": "base_steadfast",
+	"armorer": "base_armorer",
+	"resonant": "base_resonant",
+}
 const GENERIC_PART_FILES := {
 	"head": "head",
 	"torso": "torso",
@@ -31,6 +43,15 @@ const GENERIC_PART_FILES := {
 	"coat_far": "coat_far",
 }
 const PROFESSION_PROFILES := {
+	"drifter": {
+		"visual_scale": 0.128,
+		"stride": 0.94,
+		"weight": 0.78,
+		"coat_sway": 1.0,
+		"recoil": 0.9,
+		"weapon": Color("879b8e"),
+		"grip": Color("252c29"),
+	},
 	"steadfast": {
 		"visual_scale": 0.125,
 		"stride": 0.78,
@@ -60,7 +81,7 @@ const PROFESSION_PROFILES := {
 	},
 }
 
-var _style_id := ""
+var _rig_id := ""
 var _rig_available := false
 var _profession_id := "steadfast"
 var _profile: Dictionary = PROFESSION_PROFILES["steadfast"]
@@ -68,8 +89,8 @@ var _profile: Dictionary = PROFESSION_PROFILES["steadfast"]
 
 func _ready() -> void:
 	ik_demo_enabled = false
-	_style_id = _active_style()
-	_rig_available = has_style_rig(_style_id)
+	_rig_id = _active_rig_id()
+	_rig_available = has_rig(_rig_id)
 	visible = _rig_available
 	if not _rig_available:
 		for child in find_children("*", "Bone2D"):
@@ -83,10 +104,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var next_style := _active_style()
-	if next_style != _style_id:
-		_style_id = next_style
-		_rig_available = has_style_rig(_style_id)
+	var next_rig := _active_rig_id()
+	if next_rig != _rig_id:
+		_rig_id = next_rig
+		_rig_available = has_rig(_rig_id)
 		visible = _rig_available
 		set_process(_rig_available)
 		if not _rig_available:
@@ -102,34 +123,53 @@ func _process(delta: float) -> void:
 	(_sprites["lantern"] as Sprite2D).visible = false
 
 
-func _active_style() -> String:
+func _active_rig_id() -> String:
 	var state := get_node_or_null("/root/GameState")
-	return str(state.active_combat_style) if state != null else ""
+	if state == null:
+		return "base_drifter"
+	var selected_style := str(state.active_combat_style)
+	if selected_style in STYLE_IDS:
+		return selected_style
+	# Initial progression has four deliberate designs: an unbound drifter and
+	# one base skeleton for each pathway. Never borrow a combat-style body here.
+	return str(BASE_RIG_BY_PATHWAY.get(
+		str(state.selected_pathway),
+		"base_drifter",
+	))
 
 
 static func has_style_rig(style_id: String) -> bool:
 	if style_id.is_empty() or style_id not in STYLE_IDS:
 		return false
-	if style_id == "sacrifice_medic":
+	return has_rig(style_id)
+
+
+static func has_rig(rig_id: String) -> bool:
+	if rig_id not in STYLE_IDS and rig_id not in BASE_RIG_IDS:
+		return false
+	if rig_id == "sacrifice_medic":
 		return true
 	return FileAccess.file_exists(
-		"%s/%s/atlas.png" % [RIG_ROOT, style_id]
+		"%s/%s/atlas.png" % [RIG_ROOT, rig_id]
 	) and FileAccess.file_exists(
-		"%s/%s/front/rig.json" % [RIG_ROOT, style_id]
+		"%s/%s/front/rig.json" % [RIG_ROOT, rig_id]
 	)
 
 
 func _apply_profession_profile() -> void:
-	var definition: Dictionary = ExchangeEvolution.COMBAT_STYLES.get(
-		_style_id, {}
-	)
-	_profession_id = str(definition.get("path", "steadfast"))
+	if _rig_id.begins_with("base_"):
+		_profession_id = _rig_id.trim_prefix("base_")
+	else:
+		var definition: Dictionary = ExchangeEvolution.COMBAT_STYLES.get(
+			_rig_id, {}
+		)
+		_profession_id = str(definition.get("path", "drifter"))
 	_profile = PROFESSION_PROFILES.get(
-		_profession_id, PROFESSION_PROFILES["steadfast"]
+		_profession_id, PROFESSION_PROFILES["drifter"]
 	)
 	visual_scale = (
 		0.055
-		if _style_id == "sacrifice_medic"
+		if _rig_id == "sacrifice_medic"
 		else float(_profile["visual_scale"])
 	)
 	scale = Vector2.ONE * visual_scale
@@ -139,13 +179,13 @@ func _apply_profession_profile() -> void:
 
 
 func _asset_root() -> String:
-	if _style_id == "sacrifice_medic":
+	if _rig_id == "sacrifice_medic":
 		return ASSET_ROOT
-	return "%s/%s" % [RIG_ROOT, _style_id]
+	return "%s/%s" % [RIG_ROOT, _rig_id]
 
 
 func _apply_direction_assets(direction: String) -> void:
-	var legacy_medic := _style_id == "sacrifice_medic"
+	var legacy_medic := _rig_id == "sacrifice_medic"
 	var manifest: Dictionary = {}
 	var atlas: Texture2D
 	if not legacy_medic:
@@ -186,7 +226,7 @@ func _apply_direction_assets(direction: String) -> void:
 
 
 func _layout_rig(direction: String) -> void:
-	if _style_id == "sacrifice_medic":
+	if _rig_id == "sacrifice_medic":
 		super._layout_rig(direction)
 		return
 	_layout_manifest_rig(direction)
@@ -421,6 +461,10 @@ func _hide_frame_sprite() -> void:
 
 func current_profession_id() -> String:
 	return _profession_id
+
+
+func current_rig_id() -> String:
+	return _rig_id
 
 
 func has_split_body_parts() -> bool:

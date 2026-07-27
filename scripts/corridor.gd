@@ -30,6 +30,7 @@ const COMBAT_STYLE_SPRITESHEETS := {
 	"aberrant_form": preload("res://assets/art/characters/professions/styles/aberrant_form_spritesheet.png"),
 }
 const THRESHOLD_CURATOR_SPRITESHEET: Texture2D = preload("res://assets/art/characters/corridor/threshold_curator_spritesheet.png")
+const HUB_WALKER_SCENE: PackedScene = preload("res://scenes/entities/player.tscn")
 const EQUIPMENT_ICONS := {
 	"service_crowbar": preload("res://assets/art/icons/equipment/service_crowbar.png"),
 	"balanced_pistol": preload("res://assets/art/icons/equipment/balanced_pistol.png"),
@@ -108,6 +109,7 @@ var walker_position := Vector2(640, 585)
 var walker_velocity := Vector2.ZERO
 var walker_facing := Vector2.RIGHT
 var walk_phase := 0.0
+var walker_avatar: Player
 var _move_touch := -1
 var _touch_origin := Vector2.ZERO
 var _touch_direction := Vector2.ZERO
@@ -177,6 +179,7 @@ func _ready() -> void:
 	_create_audio_settings()
 	_apply_hub_ui_chrome()
 	_refresh()
+	_create_walker_avatar()
 	if GameState.pathway_migration_refund > 0:
 		feedback.text = "已修复旧档中的跨职业节点，并全额返还 %d 回响碎片。当前仅保留%s路线。" % [GameState.pathway_migration_refund, GameState.get_pathway_name()]
 	if not GameState.corridor_intro_seen:
@@ -382,6 +385,8 @@ func _layout_curator_contract_panel(viewport_size: Vector2) -> void:
 
 func _process(delta: float) -> void:
 	if _terminal_is_open() or warehouse_panel.visible or run_archive_panel.visible or (mirror_panel and mirror_panel.visible) or (section_panel and section_panel.visible) or (curator_contract_panel and curator_contract_panel.visible):
+		walker_velocity = Vector2.ZERO
+		_sync_walker_avatar()
 		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if _move_touch != -1:
@@ -394,10 +399,47 @@ func _process(delta: float) -> void:
 		walker_facing = direction.normalized()
 		walk_phase += delta * 13.0
 		queue_redraw()
+	_sync_walker_avatar()
 	var target := _nearby_target()
 	_update_hub_actions(target)
 	if Input.is_action_just_pressed("interact") and not target.is_empty():
 		_activate_target(target.id)
+
+
+func _create_walker_avatar() -> void:
+	if is_instance_valid(walker_avatar):
+		return
+	walker_avatar = HUB_WALKER_SCENE.instantiate() as Player
+	walker_avatar.name = "HubWalkerAvatar"
+	walker_avatar.set_physics_process(false)
+	walker_avatar.z_index = 40
+	var camera := walker_avatar.get_node_or_null("Camera2D") as Camera2D
+	if camera:
+		camera.enabled = false
+	var collision := walker_avatar.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collision:
+		collision.disabled = true
+	add_child(walker_avatar)
+	_sync_walker_avatar()
+
+
+func _sync_walker_avatar() -> void:
+	if not is_instance_valid(walker_avatar):
+		return
+	walker_avatar.position = walker_position
+	walker_avatar.facing = walker_facing
+	walker_avatar.velocity = walker_velocity
+	var target_speed := maxf(WALK_SPEED, 1.0)
+	var moving := walker_velocity.length() > 2.0
+	if moving:
+		# Reuse the hub's deterministic phase so the skeleton, footsteps and
+		# interaction position remain in lockstep.
+		walker_avatar._step_phase = fmod(walk_phase / TAU, 1.0)
+		walker_avatar._walk_animation_time = walk_phase / 13.0
+	else:
+		walker_avatar._idle_animation_time += get_process_delta_time()
+	# The formal rig reads movement_speed to normalize the walk blend.
+	walker_avatar.movement_speed = target_speed
 
 
 func _input(event: InputEvent) -> void:
@@ -645,32 +687,11 @@ func _draw() -> void:
 	# Each unlocked disaster world has a permanent, visible legendary gate.
 	_draw_legend_gate(SANATORIUM_GATE_POSITION, Color("5ce8cf"), "废弃疗养院", "医疗异化 · 供电撤离", 8)
 	_draw_legend_gate(METRO_GATE_POSITION, Color("6098f5"), "潮没末班线", "涨潮迷失 · 末班撤离", 9)
-	# The same O1 review slice is used in the hub and mission.
-	var bob := sin(walk_phase) * 3.0 if walker_velocity.length() > 2.0 else sin(Time.get_ticks_msec() * 0.002) * 1.2
-	var walker_row := 0
-	if absf(walker_facing.x) > absf(walker_facing.y):
-		walker_row = 2 if walker_facing.x > 0.0 else 1
-	elif walker_facing.y < 0.0:
-		walker_row = 3
-	var walker_frame := int(walk_phase / TAU * 6.0) % 6 if walker_velocity.length() > 2.0 else 0
-	var walker_spritesheet := _walker_body_texture()
-	if walker_spritesheet != null and walker_spritesheet.get_size() == Vector2(1536, 1024):
-		# Keep the feet pinned to the same hub position as the legacy 48×64 sprite.
-		# The larger destination rect preserves the high-detail silhouette instead
-		# of downsampling it into a pseudo-pixel character.
-		draw_texture_rect_region(
-			walker_spritesheet,
-			Rect2(walker_position + Vector2(-70, -132 + bob), Vector2(140, 140)),
-			Rect2(walker_frame * 256, walker_row * 256, 256, 256)
-		)
-	elif walker_spritesheet != null and walker_spritesheet.get_size() == Vector2(288, 256):
-		draw_texture_rect_region(
-			walker_spritesheet,
-			Rect2(walker_position + Vector2(-24, -58 + bob), Vector2(48, 64)),
-			Rect2(walker_frame * 48, walker_row * 64, 48, 64)
-		)
-	else:
-		_draw_walker_fallback(walker_position + Vector2(0, bob))
+	# The walker is a real Player + ProfessionSkeletonRig child. Do not paint a
+	# second frame-sprite body over it; that was the source of the visible glide
+	# in the shipped hub.
+	if not is_instance_valid(walker_avatar):
+		_draw_walker_fallback(walker_position)
 	for y in range(10, int(size.y), 8):
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.4, 0.8, 0.7, 0.012), 1.0)
 	if _terminal_is_open():
@@ -1334,6 +1355,7 @@ func _create_curator_contract_panel() -> void:
 	curator_contract_panel.add_child(scroll)
 	curator_contract_content = VBoxContainer.new()
 	curator_contract_content.name = "Content"
+	curator_contract_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	curator_contract_content.add_theme_constant_override("separation", 10)
 	scroll.add_child(curator_contract_content)
 	var close := Button.new()
@@ -1371,6 +1393,7 @@ func _refresh_curator_contract_panel() -> void:
 	if curator_contract_content == null:
 		return
 	for child in curator_contract_content.get_children():
+		curator_contract_content.remove_child(child)
 		child.queue_free()
 	var active := GameState.get_curator_trial()
 	if not active.is_empty():
@@ -1386,13 +1409,40 @@ func _refresh_curator_contract_panel() -> void:
 		defer.pressed.connect(_dismiss_trial)
 		curator_contract_content.add_child(defer)
 		return
-	for offer in GameState.get_curator_contract_offers():
+	var offers := GameState.get_curator_contract_offers()
+	for offer in offers:
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(0, 82)
 		button.text = "%s  ·  %s\n%s\n规则：%s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", ""))]
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
 		curator_contract_content.add_child(button)
+	if offers.is_empty():
+		var empty := Label.new()
+		empty.text = "本轮暂无可选契约。\n可能原因：当前世界的契约均已完成或暂缓。你仍可进入人性镜鉴查看行动证据，或重置司仪观察以重新生成契约。"
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color("b8eee0"))
+		curator_contract_content.add_child(empty)
+		var mirror := Button.new()
+		mirror.custom_minimum_size = Vector2(0, 54)
+		mirror.text = "查看人性镜鉴与行动证据"
+		mirror.pressed.connect(func():
+			_close_curator_contract_panel()
+			_open_human_mirror()
+		)
+		curator_contract_content.add_child(mirror)
+		var reset := Button.new()
+		reset.custom_minimum_size = Vector2(0, 54)
+		reset.text = "重置司仪观察并重新生成契约"
+		reset.pressed.connect(_reset_curator_profile)
+		curator_contract_content.add_child(reset)
+	call_deferred("_relayout_curator_contract_content")
+
+
+func _relayout_curator_contract_content() -> void:
+	if curator_contract_panel and curator_contract_panel.visible:
+		_layout_curator_contract_panel(get_viewport_rect().size)
 
 
 func _create_curator_controls() -> void:
@@ -1702,6 +1752,8 @@ func _reset_curator_profile() -> void:
 	GameState.reset_curator_profile()
 	feedback.text = "阈值司仪观察已重置；装备、货币与职业成长未改变。"
 	_refresh()
+	if curator_contract_panel and curator_contract_panel.visible:
+		_refresh_curator_contract_panel()
 
 
 func _respec_pathway() -> void:
