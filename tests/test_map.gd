@@ -17,6 +17,7 @@ func _run_test() -> void:
 	assert(fog.get_reveal_progress("entrance") == 1.0)
 	mission.player.global_position = Vector2(720, 800)
 	fog._process(fog.corridor_reveal_duration)
+	assert(fog.get_reveal_progress("west_hall") == 1.0)
 	assert(fog.get_world_reveal_at(Vector2(720, 800)) > 0.0)
 	assert(fog.get_world_reveal_at(Vector2(2200, 1360)) == 0.0)
 	mission.player.global_position = Vector2(672, 256)

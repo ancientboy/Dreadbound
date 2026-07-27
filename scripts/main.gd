@@ -1803,8 +1803,6 @@ func _draw_zones() -> void:
 	var room_index := 0
 	for room in SanatoriumLayout.rooms():
 		_draw_sanatorium_room(room.rect, room_index)
-		draw_rect(room.rect, Color("27332f"), false, 2.0)
-		draw_string(UI_FONT, room.rect.position + Vector2(24, 42), run_config.room_role(room_index), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("617269"))
 		room_index += 1
 
 
@@ -1837,7 +1835,8 @@ func _draw_sanatorium_wall(wall_rect: Rect2) -> void:
 				Rect2(2 * 32, 1 * 32, 32, 32),
 				Color(0.78, 0.8, 0.75, 0.94)
 			)
-	draw_rect(wall_rect, Color("6b766e"), false, 2.0)
+	# Tile detail supplies the edge.  A second bright rectangle made exterior
+	# collision walls read like debug geometry over the environment.
 
 
 func _draw_sanatorium_props() -> void:
@@ -1850,8 +1849,9 @@ func _draw_sanatorium_props() -> void:
 		[4, Vector2(568, 212), 96.0], [4, Vector2(712, 212), 96.0], [2, Vector2(844, 214), 88.0],
 		# Nurse station: one work island with a rear utility cabinet.
 		[6, Vector2(1080, 350), 108.0], [3, Vector2(1324, 350), 88.0],
-		# Archive: shelving is deliberately held against the back wall.
-		[8, Vector2(1760, 210), 96.0], [9, Vector2(2048, 210), 96.0],
+		# Archive: only a mobile cart remains; the cosmetic door is removed until
+		# it can become a real interactive doorway.
+		[9, Vector2(2048, 210), 96.0],
 		# Basement: machinery sits in the service bay rather than the travel lane.
 		[5, Vector2(1584, 1088), 104.0], [7, Vector2(2000, 1120), 88.0],
 		# Extraction retains a single clear landmark.
@@ -1865,9 +1865,12 @@ func _draw_sanatorium_lights() -> void:
 	if SANATORIUM_OBJECTIVE_LIGHTING == null or SANATORIUM_OBJECTIVE_LIGHTING.get_size() != Vector2(512, 256):
 		return
 	var placements := [
-		Vector2(520, 520), Vector2(920, 520), Vector2(1310, 520),
-		Vector2(1560, 720), Vector2(1900, 720), Vector2(1110, 960),
-		Vector2(660, 1120), Vector2(1650, 1180),
+		# Fluorescent fixtures are wall-mounted.  Keeping them at the top edge of
+		# a room prevents the light sprite from reading as a loose floor object.
+		Vector2(620, 154), Vector2(814, 154),
+		Vector2(1098, 306), Vector2(1302, 306),
+		Vector2(1810, 154), Vector2(2040, 154),
+		Vector2(1624, 980), Vector2(1980, 980), Vector2(216, 1054),
 	]
 	for center in placements:
 		draw_texture_rect_region(

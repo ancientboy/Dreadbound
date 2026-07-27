@@ -25,6 +25,8 @@ var _walk_animation_time := 0.0
 var _facing := Vector2.DOWN
 var _body_sprite: Sprite2D
 
+const PERSONAL_SPACE := 58.0
+
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -75,6 +77,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity = Vector2.ZERO
 	_sync_body_sprite(delta)
+	_avoid_enemy_overlap()
 	move_and_slide()
 
 
@@ -125,6 +128,19 @@ func _sync_body_sprite(delta: float) -> void:
 	_body_sprite.modulate = Color("ffb5ad") if _hurt_flash > 0.0 else Color.WHITE
 
 
+func _avoid_enemy_overlap() -> void:
+	var push := Vector2.ZERO
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if enemy == self or not (enemy is Node2D):
+			continue
+		var offset := global_position - (enemy as Node2D).global_position
+		var distance := offset.length()
+		if distance > 0.01 and distance < PERSONAL_SPACE:
+			push += offset / distance * (PERSONAL_SPACE - distance) * 2.8
+	if push.length() > 0.0:
+		velocity += push.limit_length(movement_speed * 0.68)
+
+
 func _draw() -> void:
 	var body := Color("a85a55") if _hurt_flash > 0.0 else Color("4e5955")
 	if _windup > 0.0:
@@ -138,7 +154,8 @@ func _draw() -> void:
 		draw_line(Vector2(18, -4), Vector2(34, 28), body, 10.0)
 	draw_rect(Rect2(-28, -59, 56, 5), Color("261b1a"))
 	draw_rect(Rect2(-28, -59, 56.0 * float(health) / max_health, 5), Color("9f3e38"))
-	draw_string(UI_FONT, Vector2(-50, 52), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 100, 13, Color("d89b76") if enemy_label == "检票员" else Color("9aa49e"))
+	if is_instance_valid(target) and global_position.distance_to(target.global_position) <= 152.0:
+		draw_string(UI_FONT, Vector2(-50, 52), enemy_label, HORIZONTAL_ALIGNMENT_CENTER, 100, 13, Color("d89b76") if enemy_label == "检票员" else Color("9aa49e"))
 
 
 func _get_combat_fx() -> CombatFX:
