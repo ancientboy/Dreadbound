@@ -37,7 +37,17 @@ func _run_test() -> void:
 	assert(state.equipment_inventory.has(reward_id))
 	assert(state.equip_item(reward_id))
 	var item := EquipmentDatabase.get_item(reward_id)
-	assert(state.equipped[EquipmentDatabase.equipment_slot(reward_id)] == reward_id)
+	var reward_slot := EquipmentDatabase.equipment_slot(reward_id)
+	if reward_slot == "weapon":
+		assert(
+			reward_id in [
+				state.equipped.weapon_1,
+				state.equipped.weapon_2,
+				state.equipped.weapon_3,
+			]
+		)
+	else:
+		assert(state.equipped[reward_slot] == reward_id)
 	state.equipment_inventory.append(reward_id)
 	var before_echo := state.echo_shards
 	var before_fragments := state.causality_fragments

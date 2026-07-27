@@ -6,6 +6,7 @@ enum IKDemoMode {
 	PISTOL,
 	RIFLE,
 	CAST,
+	MELEE,
 }
 
 const ASSET_ROOT := "res://assets/art/characters/professions/sacrifice_medic_rig"
@@ -401,18 +402,27 @@ func _apply_attack_pose() -> void:
 func _apply_ik_pose(_delta: float) -> void:
 	var aim := _aim_vector()
 	var side := Vector2(-aim.y, aim.x)
+	var rig_ratio := _rig_ratio()
 	var recoil := sin((1.0 - _attack_weight) * PI) if _attack_weight > 0.0 else 0.0
-	var chest := Vector2(0.0, -235.0)
+	var chest := Vector2(0.0, -235.0 * rig_ratio)
 	_ik_targets.clear()
 	_cast_orb.visible = _ik_mode == IKDemoMode.CAST and _cast_orb_preview_enabled
-	_ik_weapon.visible = _ik_mode == IKDemoMode.PISTOL or _ik_mode == IKDemoMode.RIFLE
+	_ik_weapon.visible = _ik_mode in [
+		IKDemoMode.PISTOL,
+		IKDemoMode.RIFLE,
+		IKDemoMode.MELEE,
+	]
 	(_sprites["lantern"] as Sprite2D).visible = (
 		_ik_mode == IKDemoMode.FREE or _ik_mode == IKDemoMode.PISTOL
 	)
 
 	match _ik_mode:
 		IKDemoMode.PISTOL:
-			var pistol_target := _right_upper_arm.position + aim * (190.0 - recoil * 22.0) + side * 24.0
+			var pistol_target := (
+				_right_upper_arm.position
+				+ aim * ((190.0 - recoil * 22.0) * rig_ratio)
+				+ side * 24.0 * rig_ratio
+			)
 			_apply_arm_ik(
 				_right_upper_arm,
 				_right_forearm,
@@ -432,22 +442,24 @@ func _apply_ik_pose(_delta: float) -> void:
 			var side_view := absf(aim.x) > 0.5
 			var center_forward := (
 				RIFLE_CENTER_FORWARD if side_view else RIFLE_CENTER_FORWARD_AXIAL
-			)
+			) * rig_ratio
 			var front_forward := (
 				RIFLE_FRONT_GRIP_FORWARD
 				if side_view
 				else RIFLE_FRONT_GRIP_FORWARD_AXIAL
+			) * rig_ratio
+			var rifle_center := (
+				chest + aim * (center_forward - recoil * 18.0 * rig_ratio)
 			)
-			var rifle_center := chest + aim * (center_forward - recoil * 18.0)
 			var rear_grip := (
 				rifle_center
-				- aim * RIFLE_REAR_GRIP_BACK
-				+ side * RIFLE_GRIP_DROP
+				- aim * RIFLE_REAR_GRIP_BACK * rig_ratio
+				+ side * RIFLE_GRIP_DROP * rig_ratio
 			)
 			var front_grip := (
 				rifle_center
 				+ aim * front_forward
-				+ side * RIFLE_GRIP_DROP
+				+ side * RIFLE_GRIP_DROP * rig_ratio
 			)
 			_apply_arm_ik(
 				_right_upper_arm,
@@ -467,10 +479,14 @@ func _apply_ik_pose(_delta: float) -> void:
 			_ik_targets["mech"] = front_grip
 			_configure_weapon(true, rifle_center, aim)
 		IKDemoMode.CAST:
-			var pulse := sin(_idle_time * 4.2) * 10.0
-			var orb_center := chest + aim * (150.0 + pulse)
-			var mech_target := orb_center - side * 62.0 - aim * 18.0
-			var organic_target := orb_center + side * 62.0 - aim * 18.0
+			var pulse := sin(_idle_time * 4.2) * 10.0 * rig_ratio
+			var orb_center := chest + aim * (150.0 * rig_ratio + pulse)
+			var mech_target := (
+				orb_center - side * 62.0 * rig_ratio - aim * 18.0 * rig_ratio
+			)
+			var organic_target := (
+				orb_center + side * 62.0 * rig_ratio - aim * 18.0 * rig_ratio
+			)
 			_apply_arm_ik(
 				_left_upper_arm,
 				_left_forearm,
@@ -489,6 +505,23 @@ func _apply_ik_pose(_delta: float) -> void:
 			_ik_targets["organic"] = organic_target
 			_cast_orb.position = _torso_target_to_rig(orb_center)
 			_cast_orb.scale = Vector2.ONE * (1.0 + sin(_idle_time * 5.0) * 0.08)
+		IKDemoMode.MELEE:
+			var hand_target := (
+				chest
+				+ aim * ((152.0 - recoil * 28.0) * rig_ratio)
+				+ side * 25.0 * rig_ratio
+			)
+			_apply_arm_ik(
+				_right_upper_arm,
+				_right_forearm,
+				hand_target,
+				_bend_sign(false),
+				_ik_blend,
+			)
+			_ik_targets["organic"] = hand_target
+			_pose_rotation(_left_upper_arm, 0.16, _ik_blend)
+			_pose_rotation(_left_forearm, -0.22, _ik_blend)
+			_configure_melee_weapon(hand_target, aim, rig_ratio)
 		_:
 			pass
 
@@ -595,6 +628,31 @@ func _configure_weapon(rifle: bool, target: Vector2, aim: Vector2) -> void:
 		_ik_weapon_foregrip.visible = false
 	_ik_weapon.position = _torso_target_to_rig(target)
 	_ik_weapon.rotation = aim.angle()
+	_ik_weapon.scale = Vector2.ONE * _rig_ratio()
+
+
+func _configure_melee_weapon(target: Vector2, aim: Vector2, rig_ratio: float) -> void:
+	_ik_weapon_body.polygon = PackedVector2Array([
+		Vector2(-22.0, -9.0),
+		Vector2(126.0, -7.0),
+		Vector2(148.0, 0.0),
+		Vector2(126.0, 7.0),
+		Vector2(-22.0, 9.0),
+	])
+	_ik_weapon_grip.polygon = PackedVector2Array([
+		Vector2(-48.0, -13.0),
+		Vector2(-17.0, -11.0),
+		Vector2(-17.0, 11.0),
+		Vector2(-48.0, 13.0),
+	])
+	_ik_weapon_foregrip.visible = false
+	_ik_weapon.position = _torso_target_to_rig(target)
+	_ik_weapon.rotation = aim.angle() - 0.24
+	_ik_weapon.scale = Vector2.ONE * rig_ratio
+
+
+func _rig_ratio() -> float:
+	return maxf(0.28, _texture_size("torso").y / 417.0)
 
 
 func _torso_target_to_rig(target: Vector2) -> Vector2:
@@ -687,9 +745,10 @@ func has_forward_rifle_stance() -> bool:
 		(_ik_targets["mech"] as Vector2) - (_ik_targets["organic"] as Vector2)
 	).dot(aim)
 	var side_view := absf(aim.x) > 0.5
+	var rig_ratio := _rig_ratio()
 	return (
-		grip_span >= (120.0 if side_view else 105.0)
-		and (not side_view or rear_reach >= 120.0)
+		grip_span >= (120.0 if side_view else 105.0) * rig_ratio
+		and (not side_view or rear_reach >= 120.0 * rig_ratio)
 	)
 
 
