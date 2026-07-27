@@ -92,6 +92,9 @@ color = Color(0.2, 0.28, 0.27, 1)
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(1152, 720)
 use_runtime_progress = false
+demo_weapon_slots = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
+demo_offhand_item = "riot_shield"
+demo_charm_item = "medical_tag"
 
 [node name="LayeredSkeletonRig" parent="Player" instance=ExtResource("2_rig")]
 
@@ -118,11 +121,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_ik_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v6 · IK + SKILL RANGE"
+text = "CHARACTER FEEL DEMO v7 · FREE WEAPONS + OFFHAND + CHARM"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "WASD / Arrow Keys  Move + aim · 0–3 IK/equipment\n4 Close · 5 Mid · 6 Long · G Release skill"
+text = "Fixed loadout: Crowbar / Pistol / Heavy · Riot Shield · Medical Tag\nNo ammo reserve · 0–3 weapon posture · 4–6 effect range · G charm preview"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
