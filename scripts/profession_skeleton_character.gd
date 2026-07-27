@@ -3,6 +3,8 @@ extends LayeredSkeletonCharacter
 
 const RIG_ROOT := "res://assets/art/characters/professions/rigs"
 const SKIN_ROOT := "res://assets/art/characters/professions/skins"
+const HUMANOID_BASE_SKIN_ID := "base_humanoid"
+const HUMANOID_SKELETON_ID := "humanoid_v1"
 const STYLE_IDS := [
 	"barrier_counter",
 	"last_stand",
@@ -100,6 +102,8 @@ var _rig_id := ""
 var _rig_available := false
 var _profession_id := "steadfast"
 var _profile: Dictionary = PROFESSION_PROFILES["steadfast"]
+var _standard_rest_feet := {}
+var _humanoid_skin_override := ""
 
 
 func _ready() -> void:
@@ -175,6 +179,17 @@ static func has_rig(rig_id: String) -> bool:
 	)
 
 
+static func has_humanoid_skin(skin_id: String) -> bool:
+	if skin_id not in [HUMANOID_BASE_SKIN_ID, "base_armorer"]:
+		return false
+	for direction in DIRECTIONS:
+		if not FileAccess.file_exists(
+			"%s/%s/%s/rig.json" % [SKIN_ROOT, skin_id, direction]
+		):
+			return false
+	return true
+
+
 static func _atlas_path_for(rig_id: String) -> String:
 	var extension := "webp" if rig_id in BASE_RIG_IDS else "png"
 	return "%s/%s/atlas.%s" % [RIG_ROOT, rig_id, extension]
@@ -205,8 +220,8 @@ func _apply_profession_profile() -> void:
 func _asset_root() -> String:
 	if _rig_id == "sacrifice_medic":
 		return ASSET_ROOT
-	if _rig_id == "base_armorer":
-		return "%s/%s" % [SKIN_ROOT, _rig_id]
+	if _rig_id == "base_armorer" or not _humanoid_skin_override.is_empty():
+		return "%s/%s" % [SKIN_ROOT, current_humanoid_skin_id()]
 	return "%s/%s" % [RIG_ROOT, _rig_id]
 
 
@@ -255,6 +270,10 @@ func _apply_direction_assets(direction: String) -> void:
 			texture = atlas_texture
 		sprite.texture = texture
 		sprite.visible = true
+	for bone in _animated_bones():
+		bone.rotation = 0.0
+	for sprite in _sprites.values():
+		(sprite as Sprite2D).rotation = 0.0
 	_layout_rig(direction)
 	_apply_depth_order(direction)
 	if individual_skin and direction == "right":
@@ -262,12 +281,12 @@ func _apply_direction_assets(direction: String) -> void:
 		(_sprites["shin_near"] as Sprite2D).z_index = -7
 		(_sprites["thigh_far"] as Sprite2D).z_index = 2
 		(_sprites["shin_far"] as Sprite2D).z_index = 2
-	for bone in _animated_bones():
-		bone.rotation = 0.0
-		bone.rest = bone.transform
 	_rest_positions.clear()
+	_rest_rotations.clear()
 	for bone in _animated_bones():
+		bone.rest = bone.transform
 		_rest_positions[bone] = bone.position
+		_rest_rotations[bone] = bone.rotation
 
 
 func _layout_rig(direction: String) -> void:
@@ -286,6 +305,14 @@ func _layout_individual_skin_rig(
 	direction: String,
 	manifest: Dictionary,
 ) -> void:
+	assert(
+		int(manifest.get("schema_version", 0)) >= 3,
+		"Individual humanoid skins must use the aligned v3 schema"
+	)
+	assert(
+		str(manifest.get("skeleton_id", "")) == HUMANOID_SKELETON_ID,
+		"Humanoid skin uses the wrong skeleton contract"
+	)
 	var joints := manifest["joints"] as Dictionary
 	var parts := manifest["parts"] as Dictionary
 	var frame_size := _json_vector(manifest["frame_size"])
@@ -355,6 +382,10 @@ func _layout_individual_skin_rig(
 	_set_individual_part_offset("coat_far", parts["coat_far"])
 	_set_individual_part_offset("coat_near", parts["coat_near"])
 	_lantern.position = Vector2.ZERO
+	_standard_rest_feet = {
+		"left": _json_vector(joints["left_foot"]) - hips,
+		"right": _json_vector(joints["right_foot"]) - hips,
+	}
 
 func _layout_individual_arm(
 	upper: Bone2D,
@@ -369,14 +400,24 @@ func _layout_individual_arm(
 	torso_pivot: Vector2,
 ) -> void:
 	upper.position = shoulder - torso_pivot
-	forearm.position = Vector2(0.0, elbow.y - shoulder.y)
-	upper.length = maxf(1.0, elbow.y - shoulder.y)
-	forearm.length = maxf(1.0, hand.y - elbow.y)
-	_set_individual_part_offset(upper_key, upper_part)
-	_set_individual_part_offset(
+	var upper_vector := elbow - shoulder
+	var forearm_vector := hand - elbow
+	var upper_angle := upper_vector.angle() - PI * 0.5
+	var forearm_world_angle := forearm_vector.angle() - PI * 0.5
+	upper.rotation = upper_angle
+	upper.length = maxf(1.0, upper_vector.length())
+	forearm.position = Vector2(0.0, upper.length)
+	forearm.rotation = forearm_world_angle - upper_angle
+	forearm.length = maxf(1.0, forearm_vector.length())
+	_set_oriented_individual_part(
+		upper_key,
+		upper_part,
+		upper_angle,
+	)
+	_set_oriented_individual_part(
 		forearm_key,
 		forearm_part,
-		Vector2(elbow.x - shoulder.x, 0.0),
+		forearm_world_angle,
 	)
 
 
@@ -393,14 +434,24 @@ func _layout_individual_leg(
 	hips: Vector2,
 ) -> void:
 	upper.position = hip - hips
-	lower.position = Vector2(0.0, knee.y - hip.y)
-	upper.length = maxf(1.0, knee.y - hip.y)
-	lower.length = maxf(1.0, foot.y - knee.y)
-	_set_individual_part_offset(upper_key, upper_part)
-	_set_individual_part_offset(
+	var upper_vector := knee - hip
+	var lower_vector := foot - knee
+	var upper_angle := upper_vector.angle() - PI * 0.5
+	var lower_world_angle := lower_vector.angle() - PI * 0.5
+	upper.rotation = upper_angle
+	upper.length = maxf(1.0, upper_vector.length())
+	lower.position = Vector2(0.0, upper.length)
+	lower.rotation = lower_world_angle - upper_angle
+	lower.length = maxf(1.0, lower_vector.length())
+	_set_oriented_individual_part(
+		upper_key,
+		upper_part,
+		upper_angle,
+	)
+	_set_oriented_individual_part(
 		lower_key,
 		lower_part,
-		Vector2(knee.x - hip.x, 0.0),
+		lower_world_angle,
 	)
 
 
@@ -412,6 +463,21 @@ func _set_individual_part_offset(
 	var size := _json_vector(part["size"])
 	var pivot := _json_vector(part["pivot"])
 	(_sprites[sprite_key] as Sprite2D).position = size * 0.5 - pivot + correction
+
+
+func _set_oriented_individual_part(
+	sprite_key: String,
+	part: Dictionary,
+	world_rest_angle: float,
+) -> void:
+	var size := _json_vector(part["size"])
+	var pivot := _json_vector(part["pivot"])
+	var sprite := _sprites[sprite_key] as Sprite2D
+	sprite.position = (size * 0.5 - pivot).rotated(-world_rest_angle)
+	# The source art is authored upright in frame coordinates. Cancel the
+	# complete rest angle so it reconstructs exactly, while later pose rotation
+	# still moves the pixels around the true two-dimensional bone vector.
+	sprite.rotation = -world_rest_angle
 
 
 func _layout_manifest_rig(direction: String) -> void:
@@ -592,19 +658,121 @@ func _apply_idle_pose(delta: float) -> void:
 
 
 func _apply_walk_pose(speed_ratio: float, delta: float) -> void:
-	super._apply_walk_pose(speed_ratio, delta)
+	if _uses_standard_humanoid_skin():
+		_apply_standard_humanoid_walk_pose(speed_ratio, delta)
+	else:
+		super._apply_walk_pose(speed_ratio, delta)
 	var stride := sin(_player._step_phase * TAU) * speed_ratio
 	var profile_stride := float(_profile["stride"])
 	var coat_sway := float(_profile["coat_sway"])
-	_left_leg.rotation *= profile_stride
-	_right_leg.rotation *= profile_stride
-	_left_lower_leg.rotation *= profile_stride
-	_right_lower_leg.rotation *= profile_stride
-	_left_upper_arm.rotation *= profile_stride
-	_right_upper_arm.rotation *= profile_stride
+	if not _uses_standard_humanoid_skin():
+		_left_leg.rotation *= profile_stride
+		_right_leg.rotation *= profile_stride
+		_left_lower_leg.rotation *= profile_stride
+		_right_lower_leg.rotation *= profile_stride
+		_left_upper_arm.rotation *= profile_stride
+		_right_upper_arm.rotation *= profile_stride
 	_hips.position.y += absf(stride) * (2.5 + float(_profile["weight"]) * 3.0)
 	_near_coat.rotation += stride * 0.045 * coat_sway
 	_far_coat.rotation -= stride * 0.032 * coat_sway
+
+
+func _uses_standard_humanoid_skin() -> bool:
+	return _rig_id == "base_armorer" and not _standard_rest_feet.is_empty()
+
+
+func _apply_standard_humanoid_walk_pose(
+	speed_ratio: float,
+	delta: float,
+) -> void:
+	var phase := _player._step_phase * TAU
+	var stride := sin(phase)
+	var opposite_stride := -stride
+	var side_view := _direction == "left" or _direction == "right"
+	var settle := 1.0 - exp(-delta * 18.0)
+	var left_lift := maxf(stride, 0.0)
+	var right_lift := maxf(opposite_stride, 0.0)
+	var contact := pow(absf(cos(phase)), 4.0)
+	var hips_offset := Vector2(
+		0.0 if side_view else stride * 2.2,
+		contact * 3.4,
+	) * speed_ratio
+	_pose_position(_hips, hips_offset, settle)
+	_pose_position(_left_leg, Vector2.ZERO, settle)
+	_pose_position(_right_leg, Vector2.ZERO, settle)
+
+	var travel := (23.0 if side_view else 7.0) * speed_ratio
+	var lift := (11.0 if side_view else 7.0) * speed_ratio
+	var left_target := _standard_rest_feet["left"] as Vector2
+	var right_target := _standard_rest_feet["right"] as Vector2
+	if side_view:
+		left_target.x += stride * travel
+		right_target.x += opposite_stride * travel
+	else:
+		# Axial views show depth through shortening and overlap, not the broad
+		# sideways pendulum used by a profile walk.
+		left_target.x += stride * 2.5 * speed_ratio
+		right_target.x += opposite_stride * 2.5 * speed_ratio
+		left_target.y += stride * travel
+		right_target.y += opposite_stride * travel
+	left_target.y -= left_lift * lift + hips_offset.y
+	right_target.y -= right_lift * lift + hips_offset.y
+	_apply_leg_target(
+		_left_leg,
+		_left_lower_leg,
+		left_target,
+		_standard_leg_bend_sign("left"),
+		settle,
+	)
+	_apply_leg_target(
+		_right_leg,
+		_right_lower_leg,
+		right_target,
+		_standard_leg_bend_sign("right"),
+		settle,
+	)
+
+	var arm_amount := (0.23 if side_view else 0.075) * speed_ratio
+	_pose_rotation(_left_upper_arm, opposite_stride * arm_amount, settle)
+	_pose_rotation(_right_upper_arm, stride * arm_amount, settle)
+	_pose_rotation(_left_forearm, left_lift * 0.10, settle)
+	_pose_rotation(_right_forearm, -right_lift * 0.10, settle)
+	_pose_rotation(
+		_torso,
+		opposite_stride * (0.018 if side_view else 0.010) * speed_ratio,
+		settle,
+	)
+	_pose_rotation(_head, stride * 0.008 * speed_ratio, settle)
+	_pose_rotation(_far_coat, opposite_stride * 0.035 * speed_ratio, settle)
+	_pose_rotation(_near_coat, opposite_stride * 0.048 * speed_ratio, settle)
+
+
+func _apply_leg_target(
+	upper: Bone2D,
+	lower: Bone2D,
+	target: Vector2,
+	bend_sign: float,
+	weight: float,
+) -> void:
+	var solution := solve_two_bone(
+		upper.position,
+		target,
+		upper.length,
+		lower.length,
+		bend_sign,
+	)
+	upper.rotation = lerp_angle(upper.rotation, solution.x, weight)
+	lower.rotation = lerp_angle(lower.rotation, solution.y, weight)
+
+
+func _standard_leg_bend_sign(side: String) -> float:
+	var upper := _left_leg if side == "left" else _right_leg
+	var rest_root := _rest_positions.get(upper, upper.position) as Vector2
+	var rest_foot := _standard_rest_feet[side] as Vector2
+	var horizontal := rest_foot.x - rest_root.x
+	if absf(horizontal) < 0.5:
+		horizontal = -1.0 if _direction == "right" else 1.0
+	return -signf(horizontal)
 
 
 func walk_pose_signature() -> PackedFloat32Array:
@@ -646,6 +814,24 @@ func current_profession_id() -> String:
 
 func current_rig_id() -> String:
 	return _rig_id
+
+
+func current_humanoid_skin_id() -> String:
+	return (
+		_humanoid_skin_override
+		if not _humanoid_skin_override.is_empty()
+		else _rig_id
+	)
+
+
+func set_humanoid_skin_for_preview(skin_id: String) -> void:
+	assert(
+		_rig_id == "base_armorer",
+		"Only the standard humanoid rig accepts humanoid skin swaps"
+	)
+	assert(has_humanoid_skin(skin_id), "Missing humanoid skin: %s" % skin_id)
+	_humanoid_skin_override = skin_id
+	_apply_direction_assets(_direction)
 
 
 func has_split_body_parts() -> bool:

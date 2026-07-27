@@ -1,215 +1,253 @@
 {
-  "schema_version": 2,
-  "source": "individual",
+  "schema_version": 3,
+  "source": "standard_humanoid_skin",
+  "source_id": "base_armorer",
+  "skeleton_id": "humanoid_v1",
   "frame_size": [
-    239,
+    256,
     420
   ],
+  "baseline_y": 410.0,
+  "center_x": 128.0,
   "joints": {
     "root": [
-      58.0,
+      128.0,
       420.0
     ],
     "hips": [
-      58.0,
-      226.8
+      128.0,
+      230.0
     ],
     "torso": [
-      58.0,
-      226.8
+      128.0,
+      230.0
     ],
     "head": [
-      58.0,
-      75.6
-    ],
-    "left_shoulder": [
-      53.22,
-      92.4
-    ],
-    "left_elbow": [
-      36.49,
-      168.0
-    ],
-    "left_hand": [
-      41.27,
-      243.6
+      128.0,
+      82.0
     ],
     "right_shoulder": [
-      65.17,
-      92.4
+      130.0,
+      105.0
     ],
     "right_elbow": [
-      53.22,
-      168.0
+      119.0,
+      171.0
     ],
     "right_hand": [
-      55.61,
-      243.6
+      115.0,
+      238.0
     ],
-    "left_hip": [
-      65.17,
-      226.8
+    "left_shoulder": [
+      124.0,
+      107.0
     ],
-    "left_knee": [
-      69.95,
-      319.2
+    "left_elbow": [
+      114.0,
+      173.0
     ],
-    "left_foot": [
-      74.73,
-      407.4
+    "left_hand": [
+      110.0,
+      240.0
     ],
     "right_hip": [
-      50.83,
-      226.8
+      130.0,
+      230.0
     ],
     "right_knee": [
-      46.05,
-      319.2
+      123.0,
+      322.0
     ],
     "right_foot": [
-      41.27,
-      407.4
+      128.0,
+      410.0
     ],
-    "coat_left": [
-      65.17,
-      210.0
+    "left_hip": [
+      124.0,
+      232.0
+    ],
+    "left_knee": [
+      119.0,
+      324.0
+    ],
+    "left_foot": [
+      124.0,
+      410.0
     ],
     "coat_right": [
-      50.83,
-      210.0
+      131.0,
+      224.0
+    ],
+    "coat_left": [
+      123.0,
+      226.0
+    ]
+  },
+  "rest_vectors": {
+    "left_upper_arm": [
+      -10.0,
+      66.0
+    ],
+    "left_forearm": [
+      -4.0,
+      67.0
+    ],
+    "right_upper_arm": [
+      -11.0,
+      66.0
+    ],
+    "right_forearm": [
+      -4.0,
+      67.0
+    ],
+    "left_thigh": [
+      -5.0,
+      92.0
+    ],
+    "left_shin": [
+      5.0,
+      86.0
+    ],
+    "right_thigh": [
+      -7.0,
+      92.0
+    ],
+    "right_shin": [
+      5.0,
+      88.0
     ]
   },
   "parts": {
     "head": {
       "file": "head.webp",
       "size": [
-        150,
-        138
+        101,
+        111
       ],
       "pivot": [
-        68.0,
-        85.6
+        50.0,
+        82.0
       ]
     },
     "torso": {
       "file": "torso.webp",
       "size": [
-        130,
-        198
+        124,
+        199
       ],
       "pivot": [
-        58.0,
-        171.8
+        62.0,
+        168.0
       ]
     },
     "left_upper_arm": {
       "file": "left_upper_arm.webp",
       "size": [
-        92,
-        144
+        93,
+        148
       ],
       "pivot": [
-        63.22,
-        41.400000000000006
+        51.0,
+        41.0
       ]
     },
     "left_forearm": {
       "file": "left_forearm.webp",
       "size": [
-        104,
-        170
+        81,
+        143
       ],
       "pivot": [
-        46.49,
-        50.0
+        42.0,
+        38.0
       ]
     },
     "right_upper_arm": {
       "file": "right_upper_arm.webp",
       "size": [
-        111,
-        145
+        94,
+        148
       ],
       "pivot": [
-        75.17,
-        42.400000000000006
+        52.0,
+        41.0
       ]
     },
     "right_forearm": {
       "file": "right_forearm.webp",
       "size": [
-        118,
-        171
+        81,
+        143
       ],
       "pivot": [
-        63.22,
-        51.0
-      ]
-    },
-    "coat_far": {
-      "file": "coat_far.webp",
-      "size": [
-        108,
-        206
-      ],
-      "pivot": [
-        44.17,
-        75.0
-      ]
-    },
-    "coat_near": {
-      "file": "coat_near.webp",
-      "size": [
-        96,
-        206
-      ],
-      "pivot": [
-        50.83,
-        75.0
+        42.0,
+        38.0
       ]
     },
     "left_thigh": {
       "file": "left_thigh.webp",
       "size": [
-        121,
-        171
+        90,
+        176
       ],
       "pivot": [
-        61.17,
-        42.80000000000001
+        47.0,
+        42.0
       ]
     },
     "left_shin": {
       "file": "left_shin.webp",
       "size": [
-        118,
-        154
+        81,
+        134
       ],
       "pivot": [
-        70.95,
-        43.19999999999999
+        38.0,
+        38.0
       ]
     },
     "right_thigh": {
       "file": "right_thigh.webp",
       "size": [
-        123,
-        171
+        92,
+        176
       ],
       "pivot": [
-        60.83,
-        42.80000000000001
+        49.0,
+        42.0
       ]
     },
     "right_shin": {
       "file": "right_shin.webp",
       "size": [
-        125,
-        154
+        81,
+        136
       ],
       "pivot": [
-        56.05,
-        43.19999999999999
+        38.0,
+        38.0
+      ]
+    },
+    "coat_far": {
+      "file": "coat_far.webp",
+      "size": [
+        86,
+        120
+      ],
+      "pivot": [
+        69.0,
+        51.0
+      ]
+    },
+    "coat_near": {
+      "file": "coat_near.webp",
+      "size": [
+        79,
+        120
+      ],
+      "pivot": [
+        16.0,
+        51.0
       ]
     }
   }

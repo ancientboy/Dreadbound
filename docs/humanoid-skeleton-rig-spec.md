@@ -17,6 +17,21 @@ must never rename, merge, or add a joint segment.
 `left` and `right` describe the direction the character faces. Part names
 remain anatomical (`left_*` and `right_*`) in all four directions.
 
+## Canonical Frame
+
+Every `humanoid_v1` skin is normalized before it is split:
+
+- frame: `256 × 420`
+- body center: `x = 128`
+- foot baseline: `y = 410`
+- hip line: `y = 230`
+- knee line: `y = 322` for near limbs; a far side-view limb may use `y = 324`
+- neck pivot: `y = 82`
+
+Front and back use the same crown, hip, knee, and baseline values. Left and
+right manifests are exact coordinate mirrors with anatomical side names
+swapped. Source illustration bounds never redefine the skeleton.
+
 ## Skeleton Slots
 
 | Slot | Contents | Pivot |
@@ -50,6 +65,10 @@ The common humanoid base is a complete four-direction undersuit skin. It is
 not displayed as literal nudity. It provides finished pixels under every
 replaceable garment so animation and partial outfit swaps never reveal holes.
 
+The production package is `skins/base_humanoid`. It contains the same 12 slots
+as a profession skin and uses transparent 16×16 placeholders for its two coat
+slots.
+
 ### Profession and outfit skins
 
 A profession or outfit package supplies four-direction textures for any slots
@@ -81,6 +100,20 @@ skeleton and animations.
   animation skeleton.
 - A form with a different limb count or a materially non-humanoid structure
   must declare a separate rig family instead of abusing humanoid skin slots.
+- Manifests use schema version 3, identify `skeleton_id: humanoid_v1`, and store
+  all eight two-dimensional rest vectors. Runtime binding must use vector
+  length and angle; reducing a segment to only its vertical distance is invalid.
+
+## Directional Gait
+
+- Left and right views use profile travel, visible stride, and knee lift.
+- Front and back views use depth shortening, overlap, and small lateral weight
+  transfer. They never reuse the broad profile pendulum.
+- Both views solve the two-segment leg toward an authored foot target.
+- During the support phase the foot stays on the `y = 410` baseline while hip
+  bob is compensated inside the leg target.
+- Arm swing remains opposite to its paired leg, but axial arm amplitude is
+  deliberately smaller than profile amplitude.
 
 ## Equipment Sockets
 
@@ -122,6 +155,11 @@ hips
 - The four manifests use identical part keys and joint meanings.
 - A reconstruction preview matches the source skin turnaround in neutral pose.
 - Walk previews show two complete cycles in all four directions.
+- `left` and `right` are exact mirrored coordinates and visibly face their
+  named direction.
+- The runtime keeps non-zero horizontal components in side-view rest vectors.
+- Front/back knees do not cross the center line during the walk cycle.
+- Support feet remain on the shared baseline without whole-body drift.
 - Shoulder, elbow, hip, and knee rotations do not reveal holes or hard seams.
 - The neutral character is unarmed; equipment appears only through runtime
   sockets.
