@@ -15,11 +15,6 @@ const CUES := {
 	"ui_cancel": ["res://assets/audio/sfx/ui/ui_cancel_01.wav", "UI"],
 	"ui_error": ["res://assets/audio/sfx/ui/ui_error_01.wav", "UI"],
 	"ui_tab": ["res://assets/audio/sfx/ui/ui_tab_01.wav", "UI"],
-	# Foley should sit below combat and UI. The old synthesized concrete cue was
-	# overly sharp and played too often, so hard surfaces now use real CC0 stone
-	# steps at a deliberately restrained gain.
-	"player_step": ["res://assets/audio/sfx/player/footsteps/cc0_stone_step_01.ogg", "World", 0.19],
-	"player_step_water": ["res://assets/audio/sfx/player/footsteps/player_step_water_01.wav", "World", 0.22],
 	"player_melee": ["res://assets/audio/sfx/player/combat/player_melee_swing_01.wav", "Combat"],
 	"player_pistol": ["res://assets/audio/sfx/player/combat/player_pistol_fire_01.wav", "Combat"],
 	"player_shotgun": ["res://assets/audio/sfx/player/combat/player_shotgun_fire_01.wav", "Combat"],

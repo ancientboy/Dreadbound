@@ -28,7 +28,6 @@ func _run_test() -> void:
 	for path in REQUIRED:
 		assert(ResourceLoader.exists(path), "audio stream cannot load: %s" % path)
 	for index in range(1, 5):
-		assert(ResourceLoader.exists("res://assets/audio/sfx/player/footsteps/cc0_stone_step_%02d.ogg" % index))
 		assert(ResourceLoader.exists("res://assets/audio/sfx/world/pickup/world_pickup_%02d.wav" % index))
 	var director := root.get_node_or_null("AudioDirector")
 	assert(director != null, "AudioDirector autoload must be available")
@@ -58,7 +57,7 @@ func _run_test() -> void:
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	var fx_source := FileAccess.get_file_as_string("res://scripts/combat_fx.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
-	assert(player_source.contains("DreadboundAudioDirector") and player_source.contains("player_step_water"))
+	assert(player_source.contains("DreadboundAudioDirector") and not player_source.contains("player_step"))
 	assert(fx_source.contains("DreadboundAudioDirector"))
 	assert(main_source.contains("DreadboundAudioDirector"))
 	assert(main_source.contains("OpenInGameAudioSettings"))

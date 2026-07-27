@@ -111,7 +111,7 @@
 | Asset ID | 路径 | 来源 | 生成记录 | 权利 | 备注 | 状态 |
 |---|---|---|---|---|---|---|
 | `audio_runtime_o2` | `scripts/audio_director.gd` | 原创程序系统 | `tools/generate_o2_audio.py`，2026-07-26 | 项目原创 | Music/Ambience/Combat/Creature/World/UI/Voice 总线、Web 首次输入解锁、24 声部池与音量持久化 | review |
-| `audio_music_o2` | `assets/audio/music/*.ogg` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | 六首循环：首页、回廊、疗养院探索/Boss、地铁探索/Boss | review |
-| `audio_ambience_o2` | `assets/audio/ambience/*.ogg` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | 五条环境循环：结构、病区、地下室、站台、洪水 | review |
-| `audio_sfx_o2_core` | `assets/audio/sfx/**/*.wav` | 原创合成 | `tools/generate_o2_audio.py`，确定性 seed 20260726 | 项目原创 | UI、玩家、世界、敌人及十二流派技能；高频脚步/命中/拾取含四个变体 | review |
+| `audio_music_cc0_scifi` | `assets/audio/music/*.ogg` | Kenney Sci-fi Sounds via OpenGameArt | https://opengameart.org/content/sci-fi-sounds，下载于 2026-07-27 | CC0 | 六条 30 秒低存在感循环，来自 Kenney 科幻引擎/计算机声，统一高通、低通、低增益与淡入淡出处理 | review |
+| `audio_ambience_cc0_dark` | `assets/audio/ambience/*.ogg` | Ogrebane Dark Ambiences via OpenGameArt | https://opengameart.org/content/dark-ambiences，下载于 2026-07-27 | CC0 | 五条 30 秒环境层，统一高通、低通、低增益与淡入淡出处理，避免持续尖锐噪声 | review |
+| `audio_sfx_cc0_scifi_creatures` | `assets/audio/sfx/player/combat/{player_pistol_fire_01,player_shotgun_fire_01}.wav`、`assets/audio/sfx/creatures/**/*.wav` | Kenney Sci-fi Sounds + artisticdude Zombies Sound Pack via OpenGameArt | https://opengameart.org/content/sci-fi-sounds；https://opengameart.org/content/zombies-sound-pack，下载于 2026-07-27 | CC0 | 枪械以 Kenney 科幻冲击/爆裂声替换；十个怪物攻击/前摇以僵尸声替换；全部削弱高频并降至 12–18% 增益 | review |
 | `audio_sfx_cc0_kenney_rpg` | `assets/audio/sfx/ui/*.wav`、`assets/audio/sfx/player/combat/{player_melee_swing_01,player_melee_swing_02,player_switch_01,player_heal_01,player_hit_01..04}.wav`、`assets/audio/sfx/world/{pickup,objective}/*.wav` | Kenney via OpenGameArt | https://opengameart.org/content/50-rpg-sound-effects，下载于 2026-07-26 | CC0 | 替换原程序合成的高频 UI/近战/拾取/交互音；统一高通 70Hz、低通 5.2–9kHz，并按用途降至原素材 11–27% 增益，降低尖锐感与噪音 | review |
