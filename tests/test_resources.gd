@@ -8,6 +8,9 @@ func _run_test() -> void:
 	root.add_child(mission)
 	await process_frame
 	var player: Player = mission.player
+	# This test covers pickup behavior, not the equipped medical tag's health bonus.
+	player.max_health = 100
+	player.health = 100
 	player.bandages = 0
 	for enemy in get_nodes_in_group("enemies"):
 		enemy.set_physics_process(false)
