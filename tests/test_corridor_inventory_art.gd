@@ -11,6 +11,8 @@ const EQUIPMENT_ICON_PATHS := {
 	"cyan_mark": "res://assets/art/icons/equipment/cyan_mark.png",
 	"waterproof_pulse": "res://assets/art/icons/equipment/waterproof_pulse.png",
 	"station_whistle": "res://assets/art/icons/equipment/station_whistle.png",
+	"riot_shield": "res://assets/art/icons/equipment/riot_shield.svg",
+	"field_codex": "res://assets/art/icons/equipment/field_codex.svg",
 	"insulated_crowbar": "res://assets/art/icons/equipment/insulated_crowbar.png",
 	"last_ticket": "res://assets/art/icons/equipment/last_ticket.png",
 	"nullpoint_sidearm": "res://assets/art/icons/equipment/nullpoint_sidearm.png",
@@ -89,7 +91,7 @@ func _run_test() -> void:
 		entries[str(entry.id)] = entry
 	for asset_id in [
 		"art_corridor_hub_atlas", "art_ui_hub_section_icons",
-		"art_icon_cyan_mark", "art_icon_conductor_railgun",
+		"art_icon_cyan_mark", "art_icon_riot_shield", "art_icon_field_codex", "art_icon_conductor_railgun",
 		"art_material_flooded_circuit", "art_material_ticket_stub", "art_material_conductor_coil",
 	]:
 		assert(entries.has(asset_id))
