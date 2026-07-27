@@ -70,6 +70,7 @@ var _sfx_enabled := true
 var _world_id := "home"
 var _boss_active := false
 var _flooded := false
+var _last_cue := ""
 
 
 func _ready() -> void:
@@ -77,6 +78,10 @@ func _ready() -> void:
 	_create_players()
 	_load_settings()
 	get_tree().node_added.connect(_on_node_added)
+	# Autoload readiness can happen after part of the first UI scene has already
+	# entered the tree in an exported build. Bind that existing UI too; relying on
+	# node_added alone made early home/corridor controls miss their UI cues.
+	call_deferred("_bind_existing_buttons")
 
 
 func unlock() -> void:
@@ -86,6 +91,14 @@ func unlock() -> void:
 	if _unlocked:
 		return
 	_unlocked = true
+	# A previously muted browser session can leave the Master bus muted even though
+	# the two in-game toggles report as enabled. Reconcile every route when the
+	# user supplies the trusted gesture that unlocks WebAudio.
+	var master_index := AudioServer.get_bus_index("Master")
+	if master_index >= 0:
+		AudioServer.set_bus_mute(master_index, false)
+	_set_buses_muted(MUSIC_BUSES, not _music_enabled)
+	_set_buses_muted(SFX_BUSES, not _sfx_enabled)
 	_apply_world_loops()
 
 
@@ -95,6 +108,20 @@ func _input(event: InputEvent) -> void:
 
 
 func _on_node_added(node: Node) -> void:
+	_bind_button(node)
+
+
+func _bind_existing_buttons() -> void:
+	_bind_buttons_under(get_tree().root)
+
+
+func _bind_buttons_under(node: Node) -> void:
+	_bind_button(node)
+	for child in node.get_children():
+		_bind_buttons_under(child)
+
+
+func _bind_button(node: Node) -> void:
 	if not node is BaseButton or node.has_meta("dreadbound_audio_bound"):
 		return
 	node.set_meta("dreadbound_audio_bound", true)
@@ -103,7 +130,14 @@ func _on_node_added(node: Node) -> void:
 
 
 func play(cue_id: String, pitch_jitter := 0.0) -> void:
-	if OS.has_feature("headless") or not _unlocked or not CUES.has(cue_id):
+	if OS.has_feature("headless") or not CUES.has(cue_id):
+		return
+	# Attacks triggered by a touch-control signal can arrive in the same frame as
+	# the browser gesture, before this autoload's _input callback. Treat that cue
+	# as the unlock point instead of silently discarding the first combat sound.
+	if not _unlocked:
+		unlock()
+	if not _sfx_enabled:
 		return
 	var spec: Array = CUES[cue_id]
 	var path := _variant_path(str(spec[0]))
@@ -115,6 +149,7 @@ func play(cue_id: String, pitch_jitter := 0.0) -> void:
 	player.stream = stream
 	player.pitch_scale = clampf(1.0 + randf_range(-pitch_jitter, pitch_jitter), 0.82, 1.18)
 	player.play()
+	_last_cue = cue_id
 
 
 func play_at(cue_id: String, _world_position: Vector2, pitch_jitter := 0.0) -> void:
@@ -124,7 +159,11 @@ func play_at(cue_id: String, _world_position: Vector2, pitch_jitter := 0.0) -> v
 
 
 func play_style(style_id: String) -> void:
-	if OS.has_feature("headless") or not _unlocked:
+	if OS.has_feature("headless"):
+		return
+	if not _unlocked:
+		unlock()
+	if not _sfx_enabled:
 		return
 	var stream := load("res://assets/audio/sfx/skills/skill_%s_01.wav" % style_id) as AudioStream
 	if stream == null:
@@ -134,6 +173,13 @@ func play_style(style_id: String) -> void:
 	player.stream = stream
 	player.pitch_scale = 1.0
 	player.play()
+	_last_cue = "style:%s" % style_id
+
+
+func play_sfx_preview() -> void:
+	# Settings exposes a real, routed combat cue so players can immediately tell
+	# whether the device/browser is allowing game audio.
+	play("player_pistol")
 
 
 func play_status(status_id: String) -> void:
