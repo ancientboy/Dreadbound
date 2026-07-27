@@ -67,6 +67,9 @@ var _settings_path := "user://dreadbound_audio.cfg"
 var _unlocked := false
 var _music_enabled := true
 var _sfx_enabled := true
+var _world_id := "home"
+var _boss_active := false
+var _flooded := false
 
 
 func _ready() -> void:
@@ -77,17 +80,13 @@ func _ready() -> void:
 
 
 func unlock() -> void:
-	# Browsers require a direct input before audible playback. Calling this from
-	# the first click/tap is harmless on desktop and keeps Web exports silent-safe.
+	# WebAudio accepts playback only after a user gesture. Do not start loops
+	# optimistically before this point: a rejected early play can leave the Godot
+	# player in a non-audible state for the rest of the browser session.
 	if _unlocked:
 		return
 	_unlocked = true
-	# A loop that was prepared before the first web input may have been rejected
-	# by the browser. Start it again from this trusted interaction.
-	if _music.stream != null:
-		_music.play()
-	if _ambience.stream != null:
-		_ambience.play()
+	_apply_world_loops()
 
 
 func _input(event: InputEvent) -> void:
@@ -142,12 +141,11 @@ func play_status(status_id: String) -> void:
 
 
 func set_world(world_id: String, boss_active := false, flooded := false) -> void:
-	var music_id := world_id
-	if boss_active and world_id in ["sanatorium", "metro"]:
-		music_id = "%s_boss" % world_id
-	var ambience_id := "%s_flood" % world_id if flooded and world_id == "metro" else world_id
-	_play_loop(_music, MUSIC.get(music_id, MUSIC.home), "Music")
-	_play_loop(_ambience, AMBIENCE.get(ambience_id, AMBIENCE.get(world_id, "")), "Ambience")
+	_world_id = world_id
+	_boss_active = boss_active
+	_flooded = flooded
+	if _unlocked:
+		_apply_world_loops()
 
 
 func set_volume(bus: String, linear: float) -> void:
@@ -236,6 +234,15 @@ func _play_loop(player: AudioStreamPlayer, path: String, bus: String) -> void:
 	player.stream = stream
 	player.bus = bus
 	player.play()
+
+
+func _apply_world_loops() -> void:
+	var music_id := _world_id
+	if _boss_active and _world_id in ["sanatorium", "metro"]:
+		music_id = "%s_boss" % _world_id
+	var ambience_id := "%s_flood" % _world_id if _flooded and _world_id == "metro" else _world_id
+	_play_loop(_music, MUSIC.get(music_id, MUSIC.home), "Music")
+	_play_loop(_ambience, AMBIENCE.get(ambience_id, AMBIENCE.get(_world_id, "")), "Ambience")
 
 
 func _load_settings() -> void:
