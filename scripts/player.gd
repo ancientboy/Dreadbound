@@ -88,6 +88,7 @@ var equipped_weapon_item := ""
 var _relic_hit_counter := 0
 var _walk_animation_time := 0.0
 var _body_sprite: Sprite2D
+var _female_rig: FemaleDrifterRig
 
 
 func _ready() -> void:
@@ -215,6 +216,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _setup_body_sprite() -> void:
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if state != null and state.player_avatar == "drifter_female":
+		_female_rig = FemaleDrifterRig.new()
+		_female_rig.position = Vector2(0, -17)
+		add_child(_female_rig)
+		return
 	var body_texture := _profession_body_texture()
 	if body_texture == null or not _is_valid_body_spritesheet(body_texture):
 		push_warning("Drifter sprite sheet unavailable or invalid; using visible fallback silhouette.")
@@ -244,6 +251,9 @@ func _is_valid_body_spritesheet(texture: Texture2D) -> bool:
 
 
 func _sync_body_sprite() -> void:
+	if is_instance_valid(_female_rig):
+		_female_rig.sync_visual(facing, velocity.length() > 2.0, _attack_flash, int(current_weapon), _hurt_flash > 0.0, _heal_flash > 0.0, get_physics_process_delta_time())
+		return
 	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
 		return
 	var row := 0
@@ -751,8 +761,12 @@ func _draw() -> void:
 	_draw_flashlight()
 	_draw_pathway_state_vfx()
 	var visual := _pathway_visual()
-	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
+	if not is_instance_valid(_body_sprite) and not is_instance_valid(_female_rig):
 		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
+	if is_instance_valid(_female_rig):
+		_draw_deep_water_occlusion()
+		_draw_health_bar()
+		return
 	var state := get_node_or_null("/root/GameState") as GameProgress
 	var weapon_item := state.get_equipped_weapon_for_attack(_weapon_attack_type()) if state else ""
 	var growth_level := state.get_relic_growth(weapon_item) if state else 0
@@ -783,6 +797,10 @@ func _draw() -> void:
 	else:
 		_draw_basic_weapon(0)
 	_draw_deep_water_occlusion()
+	_draw_health_bar()
+
+
+func _draw_health_bar() -> void:
 	# Keep combat readability close to the character while the top HUD remains the detailed status view.
 	var health_ratio := clampf(float(health) / float(max_health), 0.0, 1.0)
 	var bar_rect := Rect2(-23, -68, 46, 6)

@@ -64,12 +64,10 @@ func _run_test() -> void:
 	var base_player := load("res://scenes/entities/player.tscn").instantiate() as Player
 	root.add_child(base_player)
 	await process_frame
-	var base_sprite := base_player.get_node_or_null("BodySprite") as Sprite2D
-	assert(base_sprite != null and base_sprite.texture != null)
-	assert(base_sprite.texture.resource_path.ends_with("drifter_highres_spritesheet.png"))
-	assert(base_sprite.hframes == 6 and base_sprite.vframes == 4)
-	assert(base_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR)
-	assert(base_sprite.scale == Vector2(0.55, 0.55))
+	var female_rig := base_player.get_node_or_null("FemaleDrifterRig") as FemaleDrifterRig
+	assert(female_rig != null)
+	assert(female_rig.get_node_or_null("RightForearm/WeaponMount/Weapon") is Sprite2D)
+	assert(female_rig.get_node_or_null("Torso") != null)
 	base_player.queue_free()
 	await process_frame
 	state.player_avatar = "drifter_male"
@@ -132,6 +130,7 @@ func _run_test() -> void:
 	var npc_source := FileAccess.get_file_as_string("res://scripts/objective_interactable.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	assert(player_source.contains("_profession_body_texture"))
+	assert(player_source.contains("FemaleDrifterRig"))
 	assert(player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
 	assert(not player_source.contains("_draw_combat_style_form"))
 	assert(player_source.contains("_play_attack_style_vfx"))

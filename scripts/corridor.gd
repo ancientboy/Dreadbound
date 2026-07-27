@@ -510,7 +510,7 @@ func _refresh() -> void:
 			style_button.disabled = not unlocked and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
 	for avatar_id in avatar_buttons:
 		var avatar_button: Button = avatar_buttons[avatar_id]
-		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（高精样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
+		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（2D骨骼样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
 	var respec := get_node_or_null("Margin/Layout/Columns/Paths/RespecPathway") as Button
 	if respec:
 		respec.text = "重构职业 · 1 因果残片（可无限次）"
@@ -1517,11 +1517,11 @@ func _refresh_mobile_terminal() -> void:
 		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
 		button.pressed.connect(_select_loadout.bind(loadout_id))
 		content.add_child(button)
-	_mobile_terminal_section(content, "行者外观", "外观不影响装备、职业或技能；女性行者用于测试高精角色效果。")
+	_mobile_terminal_section(content, "行者外观", "外观不影响装备、职业或技能；女性行者用于测试 2D 骨骼动作与独立武器挂点。")
 	for avatar_id in ["drifter_male", "drifter_female"]:
 		var avatar_button := Button.new()
 		avatar_button.custom_minimum_size = Vector2(0, 50)
-		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（高精样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
+		avatar_button.text = "%s%s" % ["▶ " if GameState.player_avatar == avatar_id else "", "女性行者（2D骨骼样本）" if avatar_id == "drifter_female" else "男性行者（原始外观）"]
 		avatar_button.pressed.connect(_select_player_avatar.bind(avatar_id))
 		content.add_child(avatar_button)
 	_mobile_terminal_section(content, "永久强化", "选择强化，下一次投送生效。")
