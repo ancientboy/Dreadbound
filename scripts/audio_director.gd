@@ -5,6 +5,8 @@ extends Node
 ## node owns buses, voice pooling, browser unlock and persisted volume settings.
 
 const BUS_NAMES := ["Music", "Ambience", "Combat", "Creature", "World", "UI", "Voice"]
+const MUSIC_BUSES := ["Music", "Ambience"]
+const SFX_BUSES := ["Combat", "Creature", "World", "UI", "Voice"]
 const MAX_VOICES := 24
 
 const CUES := {
@@ -63,6 +65,8 @@ var _music: AudioStreamPlayer
 var _ambience: AudioStreamPlayer
 var _settings_path := "user://dreadbound_audio.cfg"
 var _unlocked := false
+var _music_enabled := true
+var _sfx_enabled := true
 
 
 func _ready() -> void:
@@ -75,7 +79,15 @@ func _ready() -> void:
 func unlock() -> void:
 	# Browsers require a direct input before audible playback. Calling this from
 	# the first click/tap is harmless on desktop and keeps Web exports silent-safe.
+	if _unlocked:
+		return
 	_unlocked = true
+	# A loop that was prepared before the first web input may have been rejected
+	# by the browser. Start it again from this trusted interaction.
+	if _music.stream != null:
+		_music.play()
+	if _ambience.stream != null:
+		_ambience.play()
 
 
 func _input(event: InputEvent) -> void:
@@ -151,6 +163,26 @@ func get_volume(bus: String) -> float:
 	return db_to_linear(AudioServer.get_bus_volume_db(bus_index)) if bus_index >= 0 else 1.0
 
 
+func set_music_enabled(enabled: bool) -> void:
+	_music_enabled = enabled
+	_set_buses_muted(MUSIC_BUSES, not enabled)
+	_save_settings()
+
+
+func is_music_enabled() -> bool:
+	return _music_enabled
+
+
+func set_sfx_enabled(enabled: bool) -> void:
+	_sfx_enabled = enabled
+	_set_buses_muted(SFX_BUSES, not enabled)
+	_save_settings()
+
+
+func is_sfx_enabled() -> bool:
+	return _sfx_enabled
+
+
 func _setup_buses() -> void:
 	for bus_name in BUS_NAMES:
 		if AudioServer.get_bus_index(bus_name) >= 0:
@@ -211,11 +243,26 @@ func _load_settings() -> void:
 	if config.load(_settings_path) != OK:
 		return
 	for bus_name in BUS_NAMES:
-		set_volume(bus_name, float(config.get_value("audio", bus_name, 1.0)))
+		var bus_index := AudioServer.get_bus_index(bus_name)
+		if bus_index >= 0:
+			AudioServer.set_bus_volume_db(bus_index, linear_to_db(clampf(float(config.get_value("audio", bus_name, 1.0)), 0.0, 1.0)))
+	_music_enabled = bool(config.get_value("audio", "music_enabled", true))
+	_sfx_enabled = bool(config.get_value("audio", "sfx_enabled", true))
+	_set_buses_muted(MUSIC_BUSES, not _music_enabled)
+	_set_buses_muted(SFX_BUSES, not _sfx_enabled)
 
 
 func _save_settings() -> void:
 	var config := ConfigFile.new()
 	for bus_name in BUS_NAMES:
 		config.set_value("audio", bus_name, get_volume(bus_name))
+	config.set_value("audio", "music_enabled", _music_enabled)
+	config.set_value("audio", "sfx_enabled", _sfx_enabled)
 	config.save(_settings_path)
+
+
+func _set_buses_muted(bus_names: Array, muted: bool) -> void:
+	for bus_name in bus_names:
+		var bus_index := AudioServer.get_bus_index(str(bus_name))
+		if bus_index >= 0:
+			AudioServer.set_bus_mute(bus_index, muted)
