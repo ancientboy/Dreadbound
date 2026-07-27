@@ -63,6 +63,10 @@ func _run_test() -> void:
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Pistol") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Rifle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Cast") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Close") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Mid") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Long") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Release") is Button)
 	assert(rig is Skeleton2D)
 	assert(rig.get_node("Hips/LeftLeg") is Bone2D)
 	assert(rig.get_node("Hips/LeftLeg/LowerLeg") is Bone2D)
@@ -111,7 +115,32 @@ func _run_test() -> void:
 	await process_frame
 	assert(rig.ik_hand_error("organic") < 2.0)
 	assert(rig.ik_hand_error("mech") < 2.0)
+	var skill_demo := instance.get_node("SkillRangeDemo") as SkillRangeDemo
+	assert(skill_demo != null)
+	assert(skill_demo.uses_existing_skill_atlases())
+	var previous_range := 0.0
+	for mode in [
+		SkillRangeDemo.SkillMode.CLOSE_BURST,
+		SkillRangeDemo.SkillMode.MID_BOLT,
+		SkillRangeDemo.SkillMode.LONG_RIFT,
+	]:
+		player.facing = Vector2.RIGHT
+		skill_demo.set_skill_mode(mode)
+		assert(skill_demo.skill_range() > previous_range)
+		previous_range = skill_demo.skill_range()
+		assert(skill_demo.trigger_skill())
+		assert(skill_demo.current_phase() == "windup")
+		assert(
+			skill_demo.cast_endpoint().distance_to(player.global_position)
+			>= skill_demo.skill_range() - 0.1
+		)
+		skill_demo._phase = "active"
+		skill_demo._phase_time = float(SkillRangeDemo.SKILLS[mode].active) * 0.96
+		skill_demo._advance_phase()
+		assert(skill_demo.target_hit_count(mode) == 1)
+		skill_demo._phase = "idle"
+		skill_demo._cooldown_left = 0.0
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: four-direction rig with pistol, rifle and casting arm IK")
+	print("Character feel passed: four-direction IK with close, mid and long skill ranges")
 	quit()

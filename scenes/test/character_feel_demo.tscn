@@ -1,8 +1,9 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/test/layered_skeleton_character.tscn" id="2_rig"]
 [ext_resource type="Script" path="res://scripts/ik_demo_controls.gd" id="3_ik_controls"]
+[ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -93,13 +94,16 @@ position = Vector2(1152, 720)
 
 [node name="LayeredSkeletonRig" parent="Player" instance=ExtResource("2_rig")]
 
+[node name="SkillRangeDemo" type="Node2D" parent="."]
+script = ExtResource("4_skill_demo")
+
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="Panel" type="PanelContainer" parent="HUD"]
 offset_left = 28.0
 offset_top = 26.0
-offset_right = 620.0
-offset_bottom = 230.0
+offset_right = 790.0
+offset_bottom = 332.0
 theme_override_styles/panel = SubResource("Panel_style")
 
 [node name="Margin" type="MarginContainer" parent="HUD/Panel"]
@@ -113,11 +117,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_ik_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v5 · ARM IK"
+text = "CHARACTER FEEL DEMO v6 · IK + SKILL RANGE"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "WASD / Arrow Keys  Four-direction gait\n0 Free · 1 Pistol · 2 Two-hand rifle · 3 Cast · Space/J Action"
+text = "WASD / Arrow Keys  Move + aim · 0–3 IK/equipment\n4 Close · 5 Mid · 6 Long · G Release skill"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -138,3 +142,22 @@ text = "2 Rifle"
 
 [node name="Cast" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
 text = "3 Cast"
+
+[node name="SkillLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "SKILL: CLOSE · BLOOD BARRIER · RANGE 170 · IDLE"
+label_settings = SubResource("Body_settings")
+
+[node name="SkillButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Close" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
+text = "4 Close"
+
+[node name="Mid" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
+text = "5 Mid"
+
+[node name="Long" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
+text = "6 Long"
+
+[node name="Release" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
+text = "G Release"
