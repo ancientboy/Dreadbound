@@ -8,8 +8,17 @@ func _run_test() -> void:
 	root.add_child(mission)
 	await process_frame
 	var player: Player = mission.player
-	player.current_weapon = Player.Weapon.MELEE
-	player.ammo = 6
+	var state := root.get_node("GameState") as GameProgress
+	if not state.equipment_inventory.has("balanced_pistol"):
+		state.equipment_inventory.append("balanced_pistol")
+	if not state.equipment_inventory.has("breach_shotgun"):
+		state.equipment_inventory.append("breach_shotgun")
+	state.equip_item("balanced_pistol")
+	state.equip_item("breach_shotgun")
+	state.equipped.weapon_1 = "service_crowbar"
+	state.equipped.weapon_2 = "balanced_pistol"
+	state.equipped.weapon_3 = "breach_shotgun"
+	player._sync_active_weapon_equipment()
 	player.ranged_damage = 25
 	var crawlers = get_nodes_in_group("crawlers")
 	assert(crawlers.size() == 3)
@@ -20,29 +29,25 @@ func _run_test() -> void:
 	crawler.global_position = player.global_position + Vector2(200, 0)
 	player.facing = Vector2.RIGHT
 	player.switch_weapon()
-	assert(player.current_weapon == Player.Weapon.RANGED)
+	assert(player.get_weapon_name() == "平衡手枪")
 	var starting_ammo := player.ammo
 	assert(player.try_attack())
-	assert(player.ammo == starting_ammo - 1)
+	assert(player.ammo == starting_ammo)
 	assert(crawler.health == 10)
 	player._attack_timer = 0.0
 	assert(player.try_attack())
 	assert(crawler.health == 0)
-	player.ammo = 0
 	player._attack_timer = 0.0
-	assert(not player.try_attack())
+	assert(player.try_attack())
 	var ammo_pickup: ResourcePickup
 	for pickup in get_nodes_in_group("pickups"):
 		if pickup.kind == ResourcePickup.Kind.AMMO:
 			ammo_pickup = pickup
 			break
-	assert(ammo_pickup != null)
-	var pickup_amount := ammo_pickup.amount
-	assert(ammo_pickup.collect(player))
-	assert(player.ammo == pickup_amount)
+	assert(ammo_pickup == null)
 	player.switch_weapon()
-	assert(player.current_weapon == Player.Weapon.SHOTGUN)
+	assert(player.get_weapon_name() == "破门霰弹枪")
 	player.switch_weapon()
-	assert(player.current_weapon == Player.Weapon.MELEE)
-	print("Content test passed: Crawler roster, ranged hit/ammo, empty weapon, ammo pickup, switching")
+	assert(player.get_weapon_name() == "制式撬棍")
+	print("Content test passed: Crawler roster, free weapon slots, no-ammo ranged fire and switching")
 	quit()
