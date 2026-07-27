@@ -22,14 +22,14 @@ const PARTS := [
 # The generated rig pieces deliberately include covered joint tabs.  These
 # values keep those tabs inside the neighbouring piece instead of treating
 # their full bitmap height as visible anatomy.
-const HEAD_COLLAR_INSET := 132.0
-const HIP_TOP_INSET := 16.0
-const LEG_KNEE_OVERLAP := 68.0
-const LOWER_LEG_TOP_INSET := 34.0
+const HEAD_COLLAR_INSET := 152.0
+const HIP_TOP_INSET := 20.0
+const LEG_KNEE_OVERLAP := 84.0
+const LOWER_LEG_TOP_INSET := 44.0
 const FOOT_BASELINE_OFFSET := 10.0
-const ARM_ELBOW_OVERLAP := 70.0
-const FOREARM_TOP_INSET := 42.0
-const HAND_ATTACHMENT_INSET := 62.0
+const ARM_ELBOW_OVERLAP := 86.0
+const FOREARM_TOP_INSET := 50.0
+const HAND_ATTACHMENT_INSET := 74.0
 
 @export var visual_scale := 0.055
 
