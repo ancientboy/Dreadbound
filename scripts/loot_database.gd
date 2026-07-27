@@ -5,7 +5,7 @@ extends RefCounted
 # difficulty modifiers and future worlds from duplicating probability code.
 const ENEMY_POOLS := {
 	"sanatorium:crawler": [
-		{"kind": "ammo", "amount": 3, "weight": 34},
+		{"kind": "bandage", "amount": 1, "weight": 18},
 		{"kind": "material", "id": "tissue_sample", "amount": 1, "weight": 16},
 		{"kind": "echo_shard", "amount": 1, "weight": 8},
 	],
@@ -15,7 +15,7 @@ const ENEMY_POOLS := {
 		{"kind": "echo_shard", "amount": 1, "weight": 10},
 	],
 	"sanatorium:orderly": [
-		{"kind": "shells", "amount": 2, "weight": 18},
+		{"kind": "echo_shard", "amount": 2, "weight": 18},
 		{"kind": "sedative", "amount": 1, "weight": 12},
 		{"kind": "material", "id": "medical_record", "amount": 1, "weight": 10, "rare": true},
 	],
@@ -25,7 +25,7 @@ const ENEMY_POOLS := {
 		{"kind": "echo_shard", "amount": 1, "weight": 12},
 	],
 	"metro:conductor": [
-		{"kind": "shells", "amount": 2, "weight": 16},
+		{"kind": "echo_shard", "amount": 2, "weight": 16},
 		{"kind": "sedative", "amount": 1, "weight": 10},
 		{"kind": "material", "id": "ticket_stub", "amount": 1, "weight": 14, "rare": true},
 	],
