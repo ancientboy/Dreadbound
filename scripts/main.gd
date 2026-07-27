@@ -139,6 +139,7 @@ func _ready() -> void:
 	_apply_curator_contract()
 	total_records = run_config.objective_count
 	_create_collision_walls()
+	fog_of_war.configure_for_run(run_config)
 	fog_of_war.player = player
 	minimap.player = player
 	minimap.fog = fog_of_war
@@ -1711,7 +1712,7 @@ func _draw_metro_wall(wall_rect: Rect2) -> void:
 		for x in range(int(wall_rect.position.x), int(wall_rect.end.x), 32):
 			var tile_index := 2 + posmod(floori(float(x + y) / 32.0), 4)
 			_draw_metro_tile(Rect2(x, y, 32, 32), tile_index, Color(0.78, 0.8, 0.8, 0.98))
-	draw_rect(wall_rect, Color("6f7e83"), false, 2.0)
+	# Tile detail supplies the wall edge; no bright debug-style outline.
 
 
 func _draw_metro_tile(destination: Rect2, tile_index: int, modulate := Color.WHITE) -> void:
@@ -1725,11 +1726,13 @@ func _draw_metro_tile(destination: Rect2, tile_index: int, modulate := Color.WHI
 
 func _draw_metro_props() -> void:
 	var placements := [
-		[0, Vector2(224, 280), 112.0], [2, Vector2(672, 330), 112.0],
-		[3, Vector2(1120, 350), 112.0], [7, Vector2(1600, 300), 112.0],
-		[1, Vector2(760, 760), 104.0], [8, Vector2(1090, 820), 96.0],
-		[9, Vector2(1360, 720), 128.0], [7, Vector2(1664, 1100), 112.0],
-		[2, Vector2(1920, 1120), 112.0], [1, Vector2(480, 1120), 104.0],
+		# Keep centre lanes open: props belong to counters, platform walls and
+		# maintenance edges rather than reading as loose obstacles in the route.
+		[0, Vector2(152, 182), 112.0], [2, Vector2(672, 224), 112.0],
+		[3, Vector2(1120, 312), 112.0], [7, Vector2(1640, 188), 112.0],
+		[1, Vector2(760, 694), 104.0], [8, Vector2(1090, 866), 96.0],
+		[9, Vector2(1360, 688), 128.0], [7, Vector2(1664, 1018), 112.0],
+		[2, Vector2(2024, 1018), 112.0], [1, Vector2(600, 1048), 104.0],
 	]
 	for placement in placements:
 		_draw_metro_prop(int(placement[0]), placement[1], float(placement[2]))
@@ -1760,8 +1763,8 @@ func _draw_metro_maintenance_level(secret_rect: Rect2) -> void:
 				Rect2(center - Vector2(58, 58), Vector2(116, 116)),
 				Rect2((index % 4) * 128, floori(float(index) / 4.0) * 128, 128, 128),
 			)
-	draw_rect(secret_rect, Color("8d68b3"), false, 3.0)
-	draw_string(UI_FONT, secret_rect.position + Vector2(24, 38), "失踪乘客维护层：名单与排水记录", HORIZONTAL_ALIGNMENT_LEFT, secret_rect.size.x - 48, 18, Color("d9b8ef"))
+	# The secret level is communicated by its authored art, not a floor label or
+	# editor-like outline.
 
 
 func _draw_metro_prop(index: int, center: Vector2, draw_size: float) -> void:
@@ -1796,8 +1799,6 @@ func _draw_zones() -> void:
 		for region in run_config.map_regions():
 			var room_rect: Rect2 = region.rect
 			_draw_metro_room(room_rect, metro_index)
-			draw_rect(room_rect, Color("527f91"), false, 2.0)
-			draw_string(UI_FONT, room_rect.position + Vector2(24, 42), str(region.name), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("86b9ce"))
 			metro_index += 1
 		return
 	var room_index := 0
