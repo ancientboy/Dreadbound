@@ -97,7 +97,8 @@ func _init() -> void:
 			audio_count += 1
 
 	assert(art_count >= 45, "O0 must cover the complete first-pass art inventory")
-	assert(audio_count >= 20, "O0 must cover the complete first-pass audio inventory")
+	# Movement footsteps are intentionally not part of Dreadbound's audio direction.
+	assert(audio_count >= 19, "O0 must cover the complete first-pass audio inventory without footsteps")
 	for asset_id in REQUIRED_ART_IDS + REQUIRED_AUDIO_IDS:
 		assert(ids.has(asset_id), "O0 is missing required asset: %s" % asset_id)
 

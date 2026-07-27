@@ -5,7 +5,7 @@ func _init() -> void:
 
 
 func _run_test() -> void:
-	var state := get_node("/root/GameState")
+	var state := root.get_node("GameState") as GameProgress
 	var original_pathway := state.selected_pathway
 	var original_style := state.active_combat_style
 	var corridor = load("res://scenes/corridor.tscn").instantiate()
