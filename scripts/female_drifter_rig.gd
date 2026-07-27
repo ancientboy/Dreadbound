@@ -15,7 +15,7 @@ const LEFT_LEG: Texture2D = preload("res://assets/art/characters/drifter/female_
 const RIGHT_LEG: Texture2D = preload("res://assets/art/characters/drifter/female_rig/right_leg.webp")
 const COAT_LEFT: Texture2D = preload("res://assets/art/characters/drifter/female_rig/coat_left.webp")
 const COAT_RIGHT: Texture2D = preload("res://assets/art/characters/drifter/female_rig/coat_right.webp")
-const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.webp")
+const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 
 const ART_SCALE := 0.18
 
