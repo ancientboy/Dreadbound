@@ -23,7 +23,9 @@ func _run_test() -> void:
 	assert(not state.purchase_exchange_offer("base_weapon"))
 	assert(state.equipment_inventory.count("service_crowbar") == 2)
 
-	state.equipment_inventory.append("service_crowbar")
+	# The currently equipped crowbar is protected from synthesis. Keep four copies
+	# so three un-equipped copies remain available for this recipe.
+	state.equipment_inventory.append_array(["service_crowbar", "service_crowbar"])
 	var pending := state.begin_synthesis(["service_crowbar", "service_crowbar", "service_crowbar"])
 	assert(pending.get("candidates", []).size() >= 2)
 	var synthesized := state.complete_synthesis(0)
@@ -31,7 +33,8 @@ func _run_test() -> void:
 	assert(state.equipment_inventory.has(str(synthesized.item_id)))
 	assert(not str(state.equipment_affixes.get(str(synthesized.item_id), "")).is_empty())
 
-	state.equipment_inventory.append_array(["medical_tag", "medical_tag"])
+	# The equipped charm is protected as well, leaving three inventory copies for synthesis.
+	state.equipment_inventory.append_array(["medical_tag", "medical_tag", "medical_tag"])
 	assert(not state.begin_synthesis(["medical_tag", "medical_tag", "medical_tag"]).is_empty())
 	var embers_before := state.synthesis_embers
 	assert(state.reject_synthesis() > 0)
