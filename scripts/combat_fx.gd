@@ -12,9 +12,15 @@ const PROFESSION_SKILL_ATLASES := {
 	"armorer": preload("res://assets/art/vfx/profession_skills_armorer.png"),
 	"resonant": preload("res://assets/art/vfx/profession_skills_resonant.png"),
 }
+const PROFESSION_ATTACK_ATLASES := {
+	"steadfast": preload("res://assets/art/vfx/profession_attack_modes_steadfast.png"),
+	"armorer": preload("res://assets/art/vfx/profession_attack_modes_armorer.png"),
+	"resonant": preload("res://assets/art/vfx/profession_attack_modes_resonant.png"),
+}
 
 var _events: Array[Dictionary] = []
 var _camera: Camera2D
+var _target_lock: Node2D
 
 
 func _ready() -> void:
@@ -158,7 +164,23 @@ func profession_skill(kind: String, position: Vector2, direction := Vector2.DOWN
 	_spawn("profession_skill_%d" % skill_index, position, direction, size, duration, Color.WHITE)
 
 
-func _spawn(kind: String, origin: Vector2, payload: Vector2, radius: float, duration: float, color: Color) -> void:
+func profession_attack(pathway: String, attack_kind: String, position: Vector2, direction := Vector2.DOWN, size := 96.0, reach := 0.0, duration := 0.24) -> void:
+	if not PROFESSION_ATTACK_ATLASES.has(pathway):
+		return
+	var mode_index := {"melee": 0, "ranged": 1, "shotgun": 2}.get(attack_kind, -1)
+	if mode_index < 0:
+		return
+	var event := _spawn("profession_attack_%s_%d" % [pathway, mode_index], position, direction, size, duration, Color.WHITE)
+	if not event.is_empty():
+		event.reach = reach
+
+
+func set_target_lock(target: Node2D) -> void:
+	_target_lock = target
+	queue_redraw()
+
+
+func _spawn(kind: String, origin: Vector2, payload: Vector2, radius: float, duration: float, color: Color) -> Dictionary:
 	for event in _events:
 		if event.active:
 			continue
@@ -171,7 +193,8 @@ func _spawn(kind: String, origin: Vector2, payload: Vector2, radius: float, dura
 		event.age = 0.0
 		event.color = color
 		queue_redraw()
-		return
+		return event
+	return {}
 
 
 func _kick_camera(amount: float) -> void:
@@ -182,6 +205,11 @@ func _kick_camera(amount: float) -> void:
 
 
 func _draw() -> void:
+	if is_instance_valid(_target_lock):
+		var lock_pulse := 0.72 + sin(Time.get_ticks_msec() * 0.012) * 0.12
+		var lock_center := _target_lock.global_position + Vector2(0, 12)
+		draw_arc(lock_center, 22.0 * lock_pulse, 0.12, PI - 0.12, 18, Color("9ee8ff"), 1.8)
+		draw_arc(lock_center, 22.0 * lock_pulse, PI + 0.12, TAU - 0.12, 18, Color("9ee8ff"), 1.8)
 	for event in _events:
 		if not event.active:
 			continue
@@ -271,6 +299,25 @@ func _draw() -> void:
 						rotation,
 						Color(1.0, 1.0, 1.0, fade),
 					)
+				elif String(event.kind).begins_with("profession_attack_"):
+					var tokens := String(event.kind).trim_prefix("profession_attack_").split("_")
+					if tokens.size() != 2:
+						continue
+					var pathway := str(tokens[0])
+					var mode_index := int(tokens[1])
+					var direction: Vector2 = event.payload
+					var travel := 0.18 if mode_index == 1 else (0.12 if mode_index == 0 else 0.2)
+					var reach := float(event.get("reach", 0.0))
+					var travel_distance := minf(reach * progress * 1.35, reach) if mode_index == 1 else reach * travel
+					_draw_profession_attack_cell(
+						pathway,
+						mode_index,
+						progress,
+						event.origin + direction * travel_distance,
+						float(event.radius) * (0.82 + sin(progress * PI) * 0.2),
+						direction.angle(),
+						Color(1.0, 1.0, 1.0, fade),
+					)
 
 
 func _draw_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
@@ -334,6 +381,22 @@ func _draw_profession_fx_cell(index: int, progress: float, center: Vector2, draw
 		atlas,
 		Rect2(Vector2(-draw_size, -draw_size) * 0.5, Vector2(draw_size, draw_size)),
 		Rect2(frame * 128, row * 128, 128, 128),
+		modulate,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_profession_attack_cell(pathway: String, mode_index: int, progress: float, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
+	var atlas: Texture2D = PROFESSION_ATTACK_ATLASES.get(pathway)
+	if atlas == null or atlas.get_size() != Vector2(512, 384):
+		draw_arc(center, draw_size * 0.4, rotation - 0.5, rotation + 0.5, 16, modulate, 3.0)
+		return
+	var frame := clampi(floori(progress * 4.0), 0, 3)
+	draw_set_transform(center, rotation, Vector2.ONE)
+	draw_texture_rect_region(
+		atlas,
+		Rect2(Vector2(-draw_size, -draw_size) * 0.5, Vector2(draw_size, draw_size)),
+		Rect2(frame * 128, clampi(mode_index, 0, 2) * 128, 128, 128),
 		modulate,
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

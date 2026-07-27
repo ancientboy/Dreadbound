@@ -8,6 +8,9 @@ const ASSETS := {
 	"art_vfx_profession_skills_steadfast_animated": ["res://assets/art/vfx/profession_skills_steadfast.png", Vector2i(512, 512), Vector2i(4, 4)],
 	"art_vfx_profession_skills_armorer_animated": ["res://assets/art/vfx/profession_skills_armorer.png", Vector2i(512, 512), Vector2i(4, 4)],
 	"art_vfx_profession_skills_resonant_animated": ["res://assets/art/vfx/profession_skills_resonant.png", Vector2i(512, 512), Vector2i(4, 4)],
+	"art_vfx_profession_attack_modes_steadfast": ["res://assets/art/vfx/profession_attack_modes_steadfast.png", Vector2i(512, 384), Vector2i(4, 3)],
+	"art_vfx_profession_attack_modes_armorer": ["res://assets/art/vfx/profession_attack_modes_armorer.png", Vector2i(512, 384), Vector2i(4, 3)],
+	"art_vfx_profession_attack_modes_resonant": ["res://assets/art/vfx/profession_attack_modes_resonant.png", Vector2i(512, 384), Vector2i(4, 3)],
 	"art_ui_progression_status_icons": ["res://assets/art/ui/progression_status_icons.png", Vector2i(192, 96), Vector2i(6, 3)],
 	"art_npc_story_portraits": ["res://assets/art/characters/npcs/story_npc_portraits.png", Vector2i(576, 384), Vector2i(3, 2)],
 	"art_metro_maintenance_level": ["res://assets/art/worlds/metro/metro_maintenance_atlas.png", Vector2i(512, 256), Vector2i(4, 2)],
@@ -73,7 +76,10 @@ func _run_test() -> void:
 		"psychic_sense", "anomaly_ingestion", "echo_summoner", "aberrant_form",
 	]:
 		fx.profession_skill(style, Vector2.ZERO)
-	assert(fx._events.filter(func(event): return bool(event.active)).size() == 20)
+	for pathway in ["steadfast", "armorer", "resonant"]:
+		for attack_kind in ["melee", "ranged", "shotgun"]:
+			fx.profession_attack(pathway, attack_kind, Vector2.ZERO)
+	assert(fx._events.filter(func(event): return bool(event.active)).size() == 29)
 	fx.queue_free()
 
 	var combat_source := FileAccess.get_file_as_string("res://scripts/combat_fx.gd")
@@ -85,6 +91,7 @@ func _run_test() -> void:
 	var orderly_source := FileAccess.get_file_as_string("res://scripts/orderly.gd")
 	var boss_source := FileAccess.get_file_as_string("res://scripts/boss.gd")
 	assert(combat_source.contains("floori(progress * 4.0)"))
+	assert(combat_source.contains("profession_attack"))
 	assert(patient_source.contains("patient_grasp") and patient_source.contains("patient_claw"))
 	assert(crawler_source.contains("crawler_lunge") and crawler_source.contains("crawler_tear"))
 	assert(orderly_source.contains("orderly_heavy"))
@@ -92,6 +99,7 @@ func _run_test() -> void:
 	assert(player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
 	assert(not player_source.contains("direction_column * 128"))
 	assert(player_source.contains("_draw_boss_evolution"))
+	assert(player_source.contains("_has_profession_combat_presentation"))
 	assert(main_source.contains("_draw_metro_maintenance_level"))
 	assert(main_source.contains("_set_narrative_portrait"))
 	assert(main_source.contains("_refresh_status_icons"))

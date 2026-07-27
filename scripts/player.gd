@@ -88,6 +88,7 @@ var equipped_weapon_item := ""
 var _relic_hit_counter := 0
 var _walk_animation_time := 0.0
 var _body_sprite: Sprite2D
+var _locked_ranged_target: Node2D
 
 
 func _ready() -> void:
@@ -196,6 +197,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_walk_animation_time = 0.0
 	_sync_body_sprite()
+	_update_ranged_lock()
 	if wants_to_attack:
 		try_attack()
 	if wants_to_use_item:
@@ -271,7 +273,8 @@ func try_attack() -> bool:
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_melee", 0.035)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
-	combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
+	if not _has_profession_combat_presentation():
+		combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
 	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
@@ -304,16 +307,23 @@ func _try_ranged_attack() -> bool:
 	ammo -= 1
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_pistol", 0.025)
 	noise_generated.emit(3)
+	_update_ranged_lock()
 	var candidates: Array[Dictionary] = []
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
 		var offset: Vector2 = target.global_position - global_position
 		var distance := offset.length()
-		if distance <= ranged_range and facing.dot(offset.normalized()) >= 0.94:
-			candidates.append({"target": target, "distance": distance, "offset": offset})
+		var alignment := facing.dot(offset.normalized())
+		if distance <= ranged_range and alignment >= 0.35:
+			var priority := 0.0 if target == _locked_ranged_target else 1.0
+			candidates.append({"target": target, "distance": distance, "offset": offset, "priority": priority, "aim_score": distance + (1.0 - alignment) * 120.0})
 	_shot_end = facing * ranged_range
-	candidates.sort_custom(func(a: Dictionary, b: Dictionary): return float(a.distance) < float(b.distance))
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary):
+		if float(a.priority) != float(b.priority):
+			return float(a.priority) < float(b.priority)
+		return float(a.aim_score) < float(b.aim_score)
+	)
 	if not candidates.is_empty():
 		var multiplier := pathway_effects.consume_attack_multiplier()
 		var target_limit := maxi(1, int(relic_profile.get("pierce_targets", 1)) if equipped_weapon_item == "conductor_railgun" else 1)
@@ -331,8 +341,9 @@ func _try_ranged_attack() -> bool:
 	else:
 		pathway_effects.consume_attack_multiplier()
 	var visual := _pathway_visual()
-	_play_attack_style_vfx("ranged")
-	combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, visual.tracer, visual.muzzle)
+	_play_attack_style_vfx("ranged", _shot_end.length())
+	if not _has_profession_combat_presentation():
+		combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, visual.tracer, visual.muzzle)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -347,8 +358,9 @@ func _try_shotgun_attack() -> bool:
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_shotgun", 0.02)
 	noise_generated.emit(4)
 	var visual := _pathway_visual()
-	_play_attack_style_vfx("shotgun")
-	combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, shotgun_range, visual.tracer, visual.muzzle)
+	_play_attack_style_vfx("shotgun", shotgun_range)
+	if not _has_profession_combat_presentation():
+		combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, shotgun_range, visual.tracer, visual.muzzle)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
@@ -633,76 +645,49 @@ func _active_combat_style() -> String:
 	return str(state.active_combat_style) if state != null else ""
 
 
-const SKILL_DATA := {
-	"barrier_counter": {"name": "壁垒反击", "cooldown": 12.0}, "last_stand": {"name": "绝境坚守", "cooldown": 16.0},
-	"sacrifice_medic": {"name": "代偿治疗", "cooldown": 14.0}, "choke_control": {"name": "扼制领域", "cooldown": 13.0},
-	"weakpoint_sniper": {"name": "弱点标定", "cooldown": 10.0}, "heavy_suppression": {"name": "重火力压制", "cooldown": 12.0},
-	"demolition_traps": {"name": "爆破陷阱", "cooldown": 13.0}, "relic_engineer": {"name": "遗物调校", "cooldown": 11.0},
-	"psychic_sense": {"name": "灵觉扫描", "cooldown": 14.0}, "anomaly_ingestion": {"name": "异常摄取", "cooldown": 15.0},
-	"echo_summoner": {"name": "回响召唤", "cooldown": 14.0}, "aberrant_form": {"name": "异化突变", "cooldown": 16.0},
-}
-
-
+# Compatibility stubs keep legacy HUD/mobile callers inert while the separate
+# active-skill action is retired. Combat expression now comes from the three
+# weapon modes and the selected profession/form instead.
 func get_skill_name() -> String:
-	return str(SKILL_DATA.get(_active_combat_style(), {}).get("name", "未选择流派"))
+	return "未选择流派"
 
 
 func get_skill_cooldown() -> float:
-	return _skill_cooldown
+	return 0.0
 
 
 func use_active_skill() -> bool:
-	var style := _active_combat_style()
-	if _dead or style.is_empty() or _skill_cooldown > 0.0 or not SKILL_DATA.has(style):
-		return false
-	var data: Dictionary = SKILL_DATA[style]
-	_skill_duration = float(data.cooldown)
-	_skill_cooldown = _skill_duration
-	combat_fx.profession_skill(style, global_position + facing * 18.0, facing, 128.0, 0.56)
-	match style:
-		"barrier_counter": _invulnerability_timer = maxf(_invulnerability_timer, 2.4)
-		"last_stand", "sacrifice_medic":
-			health = mini(max_health, health + int(max_health * (0.30 if style == "last_stand" else 0.24)))
-			health_changed.emit(health, max_health)
-			_heal_flash = 0.42
-		"choke_control": _damage_enemies(110.0, attack_damage * 0.75, 0.0, 0.5)
-		"weakpoint_sniper": _damage_enemies(ranged_range, ranged_damage * 2.7, 0.88, 0.0)
-		"heavy_suppression": _damage_enemies(shotgun_range, shotgun_damage * 1.15, 0.55, 0.0)
-		"demolition_traps": _damage_enemies(150.0, attack_damage * 1.65, -1.0, 0.0)
-		"relic_engineer":
-			ammo = mini(max_ammo, ammo + 7)
-			shells = mini(max_shells, shells + 3)
-			weapon_changed.emit(get_weapon_name(), ammo)
-		"psychic_sense":
-			for target in get_tree().get_nodes_in_group("enemies"):
-				if is_instance_valid(target) and target is Node2D:
-					combat_fx.status_burst((target as Node2D).global_position, "freeze")
-		"anomaly_ingestion":
-			_damage_enemies(124.0, attack_damage * 1.25, -1.0, 0.0)
-			add_echo_shards(1)
-		"echo_summoner": _damage_enemies(190.0, attack_damage * 1.05, -1.0, 0.0)
-		"aberrant_form":
-			_damage_enemies(132.0, attack_damage * 1.8, -1.0, 0.0)
-			_invulnerability_timer = maxf(_invulnerability_timer, 0.8)
-	skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
-	queue_redraw()
-	return true
+	return false
 
 
-func _damage_enemies(radius: float, damage: float, forward_dot: float, control_duration: float) -> void:
-	var hits := 0
-	for target in get_tree().get_nodes_in_group("enemies"):
-		if not is_instance_valid(target) or not target.has_method("take_damage") or not target is Node2D:
+func _update_ranged_lock() -> void:
+	_locked_ranged_target = null
+	if current_weapon != Weapon.RANGED or _dead:
+		if combat_fx != null:
+			combat_fx.set_target_lock(null)
+		return
+	var best_score := INF
+	for candidate in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(candidate) or not (candidate is Node2D) or not candidate.has_method("take_damage"):
 			continue
-		var offset: Vector2 = (target as Node2D).global_position - global_position
-		if offset.length() > radius or (forward_dot >= 0.0 and facing.dot(offset.normalized()) < forward_dot):
+		var offset: Vector2 = candidate.global_position - global_position
+		var distance := offset.length()
+		if distance <= 8.0 or distance > ranged_range:
 			continue
-		target.take_damage(int(damage), global_position)
-		combat_fx.impact((target as Node2D).global_position, offset, true)
-		if control_duration > 0.0:
-			_apply_control_status(target, "freeze", control_duration)
-		hits += 1
-	_record_equipment_mastery("multi_hits" if hits > 1 else "melee_hits", hits)
+		var alignment := facing.dot(offset.normalized())
+		if alignment < 0.35:
+			continue
+		var score := distance + (1.0 - alignment) * 120.0
+		if score < best_score:
+			best_score = score
+			_locked_ranged_target = candidate as Node2D
+	if combat_fx != null:
+		combat_fx.set_target_lock(_locked_ranged_target)
+
+
+func _has_profession_combat_presentation() -> bool:
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	return state != null and not state.selected_pathway.is_empty()
 
 
 func play_profession_skill(style_id: String) -> void:
@@ -711,21 +696,17 @@ func play_profession_skill(style_id: String) -> void:
 	combat_fx.profession_skill(style_id, global_position, facing, 108.0, 0.52)
 
 
-func _play_attack_style_vfx(attack_kind: String) -> void:
-	if combat_fx == null:
+func _play_attack_style_vfx(attack_kind: String, reach := 0.0) -> void:
+	if combat_fx == null or not _has_profession_combat_presentation():
 		return
 	var style := _active_combat_style()
-	var should_play := (
-		(style == "barrier_counter" and attack_kind == "melee")
-		or (style == "choke_control" and attack_kind == "melee")
-		or (style == "weakpoint_sniper" and attack_kind == "ranged")
-		or (style == "heavy_suppression" and attack_kind == "shotgun")
-		or (style == "demolition_traps")
-		or (style == "aberrant_form")
-	)
-	if should_play:
-		var size := 116.0 if style in ["choke_control", "heavy_suppression", "demolition_traps"] else 92.0
-		combat_fx.profession_skill(style, global_position + facing * 24.0, facing, size, 0.34)
+	var pathway := _pathway_visual().id
+	var mode_size := 128.0 if attack_kind == "shotgun" else (106.0 if attack_kind == "ranged" else 116.0)
+	var visual_reach := reach if reach > 0.0 else (attack_range if attack_kind == "melee" else (ranged_range if attack_kind == "ranged" else shotgun_range))
+	combat_fx.profession_attack(pathway, attack_kind, global_position + facing * 28.0, facing, mode_size, visual_reach, 0.26)
+	if not style.is_empty():
+		var style_size := 116.0 if style in ["choke_control", "heavy_suppression", "demolition_traps"] else 92.0
+		combat_fx.profession_skill(style, global_position + facing * 24.0, facing, style_size, 0.34)
 
 
 func _emit_pathway_movement_echo() -> void:
@@ -748,35 +729,37 @@ func _draw() -> void:
 	var visual := _pathway_visual()
 	if not is_instance_valid(_body_sprite):
 		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
-	var state := get_node_or_null("/root/GameState") as GameProgress
-	var weapon_item := state.get_equipped_weapon_for_attack(_weapon_attack_type()) if state else ""
-	var growth_level := state.get_relic_growth(weapon_item) if state else 0
-	var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item, growth_level)
-	var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
-	var weapon_scale := float(weapon_visual.get("scale", 1.0))
-	var growth := int(weapon_visual.get("growth", 0))
-	var evolution_id := str(state.current_equipment_evolution(weapon_item).get("id", "")) if state else ""
-	# Equipment owns the silhouette while loadouts still select the attack mode.
-	if str(weapon_visual.shape) == "reaper":
-		if evolution_id in ["watcher_form", "execution_form", "abyss_form"]:
-			_draw_boss_evolution(["watcher_form", "execution_form", "abyss_form"].find(evolution_id), weapon_scale)
+	if not _has_profession_combat_presentation():
+		# Only the unbound starting drifter carries an actual weapon silhouette.
+		# Equipment continues to govern stats, traits, mastery and evolutions for every path.
+		var state := get_node_or_null("/root/GameState") as GameProgress
+		var weapon_item := state.get_equipped_weapon_for_attack(_weapon_attack_type()) if state else ""
+		var growth_level := state.get_relic_growth(weapon_item) if state else 0
+		var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item, growth_level)
+		var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
+		var weapon_scale := float(weapon_visual.get("scale", 1.0))
+		var growth := int(weapon_visual.get("growth", 0))
+		var evolution_id := str(state.current_equipment_evolution(weapon_item).get("id", "")) if state else ""
+		if str(weapon_visual.shape) == "reaper":
+			if evolution_id in ["watcher_form", "execution_form", "abyss_form"]:
+				_draw_boss_evolution(["watcher_form", "execution_form", "abyss_form"].find(evolution_id), weapon_scale)
+			else:
+				_draw_director_reaper(growth, weapon_scale, weapon_color)
+			if growth >= 3:
+				draw_arc(Vector2.ZERO, 30.0 + growth * 3.0, facing.angle() - 0.8, facing.angle() + 0.55, 18, Color(weapon_color, 0.2), 2.0)
+		elif str(weapon_visual.shape) == "railgun":
+			if evolution_id in ["hunter_form", "storm_form", "runaway_form"]:
+				_draw_boss_evolution(3 + ["hunter_form", "storm_form", "runaway_form"].find(evolution_id), weapon_scale)
+			else:
+				_draw_conductor_railgun(growth, weapon_scale, weapon_color)
+		elif str(weapon_visual.shape) == "advanced":
+			_draw_advanced_weapon(int(weapon_visual.get("atlas_index", 0)))
+		elif current_weapon == Weapon.RANGED:
+			_draw_basic_weapon(1)
+		elif current_weapon == Weapon.SHOTGUN:
+			_draw_basic_weapon(2)
 		else:
-			_draw_director_reaper(growth, weapon_scale, weapon_color)
-		if growth >= 3:
-			draw_arc(Vector2.ZERO, 30.0 + growth * 3.0, facing.angle() - 0.8, facing.angle() + 0.55, 18, Color(weapon_color, 0.2), 2.0)
-	elif str(weapon_visual.shape) == "railgun":
-		if evolution_id in ["hunter_form", "storm_form", "runaway_form"]:
-			_draw_boss_evolution(3 + ["hunter_form", "storm_form", "runaway_form"].find(evolution_id), weapon_scale)
-		else:
-			_draw_conductor_railgun(growth, weapon_scale, weapon_color)
-	elif str(weapon_visual.shape) == "advanced":
-		_draw_advanced_weapon(int(weapon_visual.get("atlas_index", 0)))
-	elif current_weapon == Weapon.RANGED:
-		_draw_basic_weapon(1)
-	elif current_weapon == Weapon.SHOTGUN:
-		_draw_basic_weapon(2)
-	else:
-		_draw_basic_weapon(0)
+			_draw_basic_weapon(0)
 	_draw_deep_water_occlusion()
 	_draw_health_bar()
 

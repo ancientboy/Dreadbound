@@ -180,7 +180,6 @@ func _ready() -> void:
 		GameState.corridor_intro_seen = true
 		GameState.save_progress()
 		feedback.text = "终末回廊已解锁：在此查看属性、强化身体、选择整备并再次投送。"
-	$HubHint.text = "两扇传说门已开启：左侧疗养院，右侧潮没末班线。靠近后按 E / 点击进入。"
 	$HubActions.visible = false
 	_apply_responsive_ui()
 	if not GameState.last_run.is_empty():
@@ -394,10 +393,6 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	var target := _nearby_target()
 	_update_hub_actions(target)
-	if target.is_empty():
-		$HubHint.text = "探索终末回廊  ·  WASD / 方向键移动  ·  靠近设施后交互"
-	else:
-		$HubHint.text = "[E] %s" % target.prompt
 	if Input.is_action_just_pressed("interact") and not target.is_empty():
 		_activate_target(target.id)
 
@@ -791,7 +786,6 @@ func _open_terminal() -> void:
 		if hub_navigation:
 			hub_navigation.visible = false
 	$HubTitle.visible = false
-	$HubHint.visible = false
 	$HubActions.visible = false
 	if audio_settings_button:
 		audio_settings_button.visible = false
@@ -806,7 +800,6 @@ func _close_terminal() -> void:
 	if hub_navigation:
 		hub_navigation.visible = true
 	$HubTitle.visible = true
-	$HubHint.visible = true
 	$HubActions.visible = false
 	if audio_settings_button:
 		audio_settings_button.visible = true

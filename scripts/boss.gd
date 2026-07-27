@@ -73,7 +73,6 @@ func _physics_process(delta: float) -> void:
 	var speed := 92.0 if phase_two else 68.0
 	if _timer <= 0.0 and distance < 250.0:
 		_windup = 0.65
-		_get_combat_fx().attack_telegraph(global_position, 230.0 if _attack_index % 2 == 1 else 105.0, _windup, Color("f06b4e"))
 		queue_redraw()
 	else:
 		velocity = global_position.direction_to(target.global_position) * speed
@@ -85,11 +84,11 @@ func _execute_attack() -> void:
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play_at("director_attack", global_position, 0.025)
 	var distance := global_position.distance_to(target.global_position)
 	if _attack_index % 2 == 0:
-		_get_combat_fx().sanatorium_enemy_skill("director_sweep", global_position, global_position.direction_to(target.global_position), 176.0, 0.4)
+		_get_combat_fx().sanatorium_enemy_skill("director_sweep", global_position, global_position.direction_to(target.global_position), 105.0, 0.4)
 		if distance <= 105.0:
 			target.take_damage(int(round((32 if phase_two else 25) * history_damage_multiplier)), global_position)
 	else:
-		_get_combat_fx().sanatorium_enemy_skill("director_slam", global_position, Vector2.DOWN, 244.0, 0.5)
+		_get_combat_fx().sanatorium_enemy_skill("director_slam", global_position, Vector2.DOWN, 230.0, 0.5)
 		if distance <= 230.0:
 			target.take_damage(int(round(20 * history_damage_multiplier)), global_position)
 	_attack_index += 1

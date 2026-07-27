@@ -281,24 +281,6 @@ grow_horizontal = 0
 theme_override_font_sizes/font_size = 17
 text = "行动档案"
 
-[node name="HubHint" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -360.0
-offset_top = -172.0
-offset_right = 360.0
-offset_bottom = -120.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.52, 0.77, 0.69, 1)
-theme_override_font_sizes/font_size = 17
-text = "左侧：废弃疗养院传说门  ·  右侧：潮没末班线传说门  ·  中央终端管理属性与装备"
-horizontal_alignment = 1
-
 [node name="HubActions" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 7
