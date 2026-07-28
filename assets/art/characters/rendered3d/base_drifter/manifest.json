@@ -16,22 +16,27 @@
   "animations": {
     "idle": {
       "frames": 36,
+      "columns": 18,
       "loop": true
     },
     "walk": {
       "frames": 17,
+      "columns": 17,
       "loop": true
     },
     "attack_melee": {
       "frames": 19,
+      "columns": 19,
       "loop": false
     },
     "hit": {
       "frames": 5,
+      "columns": 5,
       "loop": false
     },
     "death": {
       "frames": 30,
+      "columns": 30,
       "loop": false
     }
   }

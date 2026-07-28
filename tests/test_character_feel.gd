@@ -67,6 +67,27 @@ func _run_test() -> void:
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	assert(rendered_sprite != null)
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
+	var idle_frame_0 := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
+	)
+	var idle_frame_18 := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 18) as AtlasTexture
+	)
+	assert(idle_frame_0 != null and idle_frame_18 != null)
+	assert(idle_frame_0.atlas.get_size() == Vector2(2304, 256))
+	assert(idle_frame_0.region == Rect2(0, 0, 128, 128))
+	assert(idle_frame_18.region == Rect2(0, 128, 128, 128))
+	for animation_name in rendered_sprite.sprite_frames.get_animation_names():
+		for frame_index in rendered_sprite.sprite_frames.get_frame_count(animation_name):
+			var frame_texture := (
+				rendered_sprite.sprite_frames.get_frame_texture(
+					animation_name,
+					frame_index,
+				) as AtlasTexture
+			)
+			assert(frame_texture != null)
+			assert(frame_texture.atlas.get_width() <= 4096)
+			assert(frame_texture.atlas.get_height() <= 4096)
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.DOWN) == &"front")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.UP) == &"back")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.LEFT) == &"left")
@@ -76,6 +97,12 @@ func _run_test() -> void:
 	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Mid") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Long") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Release") is Button)
+	var mobile_controls := instance.get_node("HUD/MobileControls") as MobileControls
+	assert(mobile_controls != null)
+	assert(mobile_controls.is_in_group("mobile_controls"))
+	assert(instance.get_node("HUD/TouchTestButtons/Hit") is Button)
+	assert(instance.get_node("HUD/TouchTestButtons/Death") is Button)
+	assert(instance.get_node("HUD/TouchTestButtons/Reset") is Button)
 
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT

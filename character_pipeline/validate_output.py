@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 import struct
 import sys
 from pathlib import Path
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+WEB_SAFE_TEXTURE_LIMIT = 4096
 
 
 def png_size(path: Path) -> tuple[int, int]:
@@ -30,14 +32,24 @@ def main() -> None:
     if set(manifest["directions"]) != expected_directions:
         raise ValueError("manifest must contain exactly four directions")
     for animation, spec in manifest["animations"].items():
-        if int(spec["frames"]) <= 0:
+        frame_count = int(spec["frames"])
+        if frame_count <= 0:
             raise ValueError(f"{animation} has no frames")
+        columns = int(spec.get("columns", frame_count))
+        if columns <= 0 or columns > frame_count:
+            raise ValueError(f"{animation} has invalid atlas columns: {columns}")
+        rows = math.ceil(frame_count / columns)
         for direction in expected_directions:
             atlas = root / f"{animation}_{direction}.png"
             width, height = png_size(atlas)
-            expected = (frame_width * int(spec["frames"]), frame_height)
+            expected = (frame_width * columns, frame_height * rows)
             if (width, height) != expected:
                 raise ValueError(f"{atlas}: got {(width, height)}, expected {expected}")
+            if width > WEB_SAFE_TEXTURE_LIMIT or height > WEB_SAFE_TEXTURE_LIMIT:
+                raise ValueError(
+                    f"{atlas}: {(width, height)} exceeds mobile WebGL texture limit "
+                    f"{WEB_SAFE_TEXTURE_LIMIT}"
+                )
     print(f"Validated {manifest['character_id']}: {len(manifest['animations'])} animations x 4 directions")
 
 

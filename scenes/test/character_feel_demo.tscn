@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
 [ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
+[ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -102,6 +103,16 @@ script = ExtResource("4_skill_demo")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
+[node name="MobileControls" type="Control" parent="HUD" groups=["mobile_controls"]]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_mobile")
+
 [node name="Panel" type="PanelContainer" parent="HUD"]
 offset_left = 28.0
 offset_top = 26.0
@@ -149,3 +160,22 @@ text = "6 Long"
 
 [node name="Release" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
 text = "G Release"
+
+[node name="TouchTestButtons" type="HBoxContainer" parent="HUD"]
+offset_left = 828.0
+offset_top = 28.0
+offset_right = 1252.0
+offset_bottom = 88.0
+theme_override_constants/separation = 8
+
+[node name="Hit" type="Button" parent="HUD/TouchTestButtons"]
+custom_minimum_size = Vector2(96, 60)
+text = "受击"
+
+[node name="Death" type="Button" parent="HUD/TouchTestButtons"]
+custom_minimum_size = Vector2(96, 60)
+text = "死亡"
+
+[node name="Reset" type="Button" parent="HUD/TouchTestButtons"]
+custom_minimum_size = Vector2(112, 60)
+text = "重置"

@@ -10,6 +10,13 @@ const ANIMATION_FRAMES := {
 	&"hit": 5,
 	&"death": 30,
 }
+const ANIMATION_COLUMNS := {
+	&"idle": 18,
+	&"walk": 17,
+	&"attack_melee": 19,
+	&"hit": 5,
+	&"death": 30,
+}
 const ANIMATION_SPEEDS := {
 	&"idle": 12.0,
 	&"walk": 18.0,
@@ -108,8 +115,10 @@ func _build_sprite_frames() -> SpriteFrames:
 			var animation_name := _animation_name(logical_name, direction)
 			var texture := ATLAS_TEXTURES[animation_name] as Texture2D
 			var frame_count := int(ANIMATION_FRAMES[logical_name])
+			var columns := int(ANIMATION_COLUMNS[logical_name])
+			var rows := ceili(float(frame_count) / float(columns))
 			assert(
-				texture.get_size() == Vector2(FRAME_SIZE.x * frame_count, FRAME_SIZE.y),
+				texture.get_size() == Vector2(FRAME_SIZE.x * columns, FRAME_SIZE.y * rows),
 				"Rendered atlas dimensions do not match manifest: %s" % animation_name,
 			)
 			frames.add_animation(animation_name)
@@ -119,8 +128,8 @@ func _build_sprite_frames() -> SpriteFrames:
 				var frame_texture := AtlasTexture.new()
 				frame_texture.atlas = texture
 				frame_texture.region = Rect2(
-					frame_index * FRAME_SIZE.x,
-					0,
+					(frame_index % columns) * FRAME_SIZE.x,
+					(frame_index / columns) * FRAME_SIZE.y,
 					FRAME_SIZE.x,
 					FRAME_SIZE.y,
 				)
