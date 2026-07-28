@@ -66,7 +66,8 @@ func _run_test() -> void:
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	assert(rendered_sprite != null)
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
-	assert(not rig.visible)
+	assert(rig.visible)
+	assert(is_zero_approx(rig.modulate.a))
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.DOWN) == &"front")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.UP) == &"back")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.LEFT) == &"left")
