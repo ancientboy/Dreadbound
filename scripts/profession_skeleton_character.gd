@@ -879,6 +879,138 @@ func has_split_body_parts() -> bool:
 	return true
 
 
+
+
+func has_humanoid_v4_contract() -> bool:
+	if _rig_id == "sacrifice_medic":
+		return false
+	for direction in DIRECTIONS:
+		var manifest := _load_manifest(direction)
+		if int(manifest.get("schema_version", 0)) != 4:
+			return false
+		if str(manifest.get("skeleton_id", "")) != HUMANOID_SKELETON_ID:
+			return false
+		var joints := manifest.get("joints", {}) as Dictionary
+		var rest_vectors := manifest.get("rest_vectors", {}) as Dictionary
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "left_shoulder", "left_elbow", "left_upper_arm"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "left_elbow", "left_hand", "left_forearm"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "right_shoulder", "right_elbow", "right_upper_arm"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "right_elbow", "right_hand", "right_forearm"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "left_hip", "left_knee", "left_thigh"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "left_knee", "left_foot", "left_shin"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "right_hip", "right_knee", "right_thigh"
+		):
+			return false
+		if not _manifest_segment_matches(
+			joints, rest_vectors, "right_knee", "right_foot", "right_shin"
+		):
+			return false
+	return _runtime_chain_matches_manifest(_load_manifest(_direction))
+
+
+func _manifest_segment_matches(
+	joints: Dictionary,
+	rest_vectors: Dictionary,
+	start_key: String,
+	end_key: String,
+	vector_key: String,
+) -> bool:
+	if (
+		not joints.has(start_key)
+		or not joints.has(end_key)
+		or not rest_vectors.has(vector_key)
+	):
+		return false
+	var actual: Vector2 = (
+		_json_vector(joints[end_key]) - _json_vector(joints[start_key])
+	)
+	var declared: Vector2 = _json_vector(rest_vectors[vector_key])
+	return actual.length() > 1.0 and actual.distance_to(declared) <= 0.05
+
+
+func _runtime_chain_matches_manifest(manifest: Dictionary) -> bool:
+	var joints := manifest.get("joints", {}) as Dictionary
+	if not joints.has("torso") or not joints.has("head"):
+		return false
+	var left_upper_length := (
+		_json_vector(joints["left_elbow"])
+		- _json_vector(joints["left_shoulder"])
+	).length()
+	var left_forearm_length := (
+		_json_vector(joints["left_hand"])
+		- _json_vector(joints["left_elbow"])
+	).length()
+	var right_upper_length := (
+		_json_vector(joints["right_elbow"])
+		- _json_vector(joints["right_shoulder"])
+	).length()
+	var right_forearm_length := (
+		_json_vector(joints["right_hand"])
+		- _json_vector(joints["right_elbow"])
+	).length()
+	var left_thigh_length := (
+		_json_vector(joints["left_knee"])
+		- _json_vector(joints["left_hip"])
+	).length()
+	var left_shin_length := (
+		_json_vector(joints["left_foot"])
+		- _json_vector(joints["left_knee"])
+	).length()
+	var right_thigh_length := (
+		_json_vector(joints["right_knee"])
+		- _json_vector(joints["right_hip"])
+	).length()
+	var right_shin_length := (
+		_json_vector(joints["right_foot"])
+		- _json_vector(joints["right_knee"])
+	).length()
+	var expected_head_position: Vector2 = (
+		_json_vector(joints["head"]) - _json_vector(joints["torso"])
+	)
+	return (
+		_bone_length_matches(_left_upper_arm, left_upper_length)
+		and _bone_length_matches(_left_forearm, left_forearm_length)
+		and _bone_length_matches(_right_upper_arm, right_upper_length)
+		and _bone_length_matches(_right_forearm, right_forearm_length)
+		and _bone_length_matches(_left_leg, left_thigh_length)
+		and _bone_length_matches(_left_lower_leg, left_shin_length)
+		and _bone_length_matches(_right_leg, right_thigh_length)
+		and _bone_length_matches(_right_lower_leg, right_shin_length)
+		and _child_starts_at_parent_tip(_left_upper_arm, _left_forearm)
+		and _child_starts_at_parent_tip(_right_upper_arm, _right_forearm)
+		and _child_starts_at_parent_tip(_left_leg, _left_lower_leg)
+		and _child_starts_at_parent_tip(_right_leg, _right_lower_leg)
+		and _head.position.distance_to(expected_head_position) <= 0.05
+	)
+
+
+func _bone_length_matches(bone: Bone2D, expected: float) -> bool:
+	return absf(bone.length - expected) <= 0.05
+
+
+func _child_starts_at_parent_tip(parent: Bone2D, child: Bone2D) -> bool:
+	return child.position.distance_to(Vector2(0.0, parent.length)) <= 0.05
+
+
 func uses_runtime_equipment_only() -> bool:
 	return (
 		(_sprites["lantern"] as Sprite2D).visible == false
