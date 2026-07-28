@@ -107,7 +107,7 @@ script = ExtResource("6_martial_trial")
 [node name="UniversalHumanoidActionCharacter" type="Node2D" parent="Player"]
 z_index = 4
 script = ExtResource("7_humanoid_actions")
-action_library_enabled = false
+action_library_enabled = true
 skin_id = "base_armorer"
 
 [node name="SkillRangeDemo" type="Node2D" parent="."]
@@ -143,11 +143,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "角色手感测试 v18 · 骨骼方向与比例修复"
+text = "角色手感测试 v19 · 统一骨骼角色"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "正式武斗师保持默认；骨骼验收角色与正式模型同高、同地面线，左右朝向按移动方向显示。\n32 套原始动作 + 5 套 Blender 武器动作；验收武器为独立标准模型，不读取正式装备贴图。"
+text = "身体、服装、左右手与武器均走同一套骨骼坐标。\n切换武器不会再替换整张角色图；旧整图资源仅保留为迁移备份。"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -231,7 +231,8 @@ theme_override_constants/separation = 8
 
 [node name="Trial" type="Button" parent="HUD/TouchTestButtons"]
 custom_minimum_size = Vector2(136, 60)
-text = "查看骨骼调试"
+text = "统一骨骼已启用"
+disabled = true
 
 [node name="Hit" type="Button" parent="HUD/TouchTestButtons"]
 custom_minimum_size = Vector2(96, 60)
