@@ -23,6 +23,8 @@ const ITEMS := {
 	"linye_pass": {"name": "林雾的失踪乘客通行牌", "quality": "剧情唯一", "quality_rank": 4, "slot": "charm", "rating": 205, "trait": "lost_passenger_guide", "unique": true, "max_health": 8, "movement_speed": 5.0, "description": "世界唯一 · 维护层向导留下的通行牌；生命上限 +8、移动速度 +5。再次进入末班线时会唤起林雾的记忆。"},
 	"director_reaper": {"name": "主任的缝合镰", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "weapon_type": "melee", "tags": ["melee", "anomaly", "control"], "rating": 218, "series": "缝合遗物", "unique": true, "growth_max": 5, "melee_damage": 14, "trait": "stitch_pull", "description": "成长武器 · 缝线拉扯与定身 · 近战伤害 +14。"},
 	"conductor_railgun": {"name": "末班导轨枪", "quality": "首领遗物", "quality_rank": 4, "slot": "weapon", "weapon_type": "ranged", "tags": ["ranged", "precision", "heavy"], "rating": 224, "series": "末班遗物", "unique": true, "growth_max": 5, "ranged_damage": 11, "trait": "rail_pierce", "description": "成长武器 · 蓄能贯穿线与电磁麻痹 · 手枪伤害 +11。"},
+	"mourning_bow": {"name": "哀鸣骨弓", "quality": "回响", "quality_rank": 2, "slot": "weapon", "weapon_type": "ranged", "attack_profile": {"id": "bow", "kind": "ranged", "range": 520.0, "cooldown": 0.74, "damage_multiplier": 0.92}, "tags": ["bow", "precision", "pierce", "echo"], "rating": 162, "trait": "echo_retrieval", "ranged_damage": 7, "description": "拉弓穿刺 · 命中回响回收 · 不消耗箭矢 · 远程伤害 +7。"},
+	"echo_staff": {"name": "裂隙法杖", "quality": "异常", "quality_rank": 3, "slot": "weapon", "weapon_type": "arcane", "attack_profile": {"id": "arcane", "kind": "arcane", "range": 365.0, "cooldown": 0.62, "damage_multiplier": 0.86, "chain_targets": 2}, "tags": ["arcane", "anomaly", "echo"], "rating": 184, "trait": "anomaly_spread", "ranged_damage": 9, "description": "短束射线 · 异常扩散 · 回响充能 · 不消耗法力药水 · 远程伤害 +9。"},
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
@@ -120,7 +122,30 @@ static func supports_attack(item_id: String, attack_type: String) -> bool:
 	var item := get_item(item_id)
 	if str(item.get("slot", "")) != "weapon":
 		return false
-	return str(item.get("weapon_type", "melee")) == attack_type
+	var profile := attack_profile(item_id)
+	return str(profile.get("kind", "melee")) == attack_type or str(profile.get("id", "")) == attack_type
+
+
+static func attack_profile(item_id: String) -> Dictionary:
+	var item := get_item(item_id)
+	var fallback := str(item.get("weapon_type", "melee"))
+	var profile: Dictionary = item.get("attack_profile", {}).duplicate(true)
+	if profile.is_empty():
+		profile = {"id": fallback, "kind": fallback}
+	profile.id = str(profile.get("id", fallback))
+	profile.kind = str(profile.get("kind", fallback))
+	return profile
+
+
+static func weapon_tags(item_id: String) -> Array[String]:
+	var tags: Array[String] = []
+	for tag in get_item(item_id).get("tags", []):
+		tags.append(str(tag))
+	var profile := attack_profile(item_id)
+	for tag in [str(profile.get("id", "")), str(profile.get("kind", ""))]:
+		if not tag.is_empty() and not tags.has(tag):
+			tags.append(tag)
+	return tags
 
 
 static func active_charm_skill(item_id: String) -> Dictionary:
@@ -128,11 +153,11 @@ static func active_charm_skill(item_id: String) -> Dictionary:
 
 
 static func reward_pool() -> Array[String]:
-	return ["balanced_pistol", "breach_shotgun", "echo_edge", "calming_coil", "ward_echo", "cyan_mark"]
+	return ["balanced_pistol", "breach_shotgun", "mourning_bow", "riot_shield", "echo_edge", "calming_coil", "ward_echo", "cyan_mark"]
 
 
 static func metro_reward_pool() -> Array[String]:
-	return ["waterproof_pulse", "station_whistle", "insulated_crowbar", "last_ticket", "echo_edge", "cyan_mark"]
+	return ["waterproof_pulse", "station_whistle", "insulated_crowbar", "field_codex", "echo_staff", "last_ticket", "echo_edge", "cyan_mark"]
 
 
 static func get_bonuses(equipped: Dictionary) -> Dictionary:
@@ -167,3 +192,4 @@ static func has_trait(equipped: Dictionary, trait_id: String) -> bool:
 		if str(get_item(str(item_id)).get("trait", "")) == trait_id:
 			return true
 	return false
+
