@@ -95,7 +95,7 @@ color = Color(0.2, 0.28, 0.27, 1)
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(1152, 720)
 use_runtime_progress = false
-demo_weapon_slots = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
+demo_weapon_slots = ["service_crowbar", "mourning_bow", "echo_staff"]
 demo_offhand_item = "riot_shield"
 demo_charm_item = "medical_tag"
 
@@ -122,7 +122,7 @@ script = ExtResource("5_mobile")
 offset_left = 28.0
 offset_top = 26.0
 offset_right = 790.0
-offset_bottom = 332.0
+offset_bottom = 430.0
 theme_override_styles/panel = SubResource("Panel_style")
 
 [node name="Margin" type="MarginContainer" parent="HUD/Panel"]
@@ -136,11 +136,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v11 · MARTIAL ARTIST FOUR-DIRECTION TRIAL"
+text = "CHARACTER FEEL DEMO v12 · EQUIPMENT ANCHOR TRIAL"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "武斗师试片：Front / Back / Left / Right · Idle / Walk / Attack\n攻击不再切回裸模 · 受击/死亡保持武斗师外观 · main_hand / off_hand 预留"
+text = "武斗师 × 装备：主手撬棍 / 骨弓 / 法杖 · 副手盾牌 / 法典\n四方向逐帧锚点 · 法杖/弓不再错误回退为枪械"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -165,6 +165,27 @@ text = "6 Long"
 
 [node name="Release" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
 text = "G Release"
+
+[node name="EquipmentButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Crowbar" type="Button" parent="HUD/Panel/Margin/Text/EquipmentButtons"]
+text = "撬棍"
+
+[node name="Bow" type="Button" parent="HUD/Panel/Margin/Text/EquipmentButtons"]
+text = "骨弓"
+
+[node name="Staff" type="Button" parent="HUD/Panel/Margin/Text/EquipmentButtons"]
+text = "法杖"
+
+[node name="OffhandButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Shield" type="Button" parent="HUD/Panel/Margin/Text/OffhandButtons"]
+text = "副手：盾牌"
+
+[node name="Codex" type="Button" parent="HUD/Panel/Margin/Text/OffhandButtons"]
+text = "副手：法典"
 
 [node name="TouchTestButtons" type="HBoxContainer" parent="HUD"]
 offset_left = 684.0

@@ -80,6 +80,22 @@ func shotgun_blast_styled(origin: Vector2, direction: Vector2, max_range: float,
 	_kick_camera(4.0)
 
 
+func bow_shot_styled(origin: Vector2, end: Vector2, color: Color) -> void:
+	_spawn("arrow", origin, end, 0.0, 0.16, color)
+	_kick_camera(1.2)
+
+
+func rail_shot_styled(origin: Vector2, end: Vector2, color: Color) -> void:
+	_spawn("rail_beam", origin, end, 0.0, 0.13, color)
+	_kick_camera(3.2)
+
+
+func arcane_chain_styled(origin: Vector2, end: Vector2, color: Color) -> void:
+	_spawn("arcane_chain", origin, end, 0.0, 0.22, color)
+	_spawn("status", origin, Vector2.ZERO, 18.0, 0.26, color)
+	_kick_camera(1.8)
+
+
 func movement_echo(position: Vector2, facing_direction: Vector2, color: Color, resonant := false) -> void:
 	_spawn("echo", position - facing_direction * 8.0, facing_direction, 0.0, 0.22 if resonant else 0.14, color)
 
@@ -103,7 +119,11 @@ func loot_burst(position: Vector2, color := Color("56d9c6")) -> void:
 
 
 func impact(position: Vector2, direction: Vector2, heavy := false) -> void:
-	_spawn("impact_heavy" if heavy else "impact", position, direction, 0.0, 0.14 if heavy else 0.10, Color("f2dca1") if heavy else Color("9fe2d0"))
+	impact_styled(position, direction, heavy, Color("f2dca1") if heavy else Color("9fe2d0"))
+
+
+func impact_styled(position: Vector2, direction: Vector2, heavy: bool, color: Color) -> void:
+	_spawn("impact_heavy" if heavy else "impact", position, direction, 0.0, 0.14 if heavy else 0.10, color)
 
 
 func status_burst(position: Vector2, status: String) -> void:
@@ -228,6 +248,27 @@ func _draw() -> void:
 				var start_pos: Vector2 = event.origin.lerp(event.payload, progress * 0.24)
 				var end_pos: Vector2 = event.origin.lerp(event.payload, minf(1.0, progress * 1.45 + 0.18))
 				draw_line(start_pos, end_pos, color, 2.8 if event.kind == "tracer" else 1.5)
+			"arrow":
+				var arrow_start: Vector2 = event.origin.lerp(event.payload, progress * 0.82)
+				var arrow_end: Vector2 = event.origin.lerp(event.payload, minf(1.0, progress * 0.82 + 0.12))
+				draw_line(arrow_start, arrow_end, color, 2.4)
+				var arrow_direction := arrow_start.direction_to(arrow_end)
+				draw_line(arrow_end, arrow_end - arrow_direction.rotated(0.55) * 8.0, color, 1.8)
+				draw_line(arrow_end, arrow_end - arrow_direction.rotated(-0.55) * 8.0, color, 1.8)
+			"rail_beam":
+				var beam_end: Vector2 = event.origin.lerp(event.payload, minf(1.0, progress * 2.2))
+				draw_line(event.origin, beam_end, Color(color, 0.28), 8.0 * fade + 2.0)
+				draw_line(event.origin, beam_end, color, 2.8)
+			"arcane_chain":
+				var segment_count := 8
+				var previous: Vector2 = event.origin
+				for segment in range(1, segment_count + 1):
+					var ratio := float(segment) / float(segment_count)
+					var next: Vector2 = event.origin.lerp(event.payload, ratio)
+					var normal: Vector2 = Vector2(event.origin).direction_to(event.payload).orthogonal()
+					next += normal * sin(float(segment) * 2.7 + progress * 15.0) * 5.0 * fade
+					draw_line(previous, next, color, 3.2 - ratio * 1.2)
+					previous = next
 			"muzzle_pistol":
 				_draw_fx_cell(1, event.origin, 42.0 + 18.0 * fade, 0.0, Color(1.0, 1.0, 1.0, fade))
 			"muzzle_shotgun":

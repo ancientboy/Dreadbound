@@ -25,6 +25,7 @@ const ADVANCED_WEAPONS: Texture2D = preload("res://assets/art/weapons/advanced_w
 const DIRECTOR_REAPER_GROWTH: Texture2D = preload("res://assets/art/weapons/director_reaper_growth.png")
 const CONDUCTOR_RAILGUN_GROWTH: Texture2D = preload("res://assets/art/weapons/conductor_railgun_growth.png")
 const BOSS_EVOLUTION_WEAPONS: Texture2D = preload("res://assets/art/weapons/boss_evolution_weapons.png")
+const EQUIPMENT_RUNTIME: Texture2D = preload("res://assets/art/weapons/equipment_runtime.png")
 const PLAYER_STATES_LIGHTING: Texture2D = preload("res://assets/art/vfx/player_states_lighting.png")
 const METRO_FLOOD_LAYERS: Texture2D = preload("res://assets/art/vfx/metro_flood_layers.png")
 
@@ -220,6 +221,14 @@ func _active_attack_damage_multiplier() -> float:
 
 
 func _sync_active_weapon_equipment() -> void:
+	if not use_runtime_progress:
+		equipped_weapon_item = (
+			demo_weapon_slots[int(current_weapon)]
+			if int(current_weapon) < demo_weapon_slots.size()
+			else ""
+		)
+		relic_profile = {}
+		return
 	var state := get_node_or_null("/root/GameState") as GameProgress
 	if state == null:
 		equipped_weapon_item = ""
@@ -500,14 +509,12 @@ func try_attack() -> bool:
 			pass
 	var state := get_node_or_null("/root/GameState")
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
-	_play_attack_style_vfx("melee")
 	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
 	_attack_timer = _active_attack_cooldown() + (0.12 if insulated else 0.0)
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_melee", 0.035)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
-	if not _has_profession_combat_presentation():
-		combat_fx.melee_swing_styled(global_position, facing, attack_range, _pathway_visual().accent)
+	_play_weapon_attack_vfx("melee", _active_attack_range())
 	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
@@ -518,7 +525,7 @@ func try_attack() -> bool:
 			target.take_damage(damage, global_position)
 			hit_count += 1
 			_apply_relic_hit_effect(target, "melee", offset)
-			combat_fx.impact(target.global_position, offset, true)
+			_play_weapon_impact(target.global_position, offset, true)
 	_record_equipment_mastery("melee_hits", hit_count)
 	queue_redraw()
 	return true
@@ -567,17 +574,13 @@ func _try_ranged_attack(attack_mode := "ranged") -> bool:
 			_shot_end = hit_offset
 			hit_target.take_damage(int(ranged_damage * _active_attack_damage_multiplier() * multiplier), global_position)
 			_apply_relic_hit_effect(hit_target, attack_mode, hit_offset)
-			combat_fx.impact(hit_target.global_position, hit_offset, index > 0)
+			_play_weapon_impact(hit_target.global_position, hit_offset, index > 0)
 		_record_equipment_mastery("ranged_hits", mini(target_limit, candidates.size()))
 		if mini(target_limit, candidates.size()) > 1:
 			_record_equipment_mastery("multi_hits", 1)
 	else:
 		pathway_effects.consume_attack_multiplier()
-	var visual := _pathway_visual()
-	_play_attack_style_vfx("ranged", _shot_end.length())
-	if not _has_profession_combat_presentation():
-		var tracer: Color = Color("b47cff") if attack_mode == "arcane" else Color(visual.tracer)
-		combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, tracer, visual.muzzle)
+	_play_weapon_attack_vfx(attack_mode, _shot_end.length(), global_position + _shot_end)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
@@ -589,10 +592,7 @@ func _try_shotgun_attack() -> bool:
 	_attack_flash = 0.16
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_shotgun", 0.02)
 	noise_generated.emit(4)
-	var visual := _pathway_visual()
-	_play_attack_style_vfx("shotgun", attack_range_value)
-	if not _has_profession_combat_presentation():
-		combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, attack_range_value, visual.tracer, visual.muzzle)
+	_play_weapon_attack_vfx("shotgun", attack_range_value)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
@@ -604,7 +604,7 @@ func _try_shotgun_attack() -> bool:
 			target.take_damage(int(shotgun_damage * _active_attack_damage_multiplier() * falloff * pathway_multiplier), global_position)
 			hit_count += 1
 			_apply_relic_hit_effect(target, "shotgun", offset)
-			combat_fx.impact(target.global_position, offset, true)
+			_play_weapon_impact(target.global_position, offset, true)
 	_record_equipment_mastery("multi_hits" if hit_count > 1 else "ranged_hits", maxi(hit_count, 0))
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
@@ -668,6 +668,22 @@ func switch_weapon() -> void:
 	pathway_effects.on_weapon_switched()
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_switch", 0.025)
 	weapon_changed.emit(get_weapon_name(), ammo)
+	queue_redraw()
+
+
+func select_demo_weapon_slot(slot_index: int) -> void:
+	if use_runtime_progress:
+		return
+	current_weapon = clampi(slot_index, 0, 2) as Weapon
+	_sync_active_weapon_equipment()
+	weapon_changed.emit(get_weapon_name(), ammo)
+	queue_redraw()
+
+
+func select_demo_offhand(item_id: String) -> void:
+	if use_runtime_progress or not item_id in ["riot_shield", "field_codex", ""]:
+		return
+	demo_offhand_item = item_id
 	queue_redraw()
 
 
@@ -910,7 +926,7 @@ func use_active_skill() -> bool:
 
 func _damage_for_attack_type(attack_type: String) -> int:
 	match attack_type:
-		"ranged":
+		"ranged", "arcane":
 			return ranged_damage
 		"shotgun":
 			return shotgun_damage
@@ -971,13 +987,36 @@ func play_profession_skill(style_id: String) -> void:
 	combat_fx.profession_skill(style_id, global_position, facing, 108.0, 0.52)
 
 
-func _play_attack_style_vfx(attack_kind: String, reach := 0.0) -> void:
-	if combat_fx == null or not _has_profession_combat_presentation():
+func _play_weapon_attack_vfx(attack_kind: String, reach: float, endpoint := Vector2.INF) -> void:
+	if combat_fx == null:
 		return
-	var pathway: String = str(_pathway_visual().id)
-	var mode_size := 128.0 if attack_kind == "shotgun" else (106.0 if attack_kind == "ranged" else 116.0)
-	var visual_reach := reach if reach > 0.0 else _active_attack_range()
-	combat_fx.profession_attack(pathway, attack_kind, global_position + facing * 28.0, facing, mode_size, visual_reach, 0.26)
+	var profile := _weapon_attack_profile()
+	var effect_color := Color(str(profile.get("effect_color", "9fe2d0")))
+	var origin := global_position + _equipment_anchor(&"main_hand") + facing * 8.0
+	var resolved_end := endpoint if endpoint != Vector2.INF else origin + facing * reach
+	match str(profile.get("vfx", "")):
+		"melee_sweep":
+			combat_fx.melee_swing_styled(global_position, facing, reach, effect_color)
+		"shotgun":
+			combat_fx.shotgun_blast_styled(origin, facing, reach, effect_color, effect_color.lightened(0.24))
+		"bone_arrow":
+			combat_fx.bow_shot_styled(origin, resolved_end, effect_color)
+		"rail_beam":
+			combat_fx.rail_shot_styled(origin, resolved_end, effect_color)
+		"arcane_chain":
+			combat_fx.arcane_chain_styled(origin, resolved_end, effect_color)
+		_:
+			combat_fx.pistol_shot_styled(origin, resolved_end, effect_color, effect_color.lightened(0.28))
+
+
+func _play_weapon_impact(position: Vector2, direction: Vector2, heavy: bool) -> void:
+	var profile := _weapon_attack_profile()
+	combat_fx.impact_styled(
+		position,
+		direction,
+		heavy or str(profile.get("cast", "")).contains("heavy"),
+		Color(str(profile.get("impact_color", "9fe2d0"))),
+	)
 
 
 func _emit_pathway_movement_echo() -> void:
@@ -1002,7 +1041,7 @@ func _draw() -> void:
 		# Only the unbound starting drifter carries an actual weapon silhouette.
 		# Equipment continues to govern stats, traits, mastery and evolutions for every path.
 		var state := get_node_or_null("/root/GameState") as GameProgress
-		var weapon_item := state.get_equipped_weapon_for_attack(_weapon_attack_type()) if state else ""
+		var weapon_item := equipped_weapon_item
 		var growth_level := state.get_relic_growth(weapon_item) if state else 0
 		var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item, growth_level)
 		var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
@@ -1023,12 +1062,18 @@ func _draw() -> void:
 				_draw_conductor_railgun(growth, weapon_scale, weapon_color)
 		elif str(weapon_visual.shape) == "advanced":
 			_draw_advanced_weapon(int(weapon_visual.get("atlas_index", 0)))
-		elif current_weapon == Weapon.RANGED:
+		elif str(weapon_visual.shape) == "equipment":
+			_draw_equipment_weapon(
+				int(weapon_visual.get("atlas_index", 0)),
+				float(weapon_visual.get("rotation_offset", 0.0)),
+			)
+		elif _weapon_attack_type() == "ranged":
 			_draw_basic_weapon(1)
-		elif current_weapon == Weapon.SHOTGUN:
+		elif _weapon_attack_type() == "shotgun":
 			_draw_basic_weapon(2)
 		else:
 			_draw_basic_weapon(0)
+		_draw_offhand(_active_offhand_item())
 	_draw_deep_water_occlusion()
 	_draw_health_bar()
 
@@ -1098,7 +1143,7 @@ func _draw_basic_weapon(atlas_index: int) -> void:
 	if BASIC_WEAPONS == null or BASIC_WEAPONS.get_size() != Vector2(96, 32):
 		draw_line(facing * 7.0 + Vector2(0, -22), facing * 34.0 + Vector2(0, -22), Color("8a5147"), 6.0)
 		return
-	var hand_position := Vector2(0, -27) + facing * 12.0 + facing.orthogonal() * 5.0
+	var hand_position := _equipment_anchor(&"main_hand")
 	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
 	draw_texture_rect_region(
 		BASIC_WEAPONS,
@@ -1113,7 +1158,7 @@ func _draw_advanced_weapon(atlas_index: int) -> void:
 	if ADVANCED_WEAPONS == null or ADVANCED_WEAPONS.get_size() != Vector2(320, 64):
 		_draw_basic_weapon(int(current_weapon))
 		return
-	var hand_position := Vector2(0, -27) + facing * 14.0 + facing.orthogonal() * 5.0
+	var hand_position := _equipment_anchor(&"main_hand")
 	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
 	draw_texture_rect_region(
 		ADVANCED_WEAPONS,
@@ -1129,7 +1174,7 @@ func _draw_boss_evolution(atlas_index: int, scale: float) -> void:
 		return
 	var column := atlas_index % 3
 	var row := floori(float(atlas_index) / 3.0)
-	var hand_position := Vector2(0, -27) + facing * 15.0 + facing.orthogonal() * 5.0
+	var hand_position := _equipment_anchor(&"main_hand")
 	draw_set_transform(hand_position, facing.angle() + (PI * 0.5 if row == 0 else 0.0), Vector2.ONE * scale)
 	draw_texture_rect_region(
 		BOSS_EVOLUTION_WEAPONS,
@@ -1146,7 +1191,7 @@ func _draw_director_reaper(growth: int, scale: float, fallback_color: Color) -> 
 		draw_arc(facing * (42.0 * scale), 15.0 * scale, facing.angle() - 1.35, facing.angle() + 0.55, 10, fallback_color, 5.0 + growth * 0.45)
 		return
 	var frame := clampi(growth, 0, 5)
-	var hand_position := Vector2(0, -27) + facing * (14.0 + growth * 0.8) + facing.orthogonal() * 5.0
+	var hand_position := _equipment_anchor(&"main_hand") + facing * growth * 0.8
 	draw_set_transform(hand_position, facing.angle() + PI * 0.5, Vector2.ONE * scale)
 	draw_texture_rect_region(
 		DIRECTOR_REAPER_GROWTH,
@@ -1162,7 +1207,7 @@ func _draw_conductor_railgun(growth: int, scale: float, fallback_color: Color) -
 		draw_line(facing * 9.0, facing * (45.0 * scale), fallback_color, 7.0)
 		return
 	var frame := clampi(growth, 0, 5)
-	var hand_position := Vector2(0, -27) + facing * (13.0 + growth * 0.6) + facing.orthogonal() * 5.0
+	var hand_position := _equipment_anchor(&"main_hand") + facing * growth * 0.6
 	draw_set_transform(hand_position, facing.angle(), Vector2.ONE * scale)
 	draw_texture_rect_region(
 		CONDUCTOR_RAILGUN_GROWTH,
@@ -1173,10 +1218,60 @@ func _draw_conductor_railgun(growth: int, scale: float, fallback_color: Color) -
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+func _draw_equipment_weapon(atlas_index: int, rotation_offset: float) -> void:
+	if EQUIPMENT_RUNTIME == null or EQUIPMENT_RUNTIME.get_size() != Vector2(256, 64):
+		return
+	draw_set_transform(
+		_equipment_anchor(&"main_hand"),
+		facing.angle() - PI * 0.5 + rotation_offset,
+		Vector2.ONE,
+	)
+	draw_texture_rect_region(
+		EQUIPMENT_RUNTIME,
+		Rect2(-32, -32, 64, 64),
+		Rect2(clampi(atlas_index, 0, 3) * 64, 0, 64, 64),
+		Color(1.16, 1.14, 1.12, 1.0) if _attack_flash > 0.0 else Color.WHITE,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_offhand(item_id: String) -> void:
+	var visual := EquipmentDatabase.offhand_visual(item_id)
+	if visual.is_empty() or EQUIPMENT_RUNTIME == null or EQUIPMENT_RUNTIME.get_size() != Vector2(256, 64):
+		return
+	var size := float(visual.get("display_size", 42.0))
+	draw_set_transform(
+		_equipment_anchor(&"off_hand"),
+		facing.angle() - PI * 0.5,
+		Vector2.ONE,
+	)
+	draw_texture_rect_region(
+		EQUIPMENT_RUNTIME,
+		Rect2(Vector2(-size, -size) * 0.5, Vector2(size, size)),
+		Rect2(int(visual.get("atlas_index", 2)) * 64, 0, 64, 64),
+		Color.WHITE,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _active_offhand_item() -> String:
+	if not use_runtime_progress:
+		return demo_offhand_item
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	return str(state.equipped.get("offhand", "")) if state else ""
+
+
+func _equipment_anchor(slot: StringName) -> Vector2:
+	var trial := get_node_or_null("MartialArtistTrialCharacter")
+	if trial != null and trial.has_method("equipment_anchor"):
+		return trial.equipment_anchor(slot)
+	var side := -1.0 if slot == &"off_hand" else 1.0
+	return Vector2(0, -27) + facing * 13.0 + facing.orthogonal() * 5.0 * side
+
+
 func _draw_visible_body_fallback(color: Color) -> void:
 	draw_circle(Vector2(0, -42), 9.0, Color("c9c2ae"))
 	draw_rect(Rect2(-13, -34, 26, 31), color)
 	draw_line(Vector2(-8, -4), Vector2(-10, 8), Color("2b343b"), 7.0)
 	draw_line(Vector2(8, -4), Vector2(10, 8), Color("2b343b"), 7.0)
 	draw_circle(Vector2(-12, -25), 3.0, Color("59e1e6"))
-

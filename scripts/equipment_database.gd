@@ -28,6 +28,20 @@ const ITEMS := {
 }
 
 const QUALITY_COLORS := [Color("aab3ad"), Color("79b889"), Color("58c7b5"), Color("bc6ac9")]
+const WEAPON_ATTACK_PRESENTATIONS := {
+	"service_crowbar": {"range": 76.0, "cooldown": 0.48, "cast": "sweep", "vfx": "melee_sweep", "effect_color": "c8b58f", "impact_color": "e5d0a4"},
+	"balanced_pistol": {"range": 430.0, "cooldown": 0.34, "cast": "hitscan", "vfx": "pistol", "effect_color": "79d8e8", "impact_color": "a9eff7"},
+	"breach_shotgun": {"range": 235.0, "cooldown": 0.95, "cast": "cone", "vfx": "shotgun", "effect_color": "e5a45f", "impact_color": "ffd093"},
+	"echo_edge": {"range": 88.0, "cooldown": 0.42, "cast": "sweep", "vfx": "melee_sweep", "effect_color": "66d9c6", "impact_color": "9df6e5"},
+	"insulated_crowbar": {"range": 82.0, "cooldown": 0.60, "cast": "heavy_sweep", "vfx": "melee_sweep", "effect_color": "8dc5d4", "impact_color": "c4eef6"},
+	"nullpoint_sidearm": {"range": 480.0, "cooldown": 0.38, "cast": "marking_hitscan", "vfx": "pistol", "effect_color": "79d8e8", "impact_color": "b7f4ff"},
+	"siege_core": {"range": 255.0, "cooldown": 1.05, "cast": "heavy_cone", "vfx": "shotgun", "effect_color": "e58a54", "impact_color": "ffc28c"},
+	"volatile_edge": {"range": 96.0, "cooldown": 0.52, "cast": "anomaly_sweep", "vfx": "melee_sweep", "effect_color": "b47cff", "impact_color": "debaff"},
+	"director_reaper": {"range": 104.0, "cooldown": 0.68, "cast": "reaping_arc", "vfx": "melee_sweep", "effect_color": "c9786a", "impact_color": "f0aaa0"},
+	"conductor_railgun": {"range": 540.0, "cooldown": 0.66, "cast": "piercing_beam", "vfx": "rail_beam", "effect_color": "79d8e8", "impact_color": "d7b1ff"},
+	"mourning_bow": {"cast": "draw_release", "vfx": "bone_arrow", "effect_color": "a8dce0", "impact_color": "d9f2ed"},
+	"echo_staff": {"cast": "rift_channel", "vfx": "arcane_chain", "effect_color": "b47cff", "impact_color": "e0bfff"},
+}
 
 
 static func weapon_visual(item_id: String, growth_level := 0) -> Dictionary:
@@ -42,7 +56,16 @@ static func weapon_visual(item_id: String, growth_level := 0) -> Dictionary:
 		"nullpoint_sidearm": return {"shape": "advanced", "atlas_index": 2, "color": Color("79d8e8"), "name": "零点标记枪"}
 		"siege_core": return {"shape": "advanced", "atlas_index": 3, "color": Color("e58a54"), "name": "围城火力核心"}
 		"volatile_edge": return {"shape": "advanced", "atlas_index": 4, "color": Color("b47cff"), "name": "失控回响刃"}
+		"mourning_bow": return {"shape": "equipment", "atlas_index": 0, "color": Color("a8dce0"), "name": "哀鸣骨弓", "rotation_offset": 0.0}
+		"echo_staff": return {"shape": "equipment", "atlas_index": 1, "color": Color("b47cff"), "name": "裂隙法杖", "rotation_offset": PI}
 	return {"shape": "standard", "color": QUALITY_COLORS[clampi(int(item.get("quality_rank", 0)), 0, QUALITY_COLORS.size() - 1)], "name": str(item.get("name", "制式武器"))}
+
+
+static func offhand_visual(item_id: String) -> Dictionary:
+	match item_id:
+		"riot_shield": return {"shape": "equipment", "atlas_index": 2, "name": "折叠防暴盾", "display_size": 48.0}
+		"field_codex": return {"shape": "equipment", "atlas_index": 3, "name": "野战法典", "display_size": 34.0}
+	return {}
 
 
 static func relic_growth_profile(item_id: String, level: int) -> Dictionary:
@@ -132,6 +155,7 @@ static func attack_profile(item_id: String) -> Dictionary:
 	var profile: Dictionary = item.get("attack_profile", {}).duplicate(true)
 	if profile.is_empty():
 		profile = {"id": fallback, "kind": fallback}
+	profile.merge(WEAPON_ATTACK_PRESENTATIONS.get(item_id, {}), false)
 	profile.id = str(profile.get("id", fallback))
 	profile.kind = str(profile.get("kind", fallback))
 	return profile
@@ -192,4 +216,3 @@ static func has_trait(equipped: Dictionary, trait_id: String) -> bool:
 		if str(get_item(str(item_id)).get("trait", "")) == trait_id:
 			return true
 	return false
-

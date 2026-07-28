@@ -66,9 +66,10 @@ func _update_trial_button() -> void:
 func _layout_touch_ui() -> void:
 	var viewport_size := get_viewport_rect().size
 	var narrow := viewport_size.x < 900.0
+	var compact := viewport_size.x < 1400.0
 	_hud_panel.offset_right = minf(790.0, viewport_size.x - 24.0)
-	_hud_panel.offset_bottom = 314.0 if narrow else 332.0
+	_hud_panel.offset_bottom = 444.0 if narrow else 430.0
 	_touch_test_buttons.offset_left = maxf(24.0, viewport_size.x - 568.0)
 	_touch_test_buttons.offset_right = viewport_size.x - 28.0
-	_touch_test_buttons.offset_top = 28.0 if not narrow else 326.0
+	_touch_test_buttons.offset_top = 456.0 if narrow else (442.0 if compact else 28.0)
 	_touch_test_buttons.offset_bottom = _touch_test_buttons.offset_top + 60.0

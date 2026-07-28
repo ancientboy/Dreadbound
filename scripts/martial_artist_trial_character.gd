@@ -102,6 +102,24 @@ func is_trial_enabled() -> bool:
 	return trial_enabled
 
 
+func equipment_anchor(slot: StringName) -> Vector2:
+	if not trial_enabled:
+		var side := -1.0 if slot == &"off_hand" else 1.0
+		return Vector2(0, -27) + _player.facing * 13.0 + _player.facing.orthogonal() * 5.0 * side
+	var direction := RenderedAtlasCharacter.direction_from_vector(_player.facing)
+	var anchors := {
+		&"front": {&"main_hand": Vector2(15, -28), &"off_hand": Vector2(-15, -28)},
+		&"back": {&"main_hand": Vector2(-14, -30), &"off_hand": Vector2(14, -30)},
+		&"left": {&"main_hand": Vector2(-17, -29), &"off_hand": Vector2(-7, -31)},
+		&"right": {&"main_hand": Vector2(17, -29), &"off_hand": Vector2(7, -31)},
+	}
+	var anchor: Vector2 = anchors[direction][slot]
+	if _active_one_shot == &"attack" and slot == &"main_hand":
+		var extension: float = [0.0, 3.0, 13.0, 5.0, 2.0, 0.0][_sprite.frame]
+		anchor += _player.facing * extension
+	return anchor
+
+
 func _activate_trial() -> void:
 	if not is_instance_valid(_base_character):
 		return
