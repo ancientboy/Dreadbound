@@ -96,6 +96,7 @@ var _ik_mode := IKDemoMode.FREE
 var _ik_blend := 0.0
 var _ik_targets := {}
 var _cast_orb_preview_enabled := true
+var _rest_rotations: Dictionary = {}
 
 
 func _ready() -> void:
@@ -162,8 +163,10 @@ func _apply_direction_assets(direction: String) -> void:
 		bone.rotation = 0.0
 		bone.rest = bone.transform
 	_rest_positions.clear()
+	_rest_rotations.clear()
 	for bone in _animated_bones():
 		_rest_positions[bone] = bone.position
+		_rest_rotations[bone] = bone.rotation
 
 
 func _layout_rig(direction: String) -> void:
@@ -709,7 +712,8 @@ func _pose_position(bone: Bone2D, offset: Vector2, weight: float) -> void:
 
 
 func _pose_rotation(bone: Bone2D, target: float, weight: float) -> void:
-	bone.rotation = lerp_angle(bone.rotation, target, weight)
+	var rest_rotation := float(_rest_rotations.get(bone, 0.0))
+	bone.rotation = lerp_angle(bone.rotation, rest_rotation + target, weight)
 
 
 static func direction_from_facing(facing: Vector2) -> String:

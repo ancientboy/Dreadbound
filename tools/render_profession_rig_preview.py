@@ -17,6 +17,22 @@ from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTIONS = ("front", "left", "right", "back")
+SKIN_ROOT = ROOT / "assets/art/characters/professions/skins"
+
+SKIN_JOINTS = {
+    "head": "head",
+    "torso": "torso",
+    "left_upper_arm": "left_shoulder",
+    "left_forearm": "left_elbow",
+    "right_upper_arm": "right_shoulder",
+    "right_forearm": "right_elbow",
+    "left_thigh": "left_hip",
+    "left_shin": "left_knee",
+    "right_thigh": "right_hip",
+    "right_shin": "right_knee",
+    "coat_far": "coat_left",
+    "coat_near": "coat_right",
+}
 
 
 def load_parts(style_id: str, direction: str) -> dict[str, Image.Image]:
@@ -49,6 +65,9 @@ def paste_center(
 
 
 def render(style_id: str, direction: str) -> Image.Image:
+    skin_folder = SKIN_ROOT / style_id / direction
+    if skin_folder.is_dir():
+        return render_skin(style_id, direction)
     p = load_parts(style_id, direction)
     canvas = Image.new("RGBA", (440, 580), (17, 24, 39, 255))
     folder = (
@@ -76,6 +95,46 @@ def render(style_id: str, direction: str) -> Image.Image:
         canvas.alpha_composite(
             p[part_name],
             (round(offset[0] + left), round(offset[1] + top)),
+        )
+    return canvas
+
+
+def render_skin(style_id: str, direction: str) -> Image.Image:
+    folder = SKIN_ROOT / style_id / direction
+    manifest = json.loads((folder / "rig.json").read_text(encoding="utf-8"))
+    parts = {
+        name: Image.open(folder / part["file"]).convert("RGBA")
+        for name, part in manifest["parts"].items()
+    }
+    frame_width, frame_height = manifest["frame_size"]
+    canvas = Image.new("RGBA", (440, 580), (17, 24, 39, 255))
+    offset = ((canvas.width - frame_width) // 2, canvas.height - frame_height - 30)
+    near = "right" if direction == "right" else "left"
+    far = "left" if near == "right" else "right"
+    order = [
+        "coat_far",
+        f"{far}_thigh",
+        f"{far}_shin",
+        f"{far}_upper_arm",
+        f"{far}_forearm",
+        "torso",
+        f"{near}_thigh",
+        f"{near}_shin",
+        f"{near}_upper_arm",
+        f"{near}_forearm",
+        "coat_near",
+        "head",
+    ]
+    for name in order:
+        part = manifest["parts"][name]
+        joint_x, joint_y = manifest["joints"][SKIN_JOINTS[name]]
+        pivot_x, pivot_y = part["pivot"]
+        canvas.alpha_composite(
+            parts[name],
+            (
+                round(offset[0] + joint_x - pivot_x),
+                round(offset[1] + joint_y - pivot_y),
+            ),
         )
     return canvas
 
