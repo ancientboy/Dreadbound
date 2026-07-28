@@ -68,7 +68,7 @@ func _ready() -> void:
 	_sprite.sprite_frames = _build_sprite_frames()
 	_sprite.animation_finished.connect(_on_animation_finished)
 	add_child(_sprite)
-	call_deferred("_activate_demo_presentation")
+	call_deferred("_activate_presentation")
 
 
 func _process(_delta: float) -> void:
@@ -94,10 +94,7 @@ func _process(_delta: float) -> void:
 	)
 
 
-func _activate_demo_presentation() -> void:
-	var old_rig := _player.get_node_or_null("ProfessionSkeletonRig")
-	if old_rig is CanvasItem:
-		(old_rig as CanvasItem).self_modulate = Color(1.0, 1.0, 1.0, 0.0)
+func _activate_presentation() -> void:
 	if is_instance_valid(_player._body_sprite):
 		_player._body_sprite.hide()
 	_play_locomotion()

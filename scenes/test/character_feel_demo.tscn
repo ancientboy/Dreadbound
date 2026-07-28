@@ -1,10 +1,9 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
-[ext_resource type="Script" path="res://scripts/ik_demo_controls.gd" id="3_ik_controls"]
+[ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
 [ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
-[ext_resource type="Script" path="res://scripts/rendered_atlas_character.gd" id="5_rendered_atlas"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -98,10 +97,6 @@ demo_weapon_slots = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
 demo_offhand_item = "riot_shield"
 demo_charm_item = "medical_tag"
 
-[node name="RenderedAtlasCharacter" type="Node2D" parent="Player"]
-z_index = 2
-script = ExtResource("5_rendered_atlas")
-
 [node name="SkillRangeDemo" type="Node2D" parent="."]
 script = ExtResource("4_skill_demo")
 
@@ -122,7 +117,7 @@ theme_override_constants/margin_bottom = 14
 
 [node name="Text" type="VBoxContainer" parent="HUD/Panel/Margin"]
 theme_override_constants/separation = 8
-script = ExtResource("3_ik_controls")
+script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "CHARACTER FEEL DEMO v9 · 3D-RENDERED 2D ATLAS"
@@ -135,21 +130,6 @@ label_settings = SubResource("Body_settings")
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "ACTIVE: PISTOL · MAIN-HAND GRIP"
 label_settings = SubResource("Body_settings")
-
-[node name="ModeButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
-theme_override_constants/separation = 8
-
-[node name="Free" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "0 Free"
-
-[node name="Pistol" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "1 Pistol"
-
-[node name="Rifle" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "2 Rifle"
-
-[node name="Cast" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "3 Cast"
 
 [node name="SkillLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "SKILL: CLOSE · BLOOD BARRIER · RANGE 170 · IDLE"

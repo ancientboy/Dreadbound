@@ -88,11 +88,10 @@ Do not create a different skeleton per profession.
 
 ## Migration rule
 
-The current `Skeleton2D` character remains the fallback until the first rendered
-set has idle, walk, melee, hit and death atlases for all four directions and
-passes desktop, mobile Web and gameplay tests. Only then should the demo switch
-to rendered sprites. The old rig must not be deleted in the same change that
-introduces the first sample.
+The rendered atlas is the production character presentation. The retired
+`Skeleton2D`/`Bone2D` runtime is not shipped as a fallback. Any future
+profession, outfit, or equipment variant must use the same offline-rendered
+frame contract instead of reintroducing runtime bones.
 
 The first acceptance target is visual, not merely file existence:
 
