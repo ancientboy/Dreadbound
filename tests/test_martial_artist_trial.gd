@@ -25,7 +25,7 @@ func _run_test() -> void:
 	assert(trial_sprite != null and trial_sprite.visible)
 	assert(base_sprite != null and not base_sprite.visible)
 	assert(trial_sprite.position == Vector2(0.0, -12.0))
-	assert(trial_sprite.sprite_frames.get_animation_names().size() == 4)
+	assert(trial_sprite.sprite_frames.get_animation_names().size() == 9)
 	for animation_name in trial_sprite.sprite_frames.get_animation_names():
 		assert(trial_sprite.sprite_frames.get_frame_count(animation_name) == 6)
 		for frame_index in 6:
@@ -56,9 +56,44 @@ func _run_test() -> void:
 	assert(trial_sprite.animation == &"walk_left")
 	assert(trial_sprite.flip_h)
 
+	player.facing = Vector2.UP
+	player.velocity = Vector2.UP * player.movement_speed
+	await process_frame
+	assert(trial_sprite.animation == &"walk_back")
+	assert(not trial_sprite.flip_h)
+
+	player.facing = Vector2.DOWN
+	player.velocity = Vector2.ZERO
+	player._attack_flash = 0.14
+	await process_frame
+	assert(trial_sprite.animation == &"attack_front")
+	assert(trial_sprite.visible)
+	assert(not base_sprite.visible)
+
+	player._attack_flash = 0.0
+	await create_timer(0.3).timeout
+	player.facing = Vector2.RIGHT
+	player._attack_flash = 0.14
+	await process_frame
+	await process_frame
+	assert(trial_sprite.animation == &"attack_left")
+	assert(trial_sprite.flip_h)
+	assert(trial_sprite.visible)
+	assert(not base_sprite.visible)
+
+	player._hurt_flash = 0.18
+	await process_frame
+	assert(trial_sprite.visible)
+	assert(not base_sprite.visible)
+
+	player._dead = true
+	await process_frame
+	assert(trial_sprite.visible)
+	assert(not base_sprite.visible)
+
 	trial.set_trial_enabled(false)
 	await process_frame
 	assert(not trial_sprite.visible)
 	assert(base_sprite.visible)
-	print("Martial artist trial passed: down/left idle+walk and mobile-safe atlases")
+	print("Martial artist trial passed: four-direction locomotion and clothed attacks")
 	quit()

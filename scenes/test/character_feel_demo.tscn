@@ -136,11 +136,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v10 · MARTIAL ARTIST TRIAL"
+text = "CHARACTER FEEL DEMO v11 · MARTIAL ARTIST FOUR-DIRECTION TRIAL"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "武斗师试片：Down / Left · Idle / Walk · 空手 · main_hand / off_hand 预留\n攻击 / 受击 / 死亡暂用原完整图集 · 点击“武斗师试片”可对比原角色"
+text = "武斗师试片：Front / Back / Left / Right · Idle / Walk / Attack\n攻击不再切回裸模 · 受击/死亡保持武斗师外观 · main_hand / off_hand 预留"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
