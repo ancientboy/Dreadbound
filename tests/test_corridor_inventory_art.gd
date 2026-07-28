@@ -22,6 +22,8 @@ const EQUIPMENT_ICON_PATHS := {
 	"linye_pass": "res://assets/art/icons/unique/linye_pass.png",
 	"director_reaper": "res://assets/art/icons/unique/director_reaper.png",
 	"conductor_railgun": "res://assets/art/icons/unique/conductor_railgun.png",
+	"mourning_bow": "res://assets/art/icons/equipment/mourning_bow.svg",
+	"echo_staff": "res://assets/art/icons/equipment/echo_staff.svg",
 }
 
 const MATERIAL_ICON_PATHS := {
@@ -114,3 +116,4 @@ func _check_texture(path: String, expected_size: Vector2i) -> void:
 		for x in range(image.get_width()):
 			var color := image.get_pixel(x, y)
 			assert(not (color.r > 0.72 and color.b > 0.72 and color.g < 0.3), "chroma key remains: %s" % path)
+
