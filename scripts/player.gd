@@ -182,25 +182,41 @@ func _apply_demo_loadout() -> void:
 
 
 func _weapon_attack_type() -> String:
-	var item := EquipmentDatabase.get_item(equipped_weapon_item)
-	return str(item.get("weapon_type", "melee"))
+	return str(_weapon_attack_profile().get("kind", "melee"))
 
 
-func _apply_profession_default_weapon() -> void:
-	var style := _profession_style_definition()
-	var weapon_type := str(style.get("weapon_type", ""))
-	current_weapon = weapon_for_attack_type(weapon_type, current_weapon)
+func _weapon_attack_profile() -> Dictionary:
+	return EquipmentDatabase.attack_profile(equipped_weapon_item)
 
 
-static func weapon_for_attack_type(attack_type: String, fallback := Weapon.MELEE) -> Weapon:
-	match attack_type:
-		"ranged":
-			return Weapon.RANGED
-		"shotgun":
-			return Weapon.SHOTGUN
-		"melee":
-			return Weapon.MELEE
-	return fallback
+func _active_attack_range() -> float:
+	var profile := _weapon_attack_profile()
+	var configured := float(profile.get("range", 0.0))
+	if configured > 0.0:
+		return configured
+	match _weapon_attack_type():
+		"ranged", "arcane": return ranged_range
+		"shotgun": return shotgun_range
+	return attack_range
+
+
+func _active_attack_cooldown() -> float:
+	var profile := _weapon_attack_profile()
+	var configured := float(profile.get("cooldown", 0.0))
+	if configured > 0.0:
+		return configured
+	match _weapon_attack_type():
+		"ranged", "arcane": return ranged_cooldown
+		"shotgun": return shotgun_cooldown
+	return attack_cooldown
+
+
+func _active_attack_damage_multiplier() -> float:
+	var multiplier := float(_weapon_attack_profile().get("damage_multiplier", 1.0))
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if state != null:
+		multiplier *= ExchangeEvolution.combat_style_tag_multiplier(state.active_combat_style, equipped_weapon_item)
+	return multiplier
 
 
 func _sync_active_weapon_equipment() -> void:
@@ -222,7 +238,7 @@ func _physics_process(delta: float) -> void:
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_skill_cooldown = maxf(_skill_cooldown - delta, 0.0)
 	_skill_pose_timer = maxf(_skill_pose_timer - delta, 0.0)
-	if not _active_combat_style().is_empty():
+	if get_skill_name() != "未装备护符":
 		skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
 	_attack_flash = maxf(_attack_flash - delta, 0.0)
 	_invulnerability_timer = maxf(_invulnerability_timer - delta, 0.0)
@@ -479,14 +495,14 @@ func try_attack() -> bool:
 		"shotgun":
 			return _try_shotgun_attack()
 		"arcane":
-			return _try_ranged_attack()
+			return _try_ranged_attack("arcane")
 		_:
 			pass
 	var state := get_node_or_null("/root/GameState")
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	_play_attack_style_vfx("melee")
 	var insulated: bool = state != null and state.has_equipment_trait("signal_anchor_damage")
-	_attack_timer = attack_cooldown + (0.12 if insulated else 0.0)
+	_attack_timer = _active_attack_cooldown() + (0.12 if insulated else 0.0)
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_melee", 0.035)
 	noise_generated.emit(1)
 	_attack_flash = 0.14
@@ -516,8 +532,9 @@ func use_equipment_trait() -> bool:
 	return true
 
 
-func _try_ranged_attack() -> bool:
-	_attack_timer = ranged_cooldown
+func _try_ranged_attack(attack_mode := "ranged") -> bool:
+	var attack_range_value := _active_attack_range()
+	attack_timer = _active_attack_cooldown()
 	_attack_flash = 0.11
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_pistol", 0.025)
 	noise_generated.emit(3)
@@ -529,10 +546,10 @@ func _try_ranged_attack() -> bool:
 		var offset: Vector2 = target.global_position - global_position
 		var distance := offset.length()
 		var alignment := facing.dot(offset.normalized())
-		if distance <= ranged_range and alignment >= 0.35:
+		if distance <= attack_range_value and alignment >= 0.35:
 			var priority := 0.0 if target == _locked_ranged_target else 1.0
 			candidates.append({"target": target, "distance": distance, "offset": offset, "priority": priority, "aim_score": distance + (1.0 - alignment) * 120.0})
-	_shot_end = facing * ranged_range
+	_shot_end = facing * attack_range_value
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary):
 		if float(a.priority) != float(b.priority):
 			return float(a.priority) < float(b.priority)
@@ -540,14 +557,16 @@ func _try_ranged_attack() -> bool:
 	)
 	if not candidates.is_empty():
 		var multiplier := pathway_effects.consume_attack_multiplier()
-		var target_limit := maxi(1, int(relic_profile.get("pierce_targets", 1)) if equipped_weapon_item == "conductor_railgun" else 1)
+		var profile_targets := int(_weapon_attack_profile().get("chain_targets", 1))
+		var relic_targets := int(relic_profile.get("pierce_targets", 1)) if equipped_weapon_item == "conductor_railgun" else 1
+		var target_limit := maxi(1, maxi(profile_targets, relic_targets))
 		for index in range(mini(target_limit, candidates.size())):
 			var hit: Dictionary = candidates[index]
 			var hit_target: Node2D = hit.target
 			var hit_offset: Vector2 = hit.offset
 			_shot_end = hit_offset
-			hit_target.take_damage(int(ranged_damage * multiplier), global_position)
-			_apply_relic_hit_effect(hit_target, "ranged", hit_offset)
+			hit_target.take_damage(int(ranged_damage * _active_attack_damage_multiplier() * multiplier), global_position)
+			_apply_relic_hit_effect(hit_target, attack_mode, hit_offset)
 			combat_fx.impact(hit_target.global_position, hit_offset, index > 0)
 		_record_equipment_mastery("ranged_hits", mini(target_limit, candidates.size()))
 		if mini(target_limit, candidates.size()) > 1:
@@ -557,30 +576,32 @@ func _try_ranged_attack() -> bool:
 	var visual := _pathway_visual()
 	_play_attack_style_vfx("ranged", _shot_end.length())
 	if not _has_profession_combat_presentation():
-		combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, visual.tracer, visual.muzzle)
+		var tracer := Color("b47cff") if attack_mode == "arcane" else visual.tracer
+		combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, tracer, visual.muzzle)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
 	return true
 
 
 func _try_shotgun_attack() -> bool:
-	_attack_timer = shotgun_cooldown
+	var attack_range_value := _active_attack_range()
+	attack_timer = _active_attack_cooldown()
 	_attack_flash = 0.16
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_shotgun", 0.02)
 	noise_generated.emit(4)
 	var visual := _pathway_visual()
-	_play_attack_style_vfx("shotgun", shotgun_range)
+	_play_attack_style_vfx("shotgun", attack_range_value)
 	if not _has_profession_combat_presentation():
-		combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, shotgun_range, visual.tracer, visual.muzzle)
+		combat_fx.shotgun_blast_styled(global_position + facing * 18.0, facing, attack_range_value, visual.tracer, visual.muzzle)
 	var pathway_multiplier := pathway_effects.consume_attack_multiplier()
 	var hit_count := 0
 	for target in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(target) or not target.has_method("take_damage"):
 			continue
 		var offset: Vector2 = target.global_position - global_position
-		if offset.length() <= shotgun_range and facing.dot(offset.normalized()) >= 0.72:
-			var falloff := clampf(1.25 - offset.length() / shotgun_range * 0.55, 0.7, 1.0)
-			target.take_damage(int(shotgun_damage * falloff * pathway_multiplier), global_position)
+		if offset.length() <= attack_range_value and facing.dot(offset.normalized()) >= 0.72:
+			var falloff := clampf(1.25 - offset.length() / attack_range_value * 0.55, 0.7, 1.0)
+			target.take_damage(int(shotgun_damage * _active_attack_damage_multiplier() * falloff * pathway_multiplier), global_position)
 			hit_count += 1
 			_apply_relic_hit_effect(target, "shotgun", offset)
 			combat_fx.impact(target.global_position, offset, true)
@@ -610,8 +631,6 @@ func take_damage(amount: int, source_position: Vector2) -> bool:
 	var knockback := source_position.direction_to(global_position)
 	global_position += knockback * 12.0
 	health_changed.emit(health, max_health)
-	if _active_combat_style() == "last_stand" and health > 0 and health <= int(max_health * 0.3):
-		combat_fx.profession_skill("last_stand", global_position, facing, 104.0, 0.48)
 	if health == 0:
 		_dead = true
 		velocity = Vector2.ZERO
@@ -769,9 +788,7 @@ func use_bandage() -> bool:
 	bandages -= 1
 	health = mini(health + int(bandage_heal * pathway_effects.healing_multiplier()), max_health)
 	pathway_effects.on_bandage_used(health_before, max_health)
-	var style := _active_combat_style()
-	if style in ["barrier_counter", "sacrifice_medic", "echo_summoner"]:
-		combat_fx.profession_skill(style, global_position, facing, 104.0, 0.52)
+	combat_fx.status_burst(global_position, "heal")
 	_heal_flash = 0.3
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_heal", 0.02)
 	health_changed.emit(health, max_health)
@@ -882,21 +899,13 @@ func use_active_skill() -> bool:
 		combat_fx.status_burst(global_position, "heal")
 	elif kind == "lure":
 		equipment_trait_used.emit("noise_lure")
-		combat_fx.profession_skill("echo_summoner", global_position, facing, 104.0, 0.4)
+		combat_fx.status_burst(global_position, "lure")
 	_skill_cooldown = float(skill.get("cooldown", 1.0))
 	_skill_duration = _skill_cooldown
 	_skill_pose_timer = 0.24
 	skill_changed.emit(get_skill_name(), _skill_cooldown, _skill_duration)
 	queue_redraw()
 	return true
-
-
-func _profession_style_definition() -> Dictionary:
-	return ExchangeEvolution.COMBAT_STYLES.get(_active_combat_style(), {})
-
-
-func _profession_skill_definition() -> Dictionary:
-	return _profession_style_definition().get("skill", {})
 
 
 func _damage_for_attack_type(attack_type: String) -> int:
@@ -938,7 +947,7 @@ func _update_ranged_lock() -> void:
 			continue
 		var offset: Vector2 = candidate.global_position - global_position
 		var distance := offset.length()
-		if distance <= 8.0 or distance > ranged_range:
+		if distance <= 8.0 or distance > _active_attack_range():
 			continue
 		var alignment := facing.dot(offset.normalized())
 		if alignment < 0.35:
@@ -967,7 +976,7 @@ func _play_attack_style_vfx(attack_kind: String, reach := 0.0) -> void:
 		return
 	var pathway: String = str(_pathway_visual().id)
 	var mode_size := 128.0 if attack_kind == "shotgun" else (106.0 if attack_kind == "ranged" else 116.0)
-	var visual_reach := reach if reach > 0.0 else (attack_range if attack_kind == "melee" else (ranged_range if attack_kind == "ranged" else shotgun_range))
+	var visual_reach := reach if reach > 0.0 else _active_attack_range()
 	combat_fx.profession_attack(pathway, attack_kind, global_position + facing * 28.0, facing, mode_size, visual_reach, 0.26)
 
 
@@ -981,8 +990,6 @@ func _emit_pathway_movement_echo() -> void:
 		return
 	_movement_echo_timer = 0.14
 	combat_fx.movement_echo(global_position, facing, visual.accent, true)
-	if _active_combat_style() == "psychic_sense" and int(_walk_animation_time * 10.0) % 5 == 0:
-		combat_fx.profession_skill("psychic_sense", global_position, facing, 84.0, 0.34)
 
 
 func _draw() -> void:
@@ -1172,3 +1179,4 @@ func _draw_visible_body_fallback(color: Color) -> void:
 	draw_line(Vector2(-8, -4), Vector2(-10, 8), Color("2b343b"), 7.0)
 	draw_line(Vector2(8, -4), Vector2(10, 8), Color("2b343b"), 7.0)
 	draw_circle(Vector2(-12, -25), 3.0, Color("59e1e6"))
+
