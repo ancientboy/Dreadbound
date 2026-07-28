@@ -3,8 +3,8 @@ extends Node2D
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 @onready var _player := $Player as Player
-@onready var _humanoid_actions := (
-	$Player/UniversalHumanoidActionCharacter as UniversalHumanoidActionCharacter
+@onready var _martial_artist_trial := (
+	$Player/MartialArtistTrialCharacter as MartialArtistTrialCharacter
 )
 @onready var _hud_panel := $HUD/Panel as PanelContainer
 @onready var _touch_test_buttons := $HUD/TouchTestButtons as HBoxContainer
@@ -19,8 +19,9 @@ func _ready() -> void:
 	$HUD/TouchTestButtons/Hit.pressed.connect(_trigger_hit)
 	$HUD/TouchTestButtons/Death.pressed.connect(_trigger_death)
 	$HUD/TouchTestButtons/Reset.pressed.connect(_reset_demo)
-	# This scene is intentionally locked to the empty-hand skeleton baseline.
-	# Do not add a switch back to legacy character or equipment renderers here.
+	# Lock the lab to the screenshot-approved v11 martial-artist rendering.
+	# Formal inventory, equipment and item renderers remain deliberately absent.
+	_martial_artist_trial.set_trial_enabled(true)
 	get_viewport().size_changed.connect(_layout_touch_ui)
 	_update_trial_button()
 	_layout_touch_ui()
@@ -56,7 +57,7 @@ func _reset_demo() -> void:
 
 
 func _update_trial_button() -> void:
-	_trial_button.text = "空手骨骼基线"
+	_trial_button.text = "武斗师 v11"
 	_trial_button.disabled = true
 
 

@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
-[ext_resource type="Script" path="res://scripts/universal_humanoid_action_character.gd" id="7_humanoid_actions"]
+[ext_resource type="Script" path="res://scripts/martial_artist_trial_character.gd" id="7_martial_trial"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -98,14 +98,10 @@ demo_weapon_slots = []
 demo_offhand_item = ""
 demo_charm_item = ""
 
-[node name="UniversalHumanoidActionCharacter" type="Node2D" parent="Player"]
+[node name="MartialArtistTrialCharacter" type="Node2D" parent="Player"]
 z_index = 4
-position = Vector2(0, 9)
-scale = Vector2(0.235, 0.235)
-script = ExtResource("7_humanoid_actions")
-action_library_enabled = true
-isolated_demo_mode = true
-skin_id = "base_armorer"
+script = ExtResource("7_martial_trial")
+trial_enabled = true
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -137,15 +133,15 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "角色骨骼与动作测试 · 空手基线"
+text = "角色模型与动作测试 · 武斗师 v11 基线"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "已恢复到制作新武器动作前的骨骼比例与动作轨道。\n本页不读取正式游戏的装备、道具、存档或旧贴图。"
+text = "使用截图确认的武斗师四方向模型：Front / Back / Left / Right。\n本页固定空手，只验证待机、行走、攻击、受击和死亡。"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "当前模型：标准空手骨骼　动作：待机 / 行走 / 拳击"
+text = "当前模型：武斗师 v11　动作：待机 / 行走 / 空手攻击"
 label_settings = SubResource("Body_settings")
 
 [node name="TouchTestButtons" type="HBoxContainer" parent="HUD"]
@@ -157,7 +153,7 @@ theme_override_constants/separation = 8
 
 [node name="Trial" type="Button" parent="HUD/TouchTestButtons"]
 custom_minimum_size = Vector2(136, 60)
-text = "空手骨骼基线"
+text = "武斗师 v11"
 disabled = true
 
 [node name="Hit" type="Button" parent="HUD/TouchTestButtons"]

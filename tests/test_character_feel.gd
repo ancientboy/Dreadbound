@@ -54,42 +54,37 @@ func _run_test() -> void:
 	var player := instance.get_node("Player") as Player
 	var camera := player.get_node("Camera2D") as PlayerFeelCamera
 	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
-	var humanoid := (
-		player.get_node("UniversalHumanoidActionCharacter")
-		as UniversalHumanoidActionCharacter
+	var martial_artist := (
+		player.get_node("MartialArtistTrialCharacter")
+		as MartialArtistTrialCharacter
 	)
 	assert(player != null)
 	assert(camera != null)
 	assert(rendered != null)
-	assert(humanoid != null)
+	assert(martial_artist != null)
 	assert(camera.position_smoothing_enabled)
 	assert(player.movement_speed == 210.0)
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
 	assert(not player._body_sprite.visible)
 
-	# The character lab is locked to the verified empty-hand skeleton. The
-	# production atlas remains inherited from Player but must never be visible.
-	assert(not rendered.visible)
-	assert(humanoid.visible)
-	assert(humanoid.is_action_library_enabled())
-	assert(humanoid.isolated_demo_mode)
-	assert(humanoid.current_skin_id() == "base_armorer")
-	assert(humanoid.action_count() == 44)
-	assert(humanoid.owns_equipment_visuals())
-	assert(humanoid.current_action_name() == "idle")
+	# The character lab is locked to the screenshot-approved v11 martial artist.
+	# The inherited production atlas must remain hidden.
+	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	assert(rendered_sprite != null and not rendered_sprite.visible)
+	assert(martial_artist.visible)
+	assert(martial_artist.is_trial_enabled())
 	assert(player.demo_weapon_slots.is_empty())
 	assert(player.demo_offhand_item.is_empty())
 	assert(player.demo_charm_item.is_empty())
 	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
-
-	var main_hand := humanoid.get_node("MainHandEquipment") as Sprite2D
-	var offhand := humanoid.get_node("OffHandEquipment") as Sprite2D
-	assert(main_hand != null and offhand != null)
-	assert(main_hand.texture == null and offhand.texture == null)
-	assert(not main_hand.visible and not offhand.visible)
-	assert((humanoid.get_node("Head") as Sprite2D).texture != null)
-	assert((humanoid.get_node("Torso") as Sprite2D).texture != null)
+	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
+	assert(martial_artist.get_node_or_null("MainHandEquipment") == null)
+	assert(martial_artist.get_node_or_null("OffHandEquipment") == null)
+	var trial_sprite := martial_artist.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	assert(trial_sprite != null and trial_sprite.visible)
+	assert(trial_sprite.position == Vector2(0.0, -12.0))
+	assert(trial_sprite.sprite_frames.get_animation_names().size() == 9)
 
 	# No production inventory, equipment picker, weapon preview, or skill-range
 	# controls are allowed back into this isolated model-and-animation test.
@@ -107,25 +102,16 @@ func _run_test() -> void:
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
 	await process_frame
-	assert(humanoid.current_action_name() == "walk")
+	assert(trial_sprite.animation == &"walk_left")
+	assert(trial_sprite.flip_h)
 
 	player.velocity = Vector2.ZERO
 	player._attack_flash = 0.2
 	await process_frame
-	assert(humanoid.current_action_name() == "punch_jab")
-	assert(main_hand.texture == null and offhand.texture == null)
-
-	player._attack_flash = 0.0
-	player._hurt_flash = 0.2
-	await process_frame
-	assert(humanoid.current_action_name() == "hit_chest")
-
-	player._hurt_flash = 0.0
-	player._dead = true
-	await process_frame
-	assert(humanoid.current_action_name() == "death")
+	assert(trial_sprite.animation == &"attack_left")
+	assert(trial_sprite.flip_h)
 
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: isolated empty-hand skeleton and animation baseline")
+	print("Character feel passed: isolated v11 martial-artist visual baseline")
 	quit()

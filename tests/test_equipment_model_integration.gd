@@ -14,10 +14,10 @@ func _run_test() -> void:
 	root.add_child(instance)
 	await process_frame
 	var player := instance.get_node("Player") as Player
-	var humanoid := player.get_node("UniversalHumanoidActionCharacter") as UniversalHumanoidActionCharacter
+	var trial := player.get_node("MartialArtistTrialCharacter") as MartialArtistTrialCharacter
 	assert(player.equipped_weapon_item.is_empty())
-	assert(humanoid.isolated_demo_mode)
-	assert((humanoid.get_node("MainHandEquipment") as Sprite2D).texture == null)
-	assert((humanoid.get_node("OffHandEquipment") as Sprite2D).texture == null)
+	assert(trial != null and trial.is_trial_enabled())
+	assert(trial.get_node_or_null("MainHandEquipment") == null)
+	assert(trial.get_node_or_null("OffHandEquipment") == null)
 	print("Equipment separation passed: game assets are not used by the character demo")
 	quit()
