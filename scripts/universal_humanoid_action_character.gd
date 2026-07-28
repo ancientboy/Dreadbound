@@ -3,8 +3,6 @@ extends Node2D
 
 const ACTION_LIBRARY_PATH := "res://content/humanoid_action_tracks.json"
 const SKIN_ROOT := "res://assets/art/characters/professions/skins"
-const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
-const EQUIPMENT_RUNTIME: Texture2D = preload("res://assets/art/weapons/equipment_runtime.png")
 const PREVIEW_FAMILIES := ["unarmed", "sword", "pistol", "bow", "spell", "shield"]
 const FORMAL_DISPLAY_HEIGHT := 62.0
 const FORMAL_GROUND_Y := 8.0
@@ -479,57 +477,43 @@ func _sync_equipment_visuals() -> void:
 	_offhand_sprite.rotation = facing_angle - PI * 0.5
 	_main_reference_weapon.rotation = facing_angle
 	_offhand_reference_weapon.rotation = facing_angle
-	if _preview_weapon_family == "shield":
-		_main_reference_weapon.set_family("")
-		_offhand_reference_weapon.set_family("shield")
-	else:
-		_main_reference_weapon.set_family(_preview_weapon_family)
-		_offhand_reference_weapon.set_family("")
+	# Runtime equipment and the action-preview controls intentionally use the
+	# exact same hand-attached models. Inventory atlas cells are UI art and must
+	# never be magnified on the character.
+	var main_family := _preview_weapon_family
+	var offhand_family := ""
+	if main_family.is_empty():
+		main_family = _main_equipment_family()
+		offhand_family = _offhand_equipment_family()
+	if main_family == "shield":
+		main_family = ""
+		offhand_family = "shield"
+	_main_reference_weapon.set_family(main_family)
+	_offhand_reference_weapon.set_family(offhand_family)
 
 
 func _sync_main_hand_texture() -> void:
-	if not _preview_weapon_family.is_empty():
-		_main_hand_sprite.texture = null
-		return
-	match _player.equipped_weapon_item:
-		"service_crowbar":
-			_set_atlas_cell(_main_hand_sprite, BASIC_WEAPONS, 32, 0, 4.7)
-		"mourning_bow":
-			_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 0, 2.8)
-		"echo_staff":
-			_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 1, 2.8)
-		_:
-			_main_hand_sprite.texture = null
+	# These nodes remain as compatibility anchors for the player scene, but UI
+	# atlas textures are deliberately disabled. ActionReferenceWeapon owns the
+	# visible model for both the equipment and preview paths.
+	_main_hand_sprite.texture = null
 
 
 func _sync_offhand_texture() -> void:
-	if not _preview_weapon_family.is_empty():
-		_offhand_sprite.texture = null
-		return
-	match _player.demo_offhand_item:
-		"riot_shield":
-			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 2, 2.2)
-		"field_codex":
-			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 3, 1.65)
-		_:
-			_offhand_sprite.texture = null
+	_offhand_sprite.texture = null
 
 
-func _set_atlas_cell(
-	sprite: Sprite2D,
-	atlas: Texture2D,
-	cell_size: int,
-	index: int,
-	display_scale: float,
-) -> void:
-	var region := Rect2(index * cell_size, 0, cell_size, cell_size)
-	var current := sprite.texture as AtlasTexture
-	if current == null or current.atlas != atlas or current.region != region:
-		var texture := AtlasTexture.new()
-		texture.atlas = atlas
-		texture.region = region
-		sprite.texture = texture
-	sprite.scale = Vector2.ONE * display_scale
+func _main_equipment_family() -> String:
+	match _player.equipped_weapon_item:
+		"service_crowbar", "echo_edge": return "sword"
+		"mourning_bow": return "bow"
+		"echo_staff": return "spell"
+		"service_pistol", "nullpoint_sidearm": return "pistol"
+	return ""
+
+
+func _offhand_equipment_family() -> String:
+	return "shield" if _player.demo_offhand_item == "riot_shield" else ""
 
 
 func _apply_feedback_color() -> void:
