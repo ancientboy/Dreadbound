@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/ik_demo_controls.gd" id="3_ik_controls"]
 [ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
+[ext_resource type="Script" path="res://scripts/rendered_atlas_character.gd" id="5_rendered_atlas"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -97,6 +98,10 @@ demo_weapon_slots = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
 demo_offhand_item = "riot_shield"
 demo_charm_item = "medical_tag"
 
+[node name="RenderedAtlasCharacter" type="Node2D" parent="Player"]
+z_index = 2
+script = ExtResource("5_rendered_atlas")
+
 [node name="SkillRangeDemo" type="Node2D" parent="."]
 script = ExtResource("4_skill_demo")
 
@@ -120,11 +125,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_ik_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v8 · GODOT NATIVE HUMANOID RIG"
+text = "CHARACTER FEEL DEMO v9 · 3D-RENDERED 2D ATLAS"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "Skeleton2D + Bone2D · Base humanoid four-view skin · One production rig only\nNo overlay rig · 0–3 weapon posture · 4–6 effect range · G charm preview"
+text = "AnimatedSprite2D · One source rig rendered to four directions · Pure 2D runtime\nIdle / Walk / Attack / Hit / Death · 4–6 effect range · G charm preview"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
