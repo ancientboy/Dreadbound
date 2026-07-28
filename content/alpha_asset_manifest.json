@@ -100,6 +100,8 @@
     {"id": "art_icon_linye_pass", "discipline": "art", "group": "unique_icon", "world": "metro", "priority": "P1", "deliverable": "32x32_unique_icon", "target": "assets/art/icons/unique/linye_pass.png", "status": "review", "source_plan": "original_generation_and_pixel_cleanup"},
     {"id": "art_icon_director_reaper", "discipline": "art", "group": "unique_icon", "world": "sanatorium", "priority": "P0", "deliverable": "32x32_unique_icon", "target": "assets/art/icons/unique/director_reaper.png", "status": "review", "source_plan": "original_generation_and_pixel_cleanup"},
     {"id": "art_icon_conductor_railgun", "discipline": "art", "group": "unique_icon", "world": "metro", "priority": "P0", "deliverable": "32x32_unique_icon", "target": "assets/art/icons/unique/conductor_railgun.png", "status": "review", "source_plan": "original_generation_and_pixel_cleanup"},
+    {"id": "art_icon_mourning_bow", "discipline": "art", "group": "equipment_icon", "world": "sanatorium", "priority": "P1", "deliverable": "32x32_weapon_icon", "target": "assets/art/icons/equipment/mourning_bow.svg", "status": "review", "source_plan": "original_vector_icon"},
+    {"id": "art_icon_echo_staff", "discipline": "art", "group": "equipment_icon", "world": "metro", "priority": "P1", "deliverable": "32x32_weapon_icon", "target": "assets/art/icons/equipment/echo_staff.svg", "status": "review", "source_plan": "original_vector_icon"},
     {"id": "art_material_tissue_sample", "discipline": "art", "group": "material_icon", "world": "sanatorium", "priority": "P0", "deliverable": "32x32_icon", "target": "assets/art/icons/materials/tissue_sample.png", "status": "review", "source_plan": "original_generation_and_pixel_cleanup"},
     {"id": "art_material_medical_record", "discipline": "art", "group": "material_icon", "world": "sanatorium", "priority": "P0", "deliverable": "32x32_icon", "target": "assets/art/icons/materials/medical_record.png", "status": "review", "source_plan": "original_generation_and_pixel_cleanup"},
     {"id": "art_material_stitch_core", "discipline": "art", "group": "material_icon", "world": "sanatorium", "priority": "P0", "deliverable": "32x32_icon", "target": "assets/art/icons/materials/stitch_core.png", "status": "review", "source_plan": "original_generation_and_pixel_cleanup"},
@@ -155,3 +157,4 @@
     {"id": "audio_voice_metro_broadcasts", "discipline": "audio", "group": "voice", "world": "metro", "priority": "P1", "deliverable": "subtitle_backed_processed_broadcast_set", "target": "assets/audio/voice/metro/", "status": "planned", "source_plan": "original"}
   ]
 }
+
