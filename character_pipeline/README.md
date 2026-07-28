@@ -26,18 +26,23 @@ uses different names.
 
 1. Install Blender 4.x.
 2. Download the CC0 base character and animation packs from the links above.
-3. Retarget or append the desired actions to one character file, then export a
-   single GLB with one armature and the actions.
+3. Use the Godot/Unreal glTF character and the non-root-motion Godot GLB
+   animation library. The pipeline verifies their shared Quaternius humanoid
+   bone contract and applies the imported actions to the character armature.
 4. Run:
 
    ```bash
    blender --background --python character_pipeline/render_directional_sprites.py -- \
-     --character /absolute/path/to/dreadbound_character.glb \
+     --character "/absolute/path/to/Superhero_Male_FullBody.gltf" \
+     --animations "/absolute/path/to/UAL1_Standard.glb" \
      --output assets/art/characters/rendered3d/base_drifter \
      --preset character_pipeline/dreadbound.json
    python3 character_pipeline/validate_output.py \
      assets/art/characters/rendered3d/base_drifter
    ```
+
+Do not pass `UAL1_Standard_RM.glb`: Godot owns player translation, so baking
+root motion into the sprite frames would produce visible foot drift.
 
 The output contains one horizontal transparent atlas for each
 animation/direction pair plus a manifest. A 96×128 source frame is intentional:
