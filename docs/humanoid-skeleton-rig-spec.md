@@ -100,9 +100,14 @@ skeleton and animations.
   animation skeleton.
 - A form with a different limb count or a materially non-humanoid structure
   must declare a separate rig family instead of abusing humanoid skin slots.
-- Manifests use schema version 3, identify `skeleton_id: humanoid_v1`, and store
-  all eight two-dimensional rest vectors. Runtime binding must use vector
-  length and angle; reducing a segment to only its vertical distance is invalid.
+- Legacy profession skins use schema version 3; authored split-part skins use
+  schema version 4. Both identify `skeleton_id: humanoid_v1` and store all
+  eight two-dimensional rest vectors. Runtime binding must use vector length
+  and angle; reducing a segment to only its vertical distance is invalid.
+- Runtime articulation is owned by the Godot `Skeleton2D/Bone2D` hierarchy.
+  Every Sprite2D texture pivot must coincide with its parent Bone2D origin.
+  A preview scene must instantiate exactly one production skeleton and may not
+  overlay the legacy demo rig.
 
 ## Directional Gait
 
