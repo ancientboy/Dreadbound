@@ -534,7 +534,7 @@ func use_equipment_trait() -> bool:
 
 func _try_ranged_attack(attack_mode := "ranged") -> bool:
 	var attack_range_value := _active_attack_range()
-	attack_timer = _active_attack_cooldown()
+	_attack_timer = _active_attack_cooldown()
 	_attack_flash = 0.11
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_pistol", 0.025)
 	noise_generated.emit(3)
@@ -576,7 +576,7 @@ func _try_ranged_attack(attack_mode := "ranged") -> bool:
 	var visual := _pathway_visual()
 	_play_attack_style_vfx("ranged", _shot_end.length())
 	if not _has_profession_combat_presentation():
-		var tracer := Color("b47cff") if attack_mode == "arcane" else visual.tracer
+		var tracer: Color = Color("b47cff") if attack_mode == "arcane" else Color(visual.tracer)
 		combat_fx.pistol_shot_styled(global_position + facing * 18.0, global_position + _shot_end, tracer, visual.muzzle)
 	weapon_changed.emit(get_weapon_name(), ammo)
 	queue_redraw()
@@ -585,7 +585,7 @@ func _try_ranged_attack(attack_mode := "ranged") -> bool:
 
 func _try_shotgun_attack() -> bool:
 	var attack_range_value := _active_attack_range()
-	attack_timer = _active_attack_cooldown()
+	_attack_timer = _active_attack_cooldown()
 	_attack_flash = 0.16
 	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("player_shotgun", 0.02)
 	noise_generated.emit(4)
