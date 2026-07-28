@@ -37,7 +37,7 @@ const PART_JOINTS := {
 	"coat_near": ["right_hip", "right_knee"],
 }
 
-@export var action_library_enabled := false
+@export var action_library_enabled := true
 @export var skin_id := "base_armorer"
 @export var playback_fps := 30.0
 
