@@ -59,7 +59,11 @@ func _run_test() -> void:
 	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
 	assert(camera.position_smoothing_enabled)
 	assert(player.movement_speed == 210.0)
-	assert(player.attack_damage == 38)
+	assert(player.attack_damage == 35)
+	assert(player.demo_weapon_slots.is_empty())
+	assert(player.demo_offhand_item.is_empty())
+	assert(player.demo_charm_item.is_empty())
+	assert(player.equipped_weapon_item.is_empty())
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
 	assert(not player._body_sprite.visible)
@@ -68,7 +72,7 @@ func _run_test() -> void:
 	assert(rendered_sprite != null)
 	assert(rendered.ground_offset == Vector2(0.0, -12.0))
 	assert(rendered_sprite.position == Vector2(0.0, -12.0))
-	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
+	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 64)
 	var idle_frame_0 := (
 		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
 	)
@@ -110,17 +114,25 @@ func _run_test() -> void:
 		walk_right_frame.atlas
 		== load("res://assets/art/characters/rendered3d/base_drifter/walk_left.png")
 	)
-	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/ModeButtons") == null)
-	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Close") is Button)
-	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Mid") is Button)
-	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Long") is Button)
-	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Release") is Button)
+	assert(instance.get_node_or_null("SkillRangeDemo") == null)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Idle") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Attack") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Idle") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/AimDown") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Aim") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/AimUp") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Shoot") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Reload") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Enter") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Idle") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Shoot") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Exit") is Button)
 	var mobile_controls := instance.get_node("HUD/MobileControls") as MobileControls
 	assert(mobile_controls != null)
 	assert(mobile_controls.is_in_group("mobile_controls"))
-	assert(instance.get_node("HUD/TouchTestButtons/Hit") is Button)
-	assert(instance.get_node("HUD/TouchTestButtons/Death") is Button)
-	assert(instance.get_node("HUD/TouchTestButtons/Reset") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Hit") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Death") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Reset") is Button)
 
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
@@ -130,34 +142,29 @@ func _run_test() -> void:
 	player._attack_flash = 0.2
 	await process_frame
 	assert(rendered_sprite.animation == &"attack_melee_right")
-
-	var skill_demo := instance.get_node("SkillRangeDemo") as SkillRangeDemo
-	assert(skill_demo != null)
-	assert(skill_demo.uses_existing_skill_atlases())
-	var previous_range := 0.0
-	for mode in [
-		SkillRangeDemo.SkillMode.CLOSE_BURST,
-		SkillRangeDemo.SkillMode.MID_BOLT,
-		SkillRangeDemo.SkillMode.LONG_RIFT,
-	]:
-		player.facing = Vector2.RIGHT
-		skill_demo.set_skill_mode(mode)
-		assert(skill_demo.skill_range() > previous_range)
-		previous_range = skill_demo.skill_range()
-		assert(skill_demo.trigger_skill())
-		assert(skill_demo.current_phase() == "windup")
-		assert(
-			skill_demo.cast_endpoint().distance_to(player.global_position)
-			>= skill_demo.skill_range() - 0.1
-		)
-		assert(skill_demo.uses_distinct_effect_anchors())
-		skill_demo._phase = "active"
-		skill_demo._phase_time = float(SkillRangeDemo.SKILLS[mode].active) * 0.96
-		skill_demo._advance_phase()
-		assert(skill_demo.target_hit_count(mode) == 1)
-		skill_demo._phase = "idle"
-		skill_demo._cooldown_left = 0.0
+	player._attack_flash = 0.0
+	rendered.select_preview_family(&"pistol")
+	await process_frame
+	assert(rendered_sprite.animation == &"pistol_idle_right")
+	player._attack_flash = 0.2
+	await process_frame
+	assert(rendered_sprite.animation == &"pistol_shoot_right")
+	assert(rendered.play_preview_action(&"pistol_reload"))
+	assert(rendered_sprite.animation == &"pistol_reload_right")
+	assert(rendered.play_preview_action(&"spell_enter"))
+	assert(rendered_sprite.animation == &"spell_enter_right")
+	assert(rendered.play_preview_action(&"spell_idle"))
+	assert(rendered_sprite.animation == &"spell_idle_right")
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"one_hand_melee_idle_front") == 21)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"pistol_reload_front") == 21)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_enter_front") == 7)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_idle_front") == 26)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_shoot_front") == 7)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_exit_front") == 6)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: production four-direction atlas and skill ranges")
+	print("Character feel passed: isolated original sword, pistol, and staff actions")
 	quit()

@@ -1,9 +1,8 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
-[ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
@@ -94,12 +93,9 @@ color = Color(0.2, 0.28, 0.27, 1)
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(1152, 720)
 use_runtime_progress = false
-demo_weapon_slots = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
-demo_offhand_item = "riot_shield"
-demo_charm_item = "medical_tag"
-
-[node name="SkillRangeDemo" type="Node2D" parent="."]
-script = ExtResource("4_skill_demo")
+demo_weapon_slots = []
+demo_offhand_item = ""
+demo_charm_item = ""
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -116,8 +112,8 @@ script = ExtResource("5_mobile")
 [node name="Panel" type="PanelContainer" parent="HUD"]
 offset_left = 28.0
 offset_top = 26.0
-offset_right = 790.0
-offset_bottom = 332.0
+offset_right = 1000.0
+offset_bottom = 534.0
 theme_override_styles/panel = SubResource("Panel_style")
 
 [node name="Margin" type="MarginContainer" parent="HUD/Panel"]
@@ -131,51 +127,85 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v9 · 3D-RENDERED 2D ATLAS"
+text = "CHARACTER ACTION DEMO · ORIGINAL UAL MOTIONS"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "AnimatedSprite2D · One source rig rendered to four directions · Pure 2D runtime\nIdle / Walk / Attack / Hit / Death · 4–6 effect range · G charm preview"
+text = "同一正确角色 · 原始下载动作按原时长离线渲染 · 四方向纯 2D\n不读取正式游戏装备、道具、背包图标；移动仍可验证原走路"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "ACTIVE: PISTOL · MAIN-HAND GRIP"
+text = "当前动作：空手待机"
 label_settings = SubResource("Body_settings")
 
-[node name="SkillLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "SKILL: CLOSE · BLOOD BARRIER · RANGE 170 · IDLE"
+[node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "剑动作（原 Sword_Idle / Sword_Attack）"
 label_settings = SubResource("Body_settings")
 
-[node name="SkillButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+[node name="SwordButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
-[node name="Close" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "4 Close"
+[node name="Idle" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
+text = "剑待机"
 
-[node name="Mid" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "5 Mid"
+[node name="Attack" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
+text = "剑攻击"
 
-[node name="Long" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "6 Long"
+[node name="PistolLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "手枪动作（原 Pistol 系列）"
+label_settings = SubResource("Body_settings")
 
-[node name="Release" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "G Release"
-
-[node name="TouchTestButtons" type="HBoxContainer" parent="HUD"]
-offset_left = 828.0
-offset_top = 28.0
-offset_right = 1252.0
-offset_bottom = 88.0
+[node name="PistolButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
-[node name="Hit" type="Button" parent="HUD/TouchTestButtons"]
-custom_minimum_size = Vector2(96, 60)
+[node name="Idle" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
+text = "手枪待机"
+
+[node name="AimDown" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
+text = "向下瞄准"
+
+[node name="Aim" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
+text = "平瞄"
+
+[node name="AimUp" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
+text = "向上瞄准"
+
+[node name="Shoot" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
+text = "射击"
+
+[node name="Reload" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
+text = "换弹"
+
+[node name="StaffLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "法杖动作（原 Spell Simple 系列）"
+label_settings = SubResource("Body_settings")
+
+[node name="StaffButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Enter" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
+text = "进入施法"
+
+[node name="Idle" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
+text = "法杖待机"
+
+[node name="Shoot" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
+text = "施法"
+
+[node name="Exit" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
+text = "退出施法"
+
+[node name="BaselineButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Unarmed" type="Button" parent="HUD/Panel/Margin/Text/BaselineButtons"]
+text = "恢复空手"
+
+[node name="Hit" type="Button" parent="HUD/Panel/Margin/Text/BaselineButtons"]
 text = "受击"
 
-[node name="Death" type="Button" parent="HUD/TouchTestButtons"]
-custom_minimum_size = Vector2(96, 60)
+[node name="Death" type="Button" parent="HUD/Panel/Margin/Text/BaselineButtons"]
 text = "死亡"
 
-[node name="Reset" type="Button" parent="HUD/TouchTestButtons"]
-custom_minimum_size = Vector2(112, 60)
+[node name="Reset" type="Button" parent="HUD/Panel/Margin/Text/BaselineButtons"]
 text = "重置"

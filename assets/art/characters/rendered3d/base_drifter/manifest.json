@@ -38,6 +38,61 @@
       "frames": 30,
       "columns": 30,
       "loop": false
+    },
+    "one_hand_melee_idle": {
+      "frames": 21,
+      "columns": 21,
+      "loop": true
+    },
+    "pistol_idle": {
+      "frames": 21,
+      "columns": 21,
+      "loop": true
+    },
+    "pistol_aim_down": {
+      "frames": 3,
+      "columns": 3,
+      "loop": false
+    },
+    "pistol_aim": {
+      "frames": 3,
+      "columns": 3,
+      "loop": false
+    },
+    "pistol_aim_up": {
+      "frames": 3,
+      "columns": 3,
+      "loop": false
+    },
+    "pistol_shoot": {
+      "frames": 8,
+      "columns": 8,
+      "loop": false
+    },
+    "pistol_reload": {
+      "frames": 21,
+      "columns": 21,
+      "loop": false
+    },
+    "spell_enter": {
+      "frames": 7,
+      "columns": 7,
+      "loop": false
+    },
+    "spell_idle": {
+      "frames": 26,
+      "columns": 26,
+      "loop": true
+    },
+    "spell_shoot": {
+      "frames": 7,
+      "columns": 7,
+      "loop": false
+    },
+    "spell_exit": {
+      "frames": 6,
+      "columns": 6,
+      "loop": false
     }
   }
 }

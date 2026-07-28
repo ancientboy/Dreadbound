@@ -1,50 +1,81 @@
 extends VBoxContainer
 
-@onready var _skill_demo := get_node("../../../../SkillRangeDemo") as SkillRangeDemo
+const ACTION_LABELS := {
+	&"idle": "空手待机",
+	&"attack_melee": "剑攻击 / 空手基准攻击",
+	&"one_hand_melee_idle": "剑待机",
+	&"pistol_idle": "手枪待机",
+	&"pistol_aim_down": "手枪向下瞄准",
+	&"pistol_aim": "手枪平瞄",
+	&"pistol_aim_up": "手枪向上瞄准",
+	&"pistol_shoot": "手枪射击",
+	&"pistol_reload": "手枪换弹",
+	&"spell_enter": "进入法杖施法",
+	&"spell_idle": "法杖待机",
+	&"spell_shoot": "法杖施法",
+	&"spell_exit": "退出法杖施法",
+}
+
+@onready var _character := get_node(
+	"../../../../Player/RenderedAtlasCharacter",
+) as RenderedAtlasCharacter
 @onready var _mode_label := $ModeLabel as Label
-@onready var _skill_label := $SkillLabel as Label
 
 
 func _ready() -> void:
-	$SkillButtons/Close.pressed.connect(
-		_select_skill.bind(SkillRangeDemo.SkillMode.CLOSE_BURST),
-	)
-	$SkillButtons/Mid.pressed.connect(
-		_select_skill.bind(SkillRangeDemo.SkillMode.MID_BOLT),
-	)
-	$SkillButtons/Long.pressed.connect(
-		_select_skill.bind(SkillRangeDemo.SkillMode.LONG_RIFT),
-	)
-	$SkillButtons/Release.pressed.connect(_release_skill)
-	_update_mode_label()
-	_update_skill_label()
+	_connect_action($SwordButtons/Idle, &"one_hand_melee_idle")
+	_connect_action($SwordButtons/Attack, &"attack_melee")
+	_connect_action($PistolButtons/Idle, &"pistol_idle")
+	_connect_action($PistolButtons/AimDown, &"pistol_aim_down")
+	_connect_action($PistolButtons/Aim, &"pistol_aim")
+	_connect_action($PistolButtons/AimUp, &"pistol_aim_up")
+	_connect_action($PistolButtons/Shoot, &"pistol_shoot")
+	_connect_action($PistolButtons/Reload, &"pistol_reload")
+	_connect_action($StaffButtons/Enter, &"spell_enter")
+	_connect_action($StaffButtons/Idle, &"spell_idle")
+	_connect_action($StaffButtons/Shoot, &"spell_shoot")
+	_connect_action($StaffButtons/Exit, &"spell_exit")
+	$BaselineButtons/Unarmed.pressed.connect(_select_unarmed)
+	$BaselineButtons/Hit.pressed.connect(_trigger_hit)
+	$BaselineButtons/Death.pressed.connect(_trigger_death)
+	$BaselineButtons/Reset.pressed.connect(_reset_demo)
+	_show_action(&"idle")
 
 
-func _process(_delta: float) -> void:
-	_update_skill_label()
+func _connect_action(button: Button, action_name: StringName) -> void:
+	button.pressed.connect(_play_action.bind(action_name))
 
 
-func _select_skill(mode: SkillRangeDemo.SkillMode) -> void:
-	_skill_demo.set_skill_mode(mode)
-	_update_skill_label()
+func _play_action(action_name: StringName) -> void:
+	if is_instance_valid(_character) and _character.play_preview_action(action_name):
+		_show_action(action_name)
 
 
-func _release_skill() -> void:
-	_skill_demo.trigger_skill()
-	_update_skill_label()
-
-
-func _update_mode_label() -> void:
-	_mode_label.text = "ACTIVE: PURE 2D ATLAS · SPACE ATTACK · H HIT · K DEATH"
-
-
-func _update_skill_label() -> void:
-	if not is_instance_valid(_skill_demo):
+func _select_unarmed() -> void:
+	if not is_instance_valid(_character):
 		return
-	var state := _skill_demo.current_phase().to_upper()
-	if _skill_demo.cooldown_left() > 0.0 and state == "IDLE":
-		state = "COOLDOWN %.1fs" % _skill_demo.cooldown_left()
-	_skill_label.text = (
-		"SKILL: %s · RANGE %d · %s"
-		% [_skill_demo.selected_skill_name(), int(_skill_demo.skill_range()), state]
-	)
+	_character.select_preview_family(&"unarmed")
+	_show_action(&"idle")
+
+
+func _trigger_hit() -> void:
+	var player := _character.get_parent() as Player
+	if player != null and not player._dead:
+		player.take_damage(1, player.global_position + Vector2.RIGHT * 40.0)
+		_show_action(&"hit")
+
+
+func _trigger_death() -> void:
+	var player := _character.get_parent() as Player
+	if player != null and not player._dead:
+		player.take_damage(player.health, player.global_position + Vector2.RIGHT * 40.0)
+		_show_action(&"death")
+
+
+func _reset_demo() -> void:
+	get_tree().reload_current_scene()
+
+
+func _show_action(action_name: StringName) -> void:
+	var label := str(ACTION_LABELS.get(action_name, String(action_name)))
+	_mode_label.text = "当前动作：%s · 原始动作帧序列" % label

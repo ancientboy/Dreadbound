@@ -15,6 +15,17 @@ const ANIMATION_FRAMES := {
 	&"attack_melee": 19,
 	&"hit": 5,
 	&"death": 30,
+	&"one_hand_melee_idle": 21,
+	&"pistol_idle": 21,
+	&"pistol_aim_down": 3,
+	&"pistol_aim": 3,
+	&"pistol_aim_up": 3,
+	&"pistol_shoot": 8,
+	&"pistol_reload": 21,
+	&"spell_enter": 7,
+	&"spell_idle": 26,
+	&"spell_shoot": 7,
+	&"spell_exit": 6,
 }
 const ANIMATION_COLUMNS := {
 	&"idle": 18,
@@ -22,6 +33,17 @@ const ANIMATION_COLUMNS := {
 	&"attack_melee": 19,
 	&"hit": 5,
 	&"death": 30,
+	&"one_hand_melee_idle": 21,
+	&"pistol_idle": 21,
+	&"pistol_aim_down": 3,
+	&"pistol_aim": 3,
+	&"pistol_aim_up": 3,
+	&"pistol_shoot": 8,
+	&"pistol_reload": 21,
+	&"spell_enter": 7,
+	&"spell_idle": 26,
+	&"spell_shoot": 7,
+	&"spell_exit": 6,
 }
 const ANIMATION_SPEEDS := {
 	&"idle": 12.0,
@@ -29,6 +51,17 @@ const ANIMATION_SPEEDS := {
 	&"attack_melee": 36.0,
 	&"hit": 18.0,
 	&"death": 18.0,
+	&"one_hand_melee_idle": 12.0,
+	&"pistol_idle": 12.0,
+	&"pistol_aim_down": 12.0,
+	&"pistol_aim": 12.0,
+	&"pistol_aim_up": 12.0,
+	&"pistol_shoot": 12.0,
+	&"pistol_reload": 12.0,
+	&"spell_enter": 12.0,
+	&"spell_idle": 12.0,
+	&"spell_shoot": 12.0,
+	&"spell_exit": 12.0,
 }
 const LOOPING_ANIMATIONS := {
 	&"idle": true,
@@ -36,6 +69,22 @@ const LOOPING_ANIMATIONS := {
 	&"attack_melee": false,
 	&"hit": false,
 	&"death": false,
+	&"one_hand_melee_idle": true,
+	&"pistol_idle": true,
+	&"pistol_aim_down": false,
+	&"pistol_aim": false,
+	&"pistol_aim_up": false,
+	&"pistol_shoot": false,
+	&"pistol_reload": false,
+	&"spell_enter": false,
+	&"spell_idle": true,
+	&"spell_shoot": false,
+	&"spell_exit": false,
+}
+const HOLD_LAST_FRAME := {
+	&"pistol_aim_down": true,
+	&"pistol_aim": true,
+	&"pistol_aim_up": true,
 }
 const ATLAS_TEXTURES := {
 	&"idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/idle_front.png"),
@@ -58,6 +107,50 @@ const ATLAS_TEXTURES := {
 	&"death_left": preload("res://assets/art/characters/rendered3d/base_drifter/death_left.png"),
 	&"death_back": preload("res://assets/art/characters/rendered3d/base_drifter/death_back.png"),
 	&"death_right": preload("res://assets/art/characters/rendered3d/base_drifter/death_right.png"),
+	&"one_hand_melee_idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/one_hand_melee_idle_front.png"),
+	&"one_hand_melee_idle_left": preload("res://assets/art/characters/rendered3d/base_drifter/one_hand_melee_idle_left.png"),
+	&"one_hand_melee_idle_back": preload("res://assets/art/characters/rendered3d/base_drifter/one_hand_melee_idle_back.png"),
+	&"one_hand_melee_idle_right": preload("res://assets/art/characters/rendered3d/base_drifter/one_hand_melee_idle_right.png"),
+	&"pistol_idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_idle_front.png"),
+	&"pistol_idle_left": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_idle_left.png"),
+	&"pistol_idle_back": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_idle_back.png"),
+	&"pistol_idle_right": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_idle_right.png"),
+	&"pistol_aim_down_front": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_down_front.png"),
+	&"pistol_aim_down_left": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_down_left.png"),
+	&"pistol_aim_down_back": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_down_back.png"),
+	&"pistol_aim_down_right": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_down_right.png"),
+	&"pistol_aim_front": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_front.png"),
+	&"pistol_aim_left": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_left.png"),
+	&"pistol_aim_back": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_back.png"),
+	&"pistol_aim_right": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_right.png"),
+	&"pistol_aim_up_front": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_up_front.png"),
+	&"pistol_aim_up_left": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_up_left.png"),
+	&"pistol_aim_up_back": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_up_back.png"),
+	&"pistol_aim_up_right": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_aim_up_right.png"),
+	&"pistol_shoot_front": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_shoot_front.png"),
+	&"pistol_shoot_left": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_shoot_left.png"),
+	&"pistol_shoot_back": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_shoot_back.png"),
+	&"pistol_shoot_right": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_shoot_right.png"),
+	&"pistol_reload_front": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_reload_front.png"),
+	&"pistol_reload_left": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_reload_left.png"),
+	&"pistol_reload_back": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_reload_back.png"),
+	&"pistol_reload_right": preload("res://assets/art/characters/rendered3d/base_drifter/pistol_reload_right.png"),
+	&"spell_enter_front": preload("res://assets/art/characters/rendered3d/base_drifter/spell_enter_front.png"),
+	&"spell_enter_left": preload("res://assets/art/characters/rendered3d/base_drifter/spell_enter_left.png"),
+	&"spell_enter_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_enter_back.png"),
+	&"spell_enter_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_enter_right.png"),
+	&"spell_idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/spell_idle_front.png"),
+	&"spell_idle_left": preload("res://assets/art/characters/rendered3d/base_drifter/spell_idle_left.png"),
+	&"spell_idle_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_idle_back.png"),
+	&"spell_idle_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_idle_right.png"),
+	&"spell_shoot_front": preload("res://assets/art/characters/rendered3d/base_drifter/spell_shoot_front.png"),
+	&"spell_shoot_left": preload("res://assets/art/characters/rendered3d/base_drifter/spell_shoot_left.png"),
+	&"spell_shoot_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_shoot_back.png"),
+	&"spell_shoot_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_shoot_right.png"),
+	&"spell_exit_front": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_front.png"),
+	&"spell_exit_left": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_left.png"),
+	&"spell_exit_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_back.png"),
+	&"spell_exit_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_right.png"),
 }
 
 @export var ground_offset := Vector2(0.0, -12.0)
@@ -68,6 +161,8 @@ var _sprite: AnimatedSprite2D
 var _active_one_shot := &""
 var _attack_was_active := false
 var _hurt_was_active := false
+var _preview_idle := &"idle"
+var _preview_attack := &"attack_melee"
 
 
 func _ready() -> void:
@@ -95,7 +190,7 @@ func _process(_delta: float) -> void:
 	elif hurt_is_active and not _hurt_was_active:
 		_play_one_shot(&"hit")
 	elif attack_is_active and not _attack_was_active:
-		_play_one_shot(&"attack_melee")
+		_play_one_shot(_preview_attack)
 	elif _active_one_shot.is_empty():
 		_play_locomotion()
 	_attack_was_active = attack_is_active
@@ -149,7 +244,7 @@ func _build_sprite_frames() -> SpriteFrames:
 
 func _play_locomotion() -> void:
 	var direction := direction_from_vector(_player.facing)
-	var logical_name := &"walk" if _player.velocity.length() > 2.0 else &"idle"
+	var logical_name := &"walk" if _player.velocity.length() > 2.0 else _preview_idle
 	var animation_name := _animation_name(logical_name, direction)
 	if _sprite.animation != animation_name or not _sprite.is_playing():
 		_sprite.play(animation_name)
@@ -166,8 +261,52 @@ func _on_animation_finished() -> void:
 		_sprite.pause()
 		_sprite.frame = maxi(0, _sprite.sprite_frames.get_frame_count(_sprite.animation) - 1)
 		return
+	if bool(HOLD_LAST_FRAME.get(_active_one_shot, false)):
+		_sprite.pause()
+		_sprite.frame = maxi(0, _sprite.sprite_frames.get_frame_count(_sprite.animation) - 1)
+		return
 	_active_one_shot = &""
 	_play_locomotion()
+
+
+func select_preview_family(family: StringName) -> void:
+	match family:
+		&"sword":
+			_preview_idle = &"one_hand_melee_idle"
+			_preview_attack = &"attack_melee"
+		&"pistol":
+			_preview_idle = &"pistol_idle"
+			_preview_attack = &"pistol_shoot"
+		&"staff":
+			_preview_idle = &"spell_idle"
+			_preview_attack = &"spell_shoot"
+		_:
+			_preview_idle = &"idle"
+			_preview_attack = &"attack_melee"
+	_active_one_shot = &""
+	_play_locomotion()
+
+
+func play_preview_action(logical_name: StringName) -> bool:
+	if not ANIMATION_FRAMES.has(logical_name):
+		return false
+	if logical_name == &"attack_melee" or String(logical_name).begins_with("one_hand_melee"):
+		select_preview_family(&"sword")
+	elif String(logical_name).begins_with("pistol"):
+		select_preview_family(&"pistol")
+	elif String(logical_name).begins_with("spell"):
+		select_preview_family(&"staff")
+	if bool(LOOPING_ANIMATIONS[logical_name]):
+		_preview_idle = logical_name
+		_active_one_shot = &""
+		_play_locomotion()
+	else:
+		_play_one_shot(logical_name)
+	return true
+
+
+func selected_preview_attack() -> StringName:
+	return _preview_attack
 
 
 static func direction_from_vector(value: Vector2) -> StringName:

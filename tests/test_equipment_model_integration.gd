@@ -52,22 +52,9 @@ func _run_test() -> void:
 	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/EquipmentButtons") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/OffhandButtons") == null)
-	assert(player.equipped_weapon_item == "service_crowbar")
-	player._play_weapon_attack_vfx("melee", player._active_attack_range())
-	var found_weapon_swing := false
-	var found_legacy_attack := false
-	for event in player.combat_fx._events:
-		if not bool(event.get("active", false)):
-			continue
-		var event_kind := str(event.get("kind", ""))
-		found_weapon_swing = found_weapon_swing or event_kind == "weapon_swing"
-		found_legacy_attack = (
-			found_legacy_attack
-			or event_kind == "arc"
-			or event_kind.begins_with("profession_attack_")
-		)
-	assert(found_weapon_swing)
-	assert(not found_legacy_attack)
-	assert(player.demo_weapon_slots == ["service_crowbar", "balanced_pistol", "breach_shotgun"])
-	print("Equipment model integration passed: game equipment remains available outside baseline demo")
+	assert(player.equipped_weapon_item.is_empty())
+	assert(player.demo_weapon_slots.is_empty())
+	assert(player.demo_offhand_item.is_empty())
+	assert(player.demo_charm_item.is_empty())
+	print("Equipment model integration passed: game equipment remains isolated from action demo")
 	quit()

@@ -23,7 +23,29 @@ func _run_test() -> void:
 	assert(not corridor.walker_avatar._body_sprite.visible)
 	var hub_sprite := hub_atlas.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	assert(hub_sprite != null)
-	assert(hub_sprite.sprite_frames.get_animation_names().size() == 20)
+	for required_animation in [
+		&"idle_front",
+		&"idle_back",
+		&"idle_left",
+		&"idle_right",
+		&"walk_front",
+		&"walk_back",
+		&"walk_left",
+		&"walk_right",
+		&"attack_melee_front",
+		&"attack_melee_back",
+		&"attack_melee_left",
+		&"attack_melee_right",
+		&"hit_front",
+		&"hit_back",
+		&"hit_left",
+		&"hit_right",
+		&"death_front",
+		&"death_back",
+		&"death_left",
+		&"death_right",
+	]:
+		assert(hub_sprite.sprite_frames.has_animation(required_animation))
 	corridor.set_process(false)
 	corridor.walker_velocity = Vector2.RIGHT * corridor.WALK_SPEED
 	corridor.walker_facing = Vector2.RIGHT
