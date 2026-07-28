@@ -67,7 +67,7 @@ func _run_test() -> void:
 	assert(rendered_sprite != null)
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
 	assert(rig.visible)
-	assert(is_zero_approx(rig.modulate.a))
+	assert(is_zero_approx(rig.self_modulate.a))
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.DOWN) == &"front")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.UP) == &"back")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.LEFT) == &"left")
