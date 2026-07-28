@@ -5,6 +5,10 @@ const ACTION_LIBRARY_PATH := "res://content/humanoid_action_tracks.json"
 const SKIN_ROOT := "res://assets/art/characters/professions/skins"
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 const EQUIPMENT_RUNTIME: Texture2D = preload("res://assets/art/weapons/equipment_runtime.png")
+const ACTION_REFERENCE_SWORD: Texture2D = preload(
+	"res://assets/art/weapons/action_reference_sword.png"
+)
+const PREVIEW_FAMILIES := ["unarmed", "sword", "pistol", "bow", "spell", "shield"]
 const PART_NAMES := [
 	"coat_far",
 	"left_thigh",
@@ -36,7 +40,7 @@ const PART_JOINTS := {
 
 @export var action_library_enabled := false
 @export var skin_id := "base_armorer"
-@export var playback_fps := 10.0
+@export var playback_fps := 30.0
 
 var _player: Player
 var _base_character: RenderedAtlasCharacter
@@ -49,6 +53,9 @@ var _offhand_sprite: Sprite2D
 var _elapsed := 0.0
 var _attack_elapsed := 0.0
 var _attack_was_active := false
+var _active_attack_action := ""
+var _active_attack_family := ""
+var _preview_weapon_family := ""
 var _current_action := "idle"
 var _current_direction := "front"
 var _current_joints := {}
@@ -70,14 +77,28 @@ func _process(delta: float) -> void:
 	if not action_library_enabled or _library.is_empty() or _rig.is_empty():
 		return
 	_elapsed += delta
-	var attacking := _player._attack_flash > 0.0
-	if attacking and not _attack_was_active:
+	var attack_signal := _player._attack_flash > 0.0
+	if attack_signal and not _attack_was_active:
 		_attack_elapsed = 0.0
-	elif attacking:
+		_active_attack_action = _select_action(true)
+		_active_attack_family = _weapon_family()
+	elif not _active_attack_action.is_empty():
 		_attack_elapsed += delta
-	_attack_was_active = attacking
+		if (
+			_weapon_family() != _active_attack_family
+			or _attack_elapsed >= _action_duration(_active_attack_action)
+		):
+			_active_attack_action = ""
+			_active_attack_family = ""
+	_attack_was_active = attack_signal
 	_current_direction = String(RenderedAtlasCharacter.direction_from_vector(_player.facing))
-	_current_action = _select_action(attacking)
+	var status_action := _select_action(false)
+	if status_action in ["death", "hit_chest"]:
+		_current_action = status_action
+	elif not _active_attack_action.is_empty():
+		_current_action = _active_attack_action
+	else:
+		_current_action = status_action
 	var frame := _sample_action(_current_action, _current_direction)
 	if not frame.is_empty():
 		_current_joints = _retarget_frame(frame)
@@ -113,6 +134,38 @@ func current_action_name() -> String:
 	return _current_action
 
 
+func set_preview_weapon_family(family: String) -> bool:
+	if not family in PREVIEW_FAMILIES:
+		return false
+	_preview_weapon_family = family
+	_active_attack_action = ""
+	_active_attack_family = ""
+	_attack_elapsed = 0.0
+	_elapsed = 0.0
+	if not action_library_enabled:
+		set_action_library_enabled(true)
+	return true
+
+
+func current_preview_weapon_family() -> String:
+	return _preview_weapon_family
+
+
+func clear_preview_weapon_family() -> void:
+	_preview_weapon_family = ""
+	_active_attack_action = ""
+	_active_attack_family = ""
+
+
+func trigger_preview_attack() -> void:
+	if not action_library_enabled or _preview_weapon_family.is_empty():
+		return
+	_attack_elapsed = 0.0
+	_elapsed = 0.0
+	_active_attack_action = _select_action(true)
+	_active_attack_family = _weapon_family()
+
+
 func set_skin(next_skin_id: String) -> bool:
 	var direction_path := "%s/%s/front/rig.json" % [SKIN_ROOT, next_skin_id]
 	if not FileAccess.file_exists(direction_path):
@@ -140,7 +193,7 @@ func _load_action_library() -> void:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(ACTION_LIBRARY_PATH))
 	assert(parsed is Dictionary, "Invalid humanoid action library JSON")
 	_library = parsed
-	assert(int(_library.get("action_count", 0)) == 44, "Expected 44 humanoid actions")
+	assert(int(_library.get("action_count", 0)) == 37, "Expected 37 humanoid actions")
 
 
 func _create_part_sprites() -> void:
@@ -157,12 +210,12 @@ func _create_equipment_sprites() -> void:
 	_offhand_sprite = Sprite2D.new()
 	_offhand_sprite.name = "OffHandEquipment"
 	_offhand_sprite.z_index = 7
-	_offhand_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_offhand_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_offhand_sprite)
 	_main_hand_sprite = Sprite2D.new()
 	_main_hand_sprite.name = "MainHandEquipment"
 	_main_hand_sprite.z_index = 11
-	_main_hand_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_main_hand_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_main_hand_sprite)
 
 
@@ -177,9 +230,8 @@ func _select_action(attacking: bool) -> String:
 			"bow": return "bow_release"
 			"spell": return "spell_shoot"
 			"pistol": return "pistol_shoot"
-			"two_hand_firearm": return "two_hand_firearm_shoot"
-			"heavy_two_hand": return "heavy_two_hand_attack"
 			"unarmed": return "punch_jab"
+			"shield": return "shield_block"
 			_: return "one_hand_melee_attack"
 	if _player.velocity.length() > 2.0:
 		return "walk"
@@ -187,13 +239,14 @@ func _select_action(attacking: bool) -> String:
 		"bow": return "bow_idle"
 		"spell": return "spell_idle"
 		"pistol": return "pistol_idle"
-		"two_hand_firearm": return "two_hand_firearm_idle"
-		"heavy_two_hand": return "heavy_two_hand_idle"
 		"unarmed": return "idle"
+		"shield": return "shield_idle"
 		_: return "one_hand_melee_idle"
 
 
 func _weapon_family() -> String:
+	if not _preview_weapon_family.is_empty():
+		return _preview_weapon_family
 	match _player.equipped_weapon_item:
 		"mourning_bow":
 			return "bow"
@@ -202,9 +255,9 @@ func _weapon_family() -> String:
 		"service_pistol", "nullpoint_sidearm":
 			return "pistol"
 		"breach_shotgun", "siege_cannon", "conductor_railgun":
-			return "two_hand_firearm"
+			return "pistol"
 		"director_reaper":
-			return "heavy_two_hand"
+			return "one_hand_melee"
 		"":
 			return "unarmed"
 		_:
@@ -217,13 +270,30 @@ func _sample_action(action_name: String, direction: String) -> Dictionary:
 	if direction_frames.is_empty():
 		return {}
 	var looped := bool(action.get("loop", false))
-	var time := _elapsed if looped else (_attack_elapsed if _attack_was_active else 0.0)
-	var frame_index := int(floor(time * playback_fps))
+	var fps := float(action.get("fps", playback_fps))
+	var duration := float(action.get(
+		"duration_seconds",
+		float(maxi(0, direction_frames.size() - 1)) / maxf(0.001, fps),
+	))
+	var time := _elapsed if looped else _attack_elapsed
+	if looped and duration > 0.0:
+		time = fmod(time, duration)
+	var frame_index := int(floor(time * fps))
 	frame_index = frame_index % direction_frames.size() if looped else mini(
 		frame_index,
 		direction_frames.size() - 1,
 	)
 	return direction_frames[frame_index]
+
+
+func _action_duration(action_name: String) -> float:
+	var action: Dictionary = _library.get("actions", {}).get(action_name, {})
+	var duration := float(action.get("duration_seconds", 0.0))
+	if duration > 0.0:
+		return duration
+	var frame_count := int(action.get("frame_count", 1))
+	var fps := float(action.get("fps", playback_fps))
+	return float(maxi(1, frame_count - 1)) / maxf(0.001, fps)
 
 
 func _retarget_frame(frame: Dictionary) -> Dictionary:
@@ -376,7 +446,7 @@ func _sync_equipment_visuals() -> void:
 			_main_hand_sprite.rotation = facing_angle - PI * 0.5
 		"spell":
 			_main_hand_sprite.rotation = facing_angle + PI * 0.5
-		"pistol", "two_hand_firearm":
+		"pistol":
 			_main_hand_sprite.rotation = facing_angle
 		_:
 			_main_hand_sprite.rotation = facing_angle + PI * 0.25
@@ -384,6 +454,20 @@ func _sync_equipment_visuals() -> void:
 
 
 func _sync_main_hand_texture() -> void:
+	if not _preview_weapon_family.is_empty():
+		match _preview_weapon_family:
+			"sword":
+				_main_hand_sprite.texture = ACTION_REFERENCE_SWORD
+				_main_hand_sprite.scale = Vector2.ONE * 2.8
+			"pistol":
+				_set_atlas_cell(_main_hand_sprite, BASIC_WEAPONS, 32, 1, 4.7)
+			"bow":
+				_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 0, 2.8)
+			"spell":
+				_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 1, 2.8)
+			_:
+				_main_hand_sprite.texture = null
+		return
 	match _player.equipped_weapon_item:
 		"service_crowbar":
 			_set_atlas_cell(_main_hand_sprite, BASIC_WEAPONS, 32, 0, 4.7)
@@ -396,6 +480,12 @@ func _sync_main_hand_texture() -> void:
 
 
 func _sync_offhand_texture() -> void:
+	if not _preview_weapon_family.is_empty():
+		if _preview_weapon_family == "shield":
+			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 2, 2.2)
+		else:
+			_offhand_sprite.texture = null
+		return
 	match _player.demo_offhand_item:
 		"riot_shield":
 			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 2, 2.2)

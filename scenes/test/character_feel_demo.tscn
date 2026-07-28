@@ -131,7 +131,7 @@ script = ExtResource("5_mobile")
 offset_left = 28.0
 offset_top = 26.0
 offset_right = 790.0
-offset_bottom = 430.0
+offset_bottom = 510.0
 theme_override_styles/panel = SubResource("Panel_style")
 
 [node name="Margin" type="MarginContainer" parent="HUD/Panel"]
@@ -145,11 +145,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "角色手感测试 v16 · 正式武斗师模型"
+text = "角色手感测试 v17 · 装备动作验收"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "已恢复原武斗师四方向图集与正确镜像规则，武器继续独立挂载。\n44 套通用骨骼动作保留在基础库中，仅通过右侧按钮进入调试预览。"
+text = "正式武斗师保持默认；下方动作验收可切换双拳、剑、枪、弓、法杖与盾牌。\n动作库为 32 套原始动作 + 5 套 Blender 武器动作；参考武器仅用于预览，不进入正式装备池。"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -195,6 +195,34 @@ text = "● 副手：折叠防暴盾"
 
 [node name="Codex" type="Button" parent="HUD/Panel/Margin/Text/OffhandButtons"]
 text = "副手：野战法典"
+
+[node name="ActionPreviewLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "动作验收：未选择　当前动作：idle"
+label_settings = SubResource("Body_settings")
+
+[node name="ActionPreviewButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Fists" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "双拳"
+
+[node name="Sword" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "单手剑"
+
+[node name="Pistol" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "手枪"
+
+[node name="Bow" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "弓"
+
+[node name="Staff" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "法杖"
+
+[node name="Shield" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "盾牌"
+
+[node name="Play" type="Button" parent="HUD/Panel/Margin/Text/ActionPreviewButtons"]
+text = "播放动作"
 
 [node name="TouchTestButtons" type="HBoxContainer" parent="HUD"]
 offset_left = 684.0

@@ -4,6 +4,10 @@ extends VBoxContainer
 @onready var _mode_label := $ModeLabel as Label
 @onready var _skill_label := $SkillLabel as Label
 @onready var _player := get_node("../../../../Player") as Player
+@onready var _humanoid_actions := (
+	get_node("../../../../Player/UniversalHumanoidActionCharacter")
+	as UniversalHumanoidActionCharacter
+)
 
 
 func _ready() -> void:
@@ -22,13 +26,22 @@ func _ready() -> void:
 	$EquipmentButtons/Staff.pressed.connect(_select_weapon.bind(2))
 	$OffhandButtons/Shield.pressed.connect(_select_offhand.bind("riot_shield"))
 	$OffhandButtons/Codex.pressed.connect(_select_offhand.bind("field_codex"))
+	$ActionPreviewButtons/Fists.pressed.connect(_select_action_preview.bind("unarmed"))
+	$ActionPreviewButtons/Sword.pressed.connect(_select_action_preview.bind("sword"))
+	$ActionPreviewButtons/Pistol.pressed.connect(_select_action_preview.bind("pistol"))
+	$ActionPreviewButtons/Bow.pressed.connect(_select_action_preview.bind("bow"))
+	$ActionPreviewButtons/Staff.pressed.connect(_select_action_preview.bind("spell"))
+	$ActionPreviewButtons/Shield.pressed.connect(_select_action_preview.bind("shield"))
+	$ActionPreviewButtons/Play.pressed.connect(_play_preview_action)
 	_update_mode_label()
 	_update_skill_label()
 	_update_equipment_buttons()
+	_update_action_preview()
 
 
 func _process(_delta: float) -> void:
 	_update_skill_label()
+	_update_action_preview()
 
 
 func _select_skill(mode: SkillRangeDemo.SkillMode) -> void:
@@ -51,6 +64,42 @@ func _select_offhand(item_id: String) -> void:
 	_player.select_demo_offhand(item_id)
 	_update_mode_label()
 	_update_equipment_buttons()
+
+
+func _select_action_preview(family: String) -> void:
+	_humanoid_actions.set_preview_weapon_family(family)
+	_update_action_preview()
+
+
+func _play_preview_action() -> void:
+	_humanoid_actions.trigger_preview_attack()
+	_update_action_preview()
+
+
+func _update_action_preview() -> void:
+	var family := _humanoid_actions.current_preview_weapon_family()
+	var labels := {
+		"unarmed": "双拳",
+		"sword": "标准单手剑",
+		"pistol": "标准手枪",
+		"bow": "标准弓",
+		"spell": "标准法杖",
+		"shield": "标准盾牌",
+	}
+	$ActionPreviewLabel.text = "动作验收：%s　当前动作：%s" % [
+		labels.get(family, "未选择"),
+		_humanoid_actions.current_action_name(),
+	]
+	for entry in [
+		["Fists", "unarmed", "双拳"],
+		["Sword", "sword", "单手剑"],
+		["Pistol", "pistol", "手枪"],
+		["Bow", "bow", "弓"],
+		["Staff", "spell", "法杖"],
+		["Shield", "shield", "盾牌"],
+	]:
+		var button := $ActionPreviewButtons.get_node(entry[0]) as Button
+		button.text = "%s%s" % ["● " if family == entry[1] else "", entry[2]]
 
 
 func _update_mode_label() -> void:

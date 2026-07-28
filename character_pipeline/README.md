@@ -86,6 +86,47 @@ Each layer uses identical frame count, camera and direction rotation. This keeps
 runtime recoloring and equipment swaps possible without recreating anatomy.
 Do not create a different skeleton per profession.
 
+## Humanoid action timing contract
+
+`UAL1_Standard.glb` is the timing authority for every reusable humanoid action.
+The pose exporter must preserve the exact baked keyframe positions from the
+downloaded GLB. Never round Blender's imported subframes or resample every
+action to one fixed pose count: the source is a 30 FPS library whose actions
+have different lengths.
+
+The five new Dreadbound actions are limited to the equipment that needs new
+motion today: bow idle/draw/release and shield idle/block. Two-hand firearm,
+heavy-weapon and shield-impact actions are not padded into the library before
+their gameplay exists. The four staff actions keep their downloaded UAL timing
+and body motion, then pass through Blender IK calibration against the standard
+staff grip.
+
+Every authored action names both a `pose_action` and `timing_action` in
+`humanoid_action_library.json`. The pose action supplies a stable full-body
+base while Blender IK authors the weapon contacts. The timing action alone
+supplies FPS, frame count and duration. An authored action may change its poses,
+but must not invent a separate runtime cadence.
+
+Regenerate the runtime tracks with:
+
+```bash
+blender --background --python character_pipeline/export_ual_humanoid_poses.py -- \
+  --animations "/absolute/path/to/UAL1_Standard.glb" \
+  --config character_pipeline/humanoid_action_library.json \
+  --output content/humanoid_action_tracks.json
+blender --background --python character_pipeline/author_weapon_actions_blender.py -- \
+  --animations "/absolute/path/to/UAL1_Standard.glb" \
+  --config character_pipeline/humanoid_action_library.json \
+  --tracks content/humanoid_action_tracks.json \
+  --blend-output character_pipeline/dreadbound_weapon_actions.blend
+```
+
+`tests/test_humanoid_action_library.gd` locks the source frame counts and every
+authored timing-template mapping. The `.blend` file contains the original UAL
+armature, dimensioned bow/staff/shield references, named contact markers and
+the five new actions and four staff calibrations. Run the test whenever the source GLB, exporter,
+Blender-authored actions or runtime playback changes.
+
 ## Migration rule
 
 The rendered atlas is the production character presentation. The retired

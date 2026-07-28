@@ -3,7 +3,7 @@
   "skeleton_id": "humanoid_v1",
   "source_library": "UAL1_Standard.glb",
   "directions": ["front", "left", "back", "right"],
-  "sample_frames": 8,
+  "timing_policy": "preserve_source_keyframes",
   "reuse_actions": {
     "idle": {"source": "Idle_Loop", "loop": true, "family": "locomotion"},
     "walk": {"source": "Walk_Loop", "loop": true, "family": "locomotion"},
@@ -39,18 +39,17 @@
     "spell_exit": {"source": "Spell_Simple_Exit", "loop": false, "family": "staff"}
   },
   "authored_actions": {
-    "bow_idle": {"loop": true, "family": "bow", "authoring": "base_humanoid_v2"},
-    "bow_draw": {"loop": false, "family": "bow", "authoring": "base_humanoid_v2"},
-    "bow_release": {"loop": false, "family": "bow", "authoring": "base_humanoid_v2"},
-    "shield_idle": {"loop": true, "family": "shield", "authoring": "base_humanoid_v2"},
-    "shield_block": {"loop": false, "family": "shield", "authoring": "base_humanoid_v2"},
-    "shield_impact": {"loop": false, "family": "shield", "authoring": "base_humanoid_v2"},
-    "two_hand_firearm_idle": {"loop": true, "family": "two_hand_firearm", "authoring": "base_humanoid_v2"},
-    "two_hand_firearm_shoot": {"loop": false, "family": "two_hand_firearm", "authoring": "base_humanoid_v2"},
-    "two_hand_firearm_reload": {"loop": false, "family": "two_hand_firearm", "authoring": "base_humanoid_v2"},
-    "heavy_two_hand_idle": {"loop": true, "family": "heavy_two_hand", "authoring": "base_humanoid_v2"},
-    "heavy_two_hand_windup": {"loop": false, "family": "heavy_two_hand", "authoring": "base_humanoid_v2"},
-    "heavy_two_hand_attack": {"loop": false, "family": "heavy_two_hand", "authoring": "base_humanoid_v2"}
+    "bow_idle": {"loop": true, "family": "bow", "authoring": "blender_weapon_rig_v1", "pose_action": "pistol_idle", "timing_action": "pistol_idle", "reference_weapon": "standard_bow"},
+    "bow_draw": {"loop": false, "family": "bow", "authoring": "blender_weapon_rig_v1", "pose_action": "pistol_idle", "timing_action": "spell_enter", "reference_weapon": "standard_bow"},
+    "bow_release": {"loop": false, "family": "bow", "authoring": "blender_weapon_rig_v1", "pose_action": "pistol_idle", "timing_action": "pistol_shoot", "reference_weapon": "standard_bow"},
+    "shield_idle": {"loop": true, "family": "shield", "authoring": "blender_weapon_rig_v1", "pose_action": "one_hand_melee_idle", "timing_action": "one_hand_melee_idle", "reference_weapon": "standard_shield"},
+    "shield_block": {"loop": false, "family": "shield", "authoring": "blender_weapon_rig_v1", "pose_action": "one_hand_melee_idle", "timing_action": "jump_land", "reference_weapon": "standard_shield"}
+  },
+  "blender_calibrated_actions": {
+    "spell_enter": {"family": "staff", "authoring": "blender_weapon_rig_v1", "pose_action": "spell_enter", "timing_action": "spell_enter", "reference_weapon": "standard_staff"},
+    "spell_idle": {"family": "staff", "authoring": "blender_weapon_rig_v1", "pose_action": "spell_idle", "timing_action": "spell_idle", "reference_weapon": "standard_staff"},
+    "spell_shoot": {"family": "staff", "authoring": "blender_weapon_rig_v1", "pose_action": "spell_shoot", "timing_action": "spell_shoot", "reference_weapon": "standard_staff"},
+    "spell_exit": {"family": "staff", "authoring": "blender_weapon_rig_v1", "pose_action": "spell_exit", "timing_action": "spell_exit", "reference_weapon": "standard_staff"}
   },
   "excluded_source_actions": {
     "A_TPose": "calibration source, not gameplay",

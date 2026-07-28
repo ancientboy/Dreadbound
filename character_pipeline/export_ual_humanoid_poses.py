@@ -74,7 +74,19 @@ def import_glb(path: Path) -> bpy.types.Object:
 
 def action_by_name(name: str) -> bpy.types.Action:
     for action in bpy.data.actions:
-        if action.name == name or name in action.name:
+        if action.name == name:
+            return action
+    partial_matches = [
+        action for action in bpy.data.actions if name in action.name
+    ]
+    if len(partial_matches) == 1:
+        return partial_matches[0]
+    if partial_matches:
+        raise KeyError(
+            f"Ambiguous action {name}; matches={[a.name for a in partial_matches]}"
+        )
+    for action in bpy.data.actions:
+        if name.casefold() == action.name.casefold():
             return action
     raise KeyError(f"Missing action {name}; available={[a.name for a in bpy.data.actions]}")
 
@@ -126,15 +138,43 @@ def sample_pose(
     }
 
 
-def evenly_spaced_frames(action: bpy.types.Action, count: int) -> list[int]:
-    start = int(round(action.frame_range[0]))
-    end = int(round(action.frame_range[1]))
-    if count <= 1 or end <= start:
-        return [start]
-    return [
-        round(start + (end - start) * index / (count - 1))
-        for index in range(count)
+def source_keyframes(action: bpy.types.Action) -> list[float]:
+    """Return the exact baked source sample positions.
+
+    The Quaternius GLB is sampled at 30 Hz. Blender imports those timestamps
+    into its 24 FPS scene as 0.8-frame increments, so rounding to integer
+    Blender frames or resampling to a fixed count changes both the pose count
+    and the original animation timing.
+    """
+    return sorted(
+        {
+            round(float(key.co.x), 6)
+            for curve in action.fcurves
+            for key in curve.keyframe_points
+        }
+    )
+
+
+def source_fps(frame_positions: list[float], scene_fps: float) -> float:
+    deltas = [
+        current - previous
+        for previous, current in zip(frame_positions, frame_positions[1:])
+        if current - previous > 0.000001
     ]
+    if not deltas:
+        return scene_fps
+    measured = scene_fps / min(deltas)
+    nearest_integer = round(measured)
+    return (
+        float(nearest_integer)
+        if abs(measured - nearest_integer) < 0.001
+        else measured
+    )
+
+
+def set_scene_frame(scene: bpy.types.Scene, frame: float) -> None:
+    whole = math.floor(frame)
+    scene.frame_set(whole, subframe=frame - whole)
 
 
 def main() -> None:
@@ -143,7 +183,6 @@ def main() -> None:
     clear_scene()
     armature = import_glb(args.animations.resolve())
     scene = bpy.context.scene
-    count = int(config.get("sample_frames", 8))
     result = {
         "schema_version": 1,
         "skeleton_id": config["skeleton_id"],
@@ -154,18 +193,28 @@ def main() -> None:
     for logical_name, spec in config["reuse_actions"].items():
         action = action_by_name(spec["source"])
         assign_action(armature, action)
-        frames = evenly_spaced_frames(action, count)
+        frames = source_keyframes(action)
+        fps = source_fps(frames, float(scene.render.fps) / scene.render.fps_base)
         tracks = {direction: [] for direction in DIRECTIONS}
         for frame in frames:
-            scene.frame_set(frame)
+            set_scene_frame(scene, frame)
             bpy.context.view_layer.update()
             for direction, yaw in DIRECTIONS.items():
                 tracks[direction].append(sample_pose(armature, yaw))
+        duration_seconds = (
+            (frames[-1] - frames[0])
+            / (float(scene.render.fps) / scene.render.fps_base)
+            if len(frames) > 1
+            else 0.0
+        )
         result["actions"][logical_name] = {
             "source": "UAL1_Standard",
             "source_action": spec["source"],
             "family": spec["family"],
             "loop": bool(spec["loop"]),
+            "fps": round(fps, 6),
+            "frame_count": len(frames),
+            "duration_seconds": round(duration_seconds, 6),
             "frames": tracks,
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -179,7 +228,7 @@ def main() -> None:
                 "status": "ok",
                 "actions": len(result["actions"]),
                 "directions": len(DIRECTIONS),
-                "sample_frames": count,
+                "timing_policy": "preserve_source_keyframes",
                 "output": str(args.output),
             }
         )
