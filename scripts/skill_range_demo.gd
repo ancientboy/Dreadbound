@@ -43,6 +43,7 @@ const SKILLS := {
 		"cooldown": 1.12,
 	},
 }
+const TARGET_INPUT_RADIUS := 54.0
 
 @onready var _player := get_node("../Player") as Player
 @onready var _camera := get_node("../Player/Camera2D") as PlayerFeelCamera
@@ -74,17 +75,25 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed or event.echo:
+	if event is InputEventKey:
+		if not event.pressed or event.echo:
+			return
+		match event.physical_keycode:
+			KEY_4:
+				set_skill_mode(SkillMode.CLOSE_BURST)
+			KEY_5:
+				set_skill_mode(SkillMode.MID_BOLT)
+			KEY_6:
+				set_skill_mode(SkillMode.LONG_RIFT)
+		if event.is_action_pressed("use_skill"):
+			trigger_skill()
 		return
-	match event.physical_keycode:
-		KEY_4:
-			set_skill_mode(SkillMode.CLOSE_BURST)
-		KEY_5:
-			set_skill_mode(SkillMode.MID_BOLT)
-		KEY_6:
-			set_skill_mode(SkillMode.LONG_RIFT)
-	if event.is_action_pressed("use_skill"):
-		trigger_skill()
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_trigger_target_from_viewport(event.position)
+		return
+	if event is InputEventScreenTouch and event.pressed:
+		_trigger_target_from_viewport(event.position)
 
 
 func _process(delta: float) -> void:
@@ -158,6 +167,47 @@ func trigger_skill() -> bool:
 	if _cast_direction == Vector2.ZERO:
 		_cast_direction = Vector2.RIGHT
 	_cast_endpoint = _cast_origin + _cast_direction * skill_range()
+	return _start_skill_cast()
+
+
+func trigger_skill_at(world_position: Vector2) -> bool:
+	if _phase != "idle" or _cooldown_left > 0.0:
+		return false
+	_cast_origin = _player.global_position
+	var target_offset := world_position - _cast_origin
+	if target_offset.length() <= 1.0:
+		return false
+	_cast_direction = target_offset.normalized()
+	_player.facing = _cast_direction
+	_cast_endpoint = (
+		_cast_origin
+		+ _cast_direction * minf(target_offset.length(), skill_range())
+	)
+	return _start_skill_cast()
+
+
+func trigger_target_at_world_position(world_position: Vector2) -> bool:
+	var selected_target: Dictionary = {}
+	var nearest_distance := TARGET_INPUT_RADIUS
+	for target in _targets:
+		var distance := (target.position as Vector2).distance_to(world_position)
+		if distance <= nearest_distance:
+			nearest_distance = distance
+			selected_target = target
+	if selected_target.is_empty():
+		return false
+	set_skill_mode(int(selected_target.mode) as SkillMode)
+	return trigger_skill_at(selected_target.position as Vector2)
+
+
+func _trigger_target_from_viewport(viewport_position: Vector2) -> void:
+	var canvas_transform := get_viewport().get_canvas_transform()
+	var world_position := canvas_transform.affine_inverse() * viewport_position
+	if trigger_target_at_world_position(world_position):
+		get_viewport().set_input_as_handled()
+
+
+func _start_skill_cast() -> bool:
 	_phase = "windup"
 	_phase_time = 0.0
 	_hit_applied = false

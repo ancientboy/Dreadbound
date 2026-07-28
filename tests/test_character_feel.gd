@@ -134,6 +134,20 @@ func _run_test() -> void:
 	var skill_demo := instance.get_node("SkillRangeDemo") as SkillRangeDemo
 	assert(skill_demo != null)
 	assert(skill_demo.uses_existing_skill_atlases())
+	assert(not skill_demo.trigger_target_at_world_position(player.global_position + Vector2.UP * 90.0))
+	var long_target := (
+		player.global_position
+		+ Vector2.RIGHT * float(
+			SkillRangeDemo.SKILLS[SkillRangeDemo.SkillMode.LONG_RIFT].range
+		)
+	)
+	assert(skill_demo.trigger_target_at_world_position(long_target))
+	assert(skill_demo.current_skill_mode() == SkillRangeDemo.SkillMode.LONG_RIFT)
+	assert(skill_demo.current_phase() == "windup")
+	assert(skill_demo.cast_endpoint().distance_to(long_target) < 0.1)
+	assert(player.facing.is_equal_approx(Vector2.RIGHT))
+	skill_demo._phase = "idle"
+	skill_demo._cooldown_left = 0.0
 	var previous_range := 0.0
 	for mode in [
 		SkillRangeDemo.SkillMode.CLOSE_BURST,

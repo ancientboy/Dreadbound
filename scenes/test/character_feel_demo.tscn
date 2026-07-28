@@ -135,7 +135,7 @@ text = "CHARACTER FEEL DEMO v9 · 3D-RENDERED 2D ATLAS"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "AnimatedSprite2D · One source rig rendered to four directions · Pure 2D runtime\nIdle / Walk / Attack / Hit / Death · 4–6 effect range · G charm preview"
+text = "AnimatedSprite2D · One source rig rendered to four directions · Pure 2D runtime\nIdle / Walk / Attack / Hit / Death · Tap a range target to cast · G release"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
