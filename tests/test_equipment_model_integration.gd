@@ -107,18 +107,18 @@ func _run_test() -> void:
 
 	player.facing = Vector2.DOWN
 	await process_frame
-	var front_main := humanoid.equipment_anchor(&"main_hand")
-	var front_off := humanoid.equipment_anchor(&"off_hand")
+	var front_main := trial.equipment_anchor(&"main_hand")
+	var front_off := trial.equipment_anchor(&"off_hand")
 	assert(front_main.distance_to(front_off) > 1.0)
 	assert(front_main.x < front_off.x)
 	player.facing = Vector2.UP
 	await process_frame
-	var back_main := humanoid.equipment_anchor(&"main_hand")
-	var back_off := humanoid.equipment_anchor(&"off_hand")
+	var back_main := trial.equipment_anchor(&"main_hand")
+	var back_off := trial.equipment_anchor(&"off_hand")
 	assert(back_main.distance_to(back_off) > 1.0)
 	assert(back_main.x > back_off.x)
 	assert(not back_main.is_equal_approx(front_main))
 	assert(not back_off.is_equal_approx(front_off))
-	assert(not trial.is_trial_enabled())
-	print("Equipment model integration passed: bow, staff, shield, codex and skeleton anchors")
+	assert(trial.is_trial_enabled())
+	print("Equipment model integration passed: formal model, bow, staff, shield and codex")
 	quit()

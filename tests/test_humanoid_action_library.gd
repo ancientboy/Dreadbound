@@ -49,9 +49,32 @@ func _run_test() -> void:
 	var martial := (
 		player.get_node("MartialArtistTrialCharacter") as MartialArtistTrialCharacter
 	)
-	assert(humanoid != null and humanoid.is_action_library_enabled())
+	assert(humanoid != null and not humanoid.is_action_library_enabled())
 	assert(humanoid.action_count() == 44)
 	assert(humanoid.current_skin_id() == "base_armorer")
+	assert(martial.is_trial_enabled())
+	var formal_sprite := martial.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	assert(formal_sprite != null and formal_sprite.visible)
+	player.facing = Vector2.DOWN
+	player.velocity = Vector2.ZERO
+	await process_frame
+	assert(formal_sprite.animation == &"idle_front")
+	assert(not formal_sprite.flip_h)
+	player.facing = Vector2.LEFT
+	await process_frame
+	assert(formal_sprite.animation == &"idle_left")
+	assert(not formal_sprite.flip_h)
+	player.facing = Vector2.RIGHT
+	await process_frame
+	assert(formal_sprite.animation == &"idle_left")
+	assert(formal_sprite.flip_h)
+	player.facing = Vector2.UP
+	await process_frame
+	assert(formal_sprite.animation == &"idle_back")
+	assert(not formal_sprite.flip_h)
+	humanoid.set_action_library_enabled(true)
+	await process_frame
+	assert(humanoid.is_action_library_enabled())
 	assert(not martial.is_trial_enabled())
 	for part_name in [
 		"Head",
@@ -116,5 +139,6 @@ func _run_test() -> void:
 	await process_frame
 	assert(not humanoid.visible)
 	assert(martial.is_trial_enabled())
-	print("Humanoid action library passed: 32 reused + 12 authored actions, skins and equipment")
+	assert(formal_sprite.visible)
+	print("Humanoid action library passed: formal model default plus 44 debug actions")
 	quit()
