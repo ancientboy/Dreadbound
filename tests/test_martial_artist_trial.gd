@@ -36,6 +36,14 @@ func _run_test() -> void:
 	assert(off_hand != null and off_hand.visible)
 	assert((main_hand.texture as AtlasTexture).atlas.resource_path.ends_with("basic_weapons.png"))
 	assert((off_hand.texture as AtlasTexture).region.position.x == 128.0)
+	player.facing = Vector2.DOWN
+	await process_frame
+	assert(trial.equipment_anchor(&"main_hand").x < trial.equipment_anchor(&"off_hand").x)
+	player.facing = Vector2.UP
+	await process_frame
+	assert(trial.equipment_anchor(&"main_hand").x > trial.equipment_anchor(&"off_hand").x)
+	player.facing = Vector2.DOWN
+	await process_frame
 	assert(base_sprite != null and not base_sprite.visible)
 	assert(trial_sprite.position == Vector2(0.0, -12.0))
 	assert(trial_sprite.sprite_frames.get_animation_names().size() == 9)

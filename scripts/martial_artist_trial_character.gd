@@ -128,8 +128,8 @@ func equipment_anchor(slot: StringName) -> Vector2:
 		return Vector2(0, -27) + _player.facing * 13.0 + _player.facing.orthogonal() * 5.0 * side
 	var direction := RenderedAtlasCharacter.direction_from_vector(_player.facing)
 	var anchors := {
-		&"front": {&"main_hand": Vector2(15, -28), &"off_hand": Vector2(-15, -28)},
-		&"back": {&"main_hand": Vector2(-14, -30), &"off_hand": Vector2(14, -30)},
+		&"front": {&"main_hand": Vector2(-15, -28), &"off_hand": Vector2(15, -28)},
+		&"back": {&"main_hand": Vector2(14, -30), &"off_hand": Vector2(-14, -30)},
 		&"left": {&"main_hand": Vector2(-17, -29), &"off_hand": Vector2(-7, -31)},
 		&"right": {&"main_hand": Vector2(17, -29), &"off_hand": Vector2(7, -31)},
 	}
