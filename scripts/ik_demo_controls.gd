@@ -1,6 +1,6 @@
 extends VBoxContainer
 
-@onready var _rig := get_node("../../../../Player/LayeredSkeletonRig") as LayeredSkeletonCharacter
+@onready var _rig := get_node("../../../../Player/ProfessionSkeletonRig") as ProfessionSkeletonCharacter
 @onready var _skill_demo := get_node("../../../../SkillRangeDemo") as SkillRangeDemo
 @onready var _mode_label := $ModeLabel as Label
 @onready var _skill_label := $SkillLabel as Label
