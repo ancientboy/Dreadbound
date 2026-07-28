@@ -10,27 +10,27 @@
   },
   "animations": {
     "idle": {
-      "candidates": ["idle", "idle_a", "standing_idle"],
+      "candidates": ["Idle_Loop"],
       "loop": true,
       "step": 2
     },
     "walk": {
-      "candidates": ["walk", "walking", "walk_forward"],
+      "candidates": ["Walk_Loop"],
       "loop": true,
       "step": 2
     },
     "attack_melee": {
-      "candidates": ["melee", "sword_attack", "attack"],
+      "candidates": ["Sword_Attack"],
       "loop": false,
       "step": 2
     },
     "hit": {
-      "candidates": ["hit", "damage", "impact"],
+      "candidates": ["Hit_Chest"],
       "loop": false,
       "step": 2
     },
     "death": {
-      "candidates": ["death", "dying"],
+      "candidates": ["Death01"],
       "loop": false,
       "step": 2
     }
