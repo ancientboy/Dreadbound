@@ -60,6 +60,17 @@ func _run_test() -> void:
 	assert(player._body_frame_ground_y.size() == 24)
 	var rig := player.get_node("ProfessionSkeletonRig") as ProfessionSkeletonCharacter
 	assert(rig != null)
+	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
+	assert(rendered != null)
+	await process_frame
+	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	assert(rendered_sprite != null)
+	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
+	assert(not rig.visible)
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.DOWN) == &"front")
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.UP) == &"back")
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.LEFT) == &"left")
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.RIGHT) == &"right")
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Pistol") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Rifle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Cast") is Button)
@@ -145,5 +156,5 @@ func _run_test() -> void:
 		skill_demo._cooldown_left = 0.0
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: four-direction IK with close, mid and long skill ranges")
+	print("Character feel passed: rendered four-direction atlas, fallback IK and skill ranges")
 	quit()
