@@ -1012,7 +1012,4 @@ func _child_starts_at_parent_tip(parent: Bone2D, child: Bone2D) -> bool:
 
 
 func uses_runtime_equipment_only() -> bool:
-	return (
-		(_sprites["lantern"] as Sprite2D).visible == false
-		and _ik_weapon != null
-	)
+	return _ik_weapon != null and _cast_orb != null
