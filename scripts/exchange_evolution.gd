@@ -20,18 +20,18 @@ const AFFIXES := {
 }
 
 const COMBAT_STYLES := {
-	"barrier_counter": {"path": "steadfast", "name": "屏障反击", "requires": "steadfast_barrier", "description": "应急屏障持续更久，并提高近战反击。", "weapon_type": "melee", "skill": {"name": "壁垒震返", "shape": "self", "range": 118.0, "radius": 118.0, "damage_multiplier": 1.45, "cooldown": 7.0}, "bonuses": {"max_health": 6, "melee_damage": 3}},
-	"last_stand": {"path": "steadfast", "name": "濒死不灭", "requires": "steadfast_barrier", "description": "低生命时获得额外减伤。", "weapon_type": "shotgun", "skill": {"name": "余命轰鸣", "shape": "cone", "range": 255.0, "radius": 0.0, "damage_multiplier": 1.55, "cooldown": 9.0}, "bonuses": {"max_health": 10}},
-	"sacrifice_medic": {"path": "steadfast", "name": "牺牲治疗", "requires": "steadfast_barrier", "description": "强化治疗与救援，但降低个人火力。", "weapon_type": "ranged", "skill": {"name": "血灯缝合", "shape": "target", "range": 330.0, "radius": 92.0, "damage_multiplier": 1.10, "cooldown": 8.0, "self_heal": 14}, "bonuses": {"bandage_heal": 12, "ranged_damage": -2}},
-	"choke_control": {"path": "steadfast", "name": "通道控制", "requires": "steadfast_barrier", "description": "扩大近战封锁范围。", "weapon_type": "melee", "skill": {"name": "封锁横扫", "shape": "cone", "range": 176.0, "radius": 0.0, "damage_multiplier": 1.75, "cooldown": 6.0}, "bonuses": {"attack_range": 22.0, "melee_damage": 2}},
-	"weakpoint_sniper": {"path": "armorer", "name": "弱点狙击", "requires": "armorer_alternation", "description": "提高远程射程与单点伤害。", "weapon_type": "ranged", "skill": {"name": "贯芯标记", "shape": "line", "range": 610.0, "radius": 24.0, "damage_multiplier": 2.30, "cooldown": 8.0}, "bonuses": {"ranged_damage": 6, "ranged_range": 80.0}},
-	"heavy_suppression": {"path": "armorer", "name": "重火力压制", "requires": "armorer_alternation", "description": "强化霰弹与群体压制。", "weapon_type": "shotgun", "skill": {"name": "镇压齐射", "shape": "cone", "range": 330.0, "radius": 0.0, "damage_multiplier": 1.65, "cooldown": 7.5}, "bonuses": {"shotgun_damage": 7, "shotgun_range": 28.0}},
-	"demolition_traps": {"path": "armorer", "name": "爆破陷阱", "requires": "armorer_alternation", "description": "以准备换取全武器爆发。", "weapon_type": "shotgun", "skill": {"name": "定点爆破", "shape": "target", "range": 390.0, "radius": 112.0, "damage_multiplier": 1.85, "cooldown": 10.0}, "bonuses": {"melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3}},
-	"relic_engineer": {"path": "armorer", "name": "遗物改造", "requires": "armorer_alternation", "description": "提高装备升级与进化形态的收益。", "weapon_type": "ranged", "skill": {"name": "遗物过载", "shape": "line", "range": 460.0, "radius": 42.0, "damage_multiplier": 1.70, "cooldown": 9.0}, "bonuses": {"movement_speed": 5.0}},
-	"psychic_sense": {"path": "resonant", "name": "精神感知", "requires": "resonant_ingestion", "description": "扩大感知并提高机动。", "weapon_type": "ranged", "skill": {"name": "灵视穿刺", "shape": "line", "range": 520.0, "radius": 34.0, "damage_multiplier": 1.65, "cooldown": 7.0}, "bonuses": {"movement_speed": 10.0, "ranged_range": 35.0}},
-	"anomaly_ingestion": {"path": "resonant", "name": "异常摄取", "requires": "resonant_ingestion", "description": "高风险选择产生更多资源，治疗代价加深。", "weapon_type": "melee", "skill": {"name": "吞噬脉冲", "shape": "self", "range": 142.0, "radius": 142.0, "damage_multiplier": 1.80, "cooldown": 8.5}, "bonuses": {"melee_damage": 4, "shotgun_damage": 4}},
-	"echo_summoner": {"path": "resonant", "name": "回响召唤", "requires": "resonant_ingestion", "description": "以回响维持持续战斗能力。", "weapon_type": "ranged", "skill": {"name": "回响降临", "shape": "target", "range": 440.0, "radius": 126.0, "damage_multiplier": 1.55, "cooldown": 9.5}, "bonuses": {"max_health": 5, "bandage_heal": 5}},
-	"aberrant_form": {"path": "resonant", "name": "异化形态", "requires": "resonant_ingestion", "description": "牺牲生命上限换取高额伤害与速度。", "weapon_type": "melee", "skill": {"name": "畸变突袭", "shape": "line", "range": 245.0, "radius": 52.0, "damage_multiplier": 2.10, "cooldown": 6.5, "dash": 54.0}, "bonuses": {"max_health": -10, "movement_speed": 12.0, "melee_damage": 7, "ranged_damage": 5, "shotgun_damage": 5}},
+	"barrier_counter": {"path": "steadfast", "name": "屏障反击", "requires": "steadfast_barrier", "description": "被动：盾牌/格挡构筑更稳，近战反击更强。", "preferred_tags": ["guard", "shield", "melee"], "bonuses": {"max_health": 6, "melee_damage": 3}},
+	"last_stand": {"path": "steadfast", "name": "濒死不灭", "requires": "steadfast_barrier", "description": "被动：提高容错与低血生存空间，不绑定武器。", "preferred_tags": ["guard", "heavy", "survival"], "bonuses": {"max_health": 10}},
+	"sacrifice_medic": {"path": "steadfast", "name": "牺牲治疗", "requires": "steadfast_barrier", "description": "被动：强化治疗与救援，牺牲少量远程火力。", "preferred_tags": ["healing", "guard", "support"], "bonuses": {"bandage_heal": 12, "ranged_damage": -2}},
+	"choke_control": {"path": "steadfast", "name": "通道控制", "requires": "steadfast_barrier", "description": "被动：擅长钝器、盾牌与近距离封锁。", "preferred_tags": ["blunt", "breach", "guard"], "bonuses": {"attack_range": 22.0, "melee_damage": 2}},
+	"weakpoint_sniper": {"path": "armorer", "name": "弱点狙击", "requires": "armorer_alternation", "description": "被动：强化精确、弓与蓄能远程武器。", "preferred_tags": ["precision", "bow", "ranged"], "bonuses": {"ranged_damage": 6, "ranged_range": 80.0}},
+	"heavy_suppression": {"path": "armorer", "name": "重火力压制", "requires": "armorer_alternation", "description": "被动：强化重型与群体压制武器。", "preferred_tags": ["heavy", "suppression"], "bonuses": {"shotgun_damage": 7, "shotgun_range": 28.0}},
+	"demolition_traps": {"path": "armorer", "name": "爆破布置", "requires": "armorer_alternation", "description": "被动：换武器和准备动作后获得全武器增益。", "preferred_tags": ["breach", "heavy", "control"], "bonuses": {"melee_damage": 3, "ranged_damage": 3, "shotgun_damage": 3}},
+	"relic_engineer": {"path": "armorer", "name": "遗物改造", "requires": "armorer_alternation", "description": "被动：提高遗物与装备升级构筑的机动收益。", "preferred_tags": ["relic", "precision", "heavy"], "bonuses": {"movement_speed": 5.0}},
+	"psychic_sense": {"path": "resonant", "name": "精神感知", "requires": "resonant_ingestion", "description": "被动：强化感知、回响远程与机动。", "preferred_tags": ["echo", "sense", "arcane"], "bonuses": {"movement_speed": 10.0, "ranged_range": 35.0}},
+	"anomaly_ingestion": {"path": "resonant", "name": "异常摄取", "requires": "resonant_ingestion", "description": "被动：异常武器与高风险事件换取更高输出。", "preferred_tags": ["anomaly", "arcane", "melee"], "bonuses": {"melee_damage": 4, "shotgun_damage": 4}},
+	"echo_summoner": {"path": "resonant", "name": "回响共鸣", "requires": "resonant_ingestion", "description": "被动：回响武器、法典与护符的生存协同。", "preferred_tags": ["echo", "arcane", "healing"], "bonuses": {"max_health": 5, "bandage_heal": 5}},
+	"aberrant_form": {"path": "resonant", "name": "异化形态", "requires": "resonant_ingestion", "description": "被动：以生命上限换取异常构筑的极限输出。", "preferred_tags": ["anomaly", "arcane", "heavy"], "bonuses": {"max_health": -10, "movement_speed": 12.0, "melee_damage": 7, "ranged_damage": 5, "shotgun_damage": 5}},
 }
 
 const EVOLUTIONS := {
@@ -57,9 +57,9 @@ const HEART_ASPECTS := {
 }
 
 const SYNTHESIS_POOLS := {
-	"weapon:1": ["balanced_pistol", "breach_shotgun"],
-	"weapon:2": ["echo_edge", "insulated_crowbar"],
-	"weapon:3": ["nullpoint_sidearm", "siege_core", "volatile_edge"],
+	"weapon:1": ["balanced_pistol", "breach_shotgun", "mourning_bow"],
+	"weapon:2": ["echo_edge", "insulated_crowbar", "mourning_bow"],
+	"weapon:3": ["nullpoint_sidearm", "siege_core", "volatile_edge", "echo_staff"],
 	"charm:1": ["calming_coil", "waterproof_pulse"],
 	"charm:2": ["ward_echo", "station_whistle"],
 	"charm:3": ["cyan_mark", "last_ticket", "archive_lens"],
@@ -72,8 +72,9 @@ static func validate_catalog() -> Array[String]:
 		errors.append("combat styles must contain exactly twelve entries")
 	for style_id in COMBAT_STYLES:
 		var style: Dictionary = COMBAT_STYLES[style_id]
-		if str(style.get("weapon_type", "")) not in ["melee", "ranged", "shotgun"]:
-			errors.append("combat style %s has invalid weapon type" % style_id)
+		var preferred_tags: Variant = style.get("preferred_tags", [])
+		if not (preferred_tags is Array) or preferred_tags.is_empty():
+			errors.append("combat style %s has no preferred tags" % style_id)
 		if not style.has("bonuses"):
 			errors.append("combat style %s has no passive bonuses" % style_id)
 	for material_id in MATERIALS:
@@ -83,6 +84,19 @@ static func validate_catalog() -> Array[String]:
 		if EVOLUTIONS[item_id].size() < 3:
 			errors.append("equipment %s needs three evolution branches" % item_id)
 	return errors
+
+
+static func combat_style_tag_multiplier(style_id: String, weapon_id: String) -> float:
+	var style: Dictionary = COMBAT_STYLES.get(style_id, {})
+	if style.is_empty():
+		return 1.0
+	var matches := 0
+	for tag in EquipmentDatabase.weapon_tags(weapon_id):
+		if style.get("preferred_tags", []).has(tag):
+			matches += 1
+	# A profession never blocks a weapon. Matching tags simply make the chosen
+	# passive specialization more valuable, up to a modest two-tag bonus.
+	return 1.0 + minf(float(matches), 2.0) * 0.06
 
 
 static func exchange_offers(cycle: int, world_id: String) -> Array[Dictionary]:
@@ -165,3 +179,4 @@ static func heart_aspect_for(reflection: Dictionary, action_events: Array[Dictio
 	aspect.id = best
 	aspect.evidence = int(counts[best])
 	return aspect
+
