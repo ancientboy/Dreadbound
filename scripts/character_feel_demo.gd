@@ -3,9 +3,6 @@ extends Node2D
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 
 @onready var _player := $Player as Player
-@onready var _martial_artist_trial := (
-	$Player/MartialArtistTrialCharacter as MartialArtistTrialCharacter
-)
 @onready var _humanoid_actions := (
 	$Player/UniversalHumanoidActionCharacter as UniversalHumanoidActionCharacter
 )
@@ -22,8 +19,8 @@ func _ready() -> void:
 	$HUD/TouchTestButtons/Hit.pressed.connect(_trigger_hit)
 	$HUD/TouchTestButtons/Death.pressed.connect(_trigger_death)
 	$HUD/TouchTestButtons/Reset.pressed.connect(_reset_demo)
-	# Old full-body atlas resources are retained for migration safety only.
-	# The playable demo has a single runtime character path: the skeleton.
+	# This scene is intentionally locked to the empty-hand skeleton baseline.
+	# Do not add a switch back to legacy character or equipment renderers here.
 	get_viewport().size_changed.connect(_layout_touch_ui)
 	_update_trial_button()
 	_layout_touch_ui()
@@ -59,7 +56,7 @@ func _reset_demo() -> void:
 
 
 func _update_trial_button() -> void:
-	_trial_button.text = "统一骨骼已启用"
+	_trial_button.text = "空手骨骼基线"
 	_trial_button.disabled = true
 
 
@@ -68,8 +65,8 @@ func _layout_touch_ui() -> void:
 	var narrow := viewport_size.x < 900.0
 	var compact := viewport_size.x < 1400.0
 	_hud_panel.offset_right = minf(790.0, viewport_size.x - 24.0)
-	_hud_panel.offset_bottom = 524.0 if narrow else 510.0
+	_hud_panel.offset_bottom = 284.0 if narrow else 270.0
 	_touch_test_buttons.offset_left = maxf(24.0, viewport_size.x - 568.0)
 	_touch_test_buttons.offset_right = viewport_size.x - 28.0
-	_touch_test_buttons.offset_top = 536.0 if narrow else (522.0 if compact else 28.0)
+	_touch_test_buttons.offset_top = 456.0 if narrow else (442.0 if compact else 28.0)
 	_touch_test_buttons.offset_bottom = _touch_test_buttons.offset_top + 60.0
