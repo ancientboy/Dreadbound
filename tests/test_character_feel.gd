@@ -95,22 +95,22 @@ func _run_test() -> void:
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.UP) == "back")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.LEFT) == "left")
 	assert(LayeredSkeletonCharacter.direction_from_facing(Vector2.RIGHT) == "right")
-	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.FREE, true)
 	player._step_phase = 0.25
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
-	# The production rig immediately selects the real melee equipment pose.
-	# Seed the gait explicitly so this assertion tests leg/arm opposition rather
-	# than the obsolete assumption that FREE remains the runtime weapon mode.
+	# Seed the standard gait explicitly before the runtime equipment pose blends
+	# onto it; production no longer leaves the rig in the obsolete FREE mode.
 	rig._apply_standard_humanoid_walk_pose(1.0, 1.0)
 	await process_frame
 	assert(rig.current_direction() == "right")
 	assert(rig.is_using_true_opposition())
+	player.equipped_weapon_item = "balanced_pistol"
 	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.PISTOL, true)
 	player.velocity = Vector2.ZERO
 	await process_frame
 	assert(rig.current_ik_demo_mode() == LayeredSkeletonCharacter.IKDemoMode.PISTOL)
 	assert(rig.ik_hand_error("organic") < 2.0)
+	player.equipped_weapon_item = "breach_shotgun"
 	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.RIFLE, true)
 	for facing in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
 		player.facing = facing
@@ -127,14 +127,16 @@ func _run_test() -> void:
 			rig.has_forward_rifle_stance(),
 			"Rifle stance collapsed toward the torso while facing %s" % facing,
 		)
+	player._skill_pose_timer = 0.24
 	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST, true)
 	await process_frame
+	assert(rig.current_ik_demo_mode() == LayeredSkeletonCharacter.IKDemoMode.CAST)
 	assert(rig.ik_hand_error("organic") < 2.0)
 	assert(rig.ik_hand_error("mech") < 2.0)
 	var skill_demo := instance.get_node("SkillRangeDemo") as SkillRangeDemo
 	assert(skill_demo != null)
 	assert(skill_demo.uses_existing_skill_atlases())
-	assert(rig.is_cast_orb_preview_enabled())
+	assert(not rig.is_cast_orb_preview_enabled())
 	var previous_range := 0.0
 	for mode in [
 		SkillRangeDemo.SkillMode.CLOSE_BURST,
