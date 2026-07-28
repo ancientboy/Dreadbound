@@ -12,17 +12,17 @@ func _ready() -> void:
 		$ModeButtons.hide()
 	else:
 		$ModeButtons/Free.pressed.connect(
-		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.FREE),
-	)
+			_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.FREE),
+		)
 		$ModeButtons/Pistol.pressed.connect(
-		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.PISTOL),
-	)
+			_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.PISTOL),
+		)
 		$ModeButtons/Rifle.pressed.connect(
-		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.RIFLE),
-	)
+			_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.RIFLE),
+		)
 		$ModeButtons/Cast.pressed.connect(
-		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.CAST),
-	)
+			_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.CAST),
+		)
 	$SkillButtons/Close.pressed.connect(
 		_select_skill.bind(SkillRangeDemo.SkillMode.CLOSE_BURST),
 	)
@@ -35,7 +35,6 @@ func _ready() -> void:
 	$SkillButtons/Release.pressed.connect(_release_skill)
 	_update_mode_label()
 	_update_skill_label()
-
 
 func _process(_delta: float) -> void:
 	_update_mode_label()
