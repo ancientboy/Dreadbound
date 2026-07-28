@@ -24,6 +24,7 @@ func _run_test() -> void:
 		ProfessionSkeletonCharacter.HUMANOID_BASE_SKIN_ID
 	)
 	_assert_standard_humanoid_alignment("base_armorer")
+	_assert_demo_native_rig_contract()
 	var state := root.get_node("GameState") as GameProgress
 	var scene := load("res://scenes/entities/player.tscn") as PackedScene
 	assert(scene != null)
@@ -143,6 +144,26 @@ func _run_test() -> void:
 	quit()
 
 
+func _assert_demo_native_rig_contract() -> void:
+	var demo_path := "res://scenes/test/character_feel_demo.tscn"
+	var demo_source := FileAccess.get_file_as_string(demo_path)
+	assert(not demo_source.is_empty())
+	assert(
+		demo_source.contains("res://scripts/character_feel_demo.gd")
+	)
+	assert(
+		not demo_source.contains(
+			"res://scenes/test/layered_skeleton_character.tscn"
+		)
+	)
+	assert(demo_source.count("LayeredSkeletonRig") == 0)
+	var demo_controller := FileAccess.get_file_as_string(
+		"res://scripts/character_feel_demo.gd"
+	)
+	assert(demo_controller.contains("base_armorer"))
+	assert(demo_controller.contains("HUMANOID_BASE_SKIN_ID"))
+
+
 func _assert_generic_asset_contract(style_id: String) -> void:
 	if style_id == "base_armorer":
 		_assert_humanoid_skin_contract(style_id)
@@ -201,10 +222,21 @@ func _assert_humanoid_skin_contract(style_id: String) -> void:
 			FileAccess.get_file_as_string(manifest_path)
 		)
 		assert(manifest is Dictionary)
-		assert(int(manifest.get("schema_version", 0)) == 3)
+		var authored_v2 := (
+			style_id
+			== ProfessionSkeletonCharacter.HUMANOID_BASE_SKIN_ID
+		)
+		assert(
+			int(manifest.get("schema_version", 0))
+			== (4 if authored_v2 else 3)
+		)
 		assert(
 			str(manifest.get("source", ""))
-				== "standard_humanoid_skin"
+			== (
+				"authored_split_parts"
+				if authored_v2
+				else "standard_humanoid_skin"
+			)
 		)
 		assert(
 			str(manifest.get("skeleton_id", ""))
@@ -229,7 +261,16 @@ func _assert_humanoid_skin_contract(style_id: String) -> void:
 			assert(FileAccess.file_exists(file_path), file_path)
 			var texture := load(file_path) as Texture2D
 			assert(texture != null, file_path)
-			assert(texture.get_width() > 8 and texture.get_height() > 8)
+			if str(part_file) in ["coat_far", "coat_near"]:
+				assert(
+					texture.get_width() >= 1
+					and texture.get_height() >= 1
+				)
+			else:
+				assert(
+					texture.get_width() > 8
+					and texture.get_height() > 8
+				)
 		for forbidden in [
 			"weapon",
 			"gun",
