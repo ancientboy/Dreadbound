@@ -110,6 +110,7 @@ z_index = 4
 position = Vector2(0, 9)
 scale = Vector2(0.235, 0.235)
 script = ExtResource("7_humanoid_actions")
+skin_id = "base_armorer"
 
 [node name="SkillRangeDemo" type="Node2D" parent="."]
 script = ExtResource("4_skill_demo")
@@ -148,7 +149,7 @@ text = "角色手感测试 v15 · 通用骨骼动作库"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "已接入 32 套原动作并补齐 12 套持械动作，共 44 套通用裸模动作。\n皮肤与装备独立挂载；普通攻击按当前武器选择动作族。"
+text = "已接入 32 套原动作并补齐 12 套持械动作，共 44 套通用骨骼动作。\n默认显示武装师皮肤；裸模仅用于骨骼调试，普通攻击按当前武器选择动作族。"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -204,7 +205,7 @@ theme_override_constants/separation = 8
 
 [node name="Trial" type="Button" parent="HUD/TouchTestButtons"]
 custom_minimum_size = Vector2(136, 60)
-text = "通用裸模动作"
+text = "查看通用裸模"
 
 [node name="Hit" type="Button" parent="HUD/TouchTestButtons"]
 custom_minimum_size = Vector2(96, 60)

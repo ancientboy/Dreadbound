@@ -60,17 +60,20 @@ func _reset_demo() -> void:
 
 
 func _toggle_character_trial() -> void:
-	_humanoid_actions.set_action_library_enabled(
-		not _humanoid_actions.is_action_library_enabled()
+	var next_skin := (
+		"base_humanoid"
+		if _humanoid_actions.current_skin_id() == "base_armorer"
+		else "base_armorer"
 	)
+	assert(_humanoid_actions.set_skin(next_skin))
 	_update_trial_button()
 
 
 func _update_trial_button() -> void:
 	_trial_button.text = (
-		"通用裸模动作"
-		if _humanoid_actions.is_action_library_enabled()
-		else "武斗师旧图集"
+		"查看通用裸模"
+		if _humanoid_actions.current_skin_id() == "base_armorer"
+		else "返回武装师皮肤"
 	)
 
 

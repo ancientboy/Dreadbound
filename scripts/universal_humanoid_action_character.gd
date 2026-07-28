@@ -35,7 +35,7 @@ const PART_JOINTS := {
 }
 
 @export var action_library_enabled := true
-@export var skin_id := "base_humanoid"
+@export var skin_id := "base_armorer"
 @export var playback_fps := 10.0
 
 var _player: Player

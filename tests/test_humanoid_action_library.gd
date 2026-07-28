@@ -51,7 +51,7 @@ func _run_test() -> void:
 	)
 	assert(humanoid != null and humanoid.is_action_library_enabled())
 	assert(humanoid.action_count() == 44)
-	assert(humanoid.current_skin_id() == "base_humanoid")
+	assert(humanoid.current_skin_id() == "base_armorer")
 	assert(not martial.is_trial_enabled())
 	for part_name in [
 		"Head",
@@ -99,10 +99,14 @@ func _run_test() -> void:
 	await process_frame
 	assert((off_hand.texture as AtlasTexture).region.position.x == 192.0)
 	var action_before_skin_swap := humanoid.current_action_name()
+	assert(humanoid.set_skin("base_humanoid"))
+	await process_frame
+	assert(humanoid.current_skin_id() == "base_humanoid")
+	assert(humanoid.current_action_name() == action_before_skin_swap)
+	assert((humanoid.get_node("Torso") as Sprite2D).texture.resource_path.contains("base_humanoid"))
 	assert(humanoid.set_skin("base_armorer"))
 	await process_frame
 	assert(humanoid.current_skin_id() == "base_armorer")
-	assert(humanoid.current_action_name() == action_before_skin_swap)
 	assert((humanoid.get_node("Torso") as Sprite2D).texture.resource_path.contains("base_armorer"))
 
 	var main_anchor := humanoid.equipment_anchor(&"main_hand")
