@@ -53,6 +53,8 @@ const EQUIPMENT_ICONS := {
 	"linye_pass": preload("res://assets/art/icons/unique/linye_pass.png"),
 	"director_reaper": preload("res://assets/art/icons/unique/director_reaper.png"),
 	"conductor_railgun": preload("res://assets/art/icons/unique/conductor_railgun.png"),
+	"mourning_bow": preload("res://assets/art/icons/equipment/mourning_bow.svg"),
+	"echo_staff": preload("res://assets/art/icons/equipment/echo_staff.svg"),
 }
 const MATERIAL_ICONS := {
 	"tissue_sample": preload("res://assets/art/icons/materials/tissue_sample.png"),
@@ -2734,3 +2736,4 @@ func _salvage_selected() -> void:
 		selected_equipment_id = ""
 		_refresh_warehouse()
 		_refresh()
+
