@@ -1,0 +1,254 @@
+"""Render one rigged 3D character into deterministic four-direction 2D atlases.
+
+Run with Blender, for example:
+
+    blender --background --python render_directional_sprites.py -- \
+      --character UniversalBaseCharacter.glb \
+      --output ../../assets/art/characters/rendered3d/base_drifter \
+      --preset dreadbound.json
+
+The input may be GLB/GLTF/FBX. All views and frames come from the same mesh,
+armature, materials, camera, lighting and animation data.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import sys
+from pathlib import Path
+
+import bpy
+from mathutils import Vector
+
+
+DIRECTIONS = {
+    "front": 0.0,
+    "left": 90.0,
+    "back": 180.0,
+    "right": 270.0,
+}
+
+
+def parse_args() -> argparse.Namespace:
+    argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--character", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--preset", required=True)
+    parser.add_argument("--armature", default="")
+    return parser.parse_args(argv)
+
+
+def load_preset(path: Path) -> dict:
+    with path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    for key in ("character_id", "frame_size", "camera", "animations"):
+        if key not in data:
+            raise ValueError(f"Preset is missing {key!r}")
+    return data
+
+
+def clear_scene() -> None:
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete(use_global=False)
+    for collection in (
+        bpy.data.armatures,
+        bpy.data.meshes,
+        bpy.data.materials,
+        bpy.data.cameras,
+        bpy.data.lights,
+    ):
+        for block in list(collection):
+            if block.users == 0:
+                collection.remove(block)
+
+
+def import_character(path: Path) -> None:
+    suffix = path.suffix.lower()
+    if suffix in (".glb", ".gltf"):
+        bpy.ops.import_scene.gltf(filepath=str(path))
+    elif suffix == ".fbx":
+        bpy.ops.import_scene.fbx(filepath=str(path), automatic_bone_orientation=True)
+    else:
+        raise ValueError("Character must be .glb, .gltf or .fbx")
+
+
+def find_armature(name: str) -> bpy.types.Object:
+    armatures = [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
+    if name:
+        armatures = [obj for obj in armatures if obj.name == name]
+    if len(armatures) != 1:
+        names = ", ".join(obj.name for obj in armatures) or "none"
+        raise RuntimeError(f"Expected exactly one armature, found: {names}")
+    return armatures[0]
+
+
+def top_level_objects(armature: bpy.types.Object) -> list[bpy.types.Object]:
+    result = []
+    for obj in bpy.context.scene.objects:
+        if obj.type in {"CAMERA", "LIGHT"}:
+            continue
+        if obj.parent is None:
+            result.append(obj)
+    if armature not in result and armature.parent is None:
+        result.append(armature)
+    return result
+
+
+def bounds(objects: list[bpy.types.Object]) -> tuple[Vector, Vector]:
+    points = []
+    for obj in objects:
+        if obj.type != "MESH":
+            continue
+        points.extend(obj.matrix_world @ Vector(corner) for corner in obj.bound_box)
+    if not points:
+        raise RuntimeError("Imported character contains no visible mesh")
+    low = Vector((min(p.x for p in points), min(p.y for p in points), min(p.z for p in points)))
+    high = Vector((max(p.x for p in points), max(p.y for p in points), max(p.z for p in points)))
+    return low, high
+
+
+def look_at(obj: bpy.types.Object, point: Vector) -> None:
+    obj.rotation_euler = (point - obj.location).to_track_quat("-Z", "Y").to_euler()
+
+
+def configure_scene(preset: dict, objects: list[bpy.types.Object]) -> bpy.types.Object:
+    scene = bpy.context.scene
+    width, height = preset["frame_size"]
+    scene.render.engine = "BLENDER_WORKBENCH"
+    scene.display.shading.light = "STUDIO"
+    scene.display.shading.studio_light = preset.get("studio_light", "paint.sl")
+    scene.display.shading.color_type = "MATERIAL"
+    scene.display.shading.show_shadows = True
+    scene.display.shading.show_cavity = True
+    scene.display.shading.cavity_type = "WORLD"
+    scene.render.film_transparent = True
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.render.resolution_x = int(width)
+    scene.render.resolution_y = int(height)
+    scene.render.resolution_percentage = 100
+    scene.render.fps = int(preset.get("fps", 12))
+
+    low, high = bounds(objects)
+    center = (low + high) * 0.5
+    character_height = max(high.z - low.z, 0.01)
+    camera_data = bpy.data.cameras.new("DreadboundSpriteCamera")
+    camera = bpy.data.objects.new("DreadboundSpriteCamera", camera_data)
+    scene.collection.objects.link(camera)
+    scene.camera = camera
+    camera_data.type = "ORTHO"
+    camera_data.ortho_scale = character_height * float(preset["camera"].get("padding", 1.18))
+    elevation = math.radians(float(preset["camera"].get("elevation_degrees", 18.0)))
+    distance = character_height * 4.0
+    camera.location = center + Vector((0.0, -math.cos(elevation) * distance, math.sin(elevation) * distance))
+    look_at(camera, center + Vector((0.0, 0.0, character_height * 0.03)))
+    return camera
+
+
+def match_action(logical_name: str, candidates: list[str]) -> bpy.types.Action:
+    actions = list(bpy.data.actions)
+    normalized = [(action, action.name.lower().replace(" ", "_")) for action in actions]
+    for candidate in candidates:
+        needle = candidate.lower().replace(" ", "_")
+        for action, name in normalized:
+            if name == needle or needle in name:
+                return action
+    available = ", ".join(action.name for action in actions)
+    raise RuntimeError(f"No action matched {logical_name!r}. Available actions: {available}")
+
+
+def set_yaw(objects: list[bpy.types.Object], degrees: float) -> None:
+    radians = math.radians(degrees)
+    for obj in objects:
+        if obj.parent is None:
+            obj.rotation_euler.z = radians
+
+
+def pack_horizontal(frame_paths: list[Path], atlas_path: Path) -> None:
+    images = [bpy.data.images.load(str(path), check_existing=False) for path in frame_paths]
+    width, height = images[0].size
+    atlas = bpy.data.images.new(
+        atlas_path.stem,
+        width=width * len(images),
+        height=height,
+        alpha=True,
+    )
+    atlas_pixels = [0.0] * (width * len(images) * height * 4)
+    for frame_index, image in enumerate(images):
+        pixels = list(image.pixels)
+        for y in range(height):
+            source = y * width * 4
+            target = (y * width * len(images) + frame_index * width) * 4
+            atlas_pixels[target : target + width * 4] = pixels[source : source + width * 4]
+    atlas.pixels.foreach_set(atlas_pixels)
+    atlas.filepath_raw = str(atlas_path)
+    atlas.file_format = "PNG"
+    atlas.save()
+    bpy.data.images.remove(atlas)
+    for image in images:
+        bpy.data.images.remove(image)
+
+
+def render(preset: dict, armature: bpy.types.Object, roots: list[bpy.types.Object], output: Path) -> dict:
+    scene = bpy.context.scene
+    output.mkdir(parents=True, exist_ok=True)
+    temp = output / "_frames"
+    manifest = {
+        "schema": 1,
+        "source": "single_3d_rig",
+        "character_id": preset["character_id"],
+        "frame_size": preset["frame_size"],
+        "fps": scene.render.fps,
+        "directions": list(DIRECTIONS),
+        "animations": {},
+    }
+    front_offset = float(preset.get("front_yaw_degrees", 0.0))
+    for logical_name, spec in preset["animations"].items():
+        action = match_action(logical_name, spec["candidates"])
+        armature.animation_data_create()
+        armature.animation_data.action = action
+        start = int(spec.get("start", round(action.frame_range[0])))
+        end = int(spec.get("end", round(action.frame_range[1])))
+        step = max(1, int(spec.get("step", 1)))
+        frames = list(range(start, end + 1, step))
+        manifest["animations"][logical_name] = {"frames": len(frames), "loop": bool(spec.get("loop", False))}
+        for direction, yaw in DIRECTIONS.items():
+            set_yaw(roots, front_offset + yaw)
+            paths = []
+            frame_dir = temp / logical_name / direction
+            frame_dir.mkdir(parents=True, exist_ok=True)
+            for index, frame in enumerate(frames):
+                scene.frame_set(frame)
+                path = frame_dir / f"{index:03d}.png"
+                scene.render.filepath = str(path)
+                bpy.ops.render.render(write_still=True)
+                paths.append(path)
+            pack_horizontal(paths, output / f"{logical_name}_{direction}.png")
+    with (output / "manifest.json").open("w", encoding="utf-8") as handle:
+        json.dump(manifest, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+    return manifest
+
+
+def main() -> None:
+    args = parse_args()
+    character = Path(args.character).resolve()
+    output = Path(args.output).resolve()
+    preset = load_preset(Path(args.preset).resolve())
+    if not character.is_file():
+        raise FileNotFoundError(character)
+    clear_scene()
+    import_character(character)
+    armature = find_armature(args.armature)
+    roots = top_level_objects(armature)
+    configure_scene(preset, list(bpy.context.scene.objects))
+    manifest = render(preset, armature, roots, output)
+    print(json.dumps({"status": "ok", "output": str(output), "manifest": manifest}))
+
+
+if __name__ == "__main__":
+    main()
