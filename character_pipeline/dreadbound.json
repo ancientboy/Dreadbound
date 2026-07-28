@@ -1,0 +1,38 @@
+{
+  "character_id": "base_drifter_3d",
+  "frame_size": [96, 128],
+  "fps": 12,
+  "front_yaw_degrees": 0,
+  "studio_light": "paint.sl",
+  "camera": {
+    "elevation_degrees": 18,
+    "padding": 1.18
+  },
+  "animations": {
+    "idle": {
+      "candidates": ["idle", "idle_a", "standing_idle"],
+      "loop": true,
+      "step": 2
+    },
+    "walk": {
+      "candidates": ["walk", "walking", "walk_forward"],
+      "loop": true,
+      "step": 2
+    },
+    "attack_melee": {
+      "candidates": ["melee", "sword_attack", "attack"],
+      "loop": false,
+      "step": 2
+    },
+    "hit": {
+      "candidates": ["hit", "damage", "impact"],
+      "loop": false,
+      "step": 2
+    },
+    "death": {
+      "candidates": ["death", "dying"],
+      "loop": false,
+      "step": 2
+    }
+  }
+}
