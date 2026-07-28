@@ -101,9 +101,9 @@ func _run_test() -> void:
 	# Seed the standard gait explicitly before the runtime equipment pose blends
 	# onto it; production no longer leaves the rig in the obsolete FREE mode.
 	rig._apply_standard_humanoid_walk_pose(1.0, 1.0)
+	assert(rig.is_using_true_opposition())
 	await process_frame
 	assert(rig.current_direction() == "right")
-	assert(rig.is_using_true_opposition())
 	player.equipped_weapon_item = "balanced_pistol"
 	rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.PISTOL, true)
 	player.velocity = Vector2.ZERO
