@@ -3,6 +3,12 @@ extends Node2D
 
 const FRAME_SIZE := Vector2i(128, 128)
 const DIRECTIONS := [&"front", &"left", &"back", &"right"]
+const SOURCE_DIRECTIONS := {
+	&"front": &"front",
+	&"left": &"right",
+	&"back": &"back",
+	&"right": &"left",
+}
 const ANIMATION_FRAMES := {
 	&"idle": 36,
 	&"walk": 17,
@@ -54,7 +60,7 @@ const ATLAS_TEXTURES := {
 	&"death_right": preload("res://assets/art/characters/rendered3d/base_drifter/death_right.png"),
 }
 
-@export var ground_offset := Vector2(0.0, -20.0)
+@export var ground_offset := Vector2(0.0, -12.0)
 @export var display_scale := Vector2.ONE
 
 var _player: Player
@@ -113,7 +119,11 @@ func _build_sprite_frames() -> SpriteFrames:
 	for logical_name in ANIMATION_FRAMES:
 		for direction in DIRECTIONS:
 			var animation_name := _animation_name(logical_name, direction)
-			var texture := ATLAS_TEXTURES[animation_name] as Texture2D
+			var source_name := _animation_name(
+				logical_name,
+				source_direction_for_logical(direction),
+			)
+			var texture := ATLAS_TEXTURES[source_name] as Texture2D
 			var frame_count := int(ANIMATION_FRAMES[logical_name])
 			var columns := int(ANIMATION_COLUMNS[logical_name])
 			var rows := ceili(float(frame_count) / float(columns))
@@ -166,6 +176,10 @@ static func direction_from_vector(value: Vector2) -> StringName:
 	if value.y < 0.0:
 		return &"back"
 	return &"front"
+
+
+static func source_direction_for_logical(direction: StringName) -> StringName:
+	return SOURCE_DIRECTIONS.get(direction, direction) as StringName
 
 
 static func _animation_name(logical_name: StringName, direction: StringName) -> StringName:

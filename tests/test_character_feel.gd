@@ -66,6 +66,8 @@ func _run_test() -> void:
 
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	assert(rendered_sprite != null)
+	assert(rendered.ground_offset == Vector2(0.0, -12.0))
+	assert(rendered_sprite.position == Vector2(0.0, -12.0))
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
 	var idle_frame_0 := (
 		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
@@ -92,6 +94,22 @@ func _run_test() -> void:
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.UP) == &"back")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.LEFT) == &"left")
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.RIGHT) == &"right")
+	assert(RenderedAtlasCharacter.source_direction_for_logical(&"left") == &"right")
+	assert(RenderedAtlasCharacter.source_direction_for_logical(&"right") == &"left")
+	var walk_left_frame := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"walk_left", 0) as AtlasTexture
+	)
+	var walk_right_frame := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"walk_right", 0) as AtlasTexture
+	)
+	assert(
+		walk_left_frame.atlas
+		== load("res://assets/art/characters/rendered3d/base_drifter/walk_right.png")
+	)
+	assert(
+		walk_right_frame.atlas
+		== load("res://assets/art/characters/rendered3d/base_drifter/walk_left.png")
+	)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/ModeButtons") == null)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Close") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Mid") is Button)
