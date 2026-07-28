@@ -36,6 +36,11 @@ def parse_args() -> argparse.Namespace:
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--character", required=True)
+    parser.add_argument(
+        "--animations",
+        required=True,
+        help="GLB/GLTF/FBX containing actions for the same humanoid bone names",
+    )
     parser.add_argument("--output", required=True)
     parser.add_argument("--preset", required=True)
     parser.add_argument("--armature", default="")
@@ -76,14 +81,71 @@ def import_character(path: Path) -> None:
         raise ValueError("Character must be .glb, .gltf or .fbx")
 
 
+def scene_armatures() -> list[bpy.types.Object]:
+    return [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
+
+
 def find_armature(name: str) -> bpy.types.Object:
-    armatures = [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
+    armatures = scene_armatures()
     if name:
         armatures = [obj for obj in armatures if obj.name == name]
     if len(armatures) != 1:
         names = ", ".join(obj.name for obj in armatures) or "none"
         raise RuntimeError(f"Expected exactly one armature, found: {names}")
     return armatures[0]
+
+
+def import_animation_library(path: Path, character_armature: bpy.types.Object) -> None:
+    before_objects = set(bpy.context.scene.objects)
+    before_armatures = set(scene_armatures())
+    import_character(path)
+    imported_objects = [
+        obj for obj in bpy.context.scene.objects if obj not in before_objects
+    ]
+    imported_armatures = [
+        obj for obj in scene_armatures() if obj not in before_armatures
+    ]
+    if len(imported_armatures) != 1:
+        names = ", ".join(obj.name for obj in imported_armatures) or "none"
+        raise RuntimeError(
+            f"Expected one animation armature in {path}, found: {names}"
+        )
+    animation_armature = imported_armatures[0]
+    character_bones = set(character_armature.data.bones.keys())
+    animation_bones = set(animation_armature.data.bones.keys())
+    required = {
+        "root",
+        "pelvis",
+        "spine_01",
+        "spine_02",
+        "spine_03",
+        "neck_01",
+        "Head",
+        "upperarm_l",
+        "lowerarm_l",
+        "hand_l",
+        "upperarm_r",
+        "lowerarm_r",
+        "hand_r",
+        "thigh_l",
+        "calf_l",
+        "foot_l",
+        "thigh_r",
+        "calf_r",
+        "foot_r",
+    }
+    missing_character = sorted(required - character_bones)
+    missing_animation = sorted(required - animation_bones)
+    if missing_character or missing_animation:
+        raise RuntimeError(
+            "Humanoid bone contract mismatch. "
+            f"Character missing={missing_character}; "
+            f"animation library missing={missing_animation}"
+        )
+    if not bpy.data.actions:
+        raise RuntimeError(f"No actions were imported from {path}")
+    for obj in imported_objects:
+        bpy.data.objects.remove(obj, do_unlink=True)
 
 
 def top_level_objects(armature: bpy.types.Object) -> list[bpy.types.Object]:
@@ -237,13 +299,17 @@ def render(preset: dict, armature: bpy.types.Object, roots: list[bpy.types.Objec
 def main() -> None:
     args = parse_args()
     character = Path(args.character).resolve()
+    animations = Path(args.animations).resolve()
     output = Path(args.output).resolve()
     preset = load_preset(Path(args.preset).resolve())
     if not character.is_file():
         raise FileNotFoundError(character)
+    if not animations.is_file():
+        raise FileNotFoundError(animations)
     clear_scene()
     import_character(character)
     armature = find_armature(args.armature)
+    import_animation_library(animations, armature)
     roots = top_level_objects(armature)
     configure_scene(preset, list(bpy.context.scene.objects))
     manifest = render(preset, armature, roots, output)
