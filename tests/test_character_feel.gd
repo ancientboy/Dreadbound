@@ -58,7 +58,7 @@ func _run_test() -> void:
 	assert(player.attack_damage == 38) # 35 baseline + the demo crowbar's real +3 bonus.
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
-	var rig := player.get_node("LayeredSkeletonRig") as LayeredSkeletonCharacter
+	var rig := player.get_node("ProfessionSkeletonRig") as ProfessionSkeletonCharacter
 	assert(rig != null)
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Pistol") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/ModeButtons/Rifle") is Button)
