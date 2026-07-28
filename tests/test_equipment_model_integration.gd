@@ -45,16 +45,13 @@ func _run_test() -> void:
 	await process_frame
 	await process_frame
 	var player := instance.get_node("Player") as Player
-	var trial := player.get_node("MartialArtistTrialCharacter") as MartialArtistTrialCharacter
-	var humanoid := (
-		player.get_node("UniversalHumanoidActionCharacter")
-		as UniversalHumanoidActionCharacter
-	)
-	var hud_panel := instance.get_node("HUD/Panel") as PanelContainer
-	var touch_buttons := instance.get_node("HUD/TouchTestButtons") as HBoxContainer
-	var expected_font := load("res://assets/fonts/DreadboundChineseFull.otf") as Font
-	assert(hud_panel.theme.default_font == expected_font)
-	assert(touch_buttons.theme.default_font == expected_font)
+	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
+	assert(rendered != null)
+	assert(rendered.get_node("AnimatedSprite2D").visible)
+	assert(player.get_node_or_null("MartialArtistTrialCharacter") == null)
+	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
+	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/EquipmentButtons") == null)
+	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/OffhandButtons") == null)
 	assert(player.equipped_weapon_item == "service_crowbar")
 	player._play_weapon_attack_vfx("melee", player._active_attack_range())
 	var found_weapon_swing := false
@@ -71,54 +68,6 @@ func _run_test() -> void:
 		)
 	assert(found_weapon_swing)
 	assert(not found_legacy_attack)
-	player.select_demo_weapon_slot(1)
-	assert(player.equipped_weapon_item == "mourning_bow")
-	assert(str(player._weapon_attack_profile().id) == "bow")
-	player._play_weapon_attack_vfx(
-		"ranged",
-		player._active_attack_range(),
-		player.global_position + Vector2.RIGHT * player._active_attack_range(),
-	)
-	assert(
-		player.combat_fx._events.any(
-			func(event): return bool(event.get("active", false)) and str(event.get("kind", "")) == "arrow"
-		)
-	)
-	player.select_demo_weapon_slot(2)
-	assert(player.equipped_weapon_item == "echo_staff")
-	assert(str(player._weapon_attack_profile().id) == "arcane")
-	player._play_weapon_attack_vfx(
-		"arcane",
-		player._active_attack_range(),
-		player.global_position + Vector2.RIGHT * player._active_attack_range(),
-	)
-	assert(
-		player.combat_fx._events.any(
-			func(event): return bool(event.get("active", false)) and str(event.get("kind", "")) == "arcane_chain"
-		)
-	)
-	assert(
-		not player.combat_fx._events.any(
-			func(event): return str(event.get("kind", "")).begins_with("profession_attack_")
-		)
-	)
-	player.select_demo_offhand("field_codex")
-	assert(player._active_offhand_item() == "field_codex")
-
-	player.facing = Vector2.DOWN
-	await process_frame
-	var front_main := trial.equipment_anchor(&"main_hand")
-	var front_off := trial.equipment_anchor(&"off_hand")
-	assert(front_main.distance_to(front_off) > 1.0)
-	assert(front_main.x < front_off.x)
-	player.facing = Vector2.UP
-	await process_frame
-	var back_main := trial.equipment_anchor(&"main_hand")
-	var back_off := trial.equipment_anchor(&"off_hand")
-	assert(back_main.distance_to(back_off) > 1.0)
-	assert(back_main.x > back_off.x)
-	assert(not back_main.is_equal_approx(front_main))
-	assert(not back_off.is_equal_approx(front_off))
-	assert(trial.is_trial_enabled())
-	print("Equipment model integration passed: formal model, bow, staff, shield and codex")
+	assert(player.demo_weapon_slots == ["service_crowbar", "balanced_pistol", "breach_shotgun"])
+	print("Equipment model integration passed: game equipment remains available outside baseline demo")
 	quit()
