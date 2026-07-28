@@ -22,7 +22,8 @@ func _ready() -> void:
 	$HUD/TouchTestButtons/Hit.pressed.connect(_trigger_hit)
 	$HUD/TouchTestButtons/Death.pressed.connect(_trigger_death)
 	$HUD/TouchTestButtons/Reset.pressed.connect(_reset_demo)
-	_trial_button.pressed.connect(_toggle_character_trial)
+	# Old full-body atlas resources are retained for migration safety only.
+	# The playable demo has a single runtime character path: the skeleton.
 	get_viewport().size_changed.connect(_layout_touch_ui)
 	_update_trial_button()
 	_layout_touch_ui()
@@ -39,8 +40,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_trigger_hit()
 		KEY_K:
 			_trigger_death()
-		KEY_V:
-			_toggle_character_trial()
 
 
 func _trigger_hit() -> void:
@@ -59,19 +58,9 @@ func _reset_demo() -> void:
 	get_tree().reload_current_scene()
 
 
-func _toggle_character_trial() -> void:
-	_humanoid_actions.set_action_library_enabled(
-		not _humanoid_actions.is_action_library_enabled()
-	)
-	_update_trial_button()
-
-
 func _update_trial_button() -> void:
-	_trial_button.text = (
-		"返回正式武斗师"
-		if _humanoid_actions.is_action_library_enabled()
-		else "查看骨骼调试"
-	)
+	_trial_button.text = "统一骨骼已启用"
+	_trial_button.disabled = true
 
 
 func _layout_touch_ui() -> void:
