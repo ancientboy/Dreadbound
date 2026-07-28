@@ -192,8 +192,9 @@ func _run_test() -> void:
 	var off_reference := (
 		humanoid.get_node("OffHandActionReference") as ActionReferenceWeapon
 	)
-	assert(main_hand.texture != null and off_hand.texture != null)
-	assert(not main_reference.visible and not off_reference.visible)
+	assert(main_hand.texture == null and off_hand.texture == null)
+	assert(main_reference.visible and main_reference.family == "sword")
+	assert(off_reference.visible and off_reference.family == "shield")
 	assert(humanoid.current_action_name() == "one_hand_melee_idle")
 	assert(humanoid.set_preview_weapon_family("unarmed"))
 	await process_frame
@@ -254,7 +255,8 @@ func _run_test() -> void:
 	player._attack_flash = 0.14
 	await process_frame
 	assert(humanoid.current_action_name() == "bow_release")
-	assert((main_hand.texture as AtlasTexture).region.position.x == 0.0)
+	assert(main_hand.texture == null)
+	assert(main_reference.visible and main_reference.family == "bow")
 	assert(main_hand.position == humanoid._current_joints.left_hand)
 
 	player._attack_flash = 0.0
@@ -266,11 +268,13 @@ func _run_test() -> void:
 	player._attack_flash = 0.14
 	await process_frame
 	assert(humanoid.current_action_name() == "spell_shoot")
-	assert((main_hand.texture as AtlasTexture).region.position.x == 64.0)
+	assert(main_hand.texture == null)
+	assert(main_reference.visible and main_reference.family == "spell")
 
 	player.select_demo_offhand("field_codex")
 	await process_frame
-	assert((off_hand.texture as AtlasTexture).region.position.x == 192.0)
+	assert(off_hand.texture == null)
+	assert(not off_reference.visible)
 	var action_before_skin_swap := humanoid.current_action_name()
 	assert(humanoid.set_skin("base_humanoid"))
 	await process_frame
