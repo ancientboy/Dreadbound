@@ -105,10 +105,25 @@ var _profile: Dictionary = PROFESSION_PROFILES["steadfast"]
 var _standard_rest_feet := {}
 var _humanoid_skin_override := ""
 
+@export_group("Rig Preview")
+@export var forced_rig_id := ""
+@export var initial_humanoid_skin := ""
+@export_group("")
+
 
 func _ready() -> void:
 	ik_demo_enabled = false
 	_rig_id = _active_rig_id()
+	if not initial_humanoid_skin.is_empty():
+		assert(
+			_rig_id == "base_armorer",
+			"Humanoid skin preview requires the shared base_armorer skeleton",
+		)
+		assert(
+			has_humanoid_skin(initial_humanoid_skin),
+			"Missing humanoid preview skin: %s" % initial_humanoid_skin,
+		)
+		_humanoid_skin_override = initial_humanoid_skin
 	_rig_available = has_rig(_rig_id)
 	visible = _rig_available
 	if not _rig_available:
@@ -143,6 +158,12 @@ func _process(delta: float) -> void:
 
 
 func _active_rig_id() -> String:
+	if not forced_rig_id.is_empty():
+		assert(
+			forced_rig_id in BASE_RIG_IDS or forced_rig_id in STYLE_IDS,
+			"Unknown forced rig: %s" % forced_rig_id,
+		)
+		return forced_rig_id
 	var state := get_node_or_null("/root/GameState")
 	if state == null:
 		return "base_drifter"
@@ -474,10 +495,27 @@ func _set_oriented_individual_part(
 	var pivot := _json_vector(part["pivot"])
 	var sprite := _sprites[sprite_key] as Sprite2D
 	sprite.position = (size * 0.5 - pivot).rotated(-world_rest_angle)
-	# The source art is authored upright in frame coordinates. Cancel the
-	# complete rest angle so it reconstructs exactly, while later pose rotation
-	# still moves the pixels around the true two-dimensional bone vector.
+	# The source pixels are authored in world-rest orientation. Bone2D owns the
+	# shoulder/elbow transform, while this local counter-rotation reconstructs
+	# the authored neutral pose without moving the sprite pivot away from the
+	# bone origin. Later animation rotates the Bone2D itself around that pivot.
 	sprite.rotation = -world_rest_angle
+	assert(
+		_individual_sprite_pivot_error(sprite, size, pivot) < 0.05,
+		"Sprite pivot must coincide with its Bone2D origin: %s" % sprite_key,
+	)
+
+
+func _individual_sprite_pivot_error(
+	sprite: Sprite2D,
+	size: Vector2,
+	pivot: Vector2,
+) -> float:
+	var texture_pivot := pivot - size * 0.5
+	return (
+		sprite.position
+		+ texture_pivot.rotated(sprite.rotation)
+	).length()
 
 
 func _layout_manifest_rig(direction: String) -> void:
