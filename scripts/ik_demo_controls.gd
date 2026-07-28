@@ -7,16 +7,20 @@ extends VBoxContainer
 
 
 func _ready() -> void:
-	$ModeButtons/Free.pressed.connect(
+	var rendered_atlas := get_node_or_null("../../../../Player/RenderedAtlasCharacter")
+	if rendered_atlas != null:
+		$ModeButtons.hide()
+	else:
+		$ModeButtons/Free.pressed.connect(
 		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.FREE),
 	)
-	$ModeButtons/Pistol.pressed.connect(
+		$ModeButtons/Pistol.pressed.connect(
 		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.PISTOL),
 	)
-	$ModeButtons/Rifle.pressed.connect(
+		$ModeButtons/Rifle.pressed.connect(
 		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.RIFLE),
 	)
-	$ModeButtons/Cast.pressed.connect(
+		$ModeButtons/Cast.pressed.connect(
 		_select_mode.bind(LayeredSkeletonCharacter.IKDemoMode.CAST),
 	)
 	$SkillButtons/Close.pressed.connect(
@@ -54,6 +58,9 @@ func _release_skill() -> void:
 
 
 func _update_mode_label() -> void:
+	if get_node_or_null("../../../../Player/RenderedAtlasCharacter") != null:
+		_mode_label.text = "ACTIVE: PURE 2D ATLAS · SPACE ATTACK · H HIT · K DEATH"
+		return
 	if not is_instance_valid(_rig):
 		return
 	var mode_name := "FREE"
