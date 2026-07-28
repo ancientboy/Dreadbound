@@ -22,6 +22,11 @@ The free standard animation archive includes locomotion and combat data. Confirm
 the action names in Blender and update `dreadbound.json` if the downloaded pack
 uses different names.
 
+The Standard base-character archive currently contains two glTF texture-name
+typos (`*_Normal_png.png` references for files stored as `*_Normal.png`). The
+renderer corrects those URIs in a temporary sibling glTF during import and does
+not modify the downloaded source.
+
 ## First render
 
 1. Install Blender 4.x.
@@ -45,8 +50,11 @@ Do not pass `UAL1_Standard_RM.glb`: Godot owns player translation, so baking
 root motion into the sprite frames would produce visible foot drift.
 
 The output contains one horizontal transparent atlas for each
-animation/direction pair plus a manifest. A 96×128 source frame is intentional:
-Godot may display it at 48×64 while retaining cleaner silhouettes and equipment.
+animation/direction pair plus a manifest. A 128×128 source frame is intentional:
+Godot may display it at 64×64 while retaining cleaner silhouettes and enough
+horizontal space for side-view melee and death poses.
+The preset defaults to low-sample Cycles CPU rendering so the pipeline also
+works in headless build workers without EGL or a physical GPU.
 
 ## Direction and camera contract
 
