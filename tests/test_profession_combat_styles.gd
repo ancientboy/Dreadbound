@@ -21,7 +21,9 @@ func _run_test() -> void:
 		var style: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
 		var pathway := str(style.path)
 		counts[pathway] += 1
-		assert(str(style.weapon_type) in ["melee", "ranged", "shotgun"])
+		assert(style.has("preferred_tags"))
+		assert(not (style.preferred_tags as Array).is_empty())
+		assert(not style.has("skill"))
 		assert(style.has("bonuses"))
 	for pathway in counts:
 		assert(int(counts[pathway]) == 4)
