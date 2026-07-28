@@ -97,7 +97,7 @@ func _process(_delta: float) -> void:
 func _activate_demo_presentation() -> void:
 	var old_rig := _player.get_node_or_null("ProfessionSkeletonRig")
 	if old_rig is CanvasItem:
-		(old_rig as CanvasItem).modulate = Color(1.0, 1.0, 1.0, 0.0)
+		(old_rig as CanvasItem).self_modulate = Color(1.0, 1.0, 1.0, 0.0)
 	if is_instance_valid(_player._body_sprite):
 		_player._body_sprite.hide()
 	_play_locomotion()
