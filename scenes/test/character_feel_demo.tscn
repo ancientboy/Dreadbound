@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
-[ext_resource type="Script" path="res://scripts/ik_demo_controls.gd" id="3_ik_controls"]
+[ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
 [ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
@@ -117,34 +117,19 @@ theme_override_constants/margin_bottom = 14
 
 [node name="Text" type="VBoxContainer" parent="HUD/Panel/Margin"]
 theme_override_constants/separation = 8
-script = ExtResource("3_ik_controls")
+script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v8 · GODOT NATIVE HUMANOID RIG"
+text = "CHARACTER FEEL DEMO v9 · 3D-RENDERED 2D ATLAS"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "Skeleton2D + Bone2D · Base humanoid four-view skin · One production rig only\nNo overlay rig · 0–3 weapon posture · 4–6 effect range · G charm preview"
+text = "AnimatedSprite2D · One source rig rendered to four directions · Pure 2D runtime\nIdle / Walk / Attack / Hit / Death · 4–6 effect range · G charm preview"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "ACTIVE: PISTOL · MAIN-HAND GRIP"
 label_settings = SubResource("Body_settings")
-
-[node name="ModeButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
-theme_override_constants/separation = 8
-
-[node name="Free" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "0 Free"
-
-[node name="Pistol" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "1 Pistol"
-
-[node name="Rifle" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "2 Rifle"
-
-[node name="Cast" type="Button" parent="HUD/Panel/Margin/Text/ModeButtons"]
-text = "3 Cast"
 
 [node name="SkillLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "SKILL: CLOSE · BLOOD BARRIER · RANGE 170 · IDLE"

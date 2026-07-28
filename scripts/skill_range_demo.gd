@@ -45,7 +45,6 @@ const SKILLS := {
 }
 
 @onready var _player := get_node("../Player") as Player
-@onready var _rig := get_node("../Player/ProfessionSkeletonRig") as ProfessionSkeletonCharacter
 @onready var _camera := get_node("../Player/Camera2D") as PlayerFeelCamera
 
 var _mode := SkillMode.CLOSE_BURST
@@ -163,7 +162,7 @@ func trigger_skill() -> bool:
 	_phase_time = 0.0
 	_hit_applied = false
 	_cooldown_left = float(SKILLS[_mode].cooldown)
-	_apply_skill_cast_pose()
+	_apply_skill_cast_feedback()
 	_player._attack_flash = maxf(_player._attack_flash, 0.08)
 	queue_redraw()
 	return true
@@ -174,15 +173,13 @@ func set_skill_mode(mode: SkillMode) -> void:
 	_phase = "idle"
 	_phase_time = 0.0
 	_hit_applied = false
-	_apply_skill_cast_pose()
+	_apply_skill_cast_feedback()
 	queue_redraw()
 
 
-func _apply_skill_cast_pose() -> void:
-	_rig.set_ik_demo_mode(LayeredSkeletonCharacter.IKDemoMode.CAST)
-	# CAST's cyan polygon is only an IK target preview. Real skills use their own
-	# atlas animation below, so keeping it visible made every mode look identical.
-	_rig.set_cast_orb_preview_enabled(false)
+func _apply_skill_cast_feedback() -> void:
+	# Frame animation replaces the retired skeletal pose controller.
+	_player._attack_flash = maxf(_player._attack_flash, 0.08)
 
 
 func current_skill_mode() -> SkillMode:

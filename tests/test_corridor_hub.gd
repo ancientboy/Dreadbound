@@ -15,19 +15,23 @@ func _run_test() -> void:
 	for frame in range(4):
 		await process_frame
 	assert(corridor.walker_avatar != null)
-	var hub_rig := corridor.walker_avatar.get_node("ProfessionSkeletonRig") as ProfessionSkeletonCharacter
-	assert(hub_rig != null and hub_rig.visible)
-	assert(hub_rig.current_rig_id() == "base_drifter")
+	var hub_atlas := (
+		corridor.walker_avatar.get_node("RenderedAtlasCharacter")
+		as RenderedAtlasCharacter
+	)
+	assert(hub_atlas != null and hub_atlas.visible)
 	assert(not corridor.walker_avatar._body_sprite.visible)
-	assert(hub_rig.has_split_body_parts())
+	var hub_sprite := hub_atlas.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	assert(hub_sprite != null)
+	assert(hub_sprite.sprite_frames.get_animation_names().size() == 20)
 	corridor.set_process(false)
 	corridor.walker_velocity = Vector2.RIGHT * corridor.WALK_SPEED
 	corridor.walker_facing = Vector2.RIGHT
 	corridor.walk_phase = TAU * 0.25
 	corridor._sync_walker_avatar()
 	assert(corridor.walker_avatar.velocity.length() > 2.0)
-	hub_rig._process(1.0 / 30.0)
-	assert(hub_rig.walk_pose_signature()[0] != 0.0)
+	hub_atlas._process(1.0 / 30.0)
+	assert(hub_sprite.animation == &"walk_right")
 	corridor.walker_velocity = Vector2.ZERO
 	corridor._sync_walker_avatar()
 	corridor.set_process(true)
@@ -35,11 +39,11 @@ func _run_test() -> void:
 	state.active_combat_style = ""
 	assert(corridor._walker_body_texture().resource_path.ends_with("armorer_spritesheet.png"))
 	await process_frame
-	assert(hub_rig.current_rig_id() == "base_armorer")
+	assert(hub_sprite.animation.begins_with("idle_"))
 	state.active_combat_style = "heavy_suppression"
 	assert(corridor._walker_body_texture().resource_path.ends_with("heavy_suppression_spritesheet.png"))
 	await process_frame
-	assert(hub_rig.current_rig_id() == "heavy_suppression")
+	assert(corridor.walker_avatar.get_node_or_null("ProfessionSkeletonRig") == null)
 	state.active_combat_style = ""
 	state.selected_pathway = original_pathway
 	state.active_combat_style = original_style
