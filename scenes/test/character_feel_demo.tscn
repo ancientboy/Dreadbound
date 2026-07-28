@@ -136,56 +136,56 @@ theme_override_constants/separation = 8
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v12 · EQUIPMENT ANCHOR TRIAL"
+text = "角色手感测试 v13 · 武器与模型结合"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "武斗师 × 装备：主手撬棍 / 骨弓 / 法杖 · 副手盾牌 / 法典\n四方向逐帧锚点 · 法杖/弓不再错误回退为枪械"
+text = "下方第一排切换主动技能测试，第二排切换主手武器，第三排切换副手。\n普通攻击完全由当前主手决定，不会触发职业技能特效。"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "ACTIVE: MARTIAL ARTIST TRIAL · EMPTY HANDS"
+text = "主手：制式撬棍　副手：折叠防暴盾\n普通攻击：近距离横扫　射程：76　空格键/红色按钮攻击"
 label_settings = SubResource("Body_settings")
 
 [node name="SkillLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "SKILL: CLOSE · BLOOD BARRIER · RANGE 170 · IDLE"
+text = "主动技能测试：近距爆发　射程：170　状态：待命"
 label_settings = SubResource("Body_settings")
 
 [node name="SkillButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Close" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "4 Close"
+text = "近距技能（4）"
 
 [node name="Mid" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "5 Mid"
+text = "中距技能（5）"
 
 [node name="Long" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "6 Long"
+text = "远距技能（6）"
 
 [node name="Release" type="Button" parent="HUD/Panel/Margin/Text/SkillButtons"]
-text = "G Release"
+text = "释放技能（G）"
 
 [node name="EquipmentButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Crowbar" type="Button" parent="HUD/Panel/Margin/Text/EquipmentButtons"]
-text = "撬棍"
+text = "● 主手 1：制式撬棍"
 
 [node name="Bow" type="Button" parent="HUD/Panel/Margin/Text/EquipmentButtons"]
-text = "骨弓"
+text = "主手 2：哀鸣骨弓"
 
 [node name="Staff" type="Button" parent="HUD/Panel/Margin/Text/EquipmentButtons"]
-text = "法杖"
+text = "主手 3：裂隙法杖"
 
 [node name="OffhandButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Shield" type="Button" parent="HUD/Panel/Margin/Text/OffhandButtons"]
-text = "副手：盾牌"
+text = "● 副手：折叠防暴盾"
 
 [node name="Codex" type="Button" parent="HUD/Panel/Margin/Text/OffhandButtons"]
-text = "副手：法典"
+text = "副手：野战法典"
 
 [node name="TouchTestButtons" type="HBoxContainer" parent="HUD"]
 offset_left = 684.0

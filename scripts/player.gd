@@ -996,7 +996,7 @@ func _play_weapon_attack_vfx(attack_kind: String, reach: float, endpoint := Vect
 	var resolved_end := endpoint if endpoint != Vector2.INF else origin + facing * reach
 	match str(profile.get("vfx", "")):
 		"melee_sweep":
-			combat_fx.melee_swing_styled(global_position, facing, reach, effect_color)
+			combat_fx.weapon_swing_styled(global_position, facing, reach, effect_color)
 		"shotgun":
 			combat_fx.shotgun_blast_styled(origin, facing, reach, effect_color, effect_color.lightened(0.24))
 		"bone_arrow":

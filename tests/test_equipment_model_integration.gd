@@ -36,6 +36,8 @@ func _run_test() -> void:
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	assert(player_source.contains("_play_weapon_attack_vfx"))
 	assert(not player_source.contains("_play_attack_style_vfx"))
+	var combat_source := FileAccess.get_file_as_string("res://scripts/combat_fx.gd")
+	assert(combat_source.contains("weapon_swing_styled"))
 
 	var demo := load("res://scenes/test/character_feel_demo.tscn") as PackedScene
 	var instance := demo.instantiate()
@@ -44,7 +46,27 @@ func _run_test() -> void:
 	await process_frame
 	var player := instance.get_node("Player") as Player
 	var trial := player.get_node("MartialArtistTrialCharacter") as MartialArtistTrialCharacter
+	var hud_panel := instance.get_node("HUD/Panel") as PanelContainer
+	var touch_buttons := instance.get_node("HUD/TouchTestButtons") as HBoxContainer
+	var expected_font := load("res://assets/fonts/DreadboundChineseFull.otf") as Font
+	assert(hud_panel.theme.default_font == expected_font)
+	assert(touch_buttons.theme.default_font == expected_font)
 	assert(player.equipped_weapon_item == "service_crowbar")
+	player._play_weapon_attack_vfx("melee", player._active_attack_range())
+	var found_weapon_swing := false
+	var found_legacy_attack := false
+	for event in player.combat_fx._events:
+		if not bool(event.get("active", false)):
+			continue
+		var event_kind := str(event.get("kind", ""))
+		found_weapon_swing = found_weapon_swing or event_kind == "weapon_swing"
+		found_legacy_attack = (
+			found_legacy_attack
+			or event_kind == "arc"
+			or event_kind.begins_with("profession_attack_")
+		)
+	assert(found_weapon_swing)
+	assert(not found_legacy_attack)
 	player.select_demo_weapon_slot(1)
 	assert(player.equipped_weapon_item == "mourning_bow")
 	assert(str(player._weapon_attack_profile().id) == "bow")

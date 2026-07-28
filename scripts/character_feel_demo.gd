@@ -1,5 +1,7 @@
 extends Node2D
 
+const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
+
 @onready var _player := $Player as Player
 @onready var _martial_artist_trial := (
 	$Player/MartialArtistTrialCharacter as MartialArtistTrialCharacter
@@ -10,6 +12,10 @@ extends Node2D
 
 
 func _ready() -> void:
+	var demo_theme := Theme.new()
+	demo_theme.default_font = UI_FONT
+	_hud_panel.theme = demo_theme
+	_touch_test_buttons.theme = demo_theme
 	$HUD/TouchTestButtons/Hit.pressed.connect(_trigger_hit)
 	$HUD/TouchTestButtons/Death.pressed.connect(_trigger_death)
 	$HUD/TouchTestButtons/Reset.pressed.connect(_reset_demo)

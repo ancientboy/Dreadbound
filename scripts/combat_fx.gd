@@ -52,6 +52,14 @@ func melee_swing_styled(origin: Vector2, direction: Vector2, radius: float, colo
 	_kick_camera(2.0)
 
 
+func weapon_swing_styled(origin: Vector2, direction: Vector2, radius: float, color: Color) -> void:
+	# Ordinary melee attacks use a lightweight trail derived from the equipped
+	# weapon profile. The old combat-atlas crescent is reserved for legacy
+	# authored effects and must not leak into weapon-driven basic attacks.
+	_spawn("weapon_swing", origin, direction, radius, 0.14, color)
+	_kick_camera(1.6)
+
+
 static func melee_arc_rotation(direction: Vector2) -> float:
 	# The authored crescent points left in atlas space. Rotate its visual axis
 	# half a turn so the open edge and travel direction both face the strike.
@@ -244,6 +252,32 @@ func _draw() -> void:
 			"arc":
 				var direction: Vector2 = event.payload
 				_draw_fx_cell(0, event.origin + direction * event.radius * 0.52, event.radius * 1.16, melee_arc_rotation(direction), Color(1.0, 1.0, 1.0, fade))
+			"weapon_swing":
+				var swing_direction: Vector2 = event.payload.normalized()
+				var swing_angle := swing_direction.angle()
+				var sweep_progress := ease(progress, -1.4)
+				var end_angle := swing_angle - 0.72 + sweep_progress * 1.44
+				var trail_radius := clampf(event.radius * 0.58, 30.0, 64.0)
+				draw_arc(
+					event.origin,
+					trail_radius,
+					end_angle - 0.62,
+					end_angle,
+					16,
+					Color(color, fade * 0.82),
+					4.2,
+					true,
+				)
+				draw_arc(
+					event.origin,
+					trail_radius - 6.0,
+					end_angle - 0.48,
+					end_angle - 0.04,
+					12,
+					Color(color.lightened(0.28), fade * 0.48),
+					1.8,
+					true,
+				)
 			"tracer", "pellet":
 				var start_pos: Vector2 = event.origin.lerp(event.payload, progress * 0.24)
 				var end_pos: Vector2 = event.origin.lerp(event.payload, minf(1.0, progress * 1.45 + 0.18))
