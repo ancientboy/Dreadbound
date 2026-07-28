@@ -1,0 +1,254 @@
+{
+  "schema_version": 4,
+  "source": "authored_split_parts",
+  "source_id": "base_humanoid_v2",
+  "skeleton_id": "humanoid_v1",
+  "frame_size": [
+    256,
+    420
+  ],
+  "baseline_y": 410.0,
+  "center_x": 128.0,
+  "joints": {
+    "root": [
+      128,
+      420
+    ],
+    "hips": [
+      128,
+      230
+    ],
+    "torso": [
+      128,
+      230
+    ],
+    "head": [
+      128,
+      82
+    ],
+    "left_shoulder": [
+      130,
+      107
+    ],
+    "left_elbow": [
+      111,
+      173
+    ],
+    "left_hand": [
+      108,
+      240
+    ],
+    "right_shoulder": [
+      124,
+      105
+    ],
+    "right_elbow": [
+      117,
+      171
+    ],
+    "right_hand": [
+      114,
+      238
+    ],
+    "left_hip": [
+      130,
+      232
+    ],
+    "left_knee": [
+      115,
+      324
+    ],
+    "left_foot": [
+      122,
+      410
+    ],
+    "right_hip": [
+      124,
+      230
+    ],
+    "right_knee": [
+      119,
+      322
+    ],
+    "right_foot": [
+      126,
+      410
+    ],
+    "coat_left": [
+      131,
+      226
+    ],
+    "coat_right": [
+      123,
+      224
+    ]
+  },
+  "rest_vectors": {
+    "left_upper_arm": [
+      -19.0,
+      66.0
+    ],
+    "left_forearm": [
+      -3.0,
+      67.0
+    ],
+    "right_upper_arm": [
+      -7.0,
+      66.0
+    ],
+    "right_forearm": [
+      -3.0,
+      67.0
+    ],
+    "left_thigh": [
+      -15.0,
+      92.0
+    ],
+    "left_shin": [
+      7.0,
+      86.0
+    ],
+    "right_thigh": [
+      -5.0,
+      92.0
+    ],
+    "right_shin": [
+      7.0,
+      88.0
+    ]
+  },
+  "parts": {
+    "head": {
+      "file": "head.webp",
+      "size": [
+        72,
+        105
+      ],
+      "pivot": [
+        30.37,
+        91.0
+      ]
+    },
+    "torso": {
+      "file": "torso.webp",
+      "size": [
+        122,
+        165
+      ],
+      "pivot": [
+        73.81,
+        156.0
+      ]
+    },
+    "right_upper_arm": {
+      "file": "right_upper_arm.webp",
+      "size": [
+        41,
+        86
+      ],
+      "pivot": [
+        23.97,
+        7.0
+      ]
+    },
+    "right_forearm": {
+      "file": "right_forearm.webp",
+      "size": [
+        62,
+        105
+      ],
+      "pivot": [
+        12.8,
+        9.0
+      ]
+    },
+    "left_upper_arm": {
+      "file": "left_upper_arm.webp",
+      "size": [
+        51,
+        82
+      ],
+      "pivot": [
+        35.28,
+        6.0
+      ]
+    },
+    "left_forearm": {
+      "file": "left_forearm.webp",
+      "size": [
+        47,
+        105
+      ],
+      "pivot": [
+        16.07,
+        9.0
+      ]
+    },
+    "right_thigh": {
+      "file": "right_thigh.webp",
+      "size": [
+        46,
+        114
+      ],
+      "pivot": [
+        23.07,
+        9.0
+      ]
+    },
+    "right_shin": {
+      "file": "right_shin.webp",
+      "size": [
+        50,
+        112
+      ],
+      "pivot": [
+        24.94,
+        7.0
+      ]
+    },
+    "left_thigh": {
+      "file": "left_thigh.webp",
+      "size": [
+        55,
+        110
+      ],
+      "pivot": [
+        34.32,
+        9.0
+      ]
+    },
+    "left_shin": {
+      "file": "left_shin.webp",
+      "size": [
+        49,
+        112
+      ],
+      "pivot": [
+        20.08,
+        5.0
+      ]
+    },
+    "coat_far": {
+      "file": "coat_far.webp",
+      "size": [
+        1,
+        1
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    "coat_near": {
+      "file": "coat_near.webp",
+      "size": [
+        1,
+        1
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    }
+  }
+}

@@ -46,6 +46,10 @@ func _run_test() -> void:
 	await process_frame
 	var player := instance.get_node("Player") as Player
 	var trial := player.get_node("MartialArtistTrialCharacter") as MartialArtistTrialCharacter
+	var humanoid := (
+		player.get_node("UniversalHumanoidActionCharacter")
+		as UniversalHumanoidActionCharacter
+	)
 	var hud_panel := instance.get_node("HUD/Panel") as PanelContainer
 	var touch_buttons := instance.get_node("HUD/TouchTestButtons") as HBoxContainer
 	var expected_font := load("res://assets/fonts/DreadboundChineseFull.otf") as Font
@@ -103,11 +107,16 @@ func _run_test() -> void:
 
 	player.facing = Vector2.DOWN
 	await process_frame
-	assert(trial.equipment_anchor(&"main_hand") == Vector2(15, -28))
-	assert(trial.equipment_anchor(&"off_hand") == Vector2(-15, -28))
+	var front_main := humanoid.equipment_anchor(&"main_hand")
+	var front_off := humanoid.equipment_anchor(&"off_hand")
+	assert(front_main.distance_to(front_off) > 1.0)
 	player.facing = Vector2.UP
 	await process_frame
-	assert(trial.equipment_anchor(&"main_hand") == Vector2(-14, -30))
-	assert(trial.equipment_anchor(&"off_hand") == Vector2(14, -30))
-	print("Equipment model integration passed: bow, staff, shield, codex and anchors")
+	var back_main := humanoid.equipment_anchor(&"main_hand")
+	var back_off := humanoid.equipment_anchor(&"off_hand")
+	assert(back_main.distance_to(back_off) > 1.0)
+	assert(not back_main.is_equal_approx(front_main))
+	assert(not back_off.is_equal_approx(front_off))
+	assert(not trial.is_trial_enabled())
+	print("Equipment model integration passed: bow, staff, shield, codex and skeleton anchors")
 	quit()

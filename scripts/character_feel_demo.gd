@@ -6,6 +6,9 @@ const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 @onready var _martial_artist_trial := (
 	$Player/MartialArtistTrialCharacter as MartialArtistTrialCharacter
 )
+@onready var _humanoid_actions := (
+	$Player/UniversalHumanoidActionCharacter as UniversalHumanoidActionCharacter
+)
 @onready var _hud_panel := $HUD/Panel as PanelContainer
 @onready var _touch_test_buttons := $HUD/TouchTestButtons as HBoxContainer
 @onready var _trial_button := $HUD/TouchTestButtons/Trial as Button
@@ -57,15 +60,17 @@ func _reset_demo() -> void:
 
 
 func _toggle_character_trial() -> void:
-	_martial_artist_trial.set_trial_enabled(not _martial_artist_trial.is_trial_enabled())
+	_humanoid_actions.set_action_library_enabled(
+		not _humanoid_actions.is_action_library_enabled()
+	)
 	_update_trial_button()
 
 
 func _update_trial_button() -> void:
 	_trial_button.text = (
-		"武斗师试片"
-		if _martial_artist_trial.is_trial_enabled()
-		else "原角色图集"
+		"通用裸模动作"
+		if _humanoid_actions.is_action_library_enabled()
+		else "武斗师旧图集"
 	)
 
 

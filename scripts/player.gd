@@ -1037,7 +1037,7 @@ func _draw() -> void:
 	var visual := _pathway_visual()
 	if not is_instance_valid(_body_sprite):
 		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
-	if not _has_profession_combat_presentation():
+	if not _has_profession_combat_presentation() and not _trial_owns_equipment_visuals():
 		# Only the unbound starting drifter carries an actual weapon silhouette.
 		# Equipment continues to govern stats, traits, mastery and evolutions for every path.
 		var state := get_node_or_null("/root/GameState") as GameProgress
@@ -1262,11 +1262,34 @@ func _active_offhand_item() -> String:
 
 
 func _equipment_anchor(slot: StringName) -> Vector2:
+	var humanoid_actions := get_node_or_null("UniversalHumanoidActionCharacter")
+	if (
+		humanoid_actions != null
+		and humanoid_actions.has_method("is_action_library_enabled")
+		and humanoid_actions.is_action_library_enabled()
+	):
+		return humanoid_actions.equipment_anchor(slot)
 	var trial := get_node_or_null("MartialArtistTrialCharacter")
 	if trial != null and trial.has_method("equipment_anchor"):
 		return trial.equipment_anchor(slot)
 	var side := -1.0 if slot == &"off_hand" else 1.0
 	return Vector2(0, -27) + facing * 13.0 + facing.orthogonal() * 5.0 * side
+
+
+func _trial_owns_equipment_visuals() -> bool:
+	var humanoid_actions := get_node_or_null("UniversalHumanoidActionCharacter")
+	if (
+		humanoid_actions != null
+		and humanoid_actions.has_method("owns_equipment_visuals")
+		and humanoid_actions.owns_equipment_visuals()
+	):
+		return true
+	var trial := get_node_or_null("MartialArtistTrialCharacter")
+	return (
+		trial != null
+		and trial.has_method("is_trial_enabled")
+		and trial.is_trial_enabled()
+	)
 
 
 func _draw_visible_body_fallback(color: Color) -> void:
