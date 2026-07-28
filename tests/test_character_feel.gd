@@ -99,6 +99,10 @@ func _run_test() -> void:
 	player._step_phase = 0.25
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
+	# The production rig immediately selects the real melee equipment pose.
+	# Seed the gait explicitly so this assertion tests leg/arm opposition rather
+	# than the obsolete assumption that FREE remains the runtime weapon mode.
+	rig._apply_standard_humanoid_walk_pose(1.0, 1.0)
 	await process_frame
 	assert(rig.current_direction() == "right")
 	assert(rig.is_using_true_opposition())
