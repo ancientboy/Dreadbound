@@ -121,7 +121,7 @@ func _run_test() -> void:
 	var martial := (
 		player.get_node("MartialArtistTrialCharacter") as MartialArtistTrialCharacter
 	)
-	assert(humanoid != null and not humanoid.is_action_library_enabled())
+	assert(humanoid != null and humanoid.is_action_library_enabled())
 	assert(humanoid.action_count() == 37)
 	humanoid.playback_fps = 1.0
 	humanoid._attack_elapsed = 1.0 / 30.0 + 0.0001
@@ -131,30 +131,22 @@ func _run_test() -> void:
 	)
 	humanoid.playback_fps = 30.0
 	assert(humanoid.current_skin_id() == "base_armorer")
-	assert(martial.is_trial_enabled())
+	assert(not martial.is_trial_enabled())
 	var formal_sprite := martial.get_node("AnimatedSprite2D") as AnimatedSprite2D
-	assert(formal_sprite != null and formal_sprite.visible)
+	assert(formal_sprite != null and not formal_sprite.visible)
 	player.facing = Vector2.DOWN
 	player.velocity = Vector2.ZERO
 	await process_frame
-	assert(formal_sprite.animation == &"idle_front")
-	assert(not formal_sprite.flip_h)
+	assert(humanoid.current_action_name() == "one_hand_melee_idle")
 	player.facing = Vector2.LEFT
 	await process_frame
-	assert(formal_sprite.animation == &"idle_left")
-	assert(not formal_sprite.flip_h)
+	assert(humanoid.current_action_name() == "one_hand_melee_idle")
 	player.facing = Vector2.RIGHT
 	await process_frame
-	assert(formal_sprite.animation == &"idle_left")
-	assert(formal_sprite.flip_h)
+	assert(humanoid.current_action_name() == "one_hand_melee_idle")
 	player.facing = Vector2.UP
 	await process_frame
-	assert(formal_sprite.animation == &"idle_back")
-	assert(not formal_sprite.flip_h)
-	humanoid.set_action_library_enabled(true)
-	await process_frame
-	assert(humanoid.is_action_library_enabled())
-	assert(not martial.is_trial_enabled())
+	assert(humanoid.current_action_name() == "one_hand_melee_idle")
 	var visual_bounds: Array = humanoid._rig.visual_bounds
 	assert(
 		is_equal_approx(
@@ -293,10 +285,8 @@ func _run_test() -> void:
 	var main_anchor := humanoid.equipment_anchor(&"main_hand")
 	var off_anchor := humanoid.equipment_anchor(&"off_hand")
 	assert(main_anchor.distance_to(off_anchor) > 1.0)
-	humanoid.set_action_library_enabled(false)
-	await process_frame
-	assert(not humanoid.visible)
-	assert(martial.is_trial_enabled())
-	assert(formal_sprite.visible)
-	print("Humanoid action library passed: formal model default plus 37 verified actions")
+	assert(humanoid.visible)
+	assert(not martial.is_trial_enabled())
+	assert(not formal_sprite.visible)
+	print("Humanoid action library passed: 37 actions and a single runtime skeleton path")
 	quit()
