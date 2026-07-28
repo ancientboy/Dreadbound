@@ -45,7 +45,7 @@ const SKILLS := {
 }
 
 @onready var _player := get_node("../Player") as Player
-@onready var _rig := get_node("../Player/LayeredSkeletonRig") as LayeredSkeletonCharacter
+@onready var _rig := get_node("../Player/ProfessionSkeletonRig") as ProfessionSkeletonCharacter
 @onready var _camera := get_node("../Player/Camera2D") as PlayerFeelCamera
 
 var _mode := SkillMode.CLOSE_BURST
