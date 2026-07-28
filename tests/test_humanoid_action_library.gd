@@ -21,6 +21,10 @@ func _run_test() -> void:
 	assert(config.timing_policy == "preserve_source_keyframes")
 	assert(tracks.action_count == 37)
 	assert(tracks.skeleton_id == "humanoid_v1")
+	var left_idle: Dictionary = tracks.actions.idle.frames.left[0]
+	var right_idle: Dictionary = tracks.actions.idle.frames.right[0]
+	assert(float(left_idle.left_shoulder[0]) < float(left_idle.right_shoulder[0]))
+	assert(float(right_idle.left_shoulder[0]) > float(right_idle.right_shoulder[0]))
 	var expected_frame_counts := {
 		"idle": 76,
 		"walk": 41,
@@ -151,6 +155,28 @@ func _run_test() -> void:
 	await process_frame
 	assert(humanoid.is_action_library_enabled())
 	assert(not martial.is_trial_enabled())
+	var visual_bounds: Array = humanoid._rig.visual_bounds
+	assert(
+		is_equal_approx(
+			(float(visual_bounds[3]) - float(visual_bounds[1])) * humanoid.scale.y,
+			62.0,
+		)
+	)
+	assert(is_equal_approx(humanoid.position.y, 8.0))
+	player.facing = Vector2.LEFT
+	await process_frame
+	assert(humanoid._current_direction == "left")
+	assert(
+		float(humanoid._rig.joints.left_shoulder[0])
+		< float(humanoid._rig.joints.right_shoulder[0])
+	)
+	player.facing = Vector2.RIGHT
+	await process_frame
+	assert(humanoid._current_direction == "right")
+	assert(
+		float(humanoid._rig.joints.left_shoulder[0])
+		> float(humanoid._rig.joints.right_shoulder[0])
+	)
 	for part_name in [
 		"Head",
 		"Torso",
@@ -168,12 +194,20 @@ func _run_test() -> void:
 
 	var main_hand := humanoid.get_node("MainHandEquipment") as Sprite2D
 	var off_hand := humanoid.get_node("OffHandEquipment") as Sprite2D
+	var main_reference := (
+		humanoid.get_node("MainHandActionReference") as ActionReferenceWeapon
+	)
+	var off_reference := (
+		humanoid.get_node("OffHandActionReference") as ActionReferenceWeapon
+	)
 	assert(main_hand.texture != null and off_hand.texture != null)
+	assert(not main_reference.visible and not off_reference.visible)
 	assert(humanoid.current_action_name() == "one_hand_melee_idle")
 	assert(humanoid.set_preview_weapon_family("unarmed"))
 	await process_frame
 	assert(humanoid.current_action_name() == "idle")
 	assert(main_hand.texture == null and off_hand.texture == null)
+	assert(not main_reference.visible and not off_reference.visible)
 	humanoid.trigger_preview_attack()
 	await process_frame
 	assert(humanoid.current_action_name() == "punch_jab")
@@ -181,7 +215,9 @@ func _run_test() -> void:
 	assert(humanoid.set_preview_weapon_family("sword"))
 	await process_frame
 	assert(humanoid.current_action_name() == "one_hand_melee_idle")
-	assert(main_hand.texture.resource_path.ends_with("action_reference_sword.png"))
+	assert(main_hand.texture == null and off_hand.texture == null)
+	assert(main_reference.visible and main_reference.family == "sword")
+	assert(not off_reference.visible)
 	humanoid.trigger_preview_attack()
 	await process_frame
 	assert(humanoid.current_action_name() == "one_hand_melee_attack")
@@ -189,16 +225,26 @@ func _run_test() -> void:
 	assert(humanoid.set_preview_weapon_family("pistol"))
 	await process_frame
 	assert(humanoid.current_action_name() == "pistol_idle")
-	assert((main_hand.texture as AtlasTexture).region.position.x == 32.0)
+	assert(main_hand.texture == null and off_hand.texture == null)
+	assert(main_reference.visible and main_reference.family == "pistol")
 	humanoid.trigger_preview_attack()
 	await process_frame
 	assert(humanoid.current_action_name() == "pistol_shoot")
 
+	assert(humanoid.set_preview_weapon_family("bow"))
+	await process_frame
+	assert(humanoid.current_action_name() == "bow_idle")
+	assert(main_reference.visible and main_reference.family == "bow")
+	assert(main_reference.position == humanoid._current_joints.left_hand)
+	assert(main_hand.texture == null and off_hand.texture == null)
+
 	assert(humanoid.set_preview_weapon_family("shield"))
 	await process_frame
 	assert(humanoid.current_action_name() == "shield_idle")
-	assert(main_hand.texture == null)
-	assert((off_hand.texture as AtlasTexture).region.position.x == 128.0)
+	assert(main_hand.texture == null and off_hand.texture == null)
+	assert(not main_reference.visible)
+	assert(off_reference.visible and off_reference.family == "shield")
+	assert(off_reference.position == humanoid._current_joints.left_hand)
 	humanoid.trigger_preview_attack()
 	await process_frame
 	assert(humanoid.current_action_name() == "shield_block")
@@ -217,6 +263,7 @@ func _run_test() -> void:
 	await process_frame
 	assert(humanoid.current_action_name() == "bow_release")
 	assert((main_hand.texture as AtlasTexture).region.position.x == 0.0)
+	assert(main_hand.position == humanoid._current_joints.left_hand)
 
 	player._attack_flash = 0.0
 	await process_frame

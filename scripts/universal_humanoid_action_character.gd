@@ -5,10 +5,9 @@ const ACTION_LIBRARY_PATH := "res://content/humanoid_action_tracks.json"
 const SKIN_ROOT := "res://assets/art/characters/professions/skins"
 const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
 const EQUIPMENT_RUNTIME: Texture2D = preload("res://assets/art/weapons/equipment_runtime.png")
-const ACTION_REFERENCE_SWORD: Texture2D = preload(
-	"res://assets/art/weapons/action_reference_sword.png"
-)
 const PREVIEW_FAMILIES := ["unarmed", "sword", "pistol", "bow", "spell", "shield"]
+const FORMAL_DISPLAY_HEIGHT := 62.0
+const FORMAL_GROUND_Y := 8.0
 const PART_NAMES := [
 	"coat_far",
 	"left_thigh",
@@ -50,6 +49,8 @@ var _rig := {}
 var _part_sprites := {}
 var _main_hand_sprite: Sprite2D
 var _offhand_sprite: Sprite2D
+var _main_reference_weapon: ActionReferenceWeapon
+var _offhand_reference_weapon: ActionReferenceWeapon
 var _elapsed := 0.0
 var _attack_elapsed := 0.0
 var _attack_was_active := false
@@ -217,6 +218,14 @@ func _create_equipment_sprites() -> void:
 	_main_hand_sprite.z_index = 11
 	_main_hand_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_main_hand_sprite)
+	_offhand_reference_weapon = ActionReferenceWeapon.new()
+	_offhand_reference_weapon.name = "OffHandActionReference"
+	_offhand_reference_weapon.z_index = 7
+	add_child(_offhand_reference_weapon)
+	_main_reference_weapon = ActionReferenceWeapon.new()
+	_main_reference_weapon.name = "MainHandActionReference"
+	_main_reference_weapon.z_index = 11
+	add_child(_main_reference_weapon)
 
 
 func _select_action(attacking: bool) -> String:
@@ -409,6 +418,7 @@ func _load_direction_skin(direction: String) -> void:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(rig_path))
 	assert(parsed is Dictionary, "Invalid split humanoid rig: %s" % rig_path)
 	_rig = parsed
+	_apply_formal_display_contract()
 	for part_name in PART_NAMES:
 		var sprite := _part_sprites[part_name] as Sprite2D
 		var definition: Dictionary = _rig.get("parts", {}).get(part_name, {})
@@ -429,6 +439,18 @@ func _load_direction_skin(direction: String) -> void:
 	set_meta("loaded_direction", direction)
 
 
+func _apply_formal_display_contract() -> void:
+	var baseline_y := float(_rig.get("baseline_y", 410.0))
+	var bounds := _rig.get("visual_bounds", [0.0, 4.0, 256.0, 410.0]) as Array
+	var source_height := maxf(1.0, float(bounds[3]) - float(bounds[1]))
+	var display_scale := FORMAL_DISPLAY_HEIGHT / source_height
+	scale = Vector2.ONE * display_scale
+	position = Vector2(
+		0.0,
+		FORMAL_GROUND_Y - (float(bounds[3]) - baseline_y) * display_scale,
+	)
+
+
 func _loaded_direction() -> String:
 	return str(get_meta("loaded_direction", ""))
 
@@ -436,12 +458,16 @@ func _loaded_direction() -> String:
 func _sync_equipment_visuals() -> void:
 	_sync_main_hand_texture()
 	_sync_offhand_texture()
-	var main_anchor: Vector2 = _current_joints.get("right_hand", Vector2(45, -170))
+	var family := _weapon_family()
+	var main_joint := "left_hand" if family == "bow" else "right_hand"
+	var main_anchor: Vector2 = _current_joints.get(main_joint, Vector2(45, -170))
 	var off_anchor: Vector2 = _current_joints.get("left_hand", Vector2(-45, -170))
 	_main_hand_sprite.position = main_anchor
 	_offhand_sprite.position = off_anchor
+	_main_reference_weapon.position = main_anchor
+	_offhand_reference_weapon.position = off_anchor
 	var facing_angle := _player.facing.angle()
-	match _weapon_family():
+	match family:
 		"bow":
 			_main_hand_sprite.rotation = facing_angle - PI * 0.5
 		"spell":
@@ -451,22 +477,19 @@ func _sync_equipment_visuals() -> void:
 		_:
 			_main_hand_sprite.rotation = facing_angle + PI * 0.25
 	_offhand_sprite.rotation = facing_angle - PI * 0.5
+	_main_reference_weapon.rotation = facing_angle
+	_offhand_reference_weapon.rotation = facing_angle
+	if _preview_weapon_family == "shield":
+		_main_reference_weapon.set_family("")
+		_offhand_reference_weapon.set_family("shield")
+	else:
+		_main_reference_weapon.set_family(_preview_weapon_family)
+		_offhand_reference_weapon.set_family("")
 
 
 func _sync_main_hand_texture() -> void:
 	if not _preview_weapon_family.is_empty():
-		match _preview_weapon_family:
-			"sword":
-				_main_hand_sprite.texture = ACTION_REFERENCE_SWORD
-				_main_hand_sprite.scale = Vector2.ONE * 2.8
-			"pistol":
-				_set_atlas_cell(_main_hand_sprite, BASIC_WEAPONS, 32, 1, 4.7)
-			"bow":
-				_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 0, 2.8)
-			"spell":
-				_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 1, 2.8)
-			_:
-				_main_hand_sprite.texture = null
+		_main_hand_sprite.texture = null
 		return
 	match _player.equipped_weapon_item:
 		"service_crowbar":
@@ -481,10 +504,7 @@ func _sync_main_hand_texture() -> void:
 
 func _sync_offhand_texture() -> void:
 	if not _preview_weapon_family.is_empty():
-		if _preview_weapon_family == "shield":
-			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 2, 2.2)
-		else:
-			_offhand_sprite.texture = null
+		_offhand_sprite.texture = null
 		return
 	match _player.demo_offhand_item:
 		"riot_shield":

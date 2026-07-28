@@ -9,6 +9,12 @@
   ],
   "baseline_y": 410.0,
   "center_x": 128.0,
+  "visual_bounds": [
+    26.0,
+    10.0,
+    229.0,
+    410.0
+  ],
   "joints": {
     "root": [
       128.0,

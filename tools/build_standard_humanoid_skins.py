@@ -20,7 +20,11 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 FRAME_SIZE = (256, 420)
 BODY_TOP = 10
 BODY_BOTTOM = 410
-DIRECTIONS = ("front", "left", "right", "back")
+# The authored turnaround is ordered by the direction the character faces:
+# front, right, left, back.  Treating the two side panels as camera-side names
+# made runtime movement face backwards and attached anatomical limbs to the
+# opposite pixels.
+DIRECTIONS = ("front", "right", "left", "back")
 PARTS = (
     "head",
     "torso",
@@ -116,27 +120,12 @@ def left_joints() -> dict[str, list[float]]:
 
 def right_joints() -> dict[str, list[float]]:
     source = left_joints()
-    result: dict[str, list[float]] = {}
-    swaps = {
-        "left_shoulder": "right_shoulder",
-        "left_elbow": "right_elbow",
-        "left_hand": "right_hand",
-        "left_hip": "right_hip",
-        "left_knee": "right_knee",
-        "left_foot": "right_foot",
-        "coat_left": "coat_right",
-        "right_shoulder": "left_shoulder",
-        "right_elbow": "left_elbow",
-        "right_hand": "left_hand",
-        "right_hip": "left_hip",
-        "right_knee": "left_knee",
-        "right_foot": "left_foot",
-        "coat_right": "coat_left",
+    # Mirror screen coordinates while preserving anatomical identity.  Swapping
+    # the names here a second time made the right hand drive left-arm pixels.
+    return {
+        name: [FRAME_SIZE[0] - float(value[0]), float(value[1])]
+        for name, value in source.items()
     }
-    for name, value in source.items():
-        target_name = swaps.get(name, name)
-        result[target_name] = [FRAME_SIZE[0] - float(value[0]), float(value[1])]
-    return result
 
 
 STANDARD_JOINTS = {
@@ -422,6 +411,9 @@ def build_skin(
     output_root.mkdir(parents=True, exist_ok=True)
     for direction in DIRECTIONS:
         source = panels[direction]
+        visual_bounds = source.getchannel("A").getbbox()
+        if visual_bounds is None:
+            raise ValueError(f"{direction} panel has no normalized visual bounds")
         joints = STANDARD_JOINTS[direction]
         direction_root = output_root / direction
         direction_root.mkdir(parents=True, exist_ok=True)
@@ -433,6 +425,7 @@ def build_skin(
             "frame_size": list(FRAME_SIZE),
             "baseline_y": 410.0,
             "center_x": 128.0,
+            "visual_bounds": [float(value) for value in visual_bounds],
             "joints": joints,
             "rest_vectors": {
                 "left_upper_arm": vector(joints["left_shoulder"], joints["left_elbow"]),

@@ -142,3 +142,14 @@ The first acceptance target is visual, not merely file existence:
 - the silhouette remains readable at 48×64 display size;
 - walk contact frames do not slide;
 - front/back body proportions match exactly.
+
+Direction names always mean the direction the character faces in gameplay.
+The source turnaround is ordered `front, right, left, back`; it is not ordered
+by the camera side being photographed. Blender projection uses 270 degrees for
+logical left and 90 degrees for logical right. Do not swap anatomical
+left/right bone names while mirroring a side skin.
+
+The action-preview weapons are neutral code-drawn references. They must never
+load `equipment_runtime.png`, `basic_weapons.png`, inventory icons, or any
+other production equipment art. Bow references attach to the anatomical left
+hand, sword/pistol/staff references to the right hand, and shields to the left.

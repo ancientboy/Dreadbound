@@ -9,6 +9,12 @@
   ],
   "baseline_y": 410.0,
   "center_x": 128.0,
+  "visual_bounds": [
+    71.0,
+    10.0,
+    185.0,
+    410.0
+  ],
   "joints": {
     "root": [
       128.0,
@@ -136,7 +142,7 @@
         199
       ],
       "pivot": [
-        61.0,
+        62.0,
         168.0
       ]
     },
@@ -187,7 +193,7 @@
     "left_thigh": {
       "file": "left_thigh.webp",
       "size": [
-        92,
+        91,
         176
       ],
       "pivot": [
@@ -209,7 +215,7 @@
     "right_thigh": {
       "file": "right_thigh.webp",
       "size": [
-        90,
+        88,
         176
       ],
       "pivot": [
@@ -231,18 +237,18 @@
     "coat_far": {
       "file": "coat_far.webp",
       "size": [
-        79,
+        86,
         120
       ],
       "pivot": [
-        62.0,
+        69.0,
         51.0
       ]
     },
     "coat_near": {
       "file": "coat_near.webp",
       "size": [
-        86,
+        79,
         120
       ],
       "pivot": [

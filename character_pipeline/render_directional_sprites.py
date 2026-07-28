@@ -26,9 +26,9 @@ from mathutils import Matrix, Vector
 
 DIRECTIONS = {
     "front": 0.0,
-    "left": 90.0,
+    "left": 270.0,
     "back": 180.0,
-    "right": 270.0,
+    "right": 90.0,
 }
 
 
