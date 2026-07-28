@@ -21,7 +21,9 @@ func _run_test() -> void:
 		player.get_node("UniversalHumanoidActionCharacter")
 		as UniversalHumanoidActionCharacter
 	)
-	assert(humanoid_actions != null and not humanoid_actions.is_action_library_enabled())
+	assert(humanoid_actions != null and humanoid_actions.is_action_library_enabled())
+	# Legacy atlas coverage is isolated to this regression test only.
+	humanoid_actions.set_action_library_enabled(false)
 	await process_frame
 	var trial_sprite := trial.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	var main_hand := trial.get_node("MainHandEquipment") as Sprite2D
