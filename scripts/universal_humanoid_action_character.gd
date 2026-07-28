@@ -3,6 +3,8 @@ extends Node2D
 
 const ACTION_LIBRARY_PATH := "res://content/humanoid_action_tracks.json"
 const SKIN_ROOT := "res://assets/art/characters/professions/skins"
+const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
+const EQUIPMENT_RUNTIME: Texture2D = preload("res://assets/art/weapons/equipment_runtime.png")
 const PART_NAMES := [
 	"coat_far",
 	"left_thigh",
@@ -33,12 +35,12 @@ const PART_JOINTS := {
 }
 
 @export var action_library_enabled := false
-@export var isolated_demo_mode := false
 @export var skin_id := "base_armorer"
 @export var playback_fps := 10.0
 
 var _player: Player
 var _base_character: RenderedAtlasCharacter
+var _martial_trial: MartialArtistTrialCharacter
 var _library := {}
 var _rig := {}
 var _part_sprites := {}
@@ -56,6 +58,7 @@ func _ready() -> void:
 	assert(get_parent() is Player, "UniversalHumanoidActionCharacter must be a child of Player")
 	_player = get_parent() as Player
 	_base_character = _player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
+	_martial_trial = _player.get_node_or_null("MartialArtistTrialCharacter")
 	_load_action_library()
 	_create_part_sprites()
 	_create_equipment_sprites()
@@ -88,6 +91,8 @@ func set_action_library_enabled(enabled: bool) -> void:
 	visible = enabled
 	if is_instance_valid(_base_character):
 		_base_character.visible = not enabled
+	if is_instance_valid(_martial_trial):
+		_martial_trial.set_trial_enabled(not enabled)
 	if is_instance_valid(_player):
 		_player.queue_redraw()
 
@@ -189,10 +194,6 @@ func _select_action(attacking: bool) -> String:
 
 
 func _weapon_family() -> String:
-	# Character Feel Demo uses the verified empty-hand baseline only.  It must not
-	# inherit a saved loadout, a demo loadout, or any UI equipment atlas.
-	if isolated_demo_mode:
-		return "unarmed"
 	match _player.equipped_weapon_item:
 		"mourning_bow":
 			return "bow"
@@ -363,14 +364,6 @@ func _loaded_direction() -> String:
 
 
 func _sync_equipment_visuals() -> void:
-	if isolated_demo_mode:
-		_main_hand_sprite.texture = null
-		_offhand_sprite.texture = null
-		_main_hand_sprite.visible = false
-		_offhand_sprite.visible = false
-		return
-	_main_hand_sprite.visible = true
-	_offhand_sprite.visible = true
 	_sync_main_hand_texture()
 	_sync_offhand_texture()
 	var main_anchor: Vector2 = _current_joints.get("right_hand", Vector2(45, -170))
@@ -391,11 +384,42 @@ func _sync_equipment_visuals() -> void:
 
 
 func _sync_main_hand_texture() -> void:
-	_main_hand_sprite.texture = null
+	match _player.equipped_weapon_item:
+		"service_crowbar":
+			_set_atlas_cell(_main_hand_sprite, BASIC_WEAPONS, 32, 0, 4.7)
+		"mourning_bow":
+			_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 0, 2.8)
+		"echo_staff":
+			_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 1, 2.8)
+		_:
+			_main_hand_sprite.texture = null
 
 
 func _sync_offhand_texture() -> void:
-	_offhand_sprite.texture = null
+	match _player.demo_offhand_item:
+		"riot_shield":
+			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 2, 2.2)
+		"field_codex":
+			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 3, 1.65)
+		_:
+			_offhand_sprite.texture = null
+
+
+func _set_atlas_cell(
+	sprite: Sprite2D,
+	atlas: Texture2D,
+	cell_size: int,
+	index: int,
+	display_scale: float,
+) -> void:
+	var region := Rect2(index * cell_size, 0, cell_size, cell_size)
+	var current := sprite.texture as AtlasTexture
+	if current == null or current.atlas != atlas or current.region != region:
+		var texture := AtlasTexture.new()
+		texture.atlas = atlas
+		texture.region = region
+		sprite.texture = texture
+	sprite.scale = Vector2.ONE * display_scale
 
 
 func _apply_feedback_color() -> void:

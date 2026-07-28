@@ -50,51 +50,74 @@ func _run_test() -> void:
 	root.add_child(instance)
 	await process_frame
 	await process_frame
-
 	var player := instance.get_node("Player") as Player
 	var camera := player.get_node("Camera2D") as PlayerFeelCamera
 	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
-	var martial_artist := (
-		player.get_node("MartialArtistTrialCharacter")
-		as MartialArtistTrialCharacter
-	)
 	assert(player != null)
 	assert(camera != null)
 	assert(rendered != null)
-	assert(martial_artist != null)
+	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
 	assert(camera.position_smoothing_enabled)
 	assert(player.movement_speed == 210.0)
+	assert(player.attack_damage == 38)
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
 	assert(not player._body_sprite.visible)
 
-	# The character lab is locked to the screenshot-approved v11 martial artist.
-	# The inherited production atlas must remain hidden.
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
-	assert(rendered_sprite != null and not rendered_sprite.visible)
-	assert(martial_artist.visible)
-	assert(martial_artist.is_trial_enabled())
-	assert(player.demo_weapon_slots.is_empty())
-	assert(player.demo_offhand_item.is_empty())
-	assert(player.demo_charm_item.is_empty())
-	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
-	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
-	assert(martial_artist.get_node_or_null("MainHandEquipment") == null)
-	assert(martial_artist.get_node_or_null("OffHandEquipment") == null)
-	var trial_sprite := martial_artist.get_node("AnimatedSprite2D") as AnimatedSprite2D
-	assert(trial_sprite != null and trial_sprite.visible)
-	assert(trial_sprite.position == Vector2(0.0, -12.0))
-	assert(trial_sprite.sprite_frames.get_animation_names().size() == 9)
-
-	# No production inventory, equipment picker, weapon preview, or skill-range
-	# controls are allowed back into this isolated model-and-animation test.
-	assert(instance.get_node_or_null("SkillRangeDemo") == null)
+	assert(rendered_sprite != null)
+	assert(rendered.ground_offset == Vector2(0.0, -12.0))
+	assert(rendered_sprite.position == Vector2(0.0, -12.0))
+	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 20)
+	var idle_frame_0 := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
+	)
+	var idle_frame_18 := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 18) as AtlasTexture
+	)
+	assert(idle_frame_0 != null and idle_frame_18 != null)
+	assert(idle_frame_0.atlas.get_size() == Vector2(2304, 256))
+	assert(idle_frame_0.region == Rect2(0, 0, 128, 128))
+	assert(idle_frame_18.region == Rect2(0, 128, 128, 128))
+	for animation_name in rendered_sprite.sprite_frames.get_animation_names():
+		for frame_index in rendered_sprite.sprite_frames.get_frame_count(animation_name):
+			var frame_texture := (
+				rendered_sprite.sprite_frames.get_frame_texture(
+					animation_name,
+					frame_index,
+				) as AtlasTexture
+			)
+			assert(frame_texture != null)
+			assert(frame_texture.atlas.get_width() <= 4096)
+			assert(frame_texture.atlas.get_height() <= 4096)
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.DOWN) == &"front")
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.UP) == &"back")
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.LEFT) == &"left")
+	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.RIGHT) == &"right")
+	assert(RenderedAtlasCharacter.source_direction_for_logical(&"left") == &"right")
+	assert(RenderedAtlasCharacter.source_direction_for_logical(&"right") == &"left")
+	var walk_left_frame := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"walk_left", 0) as AtlasTexture
+	)
+	var walk_right_frame := (
+		rendered_sprite.sprite_frames.get_frame_texture(&"walk_right", 0) as AtlasTexture
+	)
+	assert(
+		walk_left_frame.atlas
+		== load("res://assets/art/characters/rendered3d/base_drifter/walk_right.png")
+	)
+	assert(
+		walk_right_frame.atlas
+		== load("res://assets/art/characters/rendered3d/base_drifter/walk_left.png")
+	)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/ModeButtons") == null)
-	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/SkillButtons") == null)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Close") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Mid") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Long") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SkillButtons/Release") is Button)
 	var mobile_controls := instance.get_node("HUD/MobileControls") as MobileControls
 	assert(mobile_controls != null)
 	assert(mobile_controls.is_in_group("mobile_controls"))
-	assert((instance.get_node("HUD/TouchTestButtons/Trial") as Button).disabled)
 	assert(instance.get_node("HUD/TouchTestButtons/Hit") is Button)
 	assert(instance.get_node("HUD/TouchTestButtons/Death") is Button)
 	assert(instance.get_node("HUD/TouchTestButtons/Reset") is Button)
@@ -102,16 +125,53 @@ func _run_test() -> void:
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
 	await process_frame
-	assert(trial_sprite.animation == &"walk_left")
-	assert(trial_sprite.flip_h)
-
+	assert(rendered_sprite.animation == &"walk_right")
 	player.velocity = Vector2.ZERO
 	player._attack_flash = 0.2
 	await process_frame
-	assert(trial_sprite.animation == &"attack_left")
-	assert(trial_sprite.flip_h)
+	assert(rendered_sprite.animation == &"attack_melee_right")
 
+	var skill_demo := instance.get_node("SkillRangeDemo") as SkillRangeDemo
+	assert(skill_demo != null)
+	assert(skill_demo.uses_existing_skill_atlases())
+	assert(not skill_demo.trigger_target_at_world_position(player.global_position + Vector2.UP * 90.0))
+	var long_target := (
+		player.global_position
+		+ Vector2.RIGHT * float(
+			SkillRangeDemo.SKILLS[SkillRangeDemo.SkillMode.LONG_RIFT].range
+		)
+	)
+	assert(skill_demo.trigger_target_at_world_position(long_target))
+	assert(skill_demo.current_skill_mode() == SkillRangeDemo.SkillMode.LONG_RIFT)
+	assert(skill_demo.current_phase() == "windup")
+	assert(skill_demo.cast_endpoint().distance_to(long_target) < 0.1)
+	assert(player.facing.is_equal_approx(Vector2.RIGHT))
+	skill_demo._phase = "idle"
+	skill_demo._cooldown_left = 0.0
+	var previous_range := 0.0
+	for mode in [
+		SkillRangeDemo.SkillMode.CLOSE_BURST,
+		SkillRangeDemo.SkillMode.MID_BOLT,
+		SkillRangeDemo.SkillMode.LONG_RIFT,
+	]:
+		player.facing = Vector2.RIGHT
+		skill_demo.set_skill_mode(mode)
+		assert(skill_demo.skill_range() > previous_range)
+		previous_range = skill_demo.skill_range()
+		assert(skill_demo.trigger_skill())
+		assert(skill_demo.current_phase() == "windup")
+		assert(
+			skill_demo.cast_endpoint().distance_to(player.global_position)
+			>= skill_demo.skill_range() - 0.1
+		)
+		assert(skill_demo.uses_distinct_effect_anchors())
+		skill_demo._phase = "active"
+		skill_demo._phase_time = float(SkillRangeDemo.SKILLS[mode].active) * 0.96
+		skill_demo._advance_phase()
+		assert(skill_demo.target_hit_count(mode) == 1)
+		skill_demo._phase = "idle"
+		skill_demo._cooldown_left = 0.0
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: isolated v11 martial-artist visual baseline")
+	print("Character feel passed: production four-direction atlas and skill ranges")
 	quit()
