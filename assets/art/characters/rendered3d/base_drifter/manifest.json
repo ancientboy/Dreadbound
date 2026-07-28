@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "source": "single_3d_rig",
+  "character_id": "base_drifter_3d",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 12,
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "idle": {
+      "frames": 36,
+      "loop": true
+    },
+    "walk": {
+      "frames": 17,
+      "loop": true
+    },
+    "attack_melee": {
+      "frames": 19,
+      "loop": false
+    },
+    "hit": {
+      "frames": 5,
+      "loop": false
+    },
+    "death": {
+      "frames": 30,
+      "loop": false
+    }
+  }
+}
