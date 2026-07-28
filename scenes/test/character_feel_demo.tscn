@@ -1,7 +1,7 @@
 [gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
-[ext_resource type="PackedScene" path="res://scenes/test/layered_skeleton_character.tscn" id="2_rig"]
+[ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/ik_demo_controls.gd" id="3_ik_controls"]
 [ext_resource type="Script" path="res://scripts/skill_range_demo.gd" id="4_skill_demo"]
 
@@ -32,6 +32,7 @@ font_size = 17
 font_color = Color(0.74, 0.81, 0.79, 1)
 
 [node name="CharacterFeelDemo" type="Node2D"]
+script = ExtResource("2_demo")
 
 [node name="Floor" type="Polygon2D" parent="."]
 polygon = PackedVector2Array(0, 0, 2304, 0, 2304, 1440, 0, 1440)
@@ -96,8 +97,6 @@ demo_weapon_slots = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
 demo_offhand_item = "riot_shield"
 demo_charm_item = "medical_tag"
 
-[node name="LayeredSkeletonRig" parent="Player" instance=ExtResource("2_rig")]
-
 [node name="SkillRangeDemo" type="Node2D" parent="."]
 script = ExtResource("4_skill_demo")
 
@@ -121,11 +120,11 @@ theme_override_constants/separation = 8
 script = ExtResource("3_ik_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER FEEL DEMO v7 · FREE WEAPONS + OFFHAND + CHARM"
+text = "CHARACTER FEEL DEMO v8 · GODOT NATIVE HUMANOID RIG"
 label_settings = SubResource("Title_settings")
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "Fixed loadout: Crowbar / Pistol / Heavy · Riot Shield · Medical Tag\nNo ammo reserve · 0–3 weapon posture · 4–6 effect range · G charm preview"
+text = "Skeleton2D + Bone2D · Base humanoid four-view skin · One production rig only\nNo overlay rig · 0–3 weapon posture · 4–6 effect range · G charm preview"
 label_settings = SubResource("Body_settings")
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
