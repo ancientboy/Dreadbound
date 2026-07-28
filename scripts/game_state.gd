@@ -3,7 +3,7 @@ extends Node
 
 signal progress_changed
 
-const SAVE_VERSION := 24
+const SAVE_VERSION := 25
 const MAX_REFLECTION_HISTORY := 24
 const UPGRADE_MAX_LEVEL := 3
 const MAX_EQUIPMENT := 20
@@ -1129,6 +1129,8 @@ func load_progress() -> void:
 		migrations.append("v23：新增可选女性行者外观")
 	if loaded_version < 24:
 		migrations.append("v24：三自由武器槽、副手、单一主动护符；移除弹药掉落与装备耐久")
+	if loaded_version < 25:
+		migrations.append("v25：武器攻击档案与标签被动；新增弓与法杖类别")
 	last_save_health = {"status": "migrated" if loaded_version < SAVE_VERSION else "loaded", "loaded_version": loaded_version, "current_version": SAVE_VERSION, "migrations": migrations}
 	action_ledger.load_dict(parsed.get("action_ledger", {}))
 	world_state.load_dict(parsed.get("world_state", {}))
@@ -1417,3 +1419,4 @@ func _build_observation(success: bool, enemies_defeated: int, events_resolved: i
 	if enemies_defeated >= 7:
 		return "阈值司仪：你倾向清除威胁再离开。可尝试一次低噪声撤离试炼。"
 	return "阈值司仪：你保持了可控的撤离节奏。继续观察你的路线选择。"
+
