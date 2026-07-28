@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 33991)
-Total output lines: 2737
-
 extends Control
 
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
@@ -761,7 +758,1220 @@ func _draw_corridor_prop(index: int, center: Vector2, draw_size: float, modulate
 
 
 func _draw_threshold_curator() -> void:
-	var bob := sin(Tim…13991 tokens truncated…ack.texture = texture
+	var bob := sin(Time.get_ticks_msec() * 0.0016) * 2.0
+	if THRESHOLD_CURATOR_SPRITESHEET == null or THRESHOLD_CURATOR_SPRITESHEET.get_size() != Vector2(576, 384):
+		draw_circle(CURATOR_POSITION + Vector2(0, -37 + bob), 18, Color("b3dbd0"))
+		draw_colored_polygon(PackedVector2Array([
+			CURATOR_POSITION + Vector2(-42, 20),
+			CURATOR_POSITION + Vector2(42, 20),
+			CURATOR_POSITION + Vector2(28, -52 + bob),
+			CURATOR_POSITION + Vector2(-28, -52 + bob),
+		]), Color("355f57"))
+		return
+	var frame := floori(Time.get_ticks_msec() / 240.0) % 6
+	# Draw at 128 px—twice the walker's visual height—while retaining the
+	# locked 96×96 source frame used by boss-scale characters.
+	draw_texture_rect_region(
+		THRESHOLD_CURATOR_SPRITESHEET,
+		Rect2(CURATOR_POSITION + Vector2(-64, -116 + bob), Vector2(128, 128)),
+		Rect2(frame * 96, 0, 96, 96),
+		Color(0.9, 0.98, 0.95, 1.0)
+	)
+	draw_circle(CURATOR_POSITION + Vector2(0, -48 + bob), 34, Color(0.2, 0.94, 0.84, 0.055))
+
+
+func _draw_walker_fallback(position: Vector2) -> void:
+	draw_circle(position + Vector2(0, -42), 9.0, Color("c9c2ae"))
+	draw_rect(Rect2(position + Vector2(-13, -34), Vector2(26, 34)), Color("7d9b76"))
+	draw_line(position + Vector2(-8, -2), position + Vector2(-11, 8), Color("2b343b"), 7.0)
+	draw_line(position + Vector2(8, -2), position + Vector2(11, 8), Color("2b343b"), 7.0)
+	draw_circle(position + Vector2(-12, -25), 3.0, Color("59e1e6"))
+
+
+func _create_audio_settings() -> void:
+	audio_settings_button = Button.new()
+	audio_settings_button.name = "OpenCorridorAudioSettings"
+	audio_settings_button.text = "声音"
+	audio_settings_button.tooltip_text = "音乐与音效设置"
+	audio_settings_button.add_theme_font_override("font", UI_FONT)
+	audio_settings_button.add_theme_font_size_override("font_size", 16)
+	audio_settings_button.pressed.connect(func(): audio_settings_panel.toggle())
+	add_child(audio_settings_button)
+	audio_settings_panel = DreadboundAudioSettingsPanel.new()
+	add_child(audio_settings_panel)
+	audio_settings_panel.configure(UI_FONT)
+
+
+# The hub UI is deliberately code-native: translucent panels, hairline borders,
+# and a restrained cyan signal are more coherent with the world than large UI art
+# that would quickly look like a separate website layered over the game.
+func _ui_box(fill: Color, border: Color, border_width := 1, radius := 3) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = fill
+	box.border_color = border
+	box.border_width_left = border_width
+	box.border_width_top = border_width
+	box.border_width_right = border_width
+	box.border_width_bottom = border_width
+	box.corner_radius_top_left = radius
+	box.corner_radius_top_right = radius
+	box.corner_radius_bottom_left = radius
+	box.corner_radius_bottom_right = radius
+	box.content_margin_left = 16.0
+	box.content_margin_right = 16.0
+	return box
+
+
+func _apply_archive_button_chrome(button: Button, accent := Color("65e7d2")) -> void:
+	if button == null:
+		return
+	button.add_theme_font_override("font", UI_FONT)
+	button.add_theme_color_override("font_color", Color("cfe6df"))
+	button.add_theme_color_override("font_hover_color", Color("e8fffa"))
+	button.add_theme_color_override("font_pressed_color", accent)
+	button.add_theme_color_override("font_disabled_color", Color("657773"))
+	button.add_theme_stylebox_override("normal", _ui_box(Color(0.025, 0.06, 0.057, 0.82), Color(0.2, 0.49, 0.44, 0.45)))
+	button.add_theme_stylebox_override("hover", _ui_box(Color(0.045, 0.14, 0.125, 0.94), Color(accent, 0.92), 1, 3))
+	button.add_theme_stylebox_override("pressed", _ui_box(Color(0.02, 0.1, 0.088, 0.96), Color(accent, 1.0), 2, 3))
+	button.add_theme_stylebox_override("disabled", _ui_box(Color(0.02, 0.035, 0.034, 0.72), Color(0.22, 0.3, 0.29, 0.34)))
+
+
+func _apply_panel_chrome(panel: ColorRect, accent := Color("65e7d2")) -> void:
+	if panel == null or panel.get_node_or_null("SignalFrame") != null:
+		return
+	panel.color = Color(0.006, 0.024, 0.024, 0.94)
+	var frame := Panel.new()
+	frame.name = "SignalFrame"
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_theme_stylebox_override("panel", _ui_box(Color(0.005, 0.018, 0.019, 0.18), Color(accent, 0.68), 1, 4))
+	panel.add_child(frame)
+	panel.move_child(frame, 0)
+	var signal_line := ColorRect.new()
+	signal_line.name = "SignalLine"
+	signal_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	signal_line.color = Color(accent, 0.8)
+	signal_line.position = Vector2(22, 14)
+	signal_line.size = Vector2(96, 2)
+	panel.add_child(signal_line)
+	panel.move_child(signal_line, 1)
+
+
+func _apply_hub_ui_chrome() -> void:
+	$HubTitle.add_theme_color_override("font_color", Color("6bf0d8"))
+	$HubTitle.add_theme_font_override("font", UI_FONT)
+	_apply_archive_button_chrome($OpenArchive)
+	for button in $HubActions.get_children():
+		if button is Button:
+			_apply_archive_button_chrome(button as Button)
+	if audio_settings_button:
+		_apply_archive_button_chrome(audio_settings_button)
+	if open_mirror_button:
+		_apply_archive_button_chrome(open_mirror_button, Color("7ddcf2"))
+	_apply_panel_chrome(run_archive_panel)
+	_apply_panel_chrome(mirror_panel, Color("7ddcf2"))
+	if run_archive_panel:
+		_apply_archive_button_chrome(run_archive_panel.get_node_or_null("Close") as Button)
+	if mirror_panel:
+		_apply_archive_button_chrome(mirror_panel.get_node_or_null("Close") as Button, Color("7ddcf2"))
+
+
+func _open_terminal() -> void:
+	$Background.color = Color(0.004, 0.024, 0.021, 0.985)
+	$Margin.visible = not _is_portrait()
+	if _is_portrait():
+		_refresh_mobile_terminal()
+		mobile_terminal_panel.visible = true
+		if hub_navigation:
+			hub_navigation.visible = false
+	$HubTitle.visible = false
+	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = false
+	queue_redraw()
+
+
+func _close_terminal() -> void:
+	$Margin.visible = false
+	$Background.color = Color(0.015, 0.032, 0.031, 0)
+	if mobile_terminal_panel:
+		mobile_terminal_panel.visible = false
+	if hub_navigation:
+		hub_navigation.visible = true
+	$HubTitle.visible = true
+	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = true
+	queue_redraw()
+
+
+func _create_warehouse_panel() -> void:
+	warehouse_panel = ColorRect.new()
+	warehouse_panel.position = Vector2(115, 65)
+	warehouse_panel.size = Vector2(1050, 590)
+	warehouse_panel.color = Color(0.008, 0.035, 0.032, 0.985)
+	warehouse_panel.visible = false
+	# The warehouse is opened from inside the terminal.  It must sit above both
+	# terminal variants (desktop Margin and the mobile terminal at z=140),
+	# otherwise its controls are visible but unreachable on phone canvases.
+	warehouse_panel.z_index = 200
+	add_child(warehouse_panel)
+	var title := Label.new()
+	title.position = Vector2(30, 22)
+	title.size = Vector2(990, 48)
+	title.text = "异常装备回收仓库"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color("62dec6"))
+	warehouse_panel.add_child(title)
+	warehouse_status = Label.new()
+	warehouse_status.add_theme_font_size_override("font_size", 15)
+	warehouse_status.add_theme_color_override("font_color", Color("8fc8bb"))
+	warehouse_panel.add_child(warehouse_status)
+	var scroll := ScrollContainer.new()
+	warehouse_panel.add_child(scroll)
+	warehouse_scroll = scroll
+	warehouse_list = GridContainer.new()
+	warehouse_list.columns = 4
+	warehouse_list.custom_minimum_size = Vector2(560, 0)
+	warehouse_list.add_theme_constant_override("h_separation", 8)
+	warehouse_list.add_theme_constant_override("v_separation", 8)
+	scroll.add_child(warehouse_list)
+	warehouse_preview = TextureRect.new()
+	warehouse_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	warehouse_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	warehouse_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	warehouse_preview.texture = UNKNOWN_EQUIPMENT_ICON
+	warehouse_panel.add_child(warehouse_preview)
+	warehouse_detail = Label.new()
+	warehouse_detail.text = "点击左侧装备格查看大图、评级、属性与成长路线。"
+	warehouse_detail.add_theme_font_size_override("font_size", 16)
+	warehouse_detail.add_theme_color_override("font_color", Color("a7bbb4"))
+	warehouse_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	warehouse_detail_scroll = ScrollContainer.new()
+	warehouse_detail_scroll.name = "EquipmentDetailScroll"
+	warehouse_detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	warehouse_detail_scroll.clip_contents = true
+	warehouse_panel.add_child(warehouse_detail_scroll)
+	warehouse_detail_scroll.add_child(warehouse_detail)
+	equip_button = Button.new()
+	equip_button.text = "装备"
+	equip_button.pressed.connect(_equip_selected)
+	warehouse_panel.add_child(equip_button)
+	salvage_button = Button.new()
+	salvage_button.text = "拆解"
+	salvage_button.pressed.connect(_salvage_selected)
+	warehouse_panel.add_child(salvage_button)
+	progress_button = Button.new()
+	progress_button.text = "升级 / 进化"
+	progress_button.pressed.connect(_progress_selected)
+	warehouse_panel.add_child(progress_button)
+	var close := Button.new()
+	close.name = "ReturnWarehouse"
+	close.position = Vector2(390, 515)
+	close.size = Vector2(270, 55)
+	close.text = "返回回廊"
+	close.pressed.connect(func(): warehouse_panel.visible = false)
+	warehouse_panel.add_child(close)
+
+
+func _create_salvage_reward_panel() -> void:
+	salvage_reward_panel = ColorRect.new()
+	salvage_reward_panel.name = "SalvageReward"
+	salvage_reward_panel.color = Color(0.008, 0.04, 0.035, 0.995)
+	salvage_reward_panel.visible = false
+	# This is the final feedback surface: it must sit above the warehouse and
+	# the terminal on both desktop and mobile, so a successful dismantle is never
+	# mistaken for a silent loss of equipment.
+	salvage_reward_panel.z_index = 260
+	add_child(salvage_reward_panel)
+	var title := Label.new()
+	title.text = "回收结算完成"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color("79ead2"))
+	salvage_reward_panel.add_child(title)
+	salvage_reward_detail = Label.new()
+	salvage_reward_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	salvage_reward_detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	salvage_reward_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	salvage_reward_detail.add_theme_font_size_override("font_size", 20)
+	salvage_reward_detail.add_theme_color_override("font_color", Color("d5f4ea"))
+	salvage_reward_panel.add_child(salvage_reward_detail)
+	var close := Button.new()
+	close.text = "确认收取"
+	close.add_theme_font_size_override("font_size", 18)
+	close.pressed.connect(func(): salvage_reward_panel.visible = false)
+	salvage_reward_panel.add_child(close)
+
+
+func _create_run_archive_panel() -> void:
+	run_archive_panel = ColorRect.new()
+	run_archive_panel.name = "RunArchive"
+	run_archive_panel.color = Color(0.007, 0.032, 0.029, 0.995)
+	run_archive_panel.visible = false
+	run_archive_panel.z_index = 280
+	add_child(run_archive_panel)
+	var title := Label.new()
+	title.name = "Title"
+	title.text = "行动结算与人性档案"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color("79ead2"))
+	run_archive_panel.add_child(title)
+	run_archive_scroll = ScrollContainer.new()
+	run_archive_panel.add_child(run_archive_scroll)
+	run_archive_detail = Label.new()
+	run_archive_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	run_archive_detail.add_theme_font_size_override("font_size", 17)
+	run_archive_detail.add_theme_color_override("font_color", Color("c5ded6"))
+	run_archive_scroll.add_child(run_archive_detail)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "确认并返回回廊"
+	close.add_theme_font_size_override("font_size", 17)
+	close.pressed.connect(func(): run_archive_panel.visible = false)
+	run_archive_panel.add_child(close)
+
+
+func _create_human_mirror_panel() -> void:
+	open_mirror_button = Button.new()
+	open_mirror_button.name = "OpenHumanMirror"
+	open_mirror_button.text = "人性镜鉴"
+	open_mirror_button.add_theme_font_size_override("font_size", 18)
+	open_mirror_button.pressed.connect(_open_human_mirror)
+	add_child(open_mirror_button)
+	mirror_panel = ColorRect.new()
+	mirror_panel.name = "HumanMirror"
+	mirror_panel.color = Color(0.006, 0.026, 0.034, 0.995)
+	mirror_panel.visible = false
+	mirror_panel.z_index = 300
+	add_child(mirror_panel)
+	var title := Label.new()
+	title.name = "Title"
+	title.position = Vector2(28, 20)
+	title.size = Vector2(700, 46)
+	title.text = "人性镜鉴"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color("7ddcf2"))
+	mirror_panel.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	mirror_panel.add_child(scroll)
+	mirror_content = VBoxContainer.new()
+	mirror_content.name = "Content"
+	mirror_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(mirror_content)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "返回终末回廊"
+	close.size = Vector2(122, 42)
+	close.pressed.connect(func(): mirror_panel.visible = false)
+	mirror_panel.add_child(close)
+
+
+func _open_human_mirror() -> void:
+	_refresh_human_mirror()
+	mirror_panel.visible = true
+	$HubActions.visible = false
+	_apply_responsive_ui()
+
+
+func _refresh_human_mirror() -> void:
+	for child in mirror_content.get_children():
+		child.queue_free()
+	var assessment := GameState.humanity_reflection()
+	var profile: Dictionary = assessment.get("profile", {})
+	var intro := Label.new()
+	intro.text = "%s\n这里记录的是游戏高压情境中的可反驳推断，不是现实人格或心理诊断。" % str(profile.get("disclaimer", ""))
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	intro.add_theme_color_override("font_color", Color("b8d5dc"))
+	mirror_content.add_child(intro)
+	var contract: Dictionary = GameState.active_counter_contract
+	if not contract.is_empty():
+		var contract_label := Label.new()
+		contract_label.text = "当前反证契约：%s\n%s · 目标行为 %s · 完成奖励 %d 因果残片" % [
+			str(contract.get("title", "")), str(contract.get("method", "")),
+			str(contract.get("success_event", "")), int(contract.get("reward", 0)),
+		]
+		contract_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		contract_label.add_theme_color_override("font_color", Color("efc66d"))
+		mirror_content.add_child(contract_label)
+	var dimensions: Dictionary = profile.get("dimensions", {})
+	for dimension_id in HumanityProfile.DIMENSIONS:
+		var result: Dictionary = dimensions.get(dimension_id, {})
+		var poles: Dictionary = HumanityProfile.DIMENSIONS[dimension_id]
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 4)
+		mirror_content.add_child(box)
+		var heading := Label.new()
+		heading.text = "%s ↔ %s：%s · 置信度 %d%% · 样本 %d" % [
+			str(poles.negative), str(poles.positive), str(result.get("pole", "尚未形成")),
+			int(round(float(result.get("confidence", 0.0)) * 100.0)), int(result.get("sample_size", 0)),
+		]
+		heading.add_theme_font_size_override("font_size", 19)
+		heading.add_theme_color_override("font_color", Color("7ddcf2"))
+		box.add_child(heading)
+		var evidence := Label.new()
+		evidence.text = "%s\n支持证据 %d 条 · 相反证据 %d 条\n方法：%s" % [
+			str(result.get("interpretation", "样本不足，暂不判断。")),
+			result.get("evidence", []).size(), result.get("counter_evidence", []).size(),
+			str(result.get("method", "等待更多跨情境行为")),
+		]
+		evidence.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		evidence.add_theme_color_override("font_color", Color("b8cbc8"))
+		box.add_child(evidence)
+		var dispute := Button.new()
+		dispute.name = "Dispute_%s" % dimension_id
+		var disputed: Dictionary = GameState.reflection_disputes.get(dimension_id, {})
+		dispute.text = "已提出异议：等待用行动反证" if not disputed.is_empty() and not bool(disputed.get("resolved", false)) else ("反证已被记录" if bool(disputed.get("resolved", false)) else "我不同意这个解释 · 生成反证契约")
+		dispute.disabled = int(result.get("sample_size", 0)) <= 0 or (not GameState.active_counter_contract.is_empty() and str(GameState.active_counter_contract.get("dimension", "")) != dimension_id)
+		dispute.pressed.connect(_dispute_dimension.bind(str(dimension_id)))
+		box.add_child(dispute)
+	var timeline_title := Label.new()
+	timeline_title.text = "跨局变化时间线"
+	timeline_title.add_theme_font_size_override("font_size", 22)
+	timeline_title.add_theme_color_override("font_color", Color("efc66d"))
+	mirror_content.add_child(timeline_title)
+	var timeline := GameState.reflection_timeline()
+	if timeline.is_empty():
+		var empty := Label.new()
+		empty.text = "完成一次副本后，这里会显示六维倾向、置信度与司仪预测如何变化。"
+		mirror_content.add_child(empty)
+	for snapshot in timeline:
+		var line := Label.new()
+		var changed: Array[String] = []
+		for dimension_id in snapshot.get("dimensions", {}):
+			var result: Dictionary = snapshot.dimensions[dimension_id]
+			if int(result.get("sample_size", 0)) > 0:
+				changed.append("%s %s %d%%" % [dimension_id, str(result.get("pole", "")), int(round(float(result.get("confidence", 0.0)) * 100.0))])
+		line.text = "%s · %s · %s\n%s" % [
+			str(snapshot.get("action_code", "")),
+			"潮没末班线" if str(snapshot.get("world_id", "")) == "metro" else "废弃疗养院",
+			"撤离" if bool(snapshot.get("success", false)) else "失联",
+			"；".join(changed) if not changed.is_empty() else "本局未形成有效维度变化",
+		]
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		mirror_content.add_child(line)
+
+
+func _dispute_dimension(dimension_id: String) -> void:
+	var contract := GameState.dispute_reflection(dimension_id)
+	feedback.text = "已生成反证契约：下一局可用真实行动推翻旧解释。" if not contract.is_empty() else "该维度样本不足，暂时无法生成反证契约。"
+	_refresh_human_mirror()
+
+
+func _open_run_archive() -> void:
+	if GameState.last_run.is_empty():
+		feedback.text = "行动档案尚未形成；完成一次副本后，结算、收获与人性洞察会保存在这里。"
+		return
+	run_archive_detail.text = _build_run_archive_text(GameState.last_run)
+	run_archive_scroll.scroll_vertical = 0
+	run_archive_panel.visible = true
+	$HubActions.visible = false
+	_layout_run_archive(get_viewport_rect().size)
+
+
+func _build_run_archive_text(run: Dictionary) -> String:
+	var dynamic: Dictionary = run.get("dynamic_run", {})
+	var lines: Array[String] = []
+	lines.append("【%s】  %s" % ["撤离成功" if bool(run.get("success", false)) else "行动失败", str(dynamic.get("mission", "未知契约"))])
+	lines.append("行动代码  %s  ·  世界  %s  ·  难度  %s" % [
+		str(dynamic.get("action_code", "旧版行动")),
+		"潮没末班线" if str(dynamic.get("world", "")) == "metro" else "废弃疗养院",
+		str(GameProgress.DIFFICULTIES.get(str(run.get("difficulty", "standard")), GameProgress.DIFFICULTIES.standard).name),
+	])
+	lines.append("")
+	lines.append("【本次收获】")
+	lines.append("现场碎片  %d  +  任务奖励  %d  =  入库碎片  %d" % [
+		int(run.get("carried_shards", 0)), int(run.get("mission_reward", 0)), int(run.get("banked_shards", 0)),
+	])
+	lines.append("目标完成  %d  ·  风险事件  %d/2  ·  清除威胁  %d" % [
+		int(run.get("records", 0)), int(run.get("events_resolved", 0)), int(run.get("enemies_defeated", 0)),
+	])
+	var equipment_names: Array[String] = []
+	for item_id in run.get("equipment_rewards", []):
+		equipment_names.append(str(EquipmentDatabase.get_item(str(item_id)).get("name", item_id)))
+	lines.append("装备入库  %s" % ("、".join(equipment_names) if not equipment_names.is_empty() else "无"))
+	if int(run.get("overflow_shards", 0)) > 0:
+		lines.append("仓库溢出自动转化  +%d 回响碎片" % int(run.get("overflow_shards", 0)))
+	for reward in run.get("milestone_rewards", []):
+		lines.append("因果里程碑  %s  ·  +%d 因果残片" % [str(reward.get("title", "")), int(reward.get("causality_fragments", 0))])
+	for reward in run.get("trial_rewards", []):
+		lines.append("司仪试炼  %s  ·  +%d 因果残片" % [str(reward.get("title", "")), int(reward.get("causality_fragments", 0))])
+	var relic: Dictionary = run.get("relic_growth", {})
+	if not relic.is_empty():
+		lines.append("Boss 遗物成长  %s  ·  Lv.%d" % [str(relic.get("name", "未知遗物")), int(relic.get("level", 0))])
+		lines.append("新形态效果  %s" % EquipmentDatabase.relic_growth_description(str(relic.get("item_id", "")), int(relic.get("level", 0))))
+	lines.append("")
+	lines.append("【人性洞察】")
+	var assessment: Dictionary = run.get("humanity_reflection", {})
+	if assessment.is_empty():
+		assessment = GameState.humanity_reflection()
+	lines.append(_format_humanity_archive(assessment))
+	lines.append("")
+	lines.append("【世界留下的变化】")
+	var consequences: Array = run.get("world_consequences", [])
+	if consequences.is_empty():
+		lines.append("本次行动未形成可确认的长期世界变化。")
+	else:
+		for consequence in consequences:
+			lines.append("· %s" % _world_change_text(consequence))
+	var faction_turn: Dictionary = run.get("faction_turn", {})
+	for change in faction_turn.get("changes", []):
+		lines.append("· %s" % _world_change_text(change))
+	var dungeon_memory: Dictionary = run.get("dungeon_memory", {})
+	if not dungeon_memory.is_empty():
+		lines.append("")
+		lines.append("【副本记忆】")
+		lines.append("第 %d 次进入 · 已完成 %d 次 · 当前章节 %s" % [
+			int(dungeon_memory.get("visits", 0)),
+			int(dungeon_memory.get("completed_runs", 0)),
+			str(dungeon_memory.get("chapter", "未知")),
+		])
+		var dungeon_history: Array = run.get("dungeon_history", [])
+		for memory in dungeon_history:
+			var choice := str(memory.get("choice", ""))
+			if choice in ["extracted", "lost"]:
+				continue
+			lines.append("· 第 %d 次：%s" % [int(memory.get("visit", 0)), str(memory.get("summary", ""))])
+		if GameState.dungeon_hidden_open(str(dungeon_memory.get("world_id", "")), "lost_passenger_level"):
+			lines.append("· 隐藏区域：失踪乘客维护层已永久显现")
+	var trailer := str(assessment.get("trailer", ""))
+	if not trailer.is_empty():
+		lines.append("")
+		lines.append("【下一集预告】")
+		lines.append(trailer)
+	return "\n".join(lines)
+
+
+func _format_humanity_archive(assessment: Dictionary) -> String:
+	var profile: Dictionary = assessment.get("profile", {})
+	var echo: Dictionary = assessment.get("echo", {})
+	if str(echo.get("id", "")) == "unformed_echo":
+		return "人性回声尚未成形：有效选择样本不足，系统不会据此判断人格。\n继续经历不同情境后，这里会显示证据、相反证据与置信度。"
+	var lines: Array[String] = []
+	lines.append("人性回声  %s" % str(echo.get("name", "未成形的回声")))
+	var dimensions: Dictionary = profile.get("dimensions", {})
+	for dimension_id in HumanityProfile.DIMENSIONS:
+		var result: Dictionary = dimensions.get(dimension_id, {})
+		if int(result.get("sample_size", 0)) <= 0:
+			continue
+		var positive_score := int(result.get("score", 0)) > 0
+		var evidence: Array = result.get("evidence", []) if positive_score else result.get("counter_evidence", [])
+		var contrary: Array = result.get("counter_evidence", []) if positive_score else result.get("evidence", [])
+		var evidence_text := "暂无可展示证据"
+		if not evidence.is_empty():
+			evidence_text = "%s / %s" % [str(evidence[-1].get("event_type", "")), str(evidence[-1].get("world_id", ""))]
+		var contrary_text := "尚未观察到"
+		if not contrary.is_empty():
+			contrary_text = "%s / %s" % [str(contrary[-1].get("event_type", "")), str(contrary[-1].get("world_id", ""))]
+		var knowledge: Array = result.get("knowledge", [])
+		var knowledge_text := "知识条目待补充"
+		if not knowledge.is_empty():
+			knowledge_text = "%s（%s）" % [str(knowledge[0].get("title", "")), str(knowledge[0].get("source", ""))]
+		var poles: Dictionary = HumanityProfile.DIMENSIONS[dimension_id]
+		lines.append("· %s ↔ %s：%s（置信度 %d%%）" % [
+			str(poles.negative), str(poles.positive), str(result.get("interpretation", "样本不足")),
+			int(round(float(result.get("confidence", 0.0)) * 100.0)),
+		])
+		lines.append("  行为依据：%s" % evidence_text)
+		lines.append("  相反证据：%s" % contrary_text)
+		lines.append("  知识依据：%s" % knowledge_text)
+	lines.append("仅反映游戏高压情境中的选择模式，不是现实人格或心理健康诊断。")
+	return "\n".join(lines)
+
+
+func _world_change_text(change: Dictionary) -> String:
+	var names := {
+		"sanatorium": "废弃疗养院", "metro": "潮没末班线",
+		"order_authority": "秩序署", "sunken_cult": "沉潮教团",
+		"resonance": "共鸣体", "drifters": "漂泊者",
+		"safety": "安全度", "corruption": "污染度", "resources": "资源",
+		"influence": "势力", "supplies": "补给", "player_trust": "信任",
+	}
+	var target := str(change.get("target", change.get("region_id", change.get("faction_id", "世界"))))
+	var field := str(change.get("field", "状态"))
+	if field == "controller":
+		return "%s 控制权：%s → %s" % [
+			str(names.get(target, target)),
+			str(names.get(str(change.get("from", "")), change.get("from", ""))),
+			str(names.get(str(change.get("to", "")), change.get("to", ""))),
+		]
+	return "%s · %s %s%d" % [
+		str(names.get(target, target)), str(names.get(field, field)),
+		"+" if int(change.get("amount", 0)) >= 0 else "", int(change.get("amount", 0)),
+	]
+
+
+func _is_portrait() -> bool:
+	# Mobile browser chrome often leaves a nearly-square game canvas even while
+	# the physical device is landscape. Use the scrollable terminal there too.
+	return size.y > size.x * 0.72 or size.x < 1180.0
+
+
+func _terminal_is_open() -> bool:
+	return $Margin.visible or (mobile_terminal_panel and mobile_terminal_panel.visible)
+
+
+func _mobile_panel_width() -> float:
+	return minf(size.x - 28.0, 760.0)
+
+
+func _create_mobile_terminal_panel() -> void:
+	mobile_terminal_panel = ColorRect.new()
+	mobile_terminal_panel.name = "MobileTerminal"
+	mobile_terminal_panel.color = Color(0.006, 0.028, 0.025, 0.995)
+	mobile_terminal_panel.visible = false
+	mobile_terminal_panel.z_index = 140
+	add_child(mobile_terminal_panel)
+
+
+func _create_curator_contract_panel() -> void:
+	curator_contract_panel = ColorRect.new()
+	curator_contract_panel.name = "CuratorContractPanel"
+	curator_contract_panel.color = Color(0.006, 0.032, 0.029, 0.995)
+	curator_contract_panel.visible = false
+	curator_contract_panel.z_index = 320
+	add_child(curator_contract_panel)
+	var title := Label.new()
+	title.name = "Title"
+	title.text = "阈值司仪 · 本次契约"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 27)
+	title.add_theme_color_override("font_color", Color("79ead2"))
+	curator_contract_panel.add_child(title)
+	var hint := Label.new()
+	hint.name = "Hint"
+	hint.text = "仅选择本次投送的规则与奖励；装备、职业和档案请使用底部独立入口。"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 15)
+	hint.add_theme_color_override("font_color", Color("9cc6bb"))
+	curator_contract_panel.add_child(hint)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.clip_contents = true
+	curator_contract_panel.add_child(scroll)
+	curator_contract_content = VBoxContainer.new()
+	curator_contract_content.name = "Content"
+	curator_contract_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	curator_contract_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(curator_contract_content)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "返回回廊"
+	close.pressed.connect(_close_curator_contract_panel)
+	curator_contract_panel.add_child(close)
+
+
+func _open_curator_contract_panel() -> void:
+	_close_hub_surfaces()
+	_refresh_curator_contract_panel()
+	curator_contract_panel.visible = true
+	if hub_navigation:
+		hub_navigation.visible = false
+	$HubTitle.visible = false
+	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = false
+	_layout_curator_contract_panel(get_viewport_rect().size)
+
+
+func _close_curator_contract_panel() -> void:
+	if curator_contract_panel:
+		curator_contract_panel.visible = false
+	if hub_navigation:
+		hub_navigation.visible = true
+	$HubTitle.visible = true
+	$HubActions.visible = false
+	if audio_settings_button:
+		audio_settings_button.visible = true
+
+
+func _refresh_curator_contract_panel() -> void:
+	if curator_contract_content == null:
+		return
+	for child in curator_contract_content.get_children():
+		curator_contract_content.remove_child(child)
+		child.queue_free()
+	var active := GameState.get_curator_trial()
+	if not active.is_empty():
+		var active_label := Label.new()
+		active_label.text = "已采纳\n%s\n规则：%s\n奖励：%s" % [str(active.title), str(active.get("rule_text", "")), str(active.reward_text)]
+		active_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		active_label.add_theme_font_size_override("font_size", 18)
+		active_label.add_theme_color_override("font_color", Color("b8eee0"))
+		curator_contract_content.add_child(active_label)
+		var defer := Button.new()
+		defer.custom_minimum_size = Vector2(0, 52)
+		defer.text = "暂缓当前契约"
+		defer.pressed.connect(_dismiss_trial)
+		curator_contract_content.add_child(defer)
+		return
+	var offers := GameState.get_curator_contract_offers()
+	for offer in offers:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 82)
+		button.text = "%s  ·  %s\n%s\n规则：%s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", ""))]
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
+		curator_contract_content.add_child(button)
+	if offers.is_empty():
+		var empty := Label.new()
+		empty.text = "本轮暂无可选契约。\n可能原因：当前世界的契约均已完成或暂缓。你仍可进入人性镜鉴查看行动证据，或重置司仪观察以重新生成契约。"
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color("b8eee0"))
+		curator_contract_content.add_child(empty)
+		var mirror := Button.new()
+		mirror.custom_minimum_size = Vector2(0, 54)
+		mirror.text = "查看人性镜鉴与行动证据"
+		mirror.pressed.connect(func():
+			_close_curator_contract_panel()
+			_open_human_mirror()
+		)
+		curator_contract_content.add_child(mirror)
+		var reset := Button.new()
+		reset.custom_minimum_size = Vector2(0, 54)
+		reset.text = "重置司仪观察并重新生成契约"
+		reset.pressed.connect(_reset_curator_profile)
+		curator_contract_content.add_child(reset)
+	call_deferred("_relayout_curator_contract_content")
+
+
+func _relayout_curator_contract_content() -> void:
+	if curator_contract_panel and curator_contract_panel.visible:
+		_layout_curator_contract_panel(get_viewport_rect().size)
+
+
+func _create_curator_controls() -> void:
+	var archive := $Margin/Layout/Columns/Archive as VBoxContainer
+	curator_offer_box = VBoxContainer.new()
+	curator_offer_box.name = "CuratorOffers"
+	curator_offer_box.add_theme_constant_override("separation", 6)
+	archive.add_child(curator_offer_box)
+	var reset := Button.new()
+	reset.name = "ResetCurator"
+	reset.custom_minimum_size = Vector2(0, 42)
+	reset.text = "重置司仪观察"
+	reset.pressed.connect(_reset_curator_profile)
+	archive.add_child(reset)
+
+
+func _create_respec_control() -> void:
+	var button := Button.new()
+	button.name = "RespecPathway"
+	button.custom_minimum_size = Vector2(0, 44)
+	button.text = "重构职业 · 1 因果残片（可无限次）"
+	button.disabled = GameState.selected_pathway.is_empty()
+	button.pressed.connect(_respec_pathway)
+	$Margin/Layout/Columns/Paths.add_child(button)
+
+
+func _create_difficulty_control() -> void:
+	var button := Button.new()
+	button.name = "DifficultySelector"
+	button.custom_minimum_size = Vector2(0, 58)
+	button.pressed.connect(_cycle_difficulty)
+	$Margin/Layout/Columns/Profile.add_child(button)
+
+
+func _cycle_difficulty() -> void:
+	var ids := ["standard", "hazard", "nightmare"]
+	var index := (ids.find(GameState.selected_difficulty) + 1) % ids.size()
+	GameState.set_difficulty(ids[index])
+	feedback.text = "副本难度已设为%s：会同步改变敌人、掉落和首领遗物概率。" % GameState.get_difficulty().name
+	_refresh()
+
+
+func _scroll_warehouse(amount: int) -> void:
+	if warehouse_scroll:
+		warehouse_scroll.scroll_vertical = maxi(warehouse_scroll.scroll_vertical + amount, 0)
+
+
+func _refresh_curator_offers() -> void:
+	if curator_offer_box == null:
+		return
+	for child in curator_offer_box.get_children():
+		child.queue_free()
+	var active := GameState.get_curator_trial()
+	if not active.is_empty():
+		var active_label := Label.new()
+		active_label.text = "已采纳：%s\n%s\n规则：%s · 奖励 %s" % [str(active.title), str(active.description), str(active.get("rule_text", "")), str(active.reward_text)]
+		active_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		active_label.add_theme_color_override("font_color", Color("8ce8d6"))
+		curator_offer_box.add_child(active_label)
+		var defer := Button.new()
+		defer.custom_minimum_size = Vector2(0, 42)
+		defer.text = "暂缓当前契约"
+		defer.pressed.connect(_dismiss_trial)
+		curator_offer_box.add_child(defer)
+		return
+	var heading := Label.new()
+	heading.text = "阈值司仪 · 本次可选契约（仅可采纳一项）"
+	heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	heading.add_theme_color_override("font_color", Color("6cd7c0"))
+	curator_offer_box.add_child(heading)
+	for offer in GameState.get_curator_contract_offers():
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 68)
+		button.text = "%s · %s\n%s\n规则：%s · %s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", "")), "世界专属" if str(offer.kind) == "world" else ("行为契约" if str(offer.kind) == "behavior" else "高风险")]
+		button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
+		curator_offer_box.add_child(button)
+
+
+func _choose_curator_contract(trial_id: String) -> void:
+	feedback.text = "阈值司仪：契约已写入本次投送。规则、代价与奖励均可在行动前查看。" if GameState.choose_curator_contract(trial_id) else "该契约已失效；请重新查看司仪档案。"
+	_refresh()
+	if curator_contract_panel and curator_contract_panel.visible:
+		_refresh_curator_contract_panel()
+
+
+func _refresh_mobile_terminal() -> void:
+	if mobile_terminal_panel == null:
+		return
+	for child in mobile_terminal_panel.get_children():
+		child.queue_free()
+	var panel_width := _mobile_panel_width()
+	mobile_terminal_panel.position = Vector2((size.x - panel_width) * 0.5, 12.0)
+	mobile_terminal_panel.size = Vector2(panel_width, size.y - 24.0)
+	var header := Label.new()
+	header.position = Vector2(18, 16)
+	header.size = Vector2(panel_width - 36, 34)
+	header.text = "行者整备终端"
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_theme_font_size_override("font_size", 24)
+	header.add_theme_color_override("font_color", Color("62dec6"))
+	mobile_terminal_panel.add_child(header)
+	var currency_label := Label.new()
+	currency_label.position = Vector2(18, 52)
+	currency_label.size = Vector2(panel_width - 36, 27)
+	currency_label.text = "回响 %d · 因果 %d · 余烬 %d" % [GameState.echo_shards, GameState.causality_fragments, GameState.synthesis_embers]
+	currency_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	currency_label.add_theme_font_size_override("font_size", 16)
+	mobile_terminal_panel.add_child(currency_label)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(14, 88)
+	scroll.size = Vector2(panel_width - 28, maxf(64.0, mobile_terminal_panel.size.y - 176))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.clip_contents = true
+	mobile_terminal_panel.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.custom_minimum_size = Vector2(panel_width - 50, 0)
+	content.add_theme_constant_override("separation", 10)
+	scroll.add_child(content)
+	_mobile_terminal_section(content, "漂泊者档案", stats.text)
+	_mobile_terminal_section(content, "上次行动", report.text)
+	_mobile_terminal_section(content, "阈值司仪 · 行动档案", _curator_profile_text())
+	var mirror := Button.new()
+	mirror.name = "MobileOpenHumanMirror"
+	mirror.custom_minimum_size = Vector2(0, 56)
+	mirror.text = "打开人性镜鉴 · 时间线 / 证据 / 反证契约"
+	mirror.pressed.connect(func():
+		mobile_terminal_panel.visible = false
+		_open_human_mirror()
+	)
+	content.add_child(mirror)
+	var trial := GameState.get_curator_trial()
+	if trial.is_empty():
+		_mobile_terminal_section(content, "本次可选契约（仅可采纳一项）", "司仪会提供副本专属、行为导向与高风险契约；所有规则在进入副本前公开。")
+		for offer in GameState.get_curator_contract_offers():
+			var offer_button := Button.new()
+			offer_button.custom_minimum_size = Vector2(0, 78)
+			offer_button.text = "%s · %s\n%s\n%s" % [str(offer.title), str(offer.reward_text), str(offer.description), str(offer.get("rule_text", ""))]
+			offer_button.pressed.connect(_choose_curator_contract.bind(str(offer.id)))
+			content.add_child(offer_button)
+	else:
+		_mobile_terminal_section(content, "已采纳契约", "%s\n%s\n规则：%s · 奖励 %s" % [str(trial.title), str(trial.description), str(trial.get("rule_text", "")), str(trial.reward_text)])
+		var trial_action := Button.new()
+		trial_action.custom_minimum_size = Vector2(0, 54)
+		trial_action.text = "暂缓当前契约"
+		trial_action.pressed.connect(_dismiss_trial)
+		content.add_child(trial_action)
+	var reset_profile := Button.new()
+	reset_profile.custom_minimum_size = Vector2(0, 48)
+	reset_profile.text = "重置司仪观察（不影响装备与成长）"
+	reset_profile.pressed.connect(_reset_curator_profile)
+	content.add_child(reset_profile)
+	_mobile_terminal_section(content, "出发整备", "在这里调整配置；副本入口请返回回廊使用对应传说门。")
+	var mobile_difficulty := Button.new()
+	var difficulty := GameState.get_difficulty()
+	mobile_difficulty.custom_minimum_size = Vector2(0, 62)
+	mobile_difficulty.text = "副本难度：%s\n%s（点击切换）" % [str(difficulty.name), str(difficulty.description)]
+	mobile_difficulty.pressed.connect(_cycle_difficulty)
+	content.add_child(mobile_difficulty)
+	for loadout_id in GameProgress.LOADOUTS:
+		var loadout: Dictionary = GameProgress.LOADOUTS[loadout_id]
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 56)
+		button.text = "%s%s\n%s" % ["▶ " if GameState.selected_loadout == loadout_id else "", loadout.name, loadout.description]
+		button.pressed.connect(_select_loadout.bind(loadout_id))
+		content.add_child(button)
+	_mobile_terminal_section(content, "永久强化", "选择强化，下一次投送生效。")
+	for upgrade_id in UPGRADE_INFO:
+		var level := int(GameState.upgrades[upgrade_id])
+		var cost := GameState.get_upgrade_cost(upgrade_id)
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 60)
+		button.text = "%s  Lv.%d/%d\n%s" % [UPGRADE_INFO[upgrade_id][0], level, GameState.get_upgrade_max_level(upgrade_id), "%s · %d 碎片" % [UPGRADE_INFO[upgrade_id][1], cost] if cost > 0 else "已满级"]
+		button.disabled = cost == 0 or GameState.echo_shards < cost
+		button.pressed.connect(_purchase.bind(upgrade_id))
+		content.add_child(button)
+	_mobile_terminal_section(content, "阈值途径 · 职业成长", "首次锚定消耗 8 回响碎片 + 1 因果残片，并选定一条职业路线；该职业会开放两项基础强化的 Lv.4–6。因果残片可通过分解回响/异常装备获得。")
+	for node_id in GameProgress.PATH_NODES:
+		var node: Dictionary = GameProgress.PATH_NODES[node_id]
+		if (GameState.selected_pathway.is_empty() and not str(node.get("requires", "")).is_empty()) or (not GameState.selected_pathway.is_empty() and str(node.path) != GameState.selected_pathway):
+			continue
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 60)
+		var unlocked := GameState.unlocked_path_nodes.has(node_id)
+		var anchor_needed := GameState.selected_pathway.is_empty()
+		var locked_path := not GameState.selected_pathway.is_empty() and GameState.selected_pathway != str(node.path)
+		var missing_requirement := not str(node.get("requires", "")).is_empty() and not GameState.unlocked_path_nodes.has(str(node.requires))
+		var cost_text := "%s · %d 碎片" % [str(node.description), int(node.cost)]
+		if int(node.get("fragment_cost", 0)) > 0:
+			cost_text += " + %d 因果残片" % int(node.fragment_cost)
+		if anchor_needed:
+			cost_text = "锚定%s：8 碎片 + 1 因果残片\n%s" % [GameProgress.PATHWAY_NAMES[str(node.path)], cost_text]
+		elif locked_path:
+			cost_text = "已选择%s职业" % GameState.get_pathway_name()
+		elif missing_requirement:
+			cost_text = "需先锚定前置节点"
+		button.text = "%s%s\n%s" % ["✓ " if unlocked else "", str(node.name), "已锚定" if unlocked else cost_text]
+		button.disabled = unlocked or locked_path or missing_requirement or GameState.echo_shards < int(node.cost) + (8 if anchor_needed else 0) or GameState.causality_fragments < int(node.get("fragment_cost", 0)) + (1 if anchor_needed else 0)
+		button.pressed.connect(_unlock_path_node.bind(node_id))
+		content.add_child(button)
+	if not GameState.selected_pathway.is_empty():
+		_mobile_terminal_section(content, "战斗流派 · 四选一", "职业决定身份，流派决定实际打法。解锁后可随时切换已拥有流派。")
+		for style_id in ExchangeEvolution.COMBAT_STYLES:
+			var style: Dictionary = ExchangeEvolution.COMBAT_STYLES[style_id]
+			if str(style.path) != GameState.selected_pathway:
+				continue
+			var style_button := Button.new()
+			var unlocked_style := GameState.unlocked_combat_styles.has(style_id)
+			style_button.custom_minimum_size = Vector2(0, 58)
+			style_button.text = "%s%s\n%s" % ["▶ " if GameState.active_combat_style == style_id else ("✓ " if unlocked_style else ""), str(style.name), "点击切换" if unlocked_style else "%s · 5 回响" % str(style.description)]
+			style_button.disabled = not unlocked_style and (not GameState.has_path_node(str(style.requires)) or GameState.echo_shards < 5)
+			style_button.pressed.connect(_toggle_combat_style.bind(style_id))
+			content.add_child(style_button)
+	var respec := Button.new()
+	respec.custom_minimum_size = Vector2(0, 52)
+	respec.text = "重构职业 · 1 因果残片（可无限次）"
+	respec.disabled = GameState.selected_pathway.is_empty()
+	respec.pressed.connect(_respec_pathway)
+	content.add_child(respec)
+	var actions := HBoxContainer.new()
+	actions.name = "FixedActions"
+	actions.position = Vector2(14, mobile_terminal_panel.size.y - 72)
+	actions.size = Vector2(panel_width - 28, 58)
+	actions.add_theme_constant_override("separation", 10)
+	mobile_terminal_panel.add_child(actions)
+	var warehouse := Button.new()
+	warehouse.text = "装备仓库"
+	warehouse.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	warehouse.pressed.connect(_open_warehouse)
+	actions.add_child(warehouse)
+	var close := Button.new()
+	close.text = "返回回廊"
+	close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	close.pressed.connect(_close_terminal)
+	actions.add_child(close)
+
+
+func _mobile_terminal_section(parent: VBoxContainer, title: String, body: String) -> void:
+	var heading := Label.new()
+	heading.text = title
+	heading.add_theme_font_size_override("font_size", 19)
+	heading.add_theme_color_override("font_color", Color("6cd7c0"))
+	parent.add_child(heading)
+	var text := Label.new()
+	text.text = body
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 15)
+	text.add_theme_color_override("font_color", Color("a7bbb4"))
+	parent.add_child(text)
+
+
+func _curator_profile_text() -> String:
+	var profile: Dictionary = GameState.player_profile
+	var trial := GameState.get_curator_trial()
+	var lines := [str(profile.get("last_observation", "尚无足够行动数据。")), "行动 %d · 成功 %d · 静默撤离 %d · 风险选择 %d · 清除威胁 %d" % [int(profile.get("runs", 0)), int(profile.get("successful_runs", 0)), int(profile.get("quiet_successes", 0)), int(profile.get("events_taken", 0)), int(profile.get("threats_cleared", 0))]]
+	lines.append("依据：%s" % "；".join(GameState.curator_evidence()))
+	lines.append(_humanity_summary())
+	var assessment := GameState.humanity_reflection()
+	lines.append(str(assessment.get("trailer", "")))
+	lines.append("世界简报：%s" % "；".join(GameState.world_briefing()))
+	lines.append("成长计划：%s" % " → ".join(GameState.get_growth_plan()))
+	if not GameState.heart_aspect.is_empty():
+		lines.append("心相：%s：%s" % [str(GameState.heart_aspect.name), str(GameState.heart_aspect.description)])
+	if not trial.is_empty():
+		lines.append("试炼：%s：%s · 奖励 %s" % [trial.title, trial.description, trial.reward_text])
+	var recent: Array = profile.get("recent_runs", [])
+	for run in recent:
+		lines.append("%s · %s · 噪音%d · 事件%d" % ["地铁" if str(run.get("world", "")) == "metro" else "疗养院", "撤离" if bool(run.get("success", false)) else "失联", int(run.get("noise", 0)), int(run.get("events", 0))])
+	return "\n".join(lines)
+
+
+func _humanity_summary() -> String:
+	var assessment := GameState.humanity_reflection()
+	var profile: Dictionary = assessment.get("profile", {})
+	var dimensions: Dictionary = profile.get("dimensions", {})
+	var echo: Dictionary = assessment.get("echo", {})
+	if str(echo.get("id", "")) == "unformed_echo":
+		return "人性回声：未成形（有效行为样本不足；不作人格判断）"
+	var dimension := str(echo.get("dimension", ""))
+	var result: Dictionary = dimensions.get(dimension, {})
+	var evidence: Array = result.get("evidence", []) if int(result.get("score", 0)) > 0 else result.get("counter_evidence", [])
+	var evidence_text := "暂无"
+	if not evidence.is_empty():
+		evidence_text = "%s / %s" % [str(evidence[-1].get("event_type", "")), str(evidence[-1].get("world_id", ""))]
+	var knowledge: Array = result.get("knowledge", [])
+	var source_text := "知识条目待补充"
+	if not knowledge.is_empty():
+		source_text = "%s（%s）" % [str(knowledge[0].get("title", "")), str(knowledge[0].get("source", ""))]
+	return "人性回声：%s · %s · 置信度 %d%%\n行为依据：%s\n知识依据：%s\n仅反映游戏选择，不是现实人格或心理诊断。" % [
+		str(echo.get("name", "")), str(result.get("interpretation", "")),
+		int(round(float(result.get("confidence", 0.0)) * 100.0)), evidence_text, source_text,
+	]
+
+
+func _accept_trial() -> void:
+	feedback.text = "阈值司仪：试炼已采纳；依据、条件与奖励均已写入档案。" if GameState.accept_curator_trial() else "阈值司仪：当前世界可用试炼均已完成或暂缓。"
+	_refresh()
+
+
+func _dismiss_trial() -> void:
+	feedback.text = "阈值司仪：已暂缓该方向，不会重复强制提示。" if GameState.dismiss_curator_trial() else "当前没有可暂缓的试炼。"
+	_refresh()
+	if curator_contract_panel and curator_contract_panel.visible:
+		_refresh_curator_contract_panel()
+
+
+func _reset_curator_profile() -> void:
+	GameState.reset_curator_profile()
+	feedback.text = "阈值司仪观察已重置；装备、货币与职业成长未改变。"
+	_refresh()
+	if curator_contract_panel and curator_contract_panel.visible:
+		_refresh_curator_contract_panel()
+
+
+func _respec_pathway() -> void:
+	feedback.text = "职业锚点已重构；已返还全部职业投入（锚定、节点碎片与节点残片），并扣除 1 因果残片重构费。" if GameState.respec_pathway() else "无法重构：每个存档仅限一次，并需要 1 因果残片。"
+	_refresh()
+
+
+func _hub_stick_center() -> Vector2:
+	return Vector2(106.0, size.y - _hub_control_bottom_inset())
+
+
+func _hub_action_center() -> Vector2:
+	return Vector2(size.x - 104.0, size.y - _hub_control_bottom_inset())
+
+
+func _hub_control_bottom_inset() -> float:
+	# Keep both circles and their captions above the one- or two-row navigation
+	# bar. The old fixed 108 px inset placed them behind the function buttons.
+	return 240.0 if hub_navigation and hub_navigation.columns == 4 else 178.0
+
+
+func _draw_mobile_hub_controls() -> void:
+	var stick := _hub_stick_center()
+	var action := _hub_action_center()
+	var knob := stick + _touch_direction * 58.0
+	draw_circle(stick, 72.0, Color(0.025, 0.12, 0.1, 0.8))
+	draw_arc(stick, 72.0, 0.0, TAU, 48, Color("478f80"), 3.0)
+	draw_circle(knob, 28.0, Color("5acdb5"))
+	draw_circle(action, 58.0, Color(0.035, 0.16, 0.14, 0.92))
+	draw_arc(action, 58.0, 0.0, TAU, 48, Color("69e4cd"), 4.0)
+	if _hub_action_touch != -1:
+		draw_circle(action, 48.0, Color(0.35, 0.92, 0.8, 0.28))
+	draw_string(UI_FONT, action + Vector2(-12, 9), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color("8bf1db"))
+	draw_string(UI_FONT, stick + Vector2(-27, 104), "移动", HORIZONTAL_ALIGNMENT_CENTER, 54, 14, Color("8db8ad"))
+	draw_string(UI_FONT, action + Vector2(-27, 84), "交互", HORIZONTAL_ALIGNMENT_CENTER, 54, 14, Color("8db8ad"))
+
+
+func _create_hub_navigation() -> void:
+	hub_navigation = GridContainer.new()
+	hub_navigation.name = "IndependentHubNavigation"
+	hub_navigation.columns = 8
+	hub_navigation.z_index = 190
+	add_child(hub_navigation)
+	var entries := [
+		["equipment", "装备", 0],
+		["materials", "材料", 1],
+		["collection", "唯一藏品", 2],
+		["archive", "档案", 3],
+		["career", "职业", 4],
+		["dungeons", "副本", 5],
+		["terminal", "终端", 6],
+	]
+	for index in range(entries.size()):
+		var entry: Array = entries[index]
+		var button := Button.new()
+		button.name = "Hub%s" % str(entry[0]).capitalize()
+		button.text = str(entry[1])
+		button.add_theme_font_size_override("font_size", 15)
+		button.icon = _hub_section_icon(int(entry[2]))
+		button.expand_icon = false
+		button.pressed.connect(_open_hub_section.bind(str(entry[0])))
+		hub_navigation.add_child(button)
+
+
+func _hub_section_icon(index: int) -> Texture2D:
+	if HUB_SECTION_ICONS == null or HUB_SECTION_ICONS.get_size() != Vector2(224, 32):
+		return null
+	var icon := AtlasTexture.new()
+	icon.atlas = HUB_SECTION_ICONS
+	icon.region = Rect2(index * 32, 0, 32, 32)
+	return icon
+
+
+func _create_section_panel() -> void:
+	section_panel = ColorRect.new()
+	section_panel.name = "IndependentSection"
+	section_panel.color = Color(0.007, 0.032, 0.029, 0.995)
+	section_panel.visible = false
+	section_panel.z_index = 240
+	add_child(section_panel)
+	section_title = Label.new()
+	section_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	section_title.add_theme_font_size_override("font_size", 27)
+	section_title.add_theme_color_override("font_color", Color("62dec6"))
+	section_panel.add_child(section_title)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	section_panel.add_child(scroll)
+	section_content = VBoxContainer.new()
+	section_content.add_theme_constant_override("separation", 10)
+	scroll.add_child(section_content)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "返回回廊"
+	close.pressed.connect(func(): section_panel.visible = false)
+	section_panel.add_child(close)
+
+
+func _close_hub_surfaces() -> void:
+	if warehouse_panel:
+		warehouse_panel.visible = false
+	if run_archive_panel:
+		run_archive_panel.visible = false
+	if mirror_panel:
+		mirror_panel.visible = false
+	if section_panel:
+		section_panel.visible = false
+	if curator_contract_panel:
+		curator_contract_panel.visible = false
+	if _terminal_is_open():
+		_close_terminal()
+
+
+func _close_top_surface() -> bool:
+	if audio_settings_panel and audio_settings_panel.visible:
+		audio_settings_panel.hide()
+		return true
+	if curator_contract_panel and curator_contract_panel.visible:
+		_close_curator_contract_panel()
+		return true
+	if salvage_reward_panel and salvage_reward_panel.visible:
+		salvage_reward_panel.visible = false
+		return true
+	if warehouse_panel and warehouse_panel.visible:
+		warehouse_panel.visible = false
+		return true
+	if run_archive_panel and run_archive_panel.visible:
+		run_archive_panel.visible = false
+		return true
+	if mirror_panel and mirror_panel.visible:
+		mirror_panel.visible = false
+		return true
+	if section_panel and section_panel.visible:
+		section_panel.visible = false
+		return true
+	if _terminal_is_open():
+		_close_terminal()
+		return true
+	return false
+
+
+func _open_hub_section(section: String) -> void:
+	_close_hub_surfaces()
+	match section:
+		"equipment":
+			_open_warehouse()
+			return
+	for child in section_content.get_children():
+		child.queue_free()
+	match section:
+		"materials": _build_material_section()
+		"collection": _build_collection_section()
+		"archive": _build_world_archive_section()
+		"career": _build_career_section()
+		"dungeons": _build_dungeon_section()
+		"terminal": _build_exchange_section()
+	section_panel.visible = true
+	_layout_section_panel(get_viewport_rect().size)
+
+
+func _section_heading(text: String, body := "") -> void:
+	var heading := Label.new()
+	heading.text = text
+	heading.add_theme_font_size_override("font_size", 20)
+	heading.add_theme_color_override("font_color", Color("76dcc5"))
+	section_content.add_child(heading)
+	if not body.is_empty():
+		var detail := Label.new()
+		detail.text = body
+		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		detail.add_theme_font_size_override("font_size", 15)
+		detail.add_theme_color_override("font_color", Color("b8cec6"))
+		section_content.add_child(detail)
+
+
+func _progression_icon(row: int, column: int) -> AtlasTexture:
+	var texture := AtlasTexture.new()
+	texture.atlas = PROGRESSION_STATUS_ICONS
+	texture.region = Rect2(clampi(column, 0, 5) * 32, clampi(row, 0, 2) * 32, 32, 32)
+	return texture
+
+
+func _affix_icon_index(affix_id: String) -> int:
+	return ["guardian", "last_round", "suppression", "volatile", "perception", "restoration"].find(affix_id)
+
+
+func _create_milestone_feedback() -> void:
+	milestone_feedback = TextureRect.new()
+	milestone_feedback.name = "MilestoneFeedback"
+	milestone_feedback.size = Vector2(210, 210)
+	milestone_feedback.position = Vector2((size.x - 210.0) * 0.5, 150)
+	milestone_feedback.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	milestone_feedback.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	milestone_feedback.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	milestone_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	milestone_feedback.z_index = 500
+	milestone_feedback.visible = false
+	add_child(milestone_feedback)
+	milestone_caption = Label.new()
+	milestone_caption.position = Vector2(-120, 178)
+	milestone_caption.size = Vector2(450, 42)
+	milestone_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	milestone_caption.add_theme_font_override("font", UI_FONT)
+	milestone_caption.add_theme_font_size_override("font_size", 22)
+	milestone_caption.add_theme_color_override("font_color", Color("d9ece6"))
+	milestone_caption.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+	milestone_feedback.add_child(milestone_caption)
+
+
+func _show_milestone(index: int, caption: String) -> void:
+	(get_node("/root/AudioDirector") as DreadboundAudioDirector).play("success")
+	if milestone_feedback == null or MILESTONE_FEEDBACK == null or MILESTONE_FEEDBACK.get_size() != Vector2(768, 192):
+		return
+	var texture := AtlasTexture.new()
+	texture.atlas = MILESTONE_FEEDBACK
+	texture.region = Rect2(clampi(index, 0, 3) * 192, 0, 192, 192)
+	milestone_feedback.texture = texture
 	milestone_feedback.position = Vector2((size.x - 210.0) * 0.5, 150)
 	milestone_feedback.modulate = Color(1, 1, 1, 0)
 	milestone_feedback.scale = Vector2(0.72, 0.72)
