@@ -48,7 +48,6 @@ const FIREARM_EQUIPMENT := [
 const STAFF_EQUIPMENT := [
 	{"family": &"staff", "label": "标准法杖 · 动作参考"},
 	{"family": &"echo_staff", "label": "裂隙法杖"},
-	{"family": &"field_codex", "label": "野战法典 · 副手悬浮施法"},
 ]
 
 const BOW_EQUIPMENT := [

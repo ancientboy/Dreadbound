@@ -470,7 +470,7 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 368)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 352)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -703,12 +703,6 @@ func _run_test() -> void:
 			&"spell_shoot",
 			&"spell_exit",
 		],
-		&"field_codex": [
-			&"spell_enter",
-			&"spell_idle",
-			&"spell_shoot",
-			&"spell_exit",
-		],
 		&"riot_shield": [
 			&"shield_raise",
 			&"shield_block",
@@ -756,6 +750,10 @@ func _run_test() -> void:
 						"Transparent remaining equipment frame: %s[%d]"
 						% [equipment_animation, frame_index],
 					)
+	assert(
+		not RenderedAtlasCharacter.WEAPON_LAYER_SPECS.has(&"field_codex"),
+		"Off-hand codex presentation must stay disabled",
+	)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))

@@ -8,8 +8,8 @@ type uses semantic anchors suited to its actual motion:
   string and arrow are retained;
 * staff: fixed butt/grip and spell-head identity;
 * shield: stable two-axis shield plane with temporal orientation continuity;
-* codex: a deliberately floating off-hand spell focus, following the spell
-  body's off-hand side rather than pretending to be a melee weapon.
+Off-hand presentation is intentionally excluded. The demo only renders the
+equipment family currently being exercised.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,14 +70,6 @@ SPECS = {
             "shield_bash",
         ),
         "kind": "shield",
-    },
-    "field_codex": {
-        "template": "standard_echo_staff",
-        "template_prefix": "standard_staff",
-        "prefix": "field_codex",
-        "source_index": 3,
-        "actions": ("spell_enter", "spell_idle", "spell_shoot", "spell_exit"),
-        "kind": "codex",
     },
 }
 
@@ -260,9 +252,16 @@ def render_bow(
     reference: Image.Image,
     body: Image.Image,
     previous_axis: np.ndarray | None,
+    direction: str,
 ) -> tuple[Image.Image, np.ndarray]:
     cleaned, source = bow_source(icon)
     target, retained = bow_target(reference, previous_axis)
+    source = list(source)
+    # The inventory icon is painted from one side. When the character faces
+    # right its limb curvature must be mirrored around the grip axis so the
+    # string remains on the archer side and the bow belly faces the target.
+    if direction == "right":
+        source[2] = -source[2]
     transformed = affine_equipment(
         cleaned,
         *source,
@@ -351,9 +350,15 @@ def render_staff(
     icon: Image.Image,
     reference: Image.Image,
     body: Image.Image,
+    direction: str,
 ) -> Image.Image:
-    source = staff_basis(icon, True)
+    source = list(staff_basis(icon, True))
     target = staff_basis(reference, False)
+    # Preserve head/butt identity while mirroring the asymmetric spell-head
+    # ornament for the left view. Reversing the major axis would put the focus
+    # behind the character, so only the cross-shaft handedness is changed.
+    if direction == "left":
+        source[2] = -source[2]
     transformed = affine_equipment(
         icon,
         *source,
@@ -381,6 +386,7 @@ def render_shield(
     reference: Image.Image,
     body: Image.Image,
     previous_axis: np.ndarray | None,
+    direction: str,
 ) -> tuple[Image.Image, np.ndarray]:
     source = oriented_pca(opaque_points(icon))
     target = oriented_pca(opaque_points(reference), previous_axis)
@@ -393,62 +399,51 @@ def render_shield(
         target[3] * 1.14,
         target[4] * 1.12,
     )
+    if direction == "back":
+        # A rear-facing character exposes the inside of the shield to the
+        # camera. Repaint the transformed face as a subdued inner plate and
+        # add two clipped grip straps instead of showing the exterior emblem.
+        rgba = np.asarray(transformed).copy()
+        alpha = rgba[:, :, 3]
+        luminance = rgba[:, :, :3].mean(axis=2)
+        rgba[:, :, 0] = np.where(alpha > 0, 34 + luminance * 0.18, 0)
+        rgba[:, :, 1] = np.where(alpha > 0, 37 + luminance * 0.16, 0)
+        rgba[:, :, 2] = np.where(alpha > 0, 40 + luminance * 0.14, 0)
+        transformed = Image.fromarray(rgba.astype(np.uint8), mode="RGBA")
+        straps = Image.new("RGBA", (FRAME_SIZE, FRAME_SIZE))
+        draw = ImageDraw.Draw(straps)
+        for offset in (-target[3] * 0.16, target[3] * 0.13):
+            strap_center = target[0] + target[1] * offset
+            start = strap_center - target[2] * target[4] * 0.28
+            end = strap_center + target[2] * target[4] * 0.28
+            draw.line(
+                (tuple(start), tuple(end)),
+                fill=(91, 72, 55, 235),
+                width=3,
+            )
+        strap_alpha = np.minimum(
+            np.asarray(straps.getchannel("A"), dtype=np.uint8),
+            alpha,
+        )
+        straps.putalpha(Image.fromarray(strap_alpha, mode="L"))
+        transformed.alpha_composite(straps)
     transformed = visibility_clip(transformed, reference, body, 13)
+    if direction == "back":
+        # In the rear view the forearm and hand sit between the camera and the
+        # shield interior. Keep body pixels in front instead of letting the
+        # equipment layer cover the head/arm as the old exterior layer did.
+        body_alpha = np.asarray(body.getchannel("A"), dtype=np.uint8)
+        alpha = np.asarray(transformed.getchannel("A"), dtype=np.uint8)
+        transformed.putalpha(
+            Image.fromarray(
+                np.where(body_alpha < 24, alpha, 0).astype(np.uint8),
+                mode="L",
+            )
+        )
     points = opaque_points(transformed)
     if float(np.linalg.norm(points.mean(axis=0) - target[0])) > 5.0:
         raise RuntimeError("Shield plane detached from the left-hand guard")
     return transformed, target[1]
-
-
-def render_codex(
-    icon: Image.Image,
-    reference: Image.Image,
-    body: Image.Image,
-    direction: str,
-    frame_index: int,
-) -> Image.Image:
-    body_points = opaque_points(body)
-    body_center = body_points.mean(axis=0)
-    # Direction-specific off-hand side. A tiny deterministic vertical float
-    # keeps the codex alive without inventing a fake hand grip.
-    offsets = {
-        "front": np.array([-24.0, -5.0]),
-        "left": np.array([-18.0, -8.0]),
-        "back": np.array([24.0, -6.0]),
-        "right": np.array([18.0, -8.0]),
-    }
-    float_y = float((frame_index % 8) - 4) * 0.22
-    center = body_center + offsets[direction] + np.array([0.0, float_y])
-    source = oriented_pca(opaque_points(icon))
-    # Keep the cover upright and readable; side views narrow it slightly.
-    major = np.array([0.0, 1.0])
-    minor = np.array([-1.0, 0.0])
-    width = 20.0 if direction in ("front", "back") else 12.0
-    transformed = affine_equipment(
-        icon,
-        *source,
-        center,
-        major,
-        minor,
-        27.0,
-        width,
-    )
-    # The floating book may pass behind the body, but must not be clipped to
-    # the staff silhouette because it is intentionally a separate off-hand.
-    body_alpha = np.asarray(body.getchannel("A"), dtype=np.uint8)
-    alpha = np.asarray(transformed.getchannel("A"), dtype=np.uint8)
-    allowed = np.where(body_alpha < 24, 255, 0).astype(np.uint8)
-    # Preserve a small outer rim at the off-hand contact side.
-    hand_corridor = np.asarray(
-        reference.getchannel("A").filter(ImageFilter.MaxFilter(5)),
-        dtype=np.uint8,
-    )
-    transformed.putalpha(
-        Image.fromarray(np.minimum(alpha, np.maximum(allowed, hand_corridor)), mode="L")
-    )
-    if transformed.getchannel("A").getbbox() is None:
-        raise RuntimeError("Floating codex became fully transparent")
-    return transformed
 
 
 def build_spec(item_id: str, spec: dict) -> int:
@@ -481,18 +476,25 @@ def build_spec(item_id: str, spec: dict) -> int:
                 body_frame = frame_at(body, frame_index, columns, bottom_up)
                 if spec["kind"] == "bow":
                     rendered, previous_axis = render_bow(
-                        icon, ref_frame, body_frame, previous_axis
+                        icon, ref_frame, body_frame, previous_axis, direction
                     )
                 elif spec["kind"] == "staff":
-                    rendered = render_staff(icon, ref_frame, body_frame)
+                    rendered = render_staff(
+                        icon,
+                        ref_frame,
+                        body_frame,
+                        direction,
+                    )
                 elif spec["kind"] == "shield":
                     rendered, previous_axis = render_shield(
-                        icon, ref_frame, body_frame, previous_axis
+                        icon,
+                        ref_frame,
+                        body_frame,
+                        previous_axis,
+                        direction,
                     )
                 else:
-                    rendered = render_codex(
-                        icon, ref_frame, body_frame, direction, frame_index
-                    )
+                    raise RuntimeError(f"Unsupported equipment kind: {spec['kind']}")
                 if rendered.getchannel("A").getbbox() is None:
                     raise RuntimeError(
                         f"Transparent frame: {item_id} {stem}[{frame_index}]"

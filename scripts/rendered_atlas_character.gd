@@ -387,16 +387,6 @@ const WEAPON_LAYER_SPECS := {
 			&"spell_exit",
 		],
 	},
-	&"field_codex": {
-		"directory": "res://assets/art/weapons/character_layers/field_codex",
-		"prefix": "field_codex",
-		"animations": [
-			&"spell_enter",
-			&"spell_idle",
-			&"spell_shoot",
-			&"spell_exit",
-		],
-	},
 	&"riot_shield": {
 		"directory": "res://assets/art/weapons/character_layers/riot_shield",
 		"prefix": "riot_shield",
@@ -674,7 +664,7 @@ func select_preview_family(family: StringName) -> void:
 			_preview_idle = &"pistol_idle"
 			_preview_attack = &"pistol_shoot"
 			_preview_weapon_family = family
-		&"staff", &"echo_staff", &"field_codex":
+		&"staff", &"echo_staff":
 			_preview_idle = &"spell_idle"
 			_preview_attack = &"spell_shoot"
 			_preview_weapon_family = family

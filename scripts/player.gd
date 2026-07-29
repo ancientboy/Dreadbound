@@ -47,7 +47,7 @@ enum Consumable { BANDAGE, SEDATIVE, STIMULANT }
 @export var use_runtime_progress := true
 @export_group("Demo Loadout")
 @export var demo_weapon_slots: Array[String] = ["service_crowbar", "balanced_pistol", "breach_shotgun"]
-@export var demo_offhand_item := "riot_shield"
+@export var demo_offhand_item := ""
 @export var demo_charm_item := "medical_tag"
 @export_group("")
 @export_group("Character Feel")
@@ -1073,7 +1073,6 @@ func _draw() -> void:
 			_draw_basic_weapon(2)
 		else:
 			_draw_basic_weapon(0)
-		_draw_offhand(_active_offhand_item())
 	_draw_deep_water_occlusion()
 	_draw_health_bar()
 
@@ -1231,25 +1230,6 @@ func _draw_equipment_weapon(atlas_index: int, rotation_offset: float) -> void:
 		Rect2(-32, -32, 64, 64),
 		Rect2(clampi(atlas_index, 0, 3) * 64, 0, 64, 64),
 		Color(1.16, 1.14, 1.12, 1.0) if _attack_flash > 0.0 else Color.WHITE,
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_offhand(item_id: String) -> void:
-	var visual := EquipmentDatabase.offhand_visual(item_id)
-	if visual.is_empty() or EQUIPMENT_RUNTIME == null or EQUIPMENT_RUNTIME.get_size() != Vector2(256, 64):
-		return
-	var size := float(visual.get("display_size", 42.0))
-	draw_set_transform(
-		_equipment_anchor(&"off_hand"),
-		facing.angle() - PI * 0.5,
-		Vector2.ONE,
-	)
-	draw_texture_rect_region(
-		EQUIPMENT_RUNTIME,
-		Rect2(Vector2(-size, -size) * 0.5, Vector2(size, size)),
-		Rect2(int(visual.get("atlas_index", 2)) * 64, 0, 64, 64),
-		Color.WHITE,
 	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

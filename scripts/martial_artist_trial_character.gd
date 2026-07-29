@@ -229,7 +229,7 @@ func _on_animation_finished() -> void:
 func _show_trial_character() -> void:
 	_sprite.show()
 	_main_hand_sprite.show()
-	_offhand_sprite.show()
+	_offhand_sprite.hide()
 	if is_instance_valid(_base_sprite):
 		_base_sprite.hide()
 
@@ -244,7 +244,7 @@ func _show_base_character() -> void:
 
 func _sync_equipment_visuals() -> void:
 	_sync_main_hand_visual()
-	_sync_offhand_visual()
+	_offhand_sprite.texture = null
 	var attack_active := _player._attack_flash > 0.0
 	var profile := _player._weapon_attack_profile()
 	var cast_id := str(profile.get("cast", ""))
@@ -265,8 +265,6 @@ func _sync_equipment_visuals() -> void:
 		main_rotation += 0.28
 	_main_hand_sprite.position = main_position
 	_main_hand_sprite.rotation = main_rotation
-	_offhand_sprite.position = equipment_anchor(&"off_hand")
-	_offhand_sprite.rotation = _player.facing.angle() - PI * 0.5
 
 
 func _sync_main_hand_visual() -> void:
@@ -279,18 +277,6 @@ func _sync_main_hand_visual() -> void:
 			_set_atlas_cell(_main_hand_sprite, EQUIPMENT_RUNTIME, 64, 1)
 		_:
 			_main_hand_sprite.texture = null
-
-
-func _sync_offhand_visual() -> void:
-	match _player.demo_offhand_item:
-		"riot_shield":
-			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 2)
-			_offhand_sprite.scale = Vector2.ONE * 0.75
-		"field_codex":
-			_set_atlas_cell(_offhand_sprite, EQUIPMENT_RUNTIME, 64, 3)
-			_offhand_sprite.scale = Vector2.ONE * 0.54
-		_:
-			_offhand_sprite.texture = null
 
 
 func _set_atlas_cell(sprite: Sprite2D, atlas: Texture2D, cell_size: int, index: int) -> void:
