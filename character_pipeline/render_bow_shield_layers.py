@@ -214,6 +214,9 @@ def pack_grid(frame_paths: list[Path], atlas_path: Path, columns: int) -> tuple[
         pixels = list(image.pixels)
         column = frame_index % used_columns
         row = frame_index // used_columns
+        # Blender's Image.pixels origin is bottom-left, so multi-row atlases
+        # produced here are intentionally stored bottom-up. The Godot loader
+        # reverses only these bow/shield atlas rows when slicing frames.
         for y in range(height):
             source = y * width * 4
             target_y = row * height + y
