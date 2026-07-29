@@ -372,6 +372,41 @@ const WEAPON_LAYER_SPECS := {
 			&"pistol_reload",
 		],
 	},
+	&"mourning_bow": {
+		"directory": "res://assets/art/weapons/character_layers/mourning_bow",
+		"prefix": "mourning_bow",
+		"animations": [&"bow_idle", &"bow_draw", &"bow_aim", &"bow_release"],
+	},
+	&"echo_staff": {
+		"directory": "res://assets/art/weapons/character_layers/echo_staff",
+		"prefix": "echo_staff",
+		"animations": [
+			&"spell_enter",
+			&"spell_idle",
+			&"spell_shoot",
+			&"spell_exit",
+		],
+	},
+	&"field_codex": {
+		"directory": "res://assets/art/weapons/character_layers/field_codex",
+		"prefix": "field_codex",
+		"animations": [
+			&"spell_enter",
+			&"spell_idle",
+			&"spell_shoot",
+			&"spell_exit",
+		],
+	},
+	&"riot_shield": {
+		"directory": "res://assets/art/weapons/character_layers/riot_shield",
+		"prefix": "riot_shield",
+		"animations": [
+			&"shield_raise",
+			&"shield_block",
+			&"shield_hit",
+			&"shield_bash",
+		],
+	},
 	&"sword": {
 		"directory": "res://assets/art/weapons/character_layers/standard_melee_sword",
 		"prefix": "standard_sword",
@@ -639,18 +674,18 @@ func select_preview_family(family: StringName) -> void:
 			_preview_idle = &"pistol_idle"
 			_preview_attack = &"pistol_shoot"
 			_preview_weapon_family = family
-		&"staff":
+		&"staff", &"echo_staff", &"field_codex":
 			_preview_idle = &"spell_idle"
 			_preview_attack = &"spell_shoot"
-			_preview_weapon_family = &"staff"
-		&"bow":
+			_preview_weapon_family = family
+		&"bow", &"mourning_bow":
 			_preview_idle = &"bow_idle"
 			_preview_attack = &"bow_release"
-			_preview_weapon_family = &"bow"
-		&"shield":
+			_preview_weapon_family = family
+		&"shield", &"riot_shield":
 			_preview_idle = &"shield_block"
 			_preview_attack = &"shield_bash"
-			_preview_weapon_family = &"shield"
+			_preview_weapon_family = family
 		_:
 			_preview_idle = &"idle"
 			_preview_attack = &"attack_melee"
@@ -679,11 +714,29 @@ func play_preview_action(logical_name: StringName) -> bool:
 		if not family_animations.has(logical_name):
 			select_preview_family(&"pistol")
 	elif String(logical_name).begins_with("spell"):
-		select_preview_family(&"staff")
+		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
+			_preview_weapon_family,
+			{},
+		)
+		var family_animations: Array = family_spec.get("animations", [])
+		if not family_animations.has(logical_name):
+			select_preview_family(&"staff")
 	elif String(logical_name).begins_with("bow"):
-		select_preview_family(&"bow")
+		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
+			_preview_weapon_family,
+			{},
+		)
+		var family_animations: Array = family_spec.get("animations", [])
+		if not family_animations.has(logical_name):
+			select_preview_family(&"bow")
 	elif String(logical_name).begins_with("shield"):
-		select_preview_family(&"shield")
+		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
+			_preview_weapon_family,
+			{},
+		)
+		var family_animations: Array = family_spec.get("animations", [])
+		if not family_animations.has(logical_name):
+			select_preview_family(&"shield")
 	if bool(LOOPING_ANIMATIONS[logical_name]):
 		_preview_idle = logical_name
 		_active_one_shot = &""

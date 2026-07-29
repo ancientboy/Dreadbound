@@ -470,7 +470,7 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 304)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 368)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -695,6 +695,67 @@ func _run_test() -> void:
 		railgun_awakened.get_image().get_data()
 		!= railgun_final.get_image().get_data()
 	)
+	var remaining_equipment_actions := {
+		&"mourning_bow": [&"bow_idle", &"bow_draw", &"bow_aim", &"bow_release"],
+		&"echo_staff": [
+			&"spell_enter",
+			&"spell_idle",
+			&"spell_shoot",
+			&"spell_exit",
+		],
+		&"field_codex": [
+			&"spell_enter",
+			&"spell_idle",
+			&"spell_shoot",
+			&"spell_exit",
+		],
+		&"riot_shield": [
+			&"shield_raise",
+			&"shield_block",
+			&"shield_hit",
+			&"shield_bash",
+		],
+	}
+	for equipment_family in remaining_equipment_actions:
+		var equipment_actions: Array = remaining_equipment_actions[equipment_family]
+		rendered.select_preview_family(equipment_family)
+		for equipment_action in equipment_actions:
+			assert(rendered.play_preview_action(equipment_action))
+			await process_frame
+			assert(
+				weapon_sprite.animation
+				== StringName(
+					"%s__%s_right" % [equipment_family, equipment_action]
+				)
+			)
+			for direction in [&"front", &"left", &"back", &"right"]:
+				var equipment_animation := StringName(
+					"%s__%s_%s"
+					% [equipment_family, equipment_action, direction]
+				)
+				assert(
+					weapon_sprite.sprite_frames.get_frame_count(
+						equipment_animation,
+					)
+					== int(
+						RenderedAtlasCharacter.ANIMATION_FRAMES[equipment_action]
+					)
+				)
+				for frame_index in weapon_sprite.sprite_frames.get_frame_count(
+					equipment_animation,
+				):
+					var equipment_frame := (
+						weapon_sprite.sprite_frames.get_frame_texture(
+							equipment_animation,
+							frame_index,
+						) as AtlasTexture
+					)
+					assert(equipment_frame != null)
+					assert(
+						not equipment_frame.get_image().is_invisible(),
+						"Transparent remaining equipment frame: %s[%d]"
+						% [equipment_animation, frame_index],
+					)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))

@@ -131,7 +131,7 @@ theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 10
 
 [node name="Text" type="VBoxContainer" parent="HUD/Panel/Margin"]
-theme_override_constants/separation = 3
+theme_override_constants/separation = 0
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -195,9 +195,9 @@ text = "射击"
 [node name="Reload" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
 text = "换弹"
 
-[node name="StaffLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "标准法杖（3D 模型 · hand_r 绑定 · 遮挡透明层）"
-label_settings = SubResource("Body_settings")
+[node name="StaffEquipment" type="OptionButton" parent="HUD/Panel/Margin/Text"]
+custom_minimum_size = Vector2(250, 0)
+tooltip_text = "法杖与法典：统一施法动作 / 每件装备使用原造型透明层"
 
 [node name="StaffButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
@@ -214,9 +214,9 @@ text = "施法"
 [node name="Exit" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
 text = "退出施法"
 
-[node name="BowLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "猎弓（KayKit 原动作 · 左手弓 · 动态弓弦/箭 · 遮挡透明层）"
-label_settings = SubResource("Body_settings")
+[node name="BowEquipment" type="OptionButton" parent="HUD/Panel/Margin/Text"]
+custom_minimum_size = Vector2(250, 0)
+tooltip_text = "弓类装备：保留动态弓弦与箭 / 使用原造型透明层"
 
 [node name="BowButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
@@ -233,9 +233,9 @@ text = "瞄准"
 [node name="Release" type="Button" parent="HUD/Panel/Margin/Text/BowButtons"]
 text = "放箭"
 
-[node name="ShieldLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "守卫盾（KayKit 原动作 · 左手盾 · 四方向遮挡透明层）"
-label_settings = SubResource("Body_settings")
+[node name="ShieldEquipment" type="OptionButton" parent="HUD/Panel/Margin/Text"]
+custom_minimum_size = Vector2(250, 0)
+tooltip_text = "盾牌装备：左手握点 / 四方向专属透明层"
 
 [node name="ShieldButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8

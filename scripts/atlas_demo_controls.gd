@@ -45,12 +45,31 @@ const FIREARM_EQUIPMENT := [
 	{"family": &"conductor_railgun_final", "label": "末班导轨枪 · 完全体（5）"},
 ]
 
+const STAFF_EQUIPMENT := [
+	{"family": &"staff", "label": "标准法杖 · 动作参考"},
+	{"family": &"echo_staff", "label": "裂隙法杖"},
+	{"family": &"field_codex", "label": "野战法典 · 副手悬浮施法"},
+]
+
+const BOW_EQUIPMENT := [
+	{"family": &"bow", "label": "标准猎弓 · 动作参考"},
+	{"family": &"mourning_bow", "label": "哀鸣骨弓"},
+]
+
+const SHIELD_EQUIPMENT := [
+	{"family": &"shield", "label": "标准守卫盾 · 动作参考"},
+	{"family": &"riot_shield", "label": "折叠防暴盾"},
+]
+
 @onready var _character := get_node(
 	"../../../../Player/RenderedAtlasCharacter",
 ) as RenderedAtlasCharacter
 @onready var _mode_label := $ModeLabel as Label
 @onready var _melee_selector := $MeleeEquipment as OptionButton
 @onready var _firearm_selector := $FirearmEquipment as OptionButton
+@onready var _staff_selector := $StaffEquipment as OptionButton
+@onready var _bow_selector := $BowEquipment as OptionButton
+@onready var _shield_selector := $ShieldEquipment as OptionButton
 @onready var _demo_attack_button := $"../../../DemoAttackButton" as Button
 
 
@@ -61,6 +80,15 @@ func _ready() -> void:
 	for equipment in FIREARM_EQUIPMENT:
 		_firearm_selector.add_item(str(equipment.label))
 	_firearm_selector.item_selected.connect(_select_firearm_equipment)
+	for equipment in STAFF_EQUIPMENT:
+		_staff_selector.add_item(str(equipment.label))
+	_staff_selector.item_selected.connect(_select_staff_equipment)
+	for equipment in BOW_EQUIPMENT:
+		_bow_selector.add_item(str(equipment.label))
+	_bow_selector.item_selected.connect(_select_bow_equipment)
+	for equipment in SHIELD_EQUIPMENT:
+		_shield_selector.add_item(str(equipment.label))
+	_shield_selector.item_selected.connect(_select_shield_equipment)
 	_connect_action($SwordButtons/Idle, &"one_hand_melee_idle")
 	_connect_action($SwordButtons/Attack, &"attack_melee")
 	$SwordButtons/CrowbarIdle.pressed.connect(
@@ -87,18 +115,42 @@ func _ready() -> void:
 	$PistolButtons/Reload.pressed.connect(
 		_play_selected_firearm_action.bind(&"pistol_reload"),
 	)
-	_connect_action($StaffButtons/Enter, &"spell_enter")
-	_connect_action($StaffButtons/Idle, &"spell_idle")
-	_connect_action($StaffButtons/Shoot, &"spell_shoot")
-	_connect_action($StaffButtons/Exit, &"spell_exit")
-	_connect_action($BowButtons/Idle, &"bow_idle")
-	_connect_action($BowButtons/Draw, &"bow_draw")
-	_connect_action($BowButtons/Aim, &"bow_aim")
-	_connect_action($BowButtons/Release, &"bow_release")
-	_connect_action($ShieldButtons/Raise, &"shield_raise")
-	_connect_action($ShieldButtons/Block, &"shield_block")
-	_connect_action($ShieldButtons/Hit, &"shield_hit")
-	_connect_action($ShieldButtons/Bash, &"shield_bash")
+	$StaffButtons/Enter.pressed.connect(
+		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_enter"),
+	)
+	$StaffButtons/Idle.pressed.connect(
+		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_idle"),
+	)
+	$StaffButtons/Shoot.pressed.connect(
+		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_shoot"),
+	)
+	$StaffButtons/Exit.pressed.connect(
+		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_exit"),
+	)
+	$BowButtons/Idle.pressed.connect(
+		_play_selected_other_action.bind(_bow_selector, BOW_EQUIPMENT, &"bow_idle"),
+	)
+	$BowButtons/Draw.pressed.connect(
+		_play_selected_other_action.bind(_bow_selector, BOW_EQUIPMENT, &"bow_draw"),
+	)
+	$BowButtons/Aim.pressed.connect(
+		_play_selected_other_action.bind(_bow_selector, BOW_EQUIPMENT, &"bow_aim"),
+	)
+	$BowButtons/Release.pressed.connect(
+		_play_selected_other_action.bind(_bow_selector, BOW_EQUIPMENT, &"bow_release"),
+	)
+	$ShieldButtons/Raise.pressed.connect(
+		_play_selected_other_action.bind(_shield_selector, SHIELD_EQUIPMENT, &"shield_raise"),
+	)
+	$ShieldButtons/Block.pressed.connect(
+		_play_selected_other_action.bind(_shield_selector, SHIELD_EQUIPMENT, &"shield_block"),
+	)
+	$ShieldButtons/Hit.pressed.connect(
+		_play_selected_other_action.bind(_shield_selector, SHIELD_EQUIPMENT, &"shield_hit"),
+	)
+	$ShieldButtons/Bash.pressed.connect(
+		_play_selected_other_action.bind(_shield_selector, SHIELD_EQUIPMENT, &"shield_bash"),
+	)
 	$BaselineButtons/Unarmed.pressed.connect(_select_unarmed)
 	$BaselineButtons/Hit.pressed.connect(_trigger_hit)
 	$BaselineButtons/Death.pressed.connect(_trigger_death)
@@ -147,6 +199,37 @@ func _play_selected_firearm_action(action_name: StringName) -> void:
 	_character.select_preview_family(equipment.family)
 	if _character.play_preview_action(action_name):
 		_mode_label.text = "当前动作：%s · %s · 专属透明武器层" % [
+			str(equipment.label),
+			str(ACTION_LABELS.get(action_name, String(action_name))),
+		]
+
+
+func _select_staff_equipment(index: int) -> void:
+	if index >= 0 and index < STAFF_EQUIPMENT.size():
+		_play_selected_other_action(_staff_selector, STAFF_EQUIPMENT, &"spell_idle")
+
+
+func _select_bow_equipment(index: int) -> void:
+	if index >= 0 and index < BOW_EQUIPMENT.size():
+		_play_selected_other_action(_bow_selector, BOW_EQUIPMENT, &"bow_idle")
+
+
+func _select_shield_equipment(index: int) -> void:
+	if index >= 0 and index < SHIELD_EQUIPMENT.size():
+		_play_selected_other_action(_shield_selector, SHIELD_EQUIPMENT, &"shield_block")
+
+
+func _play_selected_other_action(
+	selector: OptionButton,
+	equipment_list: Array,
+	action_name: StringName,
+) -> void:
+	if not is_instance_valid(_character):
+		return
+	var equipment: Dictionary = equipment_list[selector.selected]
+	_character.select_preview_family(equipment.family)
+	if _character.play_preview_action(action_name):
+		_mode_label.text = "当前动作：%s · %s · 专属透明装备层" % [
 			str(equipment.label),
 			str(ACTION_LABELS.get(action_name, String(action_name))),
 		]
