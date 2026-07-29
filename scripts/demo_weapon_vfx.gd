@@ -593,13 +593,13 @@ func _draw_muzzle(
 	var normal := direction.orthogonal()
 	var length := (42.0 if heavy else 28.0) * fade
 	var width := (19.0 if heavy else 13.0) * fade
-	var points := PackedVector2Array([
-		origin - normal * width * 0.34,
-		origin + direction * length,
-		origin + normal * width * 0.34,
+	draw_line(
 		origin - direction * 3.0,
-	])
-	draw_colored_polygon(points, Color(color.lightened(0.42), 0.88 * fade))
+		origin + direction * length,
+		Color(color.lightened(0.42), 0.88 * fade),
+		maxf(width * 0.68, 0.5),
+		true,
+	)
 	draw_line(
 		origin + direction * length * 0.30,
 		origin + direction * length * 0.58 + normal * width,
