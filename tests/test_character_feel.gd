@@ -76,12 +76,14 @@ func _run_test() -> void:
 	var player := instance.get_node("Player") as Player
 	var camera := player.get_node("Camera2D") as PlayerFeelCamera
 	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
+	var weapon_vfx := instance.get_node("DemoWeaponVFX") as DemoWeaponVFX
 	var humanoid := player.get_node_or_null(
 		"UniversalHumanoidActionCharacter"
 	) as UniversalHumanoidActionCharacter
 	assert(player != null)
 	assert(camera != null)
 	assert(rendered != null)
+	assert(weapon_vfx != null)
 	assert(humanoid == null)
 	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
 	assert(camera.position_smoothing_enabled)
@@ -94,6 +96,76 @@ func _run_test() -> void:
 	assert(player.has_signal("footstep_requested"))
 	assert(player._body_frame_ground_y.size() == 24)
 	assert(not player._body_sprite.visible)
+	assert(weapon_vfx.active_effect_count() == 0)
+	weapon_vfx.play_melee(player.global_position, Vector2.RIGHT, &"volatile_edge")
+	assert(weapon_vfx.active_effect_count() == 1)
+	assert(weapon_vfx.last_effect() == &"melee")
+	assert(weapon_vfx.last_family() == &"volatile_edge")
+	assert(weapon_vfx.last_direction() == Vector2.RIGHT)
+	assert(weapon_vfx.melee_texture_id(&"volatile_edge") == &"anomaly_rift")
+	assert(weapon_vfx.melee_texture_id(&"heavy_blade") == &"heavy_cleave")
+	assert(weapon_vfx.melee_texture_id(&"director_reaper_final") == &"reaper_arc")
+	assert(weapon_vfx.melee_layer_for_direction(Vector2.UP) < 0)
+	assert(weapon_vfx.melee_layer_for_direction(Vector2.DOWN) > 0)
+	weapon_vfx.play_melee(player.global_position, Vector2(-0.8, 0.1), &"echo_edge")
+	assert(weapon_vfx.last_direction() == Vector2.LEFT)
+	weapon_vfx.play_melee(player.global_position, Vector2(0.1, -0.9), &"crowbar")
+	assert(weapon_vfx.last_direction() == Vector2.UP)
+	weapon_vfx.play_melee(player.global_position, Vector2(0.1, 0.9), &"sword")
+	assert(weapon_vfx.last_direction() == Vector2.DOWN)
+	weapon_vfx._process(0.18)
+	var visible_melee_layers := 0
+	var has_back_layer := false
+	var has_front_layer := false
+	for child in weapon_vfx.get_children():
+		var effect_sprite := child as Sprite2D
+		if effect_sprite == null or not effect_sprite.visible:
+			continue
+		visible_melee_layers += 1
+		has_back_layer = has_back_layer or effect_sprite.z_index < 0
+		has_front_layer = has_front_layer or effect_sprite.z_index > 0
+		assert(maxi(
+			effect_sprite.texture.get_width(),
+			effect_sprite.texture.get_height(),
+		) <= 768)
+	assert(visible_melee_layers >= 4)
+	assert(has_back_layer)
+	assert(has_front_layer)
+	weapon_vfx.play_ballistic(
+		player.global_position,
+		Vector2.RIGHT,
+		&"conductor_railgun_final",
+	)
+	assert(weapon_vfx.active_effect_count() == 5)
+	assert(weapon_vfx.last_effect() == &"rail")
+	weapon_vfx.play_arcane(player.global_position, Vector2.RIGHT, &"echo_staff")
+	assert(weapon_vfx.active_effect_count() == 6)
+	assert(weapon_vfx.last_effect() == &"arcane")
+	weapon_vfx.play_bow(player.global_position, Vector2.RIGHT, &"mourning_bow")
+	assert(weapon_vfx.active_effect_count() == 7)
+	assert(weapon_vfx.last_effect() == &"bow")
+	instance.get_node(
+		"HUD/Panel/Margin/Text/SwordButtons/CrowbarAttack",
+	).pressed.emit()
+	assert(weapon_vfx.last_effect() == &"melee")
+	var vfx_firearm_selector := instance.get_node(
+		"HUD/Panel/Margin/Text/FirearmEquipment",
+	) as OptionButton
+	vfx_firearm_selector.select(2)
+	vfx_firearm_selector.item_selected.emit(2)
+	instance.get_node(
+		"HUD/Panel/Margin/Text/PistolButtons/Shoot",
+	).pressed.emit()
+	assert(weapon_vfx.last_effect() == &"shotgun")
+	instance.get_node(
+		"HUD/Panel/Margin/Text/StaffButtons/Shoot",
+	).pressed.emit()
+	assert(weapon_vfx.last_effect() == &"arcane")
+	instance.get_node(
+		"HUD/Panel/Margin/Text/BowButtons/Release",
+	).pressed.emit()
+	assert(weapon_vfx.last_effect() == &"bow")
+	rendered.select_preview_family(&"sword")
 
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	var weapon_sprite := rendered.get_node("WeaponLayer") as AnimatedSprite2D

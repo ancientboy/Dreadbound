@@ -25,6 +25,12 @@ const ACTION_LABELS := {
 }
 
 const MELEE_EQUIPMENT := [
+	{"family": &"sword", "label": "制式快剑 · 高清月牙斩"},
+	{
+		"family": &"heavy_blade",
+		"preview_family": &"sword",
+		"label": "重型劈砍 · 高清特效试验",
+	},
 	{"family": &"crowbar", "label": "制式撬棍"},
 	{"family": &"echo_edge", "label": "回响切割器"},
 	{"family": &"insulated_crowbar", "label": "绝缘撬棍"},
@@ -71,6 +77,9 @@ const SHIELD_EQUIPMENT := [
 @onready var _bow_selector := $BowEquipment as OptionButton
 @onready var _shield_selector := $ShieldEquipment as OptionButton
 @onready var _demo_attack_button := $"../../../DemoAttackButton" as Button
+@onready var _weapon_vfx := get_node(
+	"../../../../DemoWeaponVFX",
+) as DemoWeaponVFX
 
 
 func _ready() -> void:
@@ -93,12 +102,14 @@ func _ready() -> void:
 		_shield_selector.add_item(str(equipment.label))
 	_shield_selector.item_selected.connect(_select_shield_equipment)
 	_connect_action($SwordButtons/Idle, &"one_hand_melee_idle")
-	_connect_action($SwordButtons/Attack, &"attack_melee")
+	$SwordButtons/Attack.pressed.connect(
+		_play_action_with_vfx.bind(&"attack_melee", &"sword"),
+	)
 	$SwordButtons/CrowbarIdle.pressed.connect(
 		_play_selected_melee_action.bind(&"one_hand_melee_idle"),
 	)
 	$SwordButtons/CrowbarAttack.pressed.connect(
-		_play_selected_melee_action.bind(&"attack_melee"),
+		_play_selected_melee_attack,
 	)
 	$PistolButtons/Idle.pressed.connect(
 		_play_selected_firearm_action.bind(&"pistol_idle"),
@@ -113,7 +124,7 @@ func _ready() -> void:
 		_play_selected_firearm_action.bind(&"pistol_aim_up"),
 	)
 	$PistolButtons/Shoot.pressed.connect(
-		_play_selected_firearm_action.bind(&"pistol_shoot"),
+		_play_selected_firearm_attack,
 	)
 	$PistolButtons/Reload.pressed.connect(
 		_play_selected_firearm_action.bind(&"pistol_reload"),
@@ -125,7 +136,7 @@ func _ready() -> void:
 		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_idle"),
 	)
 	$StaffButtons/Shoot.pressed.connect(
-		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_shoot"),
+		_play_selected_staff_attack,
 	)
 	$StaffButtons/Exit.pressed.connect(
 		_play_selected_other_action.bind(_staff_selector, STAFF_EQUIPMENT, &"spell_exit"),
@@ -140,7 +151,7 @@ func _ready() -> void:
 		_play_selected_other_action.bind(_bow_selector, BOW_EQUIPMENT, &"bow_aim"),
 	)
 	$BowButtons/Release.pressed.connect(
-		_play_selected_other_action.bind(_bow_selector, BOW_EQUIPMENT, &"bow_release"),
+		_play_selected_bow_attack,
 	)
 	$ShieldButtons/Raise.pressed.connect(
 		_play_selected_other_action.bind(_shield_selector, SHIELD_EQUIPMENT, &"shield_raise"),
@@ -180,6 +191,12 @@ func _play_action(action_name: StringName) -> void:
 		_show_action(action_name)
 
 
+func _play_action_with_vfx(action_name: StringName, family: StringName) -> void:
+	if is_instance_valid(_character) and _character.play_preview_action(action_name):
+		_play_weapon_vfx(action_name, family)
+		_show_action(action_name)
+
+
 func _select_melee_equipment(index: int) -> void:
 	if index < 0 or index >= MELEE_EQUIPMENT.size():
 		return
@@ -190,12 +207,20 @@ func _play_selected_melee_action(action_name: StringName) -> void:
 	if not is_instance_valid(_character):
 		return
 	var equipment: Dictionary = MELEE_EQUIPMENT[_melee_selector.selected]
-	_character.select_preview_family(equipment.family)
+	_character.select_preview_family(
+		equipment.get("preview_family", equipment.family) as StringName
+	)
 	if _character.play_preview_action(action_name):
 		_set_mode_text("%s · %s · 专属透明武器层" % [
 			str(equipment.label),
 			"待机" if action_name == &"one_hand_melee_idle" else "攻击",
 		])
+
+
+func _play_selected_melee_attack() -> void:
+	var equipment: Dictionary = MELEE_EQUIPMENT[_melee_selector.selected]
+	_play_selected_melee_action(&"attack_melee")
+	_play_weapon_vfx(&"attack_melee", equipment.family)
 
 
 func _select_firearm_equipment(index: int) -> void:
@@ -216,6 +241,12 @@ func _play_selected_firearm_action(action_name: StringName) -> void:
 		])
 
 
+func _play_selected_firearm_attack() -> void:
+	var equipment: Dictionary = FIREARM_EQUIPMENT[_firearm_selector.selected]
+	_play_selected_firearm_action(&"pistol_shoot")
+	_play_weapon_vfx(&"pistol_shoot", equipment.family)
+
+
 func _select_staff_equipment(index: int) -> void:
 	if index >= 0 and index < STAFF_EQUIPMENT.size():
 		_play_selected_other_action(_staff_selector, STAFF_EQUIPMENT, &"spell_idle")
@@ -229,6 +260,18 @@ func _select_bow_equipment(index: int) -> void:
 func _select_shield_equipment(index: int) -> void:
 	if index >= 0 and index < SHIELD_EQUIPMENT.size():
 		_play_selected_other_action(_shield_selector, SHIELD_EQUIPMENT, &"shield_block")
+
+
+func _play_selected_staff_attack() -> void:
+	var equipment: Dictionary = STAFF_EQUIPMENT[_staff_selector.selected]
+	_play_selected_other_action(_staff_selector, STAFF_EQUIPMENT, &"spell_shoot")
+	_play_weapon_vfx(&"spell_shoot", equipment.family)
+
+
+func _play_selected_bow_attack() -> void:
+	var equipment: Dictionary = BOW_EQUIPMENT[_bow_selector.selected]
+	_play_selected_other_action(_bow_selector, BOW_EQUIPMENT, &"bow_release")
+	_play_weapon_vfx(&"bow_release", equipment.family)
 
 
 func _play_selected_other_action(
@@ -276,7 +319,42 @@ func _trigger_demo_attack() -> void:
 		return
 	var action_name := _character.selected_preview_attack()
 	if _character.play_preview_action(action_name):
+		_play_weapon_vfx(action_name, _selected_attack_family(action_name))
 		_show_action(action_name)
+
+
+func _selected_attack_family(action_name: StringName) -> StringName:
+	match action_name:
+		&"attack_melee":
+			return MELEE_EQUIPMENT[_melee_selector.selected].family
+		&"pistol_shoot":
+			return FIREARM_EQUIPMENT[_firearm_selector.selected].family
+		&"spell_shoot":
+			return STAFF_EQUIPMENT[_staff_selector.selected].family
+		&"bow_release":
+			return BOW_EQUIPMENT[_bow_selector.selected].family
+	return &"sword"
+
+
+func _play_weapon_vfx(action_name: StringName, family: StringName) -> void:
+	if not is_instance_valid(_weapon_vfx) or not is_instance_valid(_character):
+		return
+	var player := _character.get_parent() as Player
+	if player == null:
+		return
+	var direction := player.facing.normalized()
+	if direction.is_zero_approx():
+		direction = Vector2.RIGHT
+	var origin := player.global_position + Vector2(0.0, -30.0) + direction * 24.0
+	match action_name:
+		&"attack_melee":
+			_weapon_vfx.play_melee(player.global_position + Vector2(0.0, -22.0), direction, family)
+		&"pistol_shoot":
+			_weapon_vfx.play_ballistic(origin, direction, family)
+		&"spell_shoot":
+			_weapon_vfx.play_arcane(origin, direction, family)
+		&"bow_release":
+			_weapon_vfx.play_bow(origin, direction, family)
 
 
 func _reset_demo() -> void:

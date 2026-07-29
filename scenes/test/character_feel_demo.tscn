@@ -1,10 +1,11 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
 [ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
+[ext_resource type="Script" path="res://scripts/demo_weapon_vfx.gd" id="7_weapon_vfx"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -103,6 +104,9 @@ demo_weapon_slots = []
 demo_offhand_item = ""
 demo_charm_item = ""
 
+[node name="DemoWeaponVFX" type="Node2D" parent="."]
+script = ExtResource("7_weapon_vfx")
+
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="MobileControls" type="Control" parent="HUD" groups=["mobile_controls"]]
@@ -140,7 +144,7 @@ label_settings = SubResource("Title_settings")
 autowrap_mode = 2
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "同一正确角色 · 原始下载动作按原时长离线渲染 · 四方向纯 2D\n不读取正式游戏装备、道具、背包图标；移动仍可验证原走路"
+text = "同一正确角色 · 原始动作按原时长离线渲染 · 四方向纯 2D\n攻击按钮同步演示高清挥砍、弹道、箭矢与法杖魔法特效"
 label_settings = SubResource("Body_settings")
 autowrap_mode = 2
 
