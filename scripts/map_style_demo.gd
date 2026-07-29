@@ -13,6 +13,8 @@ const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 @onready var camera := $Player/Camera2D as Camera2D
 @onready var rendered_character := $Player/RenderedAtlasCharacter as RenderedAtlasCharacter
 @onready var weapon_vfx := $DemoWeaponVFX as DemoWeaponVFX
+@onready var left_room := $Rooms/LeftRoom as MapRoomModule
+@onready var right_room := $Rooms/RightRoom as MapRoomModule
 @onready var gate_collision := $WorldCollision/CentralGate/CollisionShape2D as CollisionShape2D
 @onready var gate_visual := $Foreground/CentralGateVisual as Polygon2D
 @onready var objective_label := $HUD/TopPanel/Margin/Rows/Objective as Label
@@ -37,6 +39,17 @@ func _ready() -> void:
 	_layout_hud()
 
 
+func _physics_process(_delta: float) -> void:
+	# Physics walls provide normal movement response. This final floor constraint
+	# guarantees that neither the player nor an enemy can ever enter painted void.
+	var active_room := left_room if _current_room == &"left" else right_room
+	_keep_actor_on_floor(player, active_room)
+	for enemy in get_tree().get_nodes_in_group(LEFT_ENCOUNTER):
+		_keep_actor_on_floor(enemy as Node2D, left_room)
+	for enemy in get_tree().get_nodes_in_group(ELITE_ENCOUNTER):
+		_keep_actor_on_floor(enemy as Node2D, right_room)
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key_event := event as InputEventKey
 	if key_event != null and key_event.pressed and not key_event.echo:
@@ -49,13 +62,14 @@ func _configure_player() -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 7.0
 	camera.limit_smoothed = true
-	_set_camera_room(LEFT_ROOM_BOUNDS, &"left")
+	_set_camera_room(left_room)
 	player.weapon_vfx = weapon_vfx
 	rendered_character.select_preview_family(&"crowbar")
 
 
-func _set_camera_room(bounds: Rect2, room_name: StringName) -> void:
-	_current_room = room_name
+func _set_camera_room(room: MapRoomModule) -> void:
+	var bounds := room.camera_bounds
+	_current_room = room.room_id
 	camera.limit_left = roundi(bounds.position.x)
 	camera.limit_top = roundi(bounds.position.y)
 	camera.limit_right = roundi(bounds.end.x)
@@ -63,35 +77,13 @@ func _set_camera_room(bounds: Rect2, room_name: StringName) -> void:
 
 
 func _build_collision() -> void:
-	# The demo art is enlarged without enlarging the player. Collision follows the
-	# visible floor edges with polygons so diagonal walls no longer feel passable.
-	var wall_polygons: Array[PackedVector2Array] = [
-		PackedVector2Array([
-			Vector2(-48, -48), Vector2(MAP_SIZE.x + 48, -48),
-			Vector2(MAP_SIZE.x + 48, 48), Vector2(-48, 48),
-		]),
-		PackedVector2Array([
-			Vector2(-48, MAP_SIZE.y - 48), Vector2(MAP_SIZE.x + 48, MAP_SIZE.y - 48),
-			Vector2(MAP_SIZE.x + 48, MAP_SIZE.y + 48), Vector2(-48, MAP_SIZE.y + 48),
-		]),
-		PackedVector2Array([
-			Vector2(-48, -48), Vector2(48, -48),
-			Vector2(48, MAP_SIZE.y + 48), Vector2(-48, MAP_SIZE.y + 48),
-		]),
-		PackedVector2Array([
-			Vector2(MAP_SIZE.x - 48, -48), Vector2(MAP_SIZE.x + 48, -48),
-			Vector2(MAP_SIZE.x + 48, MAP_SIZE.y + 48), Vector2(MAP_SIZE.x - 48, MAP_SIZE.y + 48),
-		]),
-		# The two voids taper toward the doorway instead of using rectangular blockers.
-		PackedVector2Array([
-			Vector2(1336, 0), Vector2(1788, 0), Vector2(1788, 590),
-			Vector2(1712, 650), Vector2(1336, 616),
-		]),
-		PackedVector2Array([
-			Vector2(1380, 1160), Vector2(1784, 1128), Vector2(1852, 1192),
-			Vector2(1852, MAP_SIZE.y), Vector2(1380, MAP_SIZE.y),
-		]),
-		# Solid props use clipped corners that match their oblique silhouettes.
+	# Each room owns a closed, hand-authored floor perimeter. Thick wall segments
+	# follow that perimeter, including every diagonal edge and branch corridor.
+	_add_room_boundary(left_room)
+	_add_room_boundary(right_room)
+	# Props already painted into the background also receive clipped footprint
+	# collision. New v3 props are independent MapRoomObstacle nodes.
+	var baked_prop_polygons: Array[PackedVector2Array] = [
 		_scaled_polygon([Vector2(430, 118), Vector2(494, 108), Vector2(504, 242), Vector2(442, 252)]),
 		_scaled_polygon([Vector2(258, 722), Vector2(340, 714), Vector2(356, 800), Vector2(276, 818)]),
 		_scaled_polygon([Vector2(90, 334), Vector2(180, 322), Vector2(202, 388), Vector2(112, 404)]),
@@ -99,8 +91,51 @@ func _build_collision() -> void:
 		_scaled_polygon([Vector2(1112, 688), Vector2(1212, 678), Vector2(1230, 750), Vector2(1124, 766)]),
 		_scaled_polygon([Vector2(1432, 620), Vector2(1508, 610), Vector2(1524, 692), Vector2(1446, 708)]),
 	]
-	for polygon in wall_polygons:
+	for polygon in baked_prop_polygons:
 		_add_static_polygon(polygon)
+
+
+func _add_room_boundary(room: MapRoomModule) -> void:
+	var outline := room.walkable_outline
+	for index in outline.size():
+		var start := room.to_global(outline[index])
+		var finish := room.to_global(outline[(index + 1) % outline.size()])
+		if _is_shared_doorway_edge(room.room_id, start, finish):
+			continue
+		_add_wall_segment(start, finish, 42.0, room.room_id)
+
+
+func _is_shared_doorway_edge(
+	room_id: StringName,
+	start: Vector2,
+	finish: Vector2,
+) -> bool:
+	if room_id == &"left":
+		return start.x >= 1800.0 and finish.x >= 1800.0
+	if room_id == &"right":
+		return start.x <= 1500.0 and finish.x <= 1500.0
+	return false
+
+
+func _add_wall_segment(
+	start: Vector2,
+	finish: Vector2,
+	thickness: float,
+	room_id: StringName,
+) -> void:
+	var delta := finish - start
+	var body := StaticBody2D.new()
+	body.name = "%sBoundary" % String(room_id).capitalize()
+	body.position = (start + finish) * 0.5
+	body.rotation = delta.angle()
+	body.set_meta(&"room_boundary", room_id)
+	var shape_node := CollisionShape2D.new()
+	shape_node.name = "BoundarySegment"
+	var rectangle := RectangleShape2D.new()
+	rectangle.size = Vector2(delta.length() + thickness, thickness)
+	shape_node.shape = rectangle
+	body.add_child(shape_node)
+	$WorldCollision.add_child(body)
 
 
 func _scaled_polygon(source: Array[Vector2]) -> PackedVector2Array:
@@ -116,6 +151,14 @@ func _add_static_polygon(polygon: PackedVector2Array) -> void:
 	shape_node.polygon = polygon
 	body.add_child(shape_node)
 	$WorldCollision.add_child(body)
+
+
+func _keep_actor_on_floor(actor: Node2D, room: MapRoomModule) -> void:
+	if actor == null or room.contains_world_point(actor.global_position):
+		return
+	actor.global_position = room.nearest_walkable_world_point(actor.global_position)
+	if actor is CharacterBody2D:
+		(actor as CharacterBody2D).velocity = Vector2.ZERO
 
 
 func _connect_areas() -> void:
@@ -137,14 +180,23 @@ func _connect_areas() -> void:
 
 
 func _spawn_left_encounter() -> void:
-	_spawn_patient(Vector2(650, 560), LEFT_ENCOUNTER, "游荡病患")
-	_spawn_patient(Vector2(1040, 930), LEFT_ENCOUNTER, "回声病患")
-	_spawn_patient(Vector2(590, 1320), LEFT_ENCOUNTER, "失序病患")
+	var spawns := left_room.get_spawn_points(&"EnemySpawns")
+	var labels := ["游荡病患", "回声病患", "失序病患"]
+	for index in mini(spawns.size(), labels.size()):
+		_spawn_patient(spawns[index].global_position, LEFT_ENCOUNTER, labels[index])
 
 
 func _spawn_elite_encounter() -> void:
-	_spawn_patient(Vector2(2220, 620), ELITE_ENCOUNTER, "精英 · 异常病患", 1.7)
-	_spawn_patient(Vector2(2580, 1160), ELITE_ENCOUNTER, "精英 · 值守残影", 1.9)
+	var spawns := right_room.get_spawn_points(&"EnemySpawns")
+	var labels := ["精英 · 异常病患", "精英 · 值守残影"]
+	var health_scales := [1.7, 1.9]
+	for index in mini(spawns.size(), labels.size()):
+		_spawn_patient(
+			spawns[index].global_position,
+			ELITE_ENCOUNTER,
+			labels[index],
+			health_scales[index],
+		)
 
 
 func _spawn_patient(
@@ -170,7 +222,7 @@ func _on_enemy_removed(_encounter_group: StringName) -> void:
 func _on_elite_room_entered(body: Node) -> void:
 	if body != player:
 		return
-	_set_camera_room(RIGHT_ROOM_BOUNDS, &"right")
+	_set_camera_room(right_room)
 	if _elite_started:
 		return
 	_elite_started = true
@@ -181,7 +233,7 @@ func _on_elite_room_entered(body: Node) -> void:
 
 func _on_left_room_entered(body: Node) -> void:
 	if body == player:
-		_set_camera_room(LEFT_ROOM_BOUNDS, &"left")
+		_set_camera_room(left_room)
 
 
 func _on_wall_fade_entered(body: Node, wall: CanvasItem) -> void:
@@ -202,8 +254,8 @@ func _update_encounter_state() -> void:
 	var left_remaining := get_tree().get_nodes_in_group(LEFT_ENCOUNTER).size()
 	var elite_remaining := get_tree().get_nodes_in_group(ELITE_ENCOUNTER).size()
 	if left_remaining > 0:
-		objective_label.text = "大房间战斗：探索空间并清除目标"
-		state_label.text = "中央闸门锁定 · 剩余 %d" % left_remaining
+		objective_label.text = "模块化战斗房：利用独立障碍物清除目标"
+		state_label.text = "精确地面边界生效 · 中央闸门锁定 · 剩余 %d" % left_remaining
 		return
 	if not gate_collision.disabled:
 		gate_collision.set_deferred("disabled", true)
