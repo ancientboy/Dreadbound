@@ -157,7 +157,7 @@ label_settings = SubResource("Body_settings")
 
 [node name="SkinSelector" type="OptionButton" parent="HUD/Panel/Margin/Text/SkinRow"]
 custom_minimum_size = Vector2(250, 0)
-tooltip_text = "材质样板与全部动作、四方向共享同一套帧位"
+tooltip_text = "切换原始动作图集与真正的四方向武装师分层骨骼皮肤"
 
 [node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "近战装备：统一剑类动作 / 每件装备使用原造型透明层"
