@@ -10,10 +10,11 @@ const SKIN_PRESETS := [
 		"renderer": &"atlas",
 	},
 	{
-		"id": &"base_armorer",
-		"label": "武装师 · 正式骨骼皮肤",
-		"renderer": &"skeleton",
-		"skeleton_skin": "base_armorer",
+		"id": &"armorer_demo_v1",
+		"label": "武装师 · Blender样板",
+		"renderer": &"atlas",
+		"atlas_directory": "res://assets/art/characters/rendered3d/armorer_demo_v1",
+		"direct_directions": true,
 	},
 ]
 const SOURCE_DIRECTIONS := {
@@ -532,9 +533,10 @@ func _build_sprite_frames() -> SpriteFrames:
 			var animation_name := _animation_name(logical_name, direction)
 			var source_name := _animation_name(
 				logical_name,
-				source_direction_for_animation(logical_name, direction),
+				_source_direction_for_active_skin(logical_name, direction),
 			)
-			var texture := ATLAS_TEXTURES[source_name] as Texture2D
+			var texture := _atlas_texture_for_active_skin(source_name)
+			assert(texture != null, "Missing character atlas: %s" % source_name)
 			var frame_count := int(ANIMATION_FRAMES[logical_name])
 			var columns := int(ANIMATION_COLUMNS[logical_name])
 			var rows := ceili(float(frame_count) / float(columns))
@@ -559,6 +561,31 @@ func _build_sprite_frames() -> SpriteFrames:
 				)
 				frames.add_frame(animation_name, frame_texture)
 	return frames
+
+
+func _active_skin_preset() -> Dictionary:
+	for preset in SKIN_PRESETS:
+		if preset["id"] == _active_skin_id:
+			return preset
+	return SKIN_PRESETS[0]
+
+
+func _source_direction_for_active_skin(
+	logical_name: StringName,
+	direction: StringName,
+) -> StringName:
+	var preset := _active_skin_preset()
+	if bool(preset.get("direct_directions", false)):
+		return direction
+	return source_direction_for_animation(logical_name, direction)
+
+
+func _atlas_texture_for_active_skin(source_name: StringName) -> Texture2D:
+	var preset := _active_skin_preset()
+	var directory := str(preset.get("atlas_directory", ""))
+	if directory.is_empty():
+		return ATLAS_TEXTURES[source_name] as Texture2D
+	return load("%s/%s.png" % [directory, source_name]) as Texture2D
 
 
 func _build_weapon_layer_frames() -> SpriteFrames:
@@ -763,7 +790,11 @@ func select_skin(skin_id: StringName) -> bool:
 	for preset in SKIN_PRESETS:
 		if preset["id"] == skin_id:
 			_active_skin_id = skin_id
+			if is_instance_valid(_sprite):
+				_sprite.sprite_frames = _build_sprite_frames()
 			_apply_skin_renderer()
+			_active_one_shot = &""
+			_play_locomotion()
 			return true
 	return false
 

@@ -52,8 +52,7 @@ func _run_test() -> void:
 	var humanoid := player.get_node_or_null(
 		"UniversalHumanoidActionCharacter"
 	) as UniversalHumanoidActionCharacter
-	assert(humanoid != null)
-	assert(not humanoid.is_action_library_enabled())
+	assert(humanoid == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/EquipmentButtons") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/OffhandButtons") == null)
 	assert(player.equipped_weapon_item.is_empty())
