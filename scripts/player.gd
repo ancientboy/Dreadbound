@@ -98,6 +98,7 @@ var _shot_end := Vector2.ZERO
 var _movement_echo_timer := 0.0
 var pathway_effects: PathwayEffects
 var combat_fx: CombatFX
+var weapon_vfx: DemoWeaponVFX
 var relic_profile := {}
 var equipped_weapon_item := ""
 var _relic_hit_counter := 0
@@ -122,6 +123,8 @@ func _ready() -> void:
 	add_child(pathway_effects)
 	combat_fx = CombatFX.new()
 	add_child(combat_fx)
+	if use_runtime_progress:
+		call_deferred("_setup_runtime_weapon_vfx")
 	health = max_health
 	health_changed.emit(health, max_health)
 	inventory_changed.emit(bandages, echo_shards)
@@ -988,6 +991,9 @@ func play_profession_skill(style_id: String) -> void:
 
 
 func _play_weapon_attack_vfx(attack_kind: String, reach: float, endpoint := Vector2.INF) -> void:
+	if is_instance_valid(weapon_vfx):
+		_play_shared_weapon_vfx(attack_kind, reach, endpoint)
+		return
 	if combat_fx == null:
 		return
 	var profile := _weapon_attack_profile()
@@ -1007,6 +1013,76 @@ func _play_weapon_attack_vfx(attack_kind: String, reach: float, endpoint := Vect
 			combat_fx.arcane_chain_styled(origin, resolved_end, effect_color)
 		_:
 			combat_fx.pistol_shot_styled(origin, resolved_end, effect_color, effect_color.lightened(0.28))
+
+
+func _setup_runtime_weapon_vfx() -> void:
+	if is_instance_valid(weapon_vfx) or not is_inside_tree():
+		return
+	var scene_root := get_parent()
+	if scene_root == null:
+		return
+	weapon_vfx = DemoWeaponVFX.new()
+	weapon_vfx.name = "PlayerWeaponVFX"
+	scene_root.add_child(weapon_vfx)
+	tree_exiting.connect(_release_runtime_weapon_vfx, CONNECT_ONE_SHOT)
+
+
+func _release_runtime_weapon_vfx() -> void:
+	if is_instance_valid(weapon_vfx):
+		weapon_vfx.queue_free()
+	weapon_vfx = null
+
+
+func _play_shared_weapon_vfx(
+	attack_kind: String,
+	reach: float,
+	endpoint: Vector2,
+) -> void:
+	var direction := facing.normalized()
+	if direction.is_zero_approx():
+		direction = Vector2.DOWN
+	var family := _weapon_vfx_family()
+	var origin := global_position + Vector2(0.0, -30.0) + direction * 24.0
+	var resolved_reach := reach
+	if endpoint != Vector2.INF:
+		direction = origin.direction_to(endpoint)
+		resolved_reach = maxf(origin.distance_to(endpoint), 24.0)
+	var profile_vfx := str(_weapon_attack_profile().get("vfx", ""))
+	if attack_kind == "melee":
+		weapon_vfx.play_melee(
+			global_position + Vector2(0.0, -22.0),
+			direction,
+			family,
+		)
+	elif profile_vfx == "bone_arrow":
+		weapon_vfx.play_bow(origin, direction, family, resolved_reach)
+	elif attack_kind == "arcane" or profile_vfx == "arcane_chain":
+		weapon_vfx.play_arcane(origin, direction, family, resolved_reach)
+	else:
+		weapon_vfx.play_ballistic(origin, direction, family, resolved_reach)
+
+
+func _weapon_vfx_family() -> StringName:
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	if equipped_weapon_item == "director_reaper":
+		var growth := state.get_relic_growth(equipped_weapon_item) if state != null else 0
+		if growth >= 5:
+			return &"director_reaper_final"
+		if growth >= 3:
+			return &"director_reaper_awakened"
+		return &"director_reaper"
+	if equipped_weapon_item == "conductor_railgun":
+		var growth := state.get_relic_growth(equipped_weapon_item) if state != null else 0
+		if growth >= 5:
+			return &"conductor_railgun_final"
+		if growth >= 3:
+			return &"conductor_railgun_awakened"
+		return &"conductor_railgun"
+	if equipped_weapon_item == "service_crowbar":
+		return &"crowbar"
+	if equipped_weapon_item.is_empty():
+		return &"sword"
+	return StringName(equipped_weapon_item)
 
 
 func _play_weapon_impact(position: Vector2, direction: Vector2, heavy: bool) -> void:
@@ -1257,6 +1333,13 @@ func _equipment_anchor(slot: StringName) -> Vector2:
 
 
 func _trial_owns_equipment_visuals() -> bool:
+	var rendered := get_node_or_null("RenderedAtlasCharacter")
+	if (
+		rendered != null
+		and rendered.has_method("owns_equipment_visuals")
+		and rendered.owns_equipment_visuals()
+	):
+		return true
 	var humanoid_actions := get_node_or_null("UniversalHumanoidActionCharacter")
 	if (
 		humanoid_actions != null

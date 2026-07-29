@@ -471,6 +471,7 @@ const WEAPON_LAYER_SPECS := {
 
 @export var ground_offset := Vector2(0.0, -12.0)
 @export var display_scale := Vector2.ONE
+@export var runtime_sync_enabled := true
 
 var _player: Player
 var _sprite: AnimatedSprite2D
@@ -482,6 +483,10 @@ var _preview_idle := &"idle"
 var _preview_attack := &"attack_melee"
 var _preview_weapon_family := &""
 var _active_skin_id := &"base_drifter"
+var _runtime_pathway := ""
+var _runtime_weapon_item := ""
+var _runtime_weapon_family := &""
+var _runtime_show_weapon_layer := true
 
 
 func _ready() -> void:
@@ -512,6 +517,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(_player) or not is_instance_valid(_sprite):
 		return
+	if runtime_sync_enabled:
+		_sync_runtime_presentation()
 	var attack_is_active := _player._attack_flash > 0.0
 	var hurt_is_active := _player._hurt_flash > 0.0
 	if _player._dead:
@@ -668,6 +675,7 @@ func _sync_weapon_layer() -> void:
 	_weapon_sprite.visible = (
 		WEAPON_LAYER_SPECS.has(_preview_weapon_family)
 		and has_weapon_animation
+		and (not runtime_sync_enabled or _runtime_show_weapon_layer)
 	)
 	if not _weapon_sprite.visible:
 		return
@@ -798,6 +806,89 @@ func play_preview_action(logical_name: StringName) -> bool:
 
 func selected_preview_attack() -> StringName:
 	return _preview_attack
+
+
+func owns_equipment_visuals() -> bool:
+	return true
+
+
+func runtime_weapon_family() -> StringName:
+	return _runtime_weapon_family
+
+
+func runtime_weapon_layer_visible() -> bool:
+	return (
+		runtime_sync_enabled
+		and _runtime_show_weapon_layer
+		and is_instance_valid(_weapon_sprite)
+		and _weapon_sprite.visible
+	)
+
+
+func _sync_runtime_presentation() -> void:
+	var state := get_node_or_null("/root/GameState") as GameProgress
+	var pathway := str(state.selected_pathway) if state != null else ""
+	var weapon_item := _player.equipped_weapon_item
+	var family := _runtime_family_for_weapon(weapon_item, state)
+	var desired_skin := _runtime_skin_for_pathway(pathway)
+	_runtime_show_weapon_layer = pathway.is_empty()
+	var presentation_changed := false
+	if pathway != _runtime_pathway:
+		_runtime_pathway = pathway
+		presentation_changed = true
+		if desired_skin != _active_skin_id:
+			select_skin(desired_skin)
+	if weapon_item != _runtime_weapon_item or family != _runtime_weapon_family:
+		_runtime_weapon_item = weapon_item
+		_runtime_weapon_family = family
+		presentation_changed = true
+		select_preview_family(family)
+	# Profession skins keep a natural unarmed idle because their equipment is
+	# intentionally invisible. The equipped weapon still selects the attack
+	# action and VFX, so combat rules and weapon identity remain intact.
+	if not pathway.is_empty() and _preview_idle != &"idle":
+		_preview_idle = &"idle"
+		if presentation_changed and _active_one_shot.is_empty():
+			_play_locomotion()
+
+
+func _runtime_skin_for_pathway(pathway: String) -> StringName:
+	match pathway:
+		"steadfast":
+			return &"steadfast_demo_v1"
+		"armorer":
+			return &"armorer_demo_v1"
+		"resonant":
+			return &"resonant_demo_v1"
+	return &"base_drifter"
+
+
+func _runtime_family_for_weapon(
+	weapon_item: String,
+	state: GameProgress,
+) -> StringName:
+	if weapon_item.is_empty():
+		return &"unarmed"
+	if weapon_item == "director_reaper":
+		var growth := state.get_relic_growth(weapon_item) if state != null else 0
+		if growth >= 5:
+			return &"director_reaper_final"
+		if growth >= 3:
+			return &"director_reaper_awakened"
+		return &"director_reaper"
+	if weapon_item == "conductor_railgun":
+		var growth := state.get_relic_growth(weapon_item) if state != null else 0
+		if growth >= 5:
+			return &"conductor_railgun_final"
+		if growth >= 3:
+			return &"conductor_railgun_awakened"
+		return &"conductor_railgun"
+	if weapon_item == "service_crowbar":
+		return &"crowbar"
+	var direct_family := StringName(weapon_item)
+	if WEAPON_LAYER_SPECS.has(direct_family):
+		return direct_family
+	return EquipmentDatabase.weapon_animation_family(weapon_item)
 
 
 func select_skin(skin_id: StringName) -> bool:

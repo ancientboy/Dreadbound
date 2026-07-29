@@ -1,8 +1,9 @@
 class_name DemoWeaponVFX
 extends Node2D
 
-## Demo-only scalable weapon effects. Most weapon geometry stays procedural.
-## Only signature melee gear uses authored HD textures with runtime motion.
+## Shared scalable weapon effects used by both the permanent action demo and
+## the formal player presentation. Most geometry stays procedural; only
+## signature melee gear uses authored HD textures with runtime motion.
 const MAX_EVENTS := 24
 const MELEE_VISUAL_SCALE := 0.78
 const MELEE_BACK_LAYER := 0
@@ -183,7 +184,12 @@ func play_melee(origin: Vector2, direction: Vector2, family: StringName) -> void
 	_kick_camera(float(profile.shake), minf(float(profile.duration) * 0.42, 0.18))
 
 
-func play_ballistic(origin: Vector2, direction: Vector2, family: StringName) -> void:
+func play_ballistic(
+	origin: Vector2,
+	direction: Vector2,
+	family: StringName,
+	reach := 300.0,
+) -> void:
 	var color := _family_color(family)
 	var effect_kind := &"ballistic"
 	if family in [&"breach_shotgun", &"siege_core"]:
@@ -194,25 +200,62 @@ func play_ballistic(origin: Vector2, direction: Vector2, family: StringName) -> 
 		&"conductor_railgun_final",
 	]:
 		effect_kind = &"rail"
-	_spawn(effect_kind, origin, direction.normalized(), 300.0, 0.16, 0.34, color, family)
+	_spawn(
+		effect_kind,
+		origin,
+		direction.normalized(),
+		maxf(reach, 24.0),
+		0.16,
+		0.34,
+		color,
+		family,
+	)
 	_last_effect = effect_kind
 	_last_family = family
 	_last_direction = direction.normalized()
 	_kick_camera(4.0 if effect_kind != &"ballistic" else 2.0, 0.13)
 
 
-func play_arcane(origin: Vector2, direction: Vector2, family: StringName) -> void:
+func play_arcane(
+	origin: Vector2,
+	direction: Vector2,
+	family: StringName,
+	reach := 260.0,
+) -> void:
 	var color := _family_color(family)
-	_spawn(&"arcane", origin, direction.normalized(), 260.0, 0.04, 0.62, color, family)
+	_spawn(
+		&"arcane",
+		origin,
+		direction.normalized(),
+		maxf(reach, 24.0),
+		0.04,
+		0.62,
+		color,
+		family,
+	)
 	_last_effect = &"arcane"
 	_last_family = family
 	_last_direction = direction.normalized()
 	_kick_camera(2.4, 0.16)
 
 
-func play_bow(origin: Vector2, direction: Vector2, family: StringName) -> void:
+func play_bow(
+	origin: Vector2,
+	direction: Vector2,
+	family: StringName,
+	reach := 320.0,
+) -> void:
 	var color := _family_color(family)
-	_spawn(&"bow", origin, direction.normalized(), 320.0, 0.04, 0.48, color, family)
+	_spawn(
+		&"bow",
+		origin,
+		direction.normalized(),
+		maxf(reach, 24.0),
+		0.04,
+		0.48,
+		color,
+		family,
+	)
 	_last_effect = &"bow"
 	_last_family = family
 	_last_direction = direction.normalized()

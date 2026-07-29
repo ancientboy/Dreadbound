@@ -104,6 +104,9 @@ demo_weapon_slots = []
 demo_offhand_item = ""
 demo_charm_item = ""
 
+[node name="RenderedAtlasCharacter" parent="Player" index="2"]
+runtime_sync_enabled = false
+
 [node name="DemoWeaponVFX" type="Node2D" parent="."]
 script = ExtResource("7_weapon_vfx")
 
@@ -300,3 +303,5 @@ theme_override_colors/font_pressed_color = Color(0.72, 1, 0.91, 1)
 theme_override_fonts/font = ExtResource("6_font")
 theme_override_font_sizes/font_size = 26
 text = "测试攻击"
+
+[editable path="Player"]
