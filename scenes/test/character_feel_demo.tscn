@@ -1,8 +1,9 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
+[ext_resource type="Script" path="res://scripts/universal_humanoid_action_character.gd" id="4_humanoid"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
 [ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
 
@@ -102,6 +103,14 @@ use_runtime_progress = false
 demo_weapon_slots = []
 demo_offhand_item = ""
 demo_charm_item = ""
+
+[node name="UniversalHumanoidActionCharacter" type="Node2D" parent="Player"]
+z_index = 4
+position = Vector2(0, 9)
+scale = Vector2(0.235, 0.235)
+script = ExtResource("4_humanoid")
+action_library_enabled = false
+skin_id = "base_armorer"
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
