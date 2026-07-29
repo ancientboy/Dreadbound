@@ -35,9 +35,10 @@ class WeaponSpec:
     atlas_path: Path
     cell_size: int
     atlas_index: int
+    source_grip: tuple[float, float]
+    source_muzzle: tuple[float, float]
     length_scale: float = 1.0
     width_scale: float = 1.0
-    grip_fraction: float = 0.24
     visibility_radius: int = 7
 
 
@@ -48,9 +49,10 @@ WEAPONS = (
         BASIC_ATLAS,
         32,
         1,
+        (12.5, 18.0),
+        (25.5, 4.0),
         1.02,
         1.0,
-        0.28,
         7,
     ),
     WeaponSpec(
@@ -59,9 +61,10 @@ WEAPONS = (
         BASIC_ATLAS,
         32,
         2,
+        (8.5, 23.0),
+        (25.0, 4.0),
         1.78,
         1.12,
-        0.20,
         9,
     ),
     WeaponSpec(
@@ -70,9 +73,10 @@ WEAPONS = (
         ADVANCED_ATLAS,
         64,
         2,
+        (22.0, 38.0),
+        (43.0, 17.0),
         1.10,
         1.05,
-        0.28,
         7,
     ),
     WeaponSpec(
@@ -81,9 +85,10 @@ WEAPONS = (
         ADVANCED_ATLAS,
         64,
         3,
+        (20.0, 39.0),
+        (46.0, 14.0),
         1.72,
         1.16,
-        0.22,
         9,
     ),
     WeaponSpec(
@@ -92,9 +97,10 @@ WEAPONS = (
         RAILGUN_ATLAS,
         64,
         0,
+        (13.0, 24.0),
+        (61.0, 13.0),
         1.72,
         1.08,
-        0.18,
         9,
     ),
     WeaponSpec(
@@ -103,9 +109,10 @@ WEAPONS = (
         RAILGUN_ATLAS,
         64,
         3,
+        (13.0, 24.0),
+        (61.0, 13.0),
         1.82,
         1.10,
-        0.18,
         9,
     ),
     WeaponSpec(
@@ -114,9 +121,10 @@ WEAPONS = (
         RAILGUN_ATLAS,
         64,
         5,
+        (13.0, 24.0),
+        (61.0, 13.0),
         1.92,
         1.14,
-        0.18,
         11,
     ),
 )
@@ -130,43 +138,63 @@ def _opaque_points(image: Image.Image) -> np.ndarray:
     return np.column_stack((xs, ys)).astype(float)
 
 
-def _basis(
+def _perpendicular_span(
+    points: np.ndarray,
+    origin: np.ndarray,
+    normal: np.ndarray,
+) -> float:
+    projections = (points - origin) @ normal
+    return max(2.0, float(projections.max() - projections.min()))
+
+
+def _source_basis(
     image: Image.Image,
-    grip_fraction: float,
-    prefer_right: bool,
+    spec: WeaponSpec,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     points = _opaque_points(image)
-    center = points.mean(axis=0)
-    _values, vectors = np.linalg.eigh(np.cov((points - center).T))
-    axis = vectors[:, 1]
-    if prefer_right and axis[0] < 0.0:
-        axis = -axis
-
-    projections = (points - center) @ axis
-    low = float(projections.min())
-    high = float(projections.max())
-    length = max(2.0, high - low)
-
+    grip = np.asarray(spec.source_grip, dtype=float)
+    muzzle = np.asarray(spec.source_muzzle, dtype=float)
+    muzzle_vector = muzzle - grip
+    length = max(2.0, float(np.linalg.norm(muzzle_vector)))
+    axis = muzzle_vector / length
     normal = np.array([-axis[1], axis[0]])
-    normal_projections = (points - center) @ normal
-    # The grip is the stronger branch away from the barrel. Keep the normal
-    # direction stable by pointing it toward the larger silhouette extent.
-    if abs(float(normal_projections.min())) > abs(float(normal_projections.max())):
-        normal = -normal
-        normal_projections = -normal_projections
-    width = max(2.0, float(normal_projections.max() - normal_projections.min()))
+    width = _perpendicular_span(points, grip, normal)
+    return grip, axis, normal, length, width
 
-    along = low + length * grip_fraction
-    band = np.abs(projections - along) <= max(1.5, length * 0.16)
-    band_points = points[band]
-    band_normals = normal_projections[band]
-    if len(band_points):
-        farthest = band_points[int(np.argmax(band_normals))]
-        # Anchor inside the wrapped grip, not at its exposed lower tip.
-        grip = center + axis * along
-        grip += normal * float(np.dot(farthest - grip, normal)) * 0.42
-    else:
-        grip = center + axis * along
+
+def _target_basis(
+    image: Image.Image,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    rgba = np.asarray(image.convert("RGBA"))
+    points = _opaque_points(image)
+
+    # The approved standard pistol uses a warm brown grip and blue-grey metal.
+    # Detecting the grip material gives the frame a semantic hand anchor.
+    # PCA alone cannot distinguish muzzle from stock and used to flip the gun
+    # by 180 degrees whenever a frame's silhouette changed slightly.
+    grip_mask = (
+        (rgba[:, :, 3] > 40)
+        & (rgba[:, :, 0] > rgba[:, :, 1] * 1.05)
+        & (rgba[:, :, 0] > rgba[:, :, 2] * 1.05)
+        & (rgba[:, :, 0] > 20)
+    )
+    grip_ys, grip_xs = np.where(grip_mask)
+    if len(grip_xs) == 0:
+        raise RuntimeError("Standard pistol frame has no visible grip marker")
+    grip = np.array(
+        [float(grip_xs.mean()), float(grip_ys.mean())],
+        dtype=float,
+    )
+
+    distances = np.linalg.norm(points - grip, axis=1)
+    farthest = float(distances.max())
+    muzzle_points = points[distances >= farthest * 0.84]
+    muzzle = muzzle_points.mean(axis=0)
+    muzzle_vector = muzzle - grip
+    length = max(2.0, float(np.linalg.norm(muzzle_vector)))
+    axis = muzzle_vector / length
+    normal = np.array([-axis[1], axis[0]])
+    width = _perpendicular_span(points, grip, normal)
     return grip, axis, normal, length, width
 
 
@@ -176,15 +204,11 @@ def _affine_weapon(
     body: Image.Image,
     spec: WeaponSpec,
 ) -> Image.Image:
-    source_grip, source_axis, source_normal, source_length, source_width = _basis(
-        icon,
-        spec.grip_fraction,
-        True,
+    source_grip, source_axis, source_normal, source_length, source_width = (
+        _source_basis(icon, spec)
     )
-    target_grip, target_axis, target_normal, target_length, target_width = _basis(
-        reference,
-        0.26,
-        False,
+    target_grip, target_axis, target_normal, target_length, target_width = (
+        _target_basis(reference)
     )
 
     along_scale = target_length * spec.length_scale / source_length
