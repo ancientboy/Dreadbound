@@ -293,12 +293,20 @@ def set_yaw(
     objects: list[bpy.types.Object],
     base_matrices: dict[str, Matrix],
     degrees: float,
+    heading_correction: float = 0.0,
 ) -> None:
-    radians = math.radians(degrees)
+    radians = math.radians(degrees) + heading_correction
     rotation = Matrix.Rotation(radians, 4, "Z")
     for obj in objects:
         if obj.parent is None:
             obj.matrix_world = rotation @ base_matrices[obj.name]
+
+
+def pelvis_heading(armature: bpy.types.Object) -> float:
+    """Return the horizontal UAL pelvis heading in armature space."""
+
+    facing = armature.pose.bones["pelvis"].matrix.to_3x3().col[0]
+    return math.atan2(facing.x, -facing.y)
 
 
 def pack_horizontal(frame_paths: list[Path], atlas_path: Path) -> None:
@@ -359,14 +367,31 @@ def render(preset: dict, armature: bpy.types.Object, roots: list[bpy.types.Objec
         end = int(spec.get("end", round(action.frame_range[1])))
         step = max(1, int(spec.get("step", 1)))
         frames = list(range(start, end + 1, step))
-        manifest["animations"][logical_name] = {"frames": len(frames), "loop": bool(spec.get("loop", False))}
+        stabilize_heading = bool(spec.get("stabilize_pelvis_heading", False))
+        scene.frame_set(frames[0])
+        reference_heading = pelvis_heading(armature) if stabilize_heading else 0.0
+        manifest["animations"][logical_name] = {
+            "frames": len(frames),
+            "loop": bool(spec.get("loop", False)),
+            "facing_stabilized": stabilize_heading,
+        }
         for direction, yaw in DIRECTIONS.items():
             paths = []
             frame_dir = temp / logical_name / direction
             frame_dir.mkdir(parents=True, exist_ok=True)
             for index, frame in enumerate(frames):
                 scene.frame_set(frame)
-                set_yaw(roots, base_matrices, front_offset + yaw)
+                heading_correction = (
+                    reference_heading - pelvis_heading(armature)
+                    if stabilize_heading
+                    else 0.0
+                )
+                set_yaw(
+                    roots,
+                    base_matrices,
+                    front_offset + yaw,
+                    heading_correction,
+                )
                 path = frame_dir / f"{index:03d}.png"
                 scene.render.filepath = str(path)
                 bpy.ops.render.render(write_still=True)

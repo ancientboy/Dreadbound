@@ -74,7 +74,12 @@ blender --background character_pipeline/dreadbound_weapon_actions.blend \
 
 The runtime copies the body sprite's animation, frame, and frame progress to
 the weapon layer every update. It never runs a second independent animation
-clock.
+clock. Both this exporter and the base-character preset stabilize the
+`Sword_Attack` pelvis heading against its first frame. This keeps the actor
+facing the selected side while preserving the original weight shift,
+upper-body motion, and arm swing. The body must still be rendered from the
+approved `Superhero_Male_FullBody` source; the embedded mannequin is only an
+occlusion reference and must never replace the published character layer.
 
 ## Direction and camera contract
 

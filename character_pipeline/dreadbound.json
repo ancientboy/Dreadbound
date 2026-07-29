@@ -24,7 +24,8 @@
     "attack_melee": {
       "candidates": ["Sword_Attack"],
       "loop": false,
-      "step": 2
+      "step": 2,
+      "stabilize_pelvis_heading": true
     },
     "hit": {
       "candidates": ["Hit_Chest"],

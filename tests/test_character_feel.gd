@@ -76,6 +76,20 @@ func _run_test() -> void:
 	assert(rendered.ground_offset == Vector2(0.0, -12.0))
 	assert(rendered_sprite.position == Vector2(0.0, -12.0))
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 64)
+	var body_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/characters/rendered3d/base_drifter/manifest.json"
+		)
+	)
+	var sword_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/weapons/character_layers/standard_melee_sword/manifest.json"
+		)
+	)
+	assert(body_manifest["animations"]["attack_melee"]["frames"] == 19)
+	assert(body_manifest["animations"]["attack_melee"]["facing_stabilized"])
+	assert(sword_manifest["animations"]["attack_melee"]["frames"] == 19)
+	assert(sword_manifest["animations"]["attack_melee"]["facing_stabilized"])
 	var idle_frame_0 := (
 		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
 	)

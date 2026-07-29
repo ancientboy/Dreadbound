@@ -255,6 +255,46 @@ def set_character_holdout(mannequin: bpy.types.Object, enabled: bool) -> None:
     mannequin.hide_render = False
 
 
+def sword_parts() -> list[bpy.types.Object]:
+    return list(
+        bpy.data.collections["Dreadbound Standard Melee Sword"].objects
+    )
+
+
+def set_sword_visibility(visible: bool) -> None:
+    for part in sword_parts():
+        part.hide_render = not visible
+
+
+def pelvis_heading(armature: bpy.types.Object) -> float:
+    """Return the actor heading encoded by the pelvis, in armature space.
+
+    Sword_Attack turns the pelvis roughly 70 degrees midway through the take.
+    That is useful in a free-camera 3D animation, but in a four-direction
+    sprite it crosses the side-view silhouette and makes the actor appear to
+    attack backwards.  Pelvis local X is the stable horizontal facing axis for
+    this UAL rig.
+    """
+
+    facing = armature.pose.bones["pelvis"].matrix.to_3x3().col[0]
+    return math.atan2(facing.x, -facing.y)
+
+
+def stabilized_world_matrix(
+    armature: bpy.types.Object,
+    base_matrix: Matrix,
+    direction_yaw: float,
+    reference_heading: float | None,
+) -> Matrix:
+    correction = 0.0
+    if reference_heading is not None:
+        correction = reference_heading - pelvis_heading(armature)
+    return (
+        Matrix.Rotation(math.radians(direction_yaw) + correction, 4, "Z")
+        @ base_matrix
+    )
+
+
 def set_reference_visibility() -> None:
     keep = {"Armature", "Mannequin", "Standard Melee Sword Root"}
     for obj in bpy.context.scene.objects:
@@ -290,7 +330,10 @@ def pack_horizontal(frame_paths: list[Path], atlas_path: Path) -> None:
         bpy.data.images.remove(image)
 
 
-def render(output: Path, preview_output: Path | None) -> dict:
+def render(
+    output: Path,
+    preview_output: Path | None,
+) -> dict:
     scene = bpy.context.scene
     armature = bpy.data.objects["Armature"]
     mannequin = bpy.data.objects["Mannequin"]
@@ -313,10 +356,17 @@ def render(output: Path, preview_output: Path | None) -> dict:
     for logical_name, spec in SWORD_ACTIONS.items():
         assign_action(armature, spec["source"])
         frames = list(range(spec["start"], spec["end"] + 1, spec["step"]))
+        scene.frame_set(frames[0])
+        reference_heading = (
+            pelvis_heading(armature)
+            if logical_name == "attack_melee"
+            else None
+        )
         manifest["animations"][logical_name] = {
             "frames": len(frames),
             "loop": spec["loop"],
             "source_action": spec["source"],
+            "facing_stabilized": reference_heading is not None,
         }
         for direction, yaw in DIRECTIONS.items():
             paths = []
@@ -324,10 +374,14 @@ def render(output: Path, preview_output: Path | None) -> dict:
             frame_dir.mkdir(parents=True, exist_ok=True)
             for index, frame in enumerate(frames):
                 scene.frame_set(frame)
-                armature.matrix_world = (
-                    Matrix.Rotation(math.radians(yaw), 4, "Z") @ base_armature_matrix
+                armature.matrix_world = stabilized_world_matrix(
+                    armature,
+                    base_armature_matrix,
+                    yaw,
+                    reference_heading,
                 )
                 set_character_holdout(mannequin, True)
+                set_sword_visibility(True)
                 path = frame_dir / f"{index:03d}.png"
                 scene.render.filepath = str(path)
                 bpy.ops.render.render(write_still=True)
@@ -345,22 +399,16 @@ def render(output: Path, preview_output: Path | None) -> dict:
                 Matrix.Rotation(math.radians(yaw), 4, "Z") @ base_armature_matrix
             )
             set_character_holdout(mannequin, False)
+            set_sword_visibility(True)
             path = preview_output / f"standard_sword_idle_{direction}.png"
             scene.render.filepath = str(path)
             bpy.ops.render.render(write_still=True)
-            sword_parts = [
-                obj
-                for obj in bpy.data.collections["Dreadbound Standard Melee Sword"].objects
-                if obj != sword
-            ]
-            for part in sword_parts:
-                part.hide_render = True
+            set_sword_visibility(False)
             scene.render.filepath = str(
                 preview_output / f"mannequin_idle_{direction}.png"
             )
             bpy.ops.render.render(write_still=True)
-            for part in sword_parts:
-                part.hide_render = False
+            set_sword_visibility(True)
     with (output / "manifest.json").open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, ensure_ascii=False, indent=2)
         handle.write("\n")

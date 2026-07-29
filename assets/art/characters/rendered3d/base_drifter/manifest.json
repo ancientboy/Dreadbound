@@ -27,7 +27,8 @@
     "attack_melee": {
       "frames": 19,
       "columns": 19,
-      "loop": false
+      "loop": false,
+      "facing_stabilized": true
     },
     "hit": {
       "frames": 5,

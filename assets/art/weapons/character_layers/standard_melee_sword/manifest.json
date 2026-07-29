@@ -18,12 +18,14 @@
     "one_hand_melee_idle": {
       "frames": 21,
       "loop": true,
-      "source_action": "Sword_Idle"
+      "source_action": "Sword_Idle",
+      "facing_stabilized": false
     },
     "attack_melee": {
       "frames": 19,
       "loop": false,
-      "source_action": "Sword_Attack"
+      "source_action": "Sword_Attack",
+      "facing_stabilized": true
     }
   }
 }
