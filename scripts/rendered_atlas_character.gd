@@ -3,6 +3,20 @@ extends Node2D
 
 const FRAME_SIZE := Vector2i(128, 128)
 const DIRECTIONS := [&"front", &"left", &"back", &"right"]
+const SKIN_PRESETS := [
+	{
+		"id": &"base_drifter",
+		"label": "原始角色",
+		"tint": Color.WHITE,
+	},
+	{
+		"id": &"armed_specialist_test",
+		"label": "武装师 · 材质样板",
+		# The first skin changes material only, preserving the exact silhouette,
+		# direction mapping, frame cadence and weapon grip of every action.
+		"tint": Color("8fc9c4"),
+	},
+]
 const SOURCE_DIRECTIONS := {
 	&"front": &"front",
 	&"left": &"right",
@@ -453,6 +467,7 @@ var _hurt_was_active := false
 var _preview_idle := &"idle"
 var _preview_attack := &"attack_melee"
 var _preview_weapon_family := &""
+var _active_skin_id := &"base_drifter"
 
 
 func _ready() -> void:
@@ -464,6 +479,7 @@ func _ready() -> void:
 	_sprite.scale = display_scale
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_sprite.sprite_frames = _build_sprite_frames()
+	_sprite.self_modulate = _skin_tint(_active_skin_id)
 	_sprite.animation_finished.connect(_on_animation_finished)
 	add_child(_sprite)
 	_weapon_sprite = AnimatedSprite2D.new()
@@ -738,6 +754,31 @@ func play_preview_action(logical_name: StringName) -> bool:
 
 func selected_preview_attack() -> StringName:
 	return _preview_attack
+
+
+func select_skin(skin_id: StringName) -> bool:
+	for preset in SKIN_PRESETS:
+		if preset["id"] == skin_id:
+			_active_skin_id = skin_id
+			if is_instance_valid(_sprite):
+				_sprite.self_modulate = preset["tint"] as Color
+			return true
+	return false
+
+
+func selected_skin() -> StringName:
+	return _active_skin_id
+
+
+static func skin_options() -> Array:
+	return SKIN_PRESETS.duplicate(true)
+
+
+static func _skin_tint(skin_id: StringName) -> Color:
+	for preset in SKIN_PRESETS:
+		if preset["id"] == skin_id:
+			return preset["tint"] as Color
+	return Color.WHITE
 
 
 static func direction_from_vector(value: Vector2) -> StringName:
