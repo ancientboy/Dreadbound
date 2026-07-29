@@ -29,7 +29,9 @@ const MELEE_EQUIPMENT := [
 	{"family": &"echo_edge", "label": "回响切割器"},
 	{"family": &"insulated_crowbar", "label": "绝缘撬棍"},
 	{"family": &"volatile_edge", "label": "失控回响刃"},
-	{"family": &"director_reaper", "label": "主任的缝合镰"},
+	{"family": &"director_reaper", "label": "主任的缝合镰 · 基础（0–2）"},
+	{"family": &"director_reaper_awakened", "label": "主任的缝合镰 · 觉醒（3–4）"},
+	{"family": &"director_reaper_final", "label": "主任的缝合镰 · 完全体（5）"},
 ]
 
 @onready var _character := get_node(

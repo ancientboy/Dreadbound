@@ -465,7 +465,7 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 120)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 136)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -559,6 +559,8 @@ func _run_test() -> void:
 		&"insulated_crowbar",
 		&"volatile_edge",
 		&"director_reaper",
+		&"director_reaper_awakened",
+		&"director_reaper_final",
 	]:
 		rendered.select_preview_family(melee_family)
 		assert(rendered.play_preview_action(&"one_hand_melee_idle"))
@@ -591,6 +593,26 @@ func _run_test() -> void:
 						"Transparent melee frame: %s[%d]"
 						% [melee_animation, frame_index],
 					)
+	var growth_base := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"director_reaper__one_hand_melee_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	var growth_awakened := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"director_reaper_awakened__one_hand_melee_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	var growth_final := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"director_reaper_final__one_hand_melee_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	assert(growth_base.get_image().get_data() != growth_awakened.get_image().get_data())
+	assert(growth_awakened.get_image().get_data() != growth_final.get_image().get_data())
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))

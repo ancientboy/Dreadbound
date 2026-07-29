@@ -50,13 +50,43 @@ class WeaponSpec:
     width_scale: float = 1.0
     grip_fraction: float = 0.12
     visibility_radius: int = 3
+    director_stage: int | None = None
 
 
 WEAPONS = (
     WeaponSpec("echo_edge", "echo_edge", 0, 0.98, 1.05, 0.10, 5),
     WeaponSpec("insulated_crowbar", "insulated_crowbar", 1, 1.04, 1.0, 0.16, 3),
     WeaponSpec("volatile_edge", "volatile_edge", 4, 1.02, 1.08, 0.11, 5),
-    WeaponSpec("director_reaper", "director_reaper", None, 1.22, 1.0, 0.15, 5),
+    WeaponSpec(
+        "director_reaper",
+        "director_reaper",
+        None,
+        1.22,
+        1.0,
+        0.15,
+        5,
+        0,
+    ),
+    WeaponSpec(
+        "director_reaper_awakened",
+        "director_reaper_awakened",
+        None,
+        1.22,
+        1.0,
+        0.15,
+        5,
+        3,
+    ),
+    WeaponSpec(
+        "director_reaper_final",
+        "director_reaper_final",
+        None,
+        1.22,
+        1.0,
+        0.15,
+        5,
+        5,
+    ),
 )
 
 
@@ -229,7 +259,11 @@ def _director_reaper_icon() -> Image.Image:
 def _load_icon(spec: WeaponSpec) -> Image.Image:
     if spec.atlas_index is None:
         if DIRECTOR_ATLAS.is_file():
-            return Image.open(DIRECTOR_ATLAS).convert("RGBA").crop((0, 0, 64, 64))
+            stage = 0 if spec.director_stage is None else spec.director_stage
+            left = stage * 64
+            return Image.open(DIRECTOR_ATLAS).convert("RGBA").crop(
+                (left, 0, left + 64, 64)
+            )
         return _director_reaper_icon()
     atlas = Image.open(ADVANCED_ATLAS).convert("RGBA")
     left = spec.atlas_index * 64

@@ -278,6 +278,16 @@ const WEAPON_LAYER_SPECS := {
 		"prefix": "director_reaper",
 		"animations": [&"one_hand_melee_idle", &"attack_melee"],
 	},
+	&"director_reaper_awakened": {
+		"directory": "res://assets/art/weapons/character_layers/director_reaper_awakened",
+		"prefix": "director_reaper_awakened",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
+	&"director_reaper_final": {
+		"directory": "res://assets/art/weapons/character_layers/director_reaper_final",
+		"prefix": "director_reaper_final",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
 	&"sword": {
 		"directory": "res://assets/art/weapons/character_layers/standard_melee_sword",
 		"prefix": "standard_sword",
@@ -529,7 +539,7 @@ func _on_animation_finished() -> void:
 
 func select_preview_family(family: StringName) -> void:
 	match family:
-		&"crowbar", &"echo_edge", &"insulated_crowbar", &"volatile_edge", &"director_reaper":
+		&"crowbar", &"echo_edge", &"insulated_crowbar", &"volatile_edge", &"director_reaper", &"director_reaper_awakened", &"director_reaper_final":
 			_preview_idle = &"one_hand_melee_idle"
 			_preview_attack = &"attack_melee"
 			_preview_weapon_family = family
