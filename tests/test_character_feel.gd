@@ -103,6 +103,32 @@ func _run_test() -> void:
 	assert(RenderedAtlasCharacter.direction_from_vector(Vector2.RIGHT) == &"right")
 	assert(RenderedAtlasCharacter.source_direction_for_logical(&"left") == &"right")
 	assert(RenderedAtlasCharacter.source_direction_for_logical(&"right") == &"left")
+	assert(
+		RenderedAtlasCharacter.source_direction_for_animation(&"walk", &"left")
+		== &"right"
+	)
+	for weapon_action in [
+		&"attack_melee",
+		&"one_hand_melee_idle",
+		&"pistol_idle",
+		&"pistol_aim_down",
+		&"pistol_aim",
+		&"pistol_aim_up",
+		&"pistol_shoot",
+		&"pistol_reload",
+		&"spell_enter",
+		&"spell_idle",
+		&"spell_shoot",
+		&"spell_exit",
+	]:
+		assert(
+			RenderedAtlasCharacter.source_direction_for_animation(weapon_action, &"left")
+			== &"left"
+		)
+		assert(
+			RenderedAtlasCharacter.source_direction_for_animation(weapon_action, &"right")
+			== &"right"
+		)
 	var walk_left_frame := (
 		rendered_sprite.sprite_frames.get_frame_texture(&"walk_left", 0) as AtlasTexture
 	)
@@ -117,6 +143,30 @@ func _run_test() -> void:
 		walk_right_frame.atlas
 		== load("res://assets/art/characters/rendered3d/base_drifter/walk_left.png")
 	)
+	for weapon_action in [
+		&"attack_melee",
+		&"one_hand_melee_idle",
+		&"pistol_idle",
+		&"pistol_shoot",
+		&"pistol_reload",
+		&"spell_enter",
+		&"spell_idle",
+		&"spell_shoot",
+		&"spell_exit",
+	]:
+		for side in [&"left", &"right"]:
+			var animation_name := StringName("%s_%s" % [weapon_action, side])
+			var action_frame := (
+				rendered_sprite.sprite_frames.get_frame_texture(animation_name, 0)
+				as AtlasTexture
+			)
+			assert(
+				action_frame.atlas
+				== load(
+					"res://assets/art/characters/rendered3d/base_drifter/%s.png"
+					% animation_name
+				)
+			)
 	var sword_left_frame := (
 		weapon_sprite.sprite_frames.get_frame_texture(
 			&"one_hand_melee_idle_left",

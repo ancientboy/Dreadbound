@@ -9,6 +9,20 @@ const SOURCE_DIRECTIONS := {
 	&"back": &"back",
 	&"right": &"left",
 }
+const DIRECT_SIDE_ACTIONS := {
+	&"attack_melee": true,
+	&"one_hand_melee_idle": true,
+	&"pistol_idle": true,
+	&"pistol_aim_down": true,
+	&"pistol_aim": true,
+	&"pistol_aim_up": true,
+	&"pistol_shoot": true,
+	&"pistol_reload": true,
+	&"spell_enter": true,
+	&"spell_idle": true,
+	&"spell_shoot": true,
+	&"spell_exit": true,
+}
 const ANIMATION_FRAMES := {
 	&"idle": 36,
 	&"walk": 17,
@@ -238,7 +252,7 @@ func _build_sprite_frames() -> SpriteFrames:
 			var animation_name := _animation_name(logical_name, direction)
 			var source_name := _animation_name(
 				logical_name,
-				source_direction_for_logical(direction),
+				source_direction_for_animation(logical_name, direction),
 			)
 			var texture := ATLAS_TEXTURES[source_name] as Texture2D
 			var frame_count := int(ANIMATION_FRAMES[logical_name])
@@ -389,6 +403,15 @@ static func direction_from_vector(value: Vector2) -> StringName:
 
 static func source_direction_for_logical(direction: StringName) -> StringName:
 	return SOURCE_DIRECTIONS.get(direction, direction) as StringName
+
+
+static func source_direction_for_animation(
+	logical_name: StringName,
+	direction: StringName,
+) -> StringName:
+	if DIRECT_SIDE_ACTIONS.has(logical_name):
+		return direction
+	return source_direction_for_logical(direction)
 
 
 static func _animation_name(logical_name: StringName, direction: StringName) -> StringName:
