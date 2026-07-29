@@ -309,6 +309,7 @@ var _hurt_was_active := false
 var _preview_idle := &"idle"
 var _preview_attack := &"attack_melee"
 var _preview_weapon_family := &""
+var _equipped_item_snapshot := "__uninitialized__"
 
 
 func _ready() -> void:
@@ -337,6 +338,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(_player) or not is_instance_valid(_sprite):
 		return
+	_sync_equipped_presentation()
 	var attack_is_active := _player._attack_flash > 0.0
 	var hurt_is_active := _player._hurt_flash > 0.0
 	if _player._dead:
@@ -492,6 +494,18 @@ func _on_animation_finished() -> void:
 		return
 	_active_one_shot = &""
 	_play_locomotion()
+
+
+func _sync_equipped_presentation() -> void:
+	# The demo owns its manual family selector. Formal game scenes bind the
+	# rendered character to the currently selected equipment slot.
+	if not _player.use_runtime_progress:
+		return
+	var item_id := _player.equipped_weapon_item
+	if item_id == _equipped_item_snapshot:
+		return
+	_equipped_item_snapshot = item_id
+	select_preview_family(EquipmentDatabase.weapon_animation_family(item_id))
 
 
 func select_preview_family(family: StringName) -> void:
