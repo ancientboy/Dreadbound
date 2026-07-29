@@ -131,7 +131,7 @@ theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 10
 
 [node name="Text" type="VBoxContainer" parent="HUD/Panel/Margin"]
-theme_override_constants/separation = 5
+theme_override_constants/separation = 3
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
@@ -170,9 +170,9 @@ text = "装备待机"
 [node name="CrowbarAttack" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
 text = "装备攻击"
 
-[node name="PistolLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "标准手枪（3D 模型 · hand_r 绑定 · 遮挡透明层）"
-label_settings = SubResource("Body_settings")
+[node name="FirearmEquipment" type="OptionButton" parent="HUD/Panel/Margin/Text"]
+custom_minimum_size = Vector2(250, 0)
+tooltip_text = "枪械装备：统一手枪动作 / 每件装备使用原造型透明层"
 
 [node name="PistolButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8

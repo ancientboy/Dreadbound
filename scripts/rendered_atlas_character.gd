@@ -288,6 +288,90 @@ const WEAPON_LAYER_SPECS := {
 		"prefix": "director_reaper_final",
 		"animations": [&"one_hand_melee_idle", &"attack_melee"],
 	},
+	&"balanced_pistol": {
+		"directory": "res://assets/art/weapons/character_layers/balanced_pistol",
+		"prefix": "balanced_pistol",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"breach_shotgun": {
+		"directory": "res://assets/art/weapons/character_layers/breach_shotgun",
+		"prefix": "breach_shotgun",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"nullpoint_sidearm": {
+		"directory": "res://assets/art/weapons/character_layers/nullpoint_sidearm",
+		"prefix": "nullpoint_sidearm",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"siege_core": {
+		"directory": "res://assets/art/weapons/character_layers/siege_core",
+		"prefix": "siege_core",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"conductor_railgun": {
+		"directory": "res://assets/art/weapons/character_layers/conductor_railgun",
+		"prefix": "conductor_railgun",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"conductor_railgun_awakened": {
+		"directory": "res://assets/art/weapons/character_layers/conductor_railgun_awakened",
+		"prefix": "conductor_railgun_awakened",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"conductor_railgun_final": {
+		"directory": "res://assets/art/weapons/character_layers/conductor_railgun_final",
+		"prefix": "conductor_railgun_final",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
 	&"sword": {
 		"directory": "res://assets/art/weapons/character_layers/standard_melee_sword",
 		"prefix": "standard_sword",
@@ -551,6 +635,10 @@ func select_preview_family(family: StringName) -> void:
 			_preview_idle = &"pistol_idle"
 			_preview_attack = &"pistol_shoot"
 			_preview_weapon_family = &"pistol"
+		&"balanced_pistol", &"breach_shotgun", &"nullpoint_sidearm", &"siege_core", &"conductor_railgun", &"conductor_railgun_awakened", &"conductor_railgun_final":
+			_preview_idle = &"pistol_idle"
+			_preview_attack = &"pistol_shoot"
+			_preview_weapon_family = family
 		&"staff":
 			_preview_idle = &"spell_idle"
 			_preview_attack = &"spell_shoot"
@@ -583,7 +671,13 @@ func play_preview_action(logical_name: StringName) -> bool:
 		if not family_animations.has(logical_name):
 			select_preview_family(&"sword")
 	elif String(logical_name).begins_with("pistol"):
-		select_preview_family(&"pistol")
+		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
+			_preview_weapon_family,
+			{},
+		)
+		var family_animations: Array = family_spec.get("animations", [])
+		if not family_animations.has(logical_name):
+			select_preview_family(&"pistol")
 	elif String(logical_name).begins_with("spell"):
 		select_preview_family(&"staff")
 	elif String(logical_name).begins_with("bow"):

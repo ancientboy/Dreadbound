@@ -345,6 +345,11 @@ func _run_test() -> void:
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Attack") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/CrowbarIdle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/CrowbarAttack") is Button)
+	var firearm_selector := (
+		instance.get_node("HUD/Panel/Margin/Text/FirearmEquipment")
+		as OptionButton
+	)
+	assert(firearm_selector.item_count == 8)
 	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Idle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/AimDown") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Aim") is Button)
@@ -465,7 +470,7 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 136)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 304)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -613,6 +618,83 @@ func _run_test() -> void:
 	)
 	assert(growth_base.get_image().get_data() != growth_awakened.get_image().get_data())
 	assert(growth_awakened.get_image().get_data() != growth_final.get_image().get_data())
+	var firearm_actions := [
+		&"pistol_idle",
+		&"pistol_aim_down",
+		&"pistol_aim",
+		&"pistol_aim_up",
+		&"pistol_shoot",
+		&"pistol_reload",
+	]
+	for firearm_family in [
+		&"balanced_pistol",
+		&"breach_shotgun",
+		&"nullpoint_sidearm",
+		&"siege_core",
+		&"conductor_railgun",
+		&"conductor_railgun_awakened",
+		&"conductor_railgun_final",
+	]:
+		rendered.select_preview_family(firearm_family)
+		assert(rendered.play_preview_action(&"pistol_idle"))
+		await process_frame
+		assert(
+			weapon_sprite.animation
+			== StringName("%s__pistol_idle_right" % firearm_family)
+		)
+		for firearm_action in firearm_actions:
+			for direction in [&"front", &"left", &"back", &"right"]:
+				var firearm_animation := StringName(
+					"%s__%s_%s"
+					% [firearm_family, firearm_action, direction]
+				)
+				assert(
+					weapon_sprite.sprite_frames.get_frame_count(
+						firearm_animation,
+					)
+					== int(RenderedAtlasCharacter.ANIMATION_FRAMES[firearm_action])
+				)
+				for frame_index in weapon_sprite.sprite_frames.get_frame_count(
+					firearm_animation,
+				):
+					var firearm_frame := (
+						weapon_sprite.sprite_frames.get_frame_texture(
+							firearm_animation,
+							frame_index,
+						) as AtlasTexture
+					)
+					assert(firearm_frame != null)
+					assert(
+						not firearm_frame.get_image().is_invisible(),
+						"Transparent firearm frame: %s[%d]"
+						% [firearm_animation, frame_index],
+					)
+	var railgun_base := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"conductor_railgun__pistol_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	var railgun_awakened := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"conductor_railgun_awakened__pistol_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	var railgun_final := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"conductor_railgun_final__pistol_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	assert(
+		railgun_base.get_image().get_data()
+		!= railgun_awakened.get_image().get_data()
+	)
+	assert(
+		railgun_awakened.get_image().get_data()
+		!= railgun_final.get_image().get_data()
+	)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))
@@ -631,5 +713,5 @@ func _run_test() -> void:
 	await process_frame
 	assert(rendered_sprite.animation == &"shield_bash_right")
 	assert(weapon_sprite.animation == &"shield_bash_right")
-	print("Character feel passed: synchronized per-item melee, pistol, staff, bow, and shield layers")
+	print("Character feel passed: synchronized per-item melee, firearm, staff, bow, and shield layers")
 	quit()

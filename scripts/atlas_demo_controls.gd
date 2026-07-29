@@ -34,11 +34,23 @@ const MELEE_EQUIPMENT := [
 	{"family": &"director_reaper_final", "label": "主任的缝合镰 · 完全体（5）"},
 ]
 
+const FIREARM_EQUIPMENT := [
+	{"family": &"pistol", "label": "标准手枪 · 动作参考"},
+	{"family": &"balanced_pistol", "label": "平衡手枪"},
+	{"family": &"breach_shotgun", "label": "破门霰弹枪"},
+	{"family": &"nullpoint_sidearm", "label": "零点标记枪"},
+	{"family": &"siege_core", "label": "围城火力核心"},
+	{"family": &"conductor_railgun", "label": "末班导轨枪 · 基础（0–2）"},
+	{"family": &"conductor_railgun_awakened", "label": "末班导轨枪 · 觉醒（3–4）"},
+	{"family": &"conductor_railgun_final", "label": "末班导轨枪 · 完全体（5）"},
+]
+
 @onready var _character := get_node(
 	"../../../../Player/RenderedAtlasCharacter",
 ) as RenderedAtlasCharacter
 @onready var _mode_label := $ModeLabel as Label
 @onready var _melee_selector := $MeleeEquipment as OptionButton
+@onready var _firearm_selector := $FirearmEquipment as OptionButton
 @onready var _demo_attack_button := $"../../../DemoAttackButton" as Button
 
 
@@ -46,6 +58,9 @@ func _ready() -> void:
 	for equipment in MELEE_EQUIPMENT:
 		_melee_selector.add_item(str(equipment.label))
 	_melee_selector.item_selected.connect(_select_melee_equipment)
+	for equipment in FIREARM_EQUIPMENT:
+		_firearm_selector.add_item(str(equipment.label))
+	_firearm_selector.item_selected.connect(_select_firearm_equipment)
 	_connect_action($SwordButtons/Idle, &"one_hand_melee_idle")
 	_connect_action($SwordButtons/Attack, &"attack_melee")
 	$SwordButtons/CrowbarIdle.pressed.connect(
@@ -54,12 +69,24 @@ func _ready() -> void:
 	$SwordButtons/CrowbarAttack.pressed.connect(
 		_play_selected_melee_action.bind(&"attack_melee"),
 	)
-	_connect_action($PistolButtons/Idle, &"pistol_idle")
-	_connect_action($PistolButtons/AimDown, &"pistol_aim_down")
-	_connect_action($PistolButtons/Aim, &"pistol_aim")
-	_connect_action($PistolButtons/AimUp, &"pistol_aim_up")
-	_connect_action($PistolButtons/Shoot, &"pistol_shoot")
-	_connect_action($PistolButtons/Reload, &"pistol_reload")
+	$PistolButtons/Idle.pressed.connect(
+		_play_selected_firearm_action.bind(&"pistol_idle"),
+	)
+	$PistolButtons/AimDown.pressed.connect(
+		_play_selected_firearm_action.bind(&"pistol_aim_down"),
+	)
+	$PistolButtons/Aim.pressed.connect(
+		_play_selected_firearm_action.bind(&"pistol_aim"),
+	)
+	$PistolButtons/AimUp.pressed.connect(
+		_play_selected_firearm_action.bind(&"pistol_aim_up"),
+	)
+	$PistolButtons/Shoot.pressed.connect(
+		_play_selected_firearm_action.bind(&"pistol_shoot"),
+	)
+	$PistolButtons/Reload.pressed.connect(
+		_play_selected_firearm_action.bind(&"pistol_reload"),
+	)
 	_connect_action($StaffButtons/Enter, &"spell_enter")
 	_connect_action($StaffButtons/Idle, &"spell_idle")
 	_connect_action($StaffButtons/Shoot, &"spell_shoot")
@@ -104,6 +131,24 @@ func _play_selected_melee_action(action_name: StringName) -> void:
 		_mode_label.text = "当前动作：%s · %s · 专属透明武器层" % [
 			str(equipment.label),
 			"待机" if action_name == &"one_hand_melee_idle" else "攻击",
+		]
+
+
+func _select_firearm_equipment(index: int) -> void:
+	if index < 0 or index >= FIREARM_EQUIPMENT.size():
+		return
+	_play_selected_firearm_action(&"pistol_idle")
+
+
+func _play_selected_firearm_action(action_name: StringName) -> void:
+	if not is_instance_valid(_character):
+		return
+	var equipment: Dictionary = FIREARM_EQUIPMENT[_firearm_selector.selected]
+	_character.select_preview_family(equipment.family)
+	if _character.play_preview_action(action_name):
+		_mode_label.text = "当前动作：%s · %s · 专属透明武器层" % [
+			str(equipment.label),
+			str(ACTION_LABELS.get(action_name, String(action_name))),
 		]
 
 
