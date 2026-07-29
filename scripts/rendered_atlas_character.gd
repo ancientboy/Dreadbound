@@ -22,6 +22,14 @@ const DIRECT_SIDE_ACTIONS := {
 	&"spell_idle": true,
 	&"spell_shoot": true,
 	&"spell_exit": true,
+	&"bow_idle": true,
+	&"bow_draw": true,
+	&"bow_aim": true,
+	&"bow_release": true,
+	&"shield_raise": true,
+	&"shield_block": true,
+	&"shield_hit": true,
+	&"shield_bash": true,
 }
 const ANIMATION_FRAMES := {
 	&"idle": 36,
@@ -40,6 +48,14 @@ const ANIMATION_FRAMES := {
 	&"spell_idle": 26,
 	&"spell_shoot": 7,
 	&"spell_exit": 6,
+	&"bow_idle": 48,
+	&"bow_draw": 41,
+	&"bow_aim": 56,
+	&"bow_release": 41,
+	&"shield_raise": 33,
+	&"shield_block": 33,
+	&"shield_hit": 33,
+	&"shield_bash": 33,
 }
 const ANIMATION_COLUMNS := {
 	&"idle": 18,
@@ -58,6 +74,14 @@ const ANIMATION_COLUMNS := {
 	&"spell_idle": 26,
 	&"spell_shoot": 7,
 	&"spell_exit": 6,
+	&"bow_idle": 28,
+	&"bow_draw": 28,
+	&"bow_aim": 28,
+	&"bow_release": 28,
+	&"shield_raise": 28,
+	&"shield_block": 28,
+	&"shield_hit": 28,
+	&"shield_bash": 28,
 }
 const ANIMATION_SPEEDS := {
 	&"idle": 12.0,
@@ -76,6 +100,14 @@ const ANIMATION_SPEEDS := {
 	&"spell_idle": 12.0,
 	&"spell_shoot": 12.0,
 	&"spell_exit": 12.0,
+	&"bow_idle": 30.0,
+	&"bow_draw": 30.0,
+	&"bow_aim": 30.0,
+	&"bow_release": 30.0,
+	&"shield_raise": 30.0,
+	&"shield_block": 30.0,
+	&"shield_hit": 30.0,
+	&"shield_bash": 30.0,
 }
 const LOOPING_ANIMATIONS := {
 	&"idle": true,
@@ -94,11 +126,21 @@ const LOOPING_ANIMATIONS := {
 	&"spell_idle": true,
 	&"spell_shoot": false,
 	&"spell_exit": false,
+	&"bow_idle": true,
+	&"bow_draw": false,
+	&"bow_aim": true,
+	&"bow_release": false,
+	&"shield_raise": false,
+	&"shield_block": true,
+	&"shield_hit": false,
+	&"shield_bash": false,
 }
 const HOLD_LAST_FRAME := {
 	&"pistol_aim_down": true,
 	&"pistol_aim": true,
 	&"pistol_aim_up": true,
+	&"bow_draw": true,
+	&"shield_raise": true,
 }
 const ATLAS_TEXTURES := {
 	&"idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/idle_front.png"),
@@ -165,6 +207,38 @@ const ATLAS_TEXTURES := {
 	&"spell_exit_left": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_left.png"),
 	&"spell_exit_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_back.png"),
 	&"spell_exit_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_right.png"),
+	&"bow_idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/bow_idle_front.png"),
+	&"bow_idle_left": preload("res://assets/art/characters/rendered3d/base_drifter/bow_idle_left.png"),
+	&"bow_idle_back": preload("res://assets/art/characters/rendered3d/base_drifter/bow_idle_back.png"),
+	&"bow_idle_right": preload("res://assets/art/characters/rendered3d/base_drifter/bow_idle_right.png"),
+	&"bow_draw_front": preload("res://assets/art/characters/rendered3d/base_drifter/bow_draw_front.png"),
+	&"bow_draw_left": preload("res://assets/art/characters/rendered3d/base_drifter/bow_draw_left.png"),
+	&"bow_draw_back": preload("res://assets/art/characters/rendered3d/base_drifter/bow_draw_back.png"),
+	&"bow_draw_right": preload("res://assets/art/characters/rendered3d/base_drifter/bow_draw_right.png"),
+	&"bow_aim_front": preload("res://assets/art/characters/rendered3d/base_drifter/bow_aim_front.png"),
+	&"bow_aim_left": preload("res://assets/art/characters/rendered3d/base_drifter/bow_aim_left.png"),
+	&"bow_aim_back": preload("res://assets/art/characters/rendered3d/base_drifter/bow_aim_back.png"),
+	&"bow_aim_right": preload("res://assets/art/characters/rendered3d/base_drifter/bow_aim_right.png"),
+	&"bow_release_front": preload("res://assets/art/characters/rendered3d/base_drifter/bow_release_front.png"),
+	&"bow_release_left": preload("res://assets/art/characters/rendered3d/base_drifter/bow_release_left.png"),
+	&"bow_release_back": preload("res://assets/art/characters/rendered3d/base_drifter/bow_release_back.png"),
+	&"bow_release_right": preload("res://assets/art/characters/rendered3d/base_drifter/bow_release_right.png"),
+	&"shield_raise_front": preload("res://assets/art/characters/rendered3d/base_drifter/shield_raise_front.png"),
+	&"shield_raise_left": preload("res://assets/art/characters/rendered3d/base_drifter/shield_raise_left.png"),
+	&"shield_raise_back": preload("res://assets/art/characters/rendered3d/base_drifter/shield_raise_back.png"),
+	&"shield_raise_right": preload("res://assets/art/characters/rendered3d/base_drifter/shield_raise_right.png"),
+	&"shield_block_front": preload("res://assets/art/characters/rendered3d/base_drifter/shield_block_front.png"),
+	&"shield_block_left": preload("res://assets/art/characters/rendered3d/base_drifter/shield_block_left.png"),
+	&"shield_block_back": preload("res://assets/art/characters/rendered3d/base_drifter/shield_block_back.png"),
+	&"shield_block_right": preload("res://assets/art/characters/rendered3d/base_drifter/shield_block_right.png"),
+	&"shield_hit_front": preload("res://assets/art/characters/rendered3d/base_drifter/shield_hit_front.png"),
+	&"shield_hit_left": preload("res://assets/art/characters/rendered3d/base_drifter/shield_hit_left.png"),
+	&"shield_hit_back": preload("res://assets/art/characters/rendered3d/base_drifter/shield_hit_back.png"),
+	&"shield_hit_right": preload("res://assets/art/characters/rendered3d/base_drifter/shield_hit_right.png"),
+	&"shield_bash_front": preload("res://assets/art/characters/rendered3d/base_drifter/shield_bash_front.png"),
+	&"shield_bash_left": preload("res://assets/art/characters/rendered3d/base_drifter/shield_bash_left.png"),
+	&"shield_bash_back": preload("res://assets/art/characters/rendered3d/base_drifter/shield_bash_back.png"),
+	&"shield_bash_right": preload("res://assets/art/characters/rendered3d/base_drifter/shield_bash_right.png"),
 }
 const WEAPON_LAYER_SPECS := {
 	&"sword": {
@@ -192,6 +266,21 @@ const WEAPON_LAYER_SPECS := {
 			&"spell_idle",
 			&"spell_shoot",
 			&"spell_exit",
+		],
+	},
+	&"bow": {
+		"directory": "res://assets/art/weapons/character_layers/standard_hunter_bow",
+		"prefix": "standard_bow",
+		"animations": [&"bow_idle", &"bow_draw", &"bow_aim", &"bow_release"],
+	},
+	&"shield": {
+		"directory": "res://assets/art/weapons/character_layers/standard_guard_shield",
+		"prefix": "standard_shield",
+		"animations": [
+			&"shield_raise",
+			&"shield_block",
+			&"shield_hit",
+			&"shield_bash",
 		],
 	},
 }
@@ -314,8 +403,13 @@ func _build_weapon_layer_frames() -> SpriteFrames:
 				var texture := load(texture_path) as Texture2D
 				assert(texture != null, "Missing weapon layer: %s" % texture_path)
 				var frame_count := int(ANIMATION_FRAMES[logical_name])
+				var columns := int(ANIMATION_COLUMNS[logical_name])
+				var rows := ceili(float(frame_count) / float(columns))
 				assert(
-					texture.get_size() == Vector2(FRAME_SIZE.x * frame_count, FRAME_SIZE.y),
+					texture.get_size() == Vector2(
+						FRAME_SIZE.x * columns,
+						FRAME_SIZE.y * rows,
+					),
 					"Weapon layer dimensions do not match: %s" % animation_name,
 				)
 				frames.add_animation(animation_name)
@@ -331,8 +425,8 @@ func _build_weapon_layer_frames() -> SpriteFrames:
 					var frame_texture := AtlasTexture.new()
 					frame_texture.atlas = texture
 					frame_texture.region = Rect2(
-						frame_index * FRAME_SIZE.x,
-						0,
+						(frame_index % columns) * FRAME_SIZE.x,
+						(frame_index / columns) * FRAME_SIZE.y,
 						FRAME_SIZE.x,
 						FRAME_SIZE.y,
 					)
@@ -396,6 +490,14 @@ func select_preview_family(family: StringName) -> void:
 			_preview_idle = &"spell_idle"
 			_preview_attack = &"spell_shoot"
 			_preview_weapon_family = &"staff"
+		&"bow":
+			_preview_idle = &"bow_idle"
+			_preview_attack = &"bow_release"
+			_preview_weapon_family = &"bow"
+		&"shield":
+			_preview_idle = &"shield_block"
+			_preview_attack = &"shield_bash"
+			_preview_weapon_family = &"shield"
 		_:
 			_preview_idle = &"idle"
 			_preview_attack = &"attack_melee"
@@ -413,6 +515,10 @@ func play_preview_action(logical_name: StringName) -> bool:
 		select_preview_family(&"pistol")
 	elif String(logical_name).begins_with("spell"):
 		select_preview_family(&"staff")
+	elif String(logical_name).begins_with("bow"):
+		select_preview_family(&"bow")
+	elif String(logical_name).begins_with("shield"):
+		select_preview_family(&"shield")
 	if bool(LOOPING_ANIMATIONS[logical_name]):
 		_preview_idle = logical_name
 		_active_one_shot = &""

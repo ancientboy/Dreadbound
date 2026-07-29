@@ -26,7 +26,7 @@ func _run_test() -> void:
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/EquipmentButtons") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/OffhandButtons") == null)
 	assert(rendered_sprite.position == Vector2(0.0, -12.0))
-	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 64)
+	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 96)
 
 	player.facing = Vector2.DOWN
 	player.velocity = Vector2.ZERO

@@ -1,7 +1,7 @@
 extends Node2D
 
 const PANEL_MAX_WIDTH := 540.0
-const PANEL_HEIGHT := 410.0
+const PANEL_HEIGHT := 530.0
 const PANEL_MARGIN := 18.0
 
 @onready var _player := $Player as Player

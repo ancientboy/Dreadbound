@@ -14,6 +14,14 @@ const ACTION_LABELS := {
 	&"spell_idle": "法杖待机",
 	&"spell_shoot": "法杖施法",
 	&"spell_exit": "退出法杖施法",
+	&"bow_idle": "持弓待机",
+	&"bow_draw": "搭箭拉弓",
+	&"bow_aim": "持续瞄准",
+	&"bow_release": "放箭收势",
+	&"shield_raise": "举盾",
+	&"shield_block": "持续格挡",
+	&"shield_hit": "格挡受击",
+	&"shield_bash": "盾击",
 }
 
 @onready var _character := get_node(
@@ -36,6 +44,14 @@ func _ready() -> void:
 	_connect_action($StaffButtons/Idle, &"spell_idle")
 	_connect_action($StaffButtons/Shoot, &"spell_shoot")
 	_connect_action($StaffButtons/Exit, &"spell_exit")
+	_connect_action($BowButtons/Idle, &"bow_idle")
+	_connect_action($BowButtons/Draw, &"bow_draw")
+	_connect_action($BowButtons/Aim, &"bow_aim")
+	_connect_action($BowButtons/Release, &"bow_release")
+	_connect_action($ShieldButtons/Raise, &"shield_raise")
+	_connect_action($ShieldButtons/Block, &"shield_block")
+	_connect_action($ShieldButtons/Hit, &"shield_hit")
+	_connect_action($ShieldButtons/Bash, &"shield_bash")
 	$BaselineButtons/Unarmed.pressed.connect(_select_unarmed)
 	$BaselineButtons/Hit.pressed.connect(_trigger_hit)
 	$BaselineButtons/Death.pressed.connect(_trigger_death)

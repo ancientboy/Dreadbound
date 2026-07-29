@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "weapon_id": "standard_hunter_bow",
+  "source": "KayKit Adventurers 2.0 FREE",
+  "license": "CC0-1.0",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 30,
+  "bone": "hand_l",
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "bow_idle": {
+      "frames": 48,
+      "columns": 28,
+      "loop": true,
+      "source_action": "KayKit_bow_idle",
+      "facing_stabilized": true
+    },
+    "bow_draw": {
+      "frames": 41,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_bow_draw",
+      "facing_stabilized": true
+    },
+    "bow_aim": {
+      "frames": 56,
+      "columns": 28,
+      "loop": true,
+      "source_action": "KayKit_bow_aim",
+      "facing_stabilized": true
+    },
+    "bow_release": {
+      "frames": 41,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_bow_release",
+      "facing_stabilized": true
+    }
+  }
+}

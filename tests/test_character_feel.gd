@@ -75,7 +75,7 @@ func _run_test() -> void:
 	assert(not weapon_sprite.visible)
 	assert(rendered.ground_offset == Vector2(0.0, -12.0))
 	assert(rendered_sprite.position == Vector2(0.0, -12.0))
-	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 64)
+	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 96)
 	var body_manifest: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string(
 			"res://assets/art/characters/rendered3d/base_drifter/manifest.json"
@@ -96,6 +96,16 @@ func _run_test() -> void:
 			"res://assets/art/weapons/character_layers/standard_echo_staff/manifest.json"
 		)
 	)
+	var bow_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/weapons/character_layers/standard_hunter_bow/manifest.json"
+		)
+	)
+	var shield_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/weapons/character_layers/standard_guard_shield/manifest.json"
+		)
+	)
 	assert(body_manifest["animations"]["attack_melee"]["frames"] == 19)
 	assert(body_manifest["animations"]["attack_melee"]["facing_stabilized"])
 	assert(sword_manifest["animations"]["attack_melee"]["frames"] == 19)
@@ -110,6 +120,16 @@ func _run_test() -> void:
 	assert(staff_manifest["animations"]["spell_idle"]["frames"] == 26)
 	assert(staff_manifest["animations"]["spell_shoot"]["frames"] == 7)
 	assert(staff_manifest["animations"]["spell_exit"]["frames"] == 6)
+	assert(bow_manifest["bone"] == "hand_l")
+	assert(bow_manifest["animations"]["bow_idle"]["frames"] == 48)
+	assert(bow_manifest["animations"]["bow_draw"]["frames"] == 41)
+	assert(bow_manifest["animations"]["bow_aim"]["frames"] == 56)
+	assert(bow_manifest["animations"]["bow_release"]["frames"] == 41)
+	assert(shield_manifest["bone"] == "hand_l")
+	assert(shield_manifest["animations"]["shield_raise"]["frames"] == 33)
+	assert(shield_manifest["animations"]["shield_block"]["frames"] == 33)
+	assert(shield_manifest["animations"]["shield_hit"]["frames"] == 33)
+	assert(shield_manifest["animations"]["shield_bash"]["frames"] == 33)
 	var idle_frame_0 := (
 		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
 	)
@@ -154,6 +174,14 @@ func _run_test() -> void:
 		&"spell_idle",
 		&"spell_shoot",
 		&"spell_exit",
+		&"bow_idle",
+		&"bow_draw",
+		&"bow_aim",
+		&"bow_release",
+		&"shield_raise",
+		&"shield_block",
+		&"shield_hit",
+		&"shield_bash",
 	]:
 		assert(
 			RenderedAtlasCharacter.source_direction_for_animation(weapon_action, &"left")
@@ -187,6 +215,14 @@ func _run_test() -> void:
 		&"spell_idle",
 		&"spell_shoot",
 		&"spell_exit",
+		&"bow_idle",
+		&"bow_draw",
+		&"bow_aim",
+		&"bow_release",
+		&"shield_raise",
+		&"shield_block",
+		&"shield_hit",
+		&"shield_bash",
 	]:
 		for side in [&"left", &"right"]:
 			var animation_name := StringName("%s_%s" % [weapon_action, side])
@@ -284,6 +320,14 @@ func _run_test() -> void:
 	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Idle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Shoot") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/StaffButtons/Exit") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BowButtons/Idle") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BowButtons/Draw") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BowButtons/Aim") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/BowButtons/Release") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ShieldButtons/Raise") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ShieldButtons/Block") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ShieldButtons/Hit") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/ShieldButtons/Bash") is Button)
 	var mobile_controls := instance.get_node("HUD/MobileControls") as MobileControls
 	assert(mobile_controls != null)
 	assert(mobile_controls.is_in_group("mobile_controls"))
@@ -293,7 +337,7 @@ func _run_test() -> void:
 	assert(demo_attack_button.text == "测试攻击")
 	var panel := instance.get_node("HUD/Panel") as PanelContainer
 	assert(panel.size.x <= 540.0)
-	assert(panel.size.y <= 410.0)
+	assert(panel.size.y <= 530.0)
 	assert(
 		panel.get_theme_font("font")
 		== load("res://assets/fonts/DreadboundChineseFull.otf")
@@ -378,7 +422,15 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_idle_front") == 26)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_shoot_front") == 7)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_exit_front") == 6)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 48)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"bow_idle_front") == 48)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"bow_draw_front") == 41)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"bow_aim_front") == 56)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"bow_release_front") == 41)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_raise_front") == 33)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
+	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 80)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -387,7 +439,31 @@ func _run_test() -> void:
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_idle_front") == 26)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_shoot_front") == 7)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_exit_front") == 6)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"bow_idle_front") == 48)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"bow_draw_front") == 41)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"bow_aim_front") == 56)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"bow_release_front") == 41)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_raise_front") == 33)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: synchronized sword, pistol, and staff layers")
+	assert(rendered.play_preview_action(&"bow_aim"))
+	await process_frame
+	assert(rendered_sprite.animation == &"bow_aim_right")
+	assert(weapon_sprite.animation == &"bow_aim_right")
+	assert(rendered.play_preview_action(&"bow_release"))
+	await process_frame
+	assert(rendered_sprite.animation == &"bow_release_right")
+	assert(weapon_sprite.animation == &"bow_release_right")
+	assert(rendered.play_preview_action(&"shield_block"))
+	await process_frame
+	assert(rendered_sprite.animation == &"shield_block_right")
+	assert(weapon_sprite.animation == &"shield_block_right")
+	assert(rendered.play_preview_action(&"shield_bash"))
+	await process_frame
+	assert(rendered_sprite.animation == &"shield_bash_right")
+	assert(weapon_sprite.animation == &"shield_bash_right")
+	print("Character feel passed: synchronized sword, pistol, staff, bow, and shield layers")
 	quit()

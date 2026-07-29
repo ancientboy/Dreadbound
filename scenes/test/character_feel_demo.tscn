@@ -120,7 +120,7 @@ movement_only = true
 offset_left = 18.0
 offset_top = 18.0
 offset_right = 558.0
-offset_bottom = 428.0
+offset_bottom = 548.0
 theme = SubResource("Demo_theme")
 theme_override_styles/panel = SubResource("Panel_style")
 
@@ -135,7 +135,7 @@ theme_override_constants/separation = 5
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "CHARACTER ACTION DEMO · ORIGINAL UAL MOTIONS"
+text = "CHARACTER ACTION DEMO · ORIGINAL CC0 MOTIONS"
 label_settings = SubResource("Title_settings")
 autowrap_mode = 2
 
@@ -204,6 +204,44 @@ text = "施法"
 
 [node name="Exit" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
 text = "退出施法"
+
+[node name="BowLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "猎弓（KayKit 原动作 · 左手弓 · 动态弓弦/箭 · 遮挡透明层）"
+label_settings = SubResource("Body_settings")
+
+[node name="BowButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Idle" type="Button" parent="HUD/Panel/Margin/Text/BowButtons"]
+text = "持弓待机"
+
+[node name="Draw" type="Button" parent="HUD/Panel/Margin/Text/BowButtons"]
+text = "拉弓"
+
+[node name="Aim" type="Button" parent="HUD/Panel/Margin/Text/BowButtons"]
+text = "瞄准"
+
+[node name="Release" type="Button" parent="HUD/Panel/Margin/Text/BowButtons"]
+text = "放箭"
+
+[node name="ShieldLabel" type="Label" parent="HUD/Panel/Margin/Text"]
+text = "守卫盾（KayKit 原动作 · 左手盾 · 四方向遮挡透明层）"
+label_settings = SubResource("Body_settings")
+
+[node name="ShieldButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="Raise" type="Button" parent="HUD/Panel/Margin/Text/ShieldButtons"]
+text = "举盾"
+
+[node name="Block" type="Button" parent="HUD/Panel/Margin/Text/ShieldButtons"]
+text = "格挡"
+
+[node name="Hit" type="Button" parent="HUD/Panel/Margin/Text/ShieldButtons"]
+text = "受击"
+
+[node name="Bash" type="Button" parent="HUD/Panel/Margin/Text/ShieldButtons"]
+text = "盾击"
 
 [node name="BaselineButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8

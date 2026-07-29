@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "weapon_id": "standard_guard_shield",
+  "source": "KayKit Adventurers 2.0 FREE",
+  "license": "CC0-1.0",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 30,
+  "bone": "hand_l",
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "shield_raise": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_shield_raise",
+      "facing_stabilized": true
+    },
+    "shield_block": {
+      "frames": 33,
+      "columns": 28,
+      "loop": true,
+      "source_action": "KayKit_shield_block",
+      "facing_stabilized": true
+    },
+    "shield_hit": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_shield_hit",
+      "facing_stabilized": true
+    },
+    "shield_bash": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_shield_bash",
+      "facing_stabilized": true
+    }
+  }
+}

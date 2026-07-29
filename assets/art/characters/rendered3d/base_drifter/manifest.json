@@ -94,6 +94,70 @@
       "frames": 6,
       "columns": 6,
       "loop": false
+    },
+    "bow_idle": {
+      "frames": 48,
+      "columns": 28,
+      "loop": true,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Ranged_Bow_Idle",
+      "facing_stabilized": true
+    },
+    "bow_draw": {
+      "frames": 41,
+      "columns": 28,
+      "loop": false,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Ranged_Bow_Draw",
+      "facing_stabilized": true
+    },
+    "bow_aim": {
+      "frames": 56,
+      "columns": 28,
+      "loop": true,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Ranged_Bow_Aiming_Idle",
+      "facing_stabilized": true
+    },
+    "bow_release": {
+      "frames": 41,
+      "columns": 28,
+      "loop": false,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Ranged_Bow_Release",
+      "facing_stabilized": true
+    },
+    "shield_raise": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Melee_Block",
+      "facing_stabilized": true
+    },
+    "shield_block": {
+      "frames": 33,
+      "columns": 28,
+      "loop": true,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Melee_Blocking",
+      "facing_stabilized": true
+    },
+    "shield_hit": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Melee_Block_Hit",
+      "facing_stabilized": true
+    },
+    "shield_bash": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source": "KayKit Character Animations 1.1",
+      "source_action": "Melee_Block_Attack",
+      "facing_stabilized": true
     }
   }
 }

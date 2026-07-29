@@ -98,6 +98,31 @@ The output directories are `standard_service_pistol` and
 `standard_echo_staff`. Their logical left/right filenames are already correct;
 do not apply the legacy base-character side swap to these weapon layers.
 
+## KayKit bow and shield actions
+
+Bow and shield use the CC0 **KayKit Character Animations 1.1** motion library
+and **KayKit Adventurers 2.0 FREE** equipment models. KayKit's mannequin is an
+offline motion source only: `retarget_kaykit_weapon_actions.py` transfers the
+downloaded bone motion onto the existing Quaternius-compatible armature, so
+the published character model, materials, scale and lighting never change.
+
+The retained source cadence is 30 FPS:
+
+- bow idle 48, draw 41, aim 56, release 41 frames;
+- shield raise, blocking, block hit and bash 33 frames each.
+
+`render_bow_shield_layers.py` renders the current Dreadbound character and a
+separate transparent equipment pass from the same pose and camera. The bow is
+held in the left hand, its string and arrow nock follow the right hand, and the
+shield follows the left-hand guard direction. Atlases use at most 28 columns,
+so every 128 px frame remains within a 4096 px Web texture limit without
+changing source frame order.
+
+The runtime directories are `standard_hunter_bow` and
+`standard_guard_shield`. As with other weapon actions, their logical
+left/right filenames are direct and must not inherit the legacy locomotion
+side swap.
+
 ## Direction and camera contract
 
 - One model, armature, material set and animation take is used for all views.

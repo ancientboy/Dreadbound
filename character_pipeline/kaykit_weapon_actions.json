@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "source": "KayKit Character Animations 1.1",
+  "license": "CC0-1.0",
+  "source_pages": {
+    "animations": "https://kaylousberg.itch.io/kaykit-character-animations",
+    "equipment": "https://kaylousberg.itch.io/kaykit-adventurers"
+  },
+  "archives": {
+    "KayKit_Character_Animations_1.1.zip": {
+      "sha256": "65882f31f905ad2e953819648a59287cdeab8f623908d5ef701971d3758be20f"
+    },
+    "KayKit_Adventurers_2.0_FREE.zip": {
+      "sha256": "abe48f4763fba0896bab486ee9e6d08ca6b5b3884b9601f235c8847ae94dc479"
+    }
+  },
+  "source_fps": 30,
+  "target_armature": "Armature",
+  "actions": {
+    "bow_idle": {
+      "source_action": "Ranged_Bow_Idle",
+      "target_action": "KayKit_bow_idle",
+      "frames": 48,
+      "loop": true,
+      "duration_seconds": 1.566667
+    },
+    "bow_draw": {
+      "source_action": "Ranged_Bow_Draw",
+      "target_action": "KayKit_bow_draw",
+      "frames": 41,
+      "loop": false,
+      "duration_seconds": 1.333333
+    },
+    "bow_aim": {
+      "source_action": "Ranged_Bow_Aiming_Idle",
+      "target_action": "KayKit_bow_aim",
+      "frames": 56,
+      "loop": true,
+      "duration_seconds": 1.833333
+    },
+    "bow_release": {
+      "source_action": "Ranged_Bow_Release",
+      "target_action": "KayKit_bow_release",
+      "frames": 41,
+      "loop": false,
+      "duration_seconds": 1.333333
+    },
+    "shield_raise": {
+      "source_action": "Melee_Block",
+      "target_action": "KayKit_shield_raise",
+      "frames": 33,
+      "loop": false,
+      "duration_seconds": 1.066667
+    },
+    "shield_block": {
+      "source_action": "Melee_Blocking",
+      "target_action": "KayKit_shield_block",
+      "frames": 33,
+      "loop": true,
+      "duration_seconds": 1.066667
+    },
+    "shield_hit": {
+      "source_action": "Melee_Block_Hit",
+      "target_action": "KayKit_shield_hit",
+      "frames": 33,
+      "loop": false,
+      "duration_seconds": 1.066667
+    },
+    "shield_bash": {
+      "source_action": "Melee_Block_Attack",
+      "target_action": "KayKit_shield_bash",
+      "frames": 33,
+      "loop": false,
+      "duration_seconds": 1.066667
+    }
+  }
+}
