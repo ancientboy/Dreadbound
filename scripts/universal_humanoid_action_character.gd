@@ -33,6 +33,32 @@ const PART_JOINTS := {
 	"coat_far": ["left_hip", "left_knee"],
 	"coat_near": ["right_hip", "right_knee"],
 }
+const PREVIEW_ACTION_MAP := {
+	&"idle": "idle",
+	&"walk": "walk",
+	&"attack_melee": "one_hand_melee_attack",
+	&"hit": "hit_chest",
+	&"death": "death",
+	&"one_hand_melee_idle": "one_hand_melee_idle",
+	&"pistol_idle": "pistol_idle",
+	&"pistol_aim_down": "pistol_aim_down",
+	&"pistol_aim": "pistol_aim",
+	&"pistol_aim_up": "pistol_aim_up",
+	&"pistol_shoot": "pistol_shoot",
+	&"pistol_reload": "pistol_reload",
+	&"spell_enter": "spell_enter",
+	&"spell_idle": "spell_idle",
+	&"spell_shoot": "spell_shoot",
+	&"spell_exit": "spell_exit",
+	&"bow_idle": "bow_idle",
+	&"bow_draw": "bow_draw",
+	&"bow_aim": "bow_draw",
+	&"bow_release": "bow_release",
+	&"shield_raise": "shield_idle",
+	&"shield_block": "shield_block",
+	&"shield_hit": "shield_impact",
+	&"shield_bash": "shield_impact",
+}
 
 @export var action_library_enabled := false
 @export var skin_id := "base_armorer"
@@ -52,6 +78,8 @@ var _attack_was_active := false
 var _current_action := "idle"
 var _current_direction := "front"
 var _current_joints := {}
+var _preview_action := ""
+var _preview_elapsed := 0.0
 
 
 func _ready() -> void:
@@ -70,6 +98,7 @@ func _process(delta: float) -> void:
 	if not action_library_enabled or _library.is_empty() or _rig.is_empty():
 		return
 	_elapsed += delta
+	_preview_elapsed += delta
 	var attacking := _player._attack_flash > 0.0
 	if attacking and not _attack_was_active:
 		_attack_elapsed = 0.0
@@ -77,7 +106,13 @@ func _process(delta: float) -> void:
 		_attack_elapsed += delta
 	_attack_was_active = attacking
 	_current_direction = String(RenderedAtlasCharacter.direction_from_vector(_player.facing))
-	_current_action = _select_action(attacking)
+	if _player.velocity.length() > 2.0 and _preview_action not in ["", "walk"]:
+		_preview_action = ""
+	_current_action = (
+		_preview_action
+		if not _preview_action.is_empty()
+		else _select_action(attacking)
+	)
 	var frame := _sample_action(_current_action, _current_direction)
 	if not frame.is_empty():
 		_current_joints = _retarget_frame(frame)
@@ -90,7 +125,9 @@ func set_action_library_enabled(enabled: bool) -> void:
 	action_library_enabled = enabled
 	visible = enabled
 	if is_instance_valid(_base_character):
-		_base_character.visible = not enabled
+		_base_character.set_body_layer_visible(not enabled)
+	if not enabled:
+		_preview_action = ""
 	if is_instance_valid(_martial_trial):
 		_martial_trial.set_trial_enabled(not enabled)
 	if is_instance_valid(_player):
@@ -111,6 +148,15 @@ func current_skin_id() -> String:
 
 func current_action_name() -> String:
 	return _current_action
+
+
+func play_preview_action(logical_name: StringName) -> bool:
+	var mapped_action := str(PREVIEW_ACTION_MAP.get(logical_name, ""))
+	if mapped_action.is_empty():
+		return false
+	_preview_action = mapped_action
+	_preview_elapsed = 0.0
+	return true
 
 
 func set_skin(next_skin_id: String) -> bool:
@@ -217,7 +263,11 @@ func _sample_action(action_name: String, direction: String) -> Dictionary:
 	if direction_frames.is_empty():
 		return {}
 	var looped := bool(action.get("loop", false))
-	var time := _elapsed if looped else (_attack_elapsed if _attack_was_active else 0.0)
+	var time := (
+		_preview_elapsed
+		if action_name == _preview_action
+		else (_elapsed if looped else (_attack_elapsed if _attack_was_active else 0.0))
+	)
 	var frame_index := int(floor(time * playback_fps))
 	frame_index = frame_index % direction_frames.size() if looped else mini(
 		frame_index,
