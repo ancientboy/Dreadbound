@@ -76,9 +76,14 @@ func _run_test() -> void:
 	var player := instance.get_node("Player") as Player
 	var camera := player.get_node("Camera2D") as PlayerFeelCamera
 	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
+	var humanoid := player.get_node(
+		"UniversalHumanoidActionCharacter"
+	) as UniversalHumanoidActionCharacter
 	assert(player != null)
 	assert(camera != null)
 	assert(rendered != null)
+	assert(humanoid != null)
+	assert(not humanoid.is_action_library_enabled())
 	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
 	assert(camera.position_smoothing_enabled)
 	assert(player.movement_speed == 210.0)
@@ -395,8 +400,16 @@ func _run_test() -> void:
 	skin_selector.select(1)
 	skin_selector.item_selected.emit(1)
 	await process_frame
-	assert(rendered.selected_skin() == &"armed_specialist_test")
-	assert(rendered_sprite.self_modulate == Color("8fc9c4"))
+	assert(rendered.selected_skin() == &"base_armorer")
+	assert(rendered_sprite.self_modulate == Color.WHITE)
+	assert(not rendered_sprite.visible)
+	assert(humanoid.is_action_library_enabled())
+	assert(humanoid.current_skin_id() == "base_armorer")
+	assert(
+		(humanoid.get_node("Torso") as Sprite2D).texture.resource_path.contains(
+			"/base_armorer/"
+		)
+	)
 	assert(weapon_sprite.self_modulate == Color.WHITE)
 
 	player.velocity = Vector2(player.movement_speed, 0.0)
@@ -417,8 +430,10 @@ func _run_test() -> void:
 	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_shoot_right")
-	assert(rendered.selected_skin() == &"armed_specialist_test")
-	assert(rendered_sprite.self_modulate == Color("8fc9c4"))
+	assert(rendered.selected_skin() == &"base_armorer")
+	assert(rendered_sprite.self_modulate == Color.WHITE)
+	assert(humanoid.is_action_library_enabled())
+	assert(humanoid.current_action_name() == "pistol_shoot")
 	assert(weapon_sprite.visible)
 	assert(weapon_sprite.animation == &"pistol_shoot_right")
 	assert(weapon_sprite.frame == rendered_sprite.frame)
