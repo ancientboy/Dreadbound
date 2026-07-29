@@ -790,7 +790,7 @@ func _apply_skin_renderer() -> void:
 		if option["id"] == _active_skin_id:
 			preset = option
 			break
-	var use_skeleton := preset.get("renderer", &"atlas") == &"skeleton"
+	var use_skeleton: bool = preset.get("renderer", &"atlas") == &"skeleton"
 	var skeleton := _skeleton_character()
 	if skeleton != null:
 		if use_skeleton:
