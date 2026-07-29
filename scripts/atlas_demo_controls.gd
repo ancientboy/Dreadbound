@@ -64,6 +64,7 @@ const SHIELD_EQUIPMENT := [
 	"../../../../Player/RenderedAtlasCharacter",
 ) as RenderedAtlasCharacter
 @onready var _mode_label := $ModeLabel as Label
+@onready var _skin_selector := $SkinRow/SkinSelector as OptionButton
 @onready var _melee_selector := $MeleeEquipment as OptionButton
 @onready var _firearm_selector := $FirearmEquipment as OptionButton
 @onready var _staff_selector := $StaffEquipment as OptionButton
@@ -73,6 +74,9 @@ const SHIELD_EQUIPMENT := [
 
 
 func _ready() -> void:
+	for skin in RenderedAtlasCharacter.skin_options():
+		_skin_selector.add_item(str(skin["label"]))
+	_skin_selector.item_selected.connect(_select_skin)
 	for equipment in MELEE_EQUIPMENT:
 		_melee_selector.add_item(str(equipment.label))
 	_melee_selector.item_selected.connect(_select_melee_equipment)
@@ -158,6 +162,15 @@ func _ready() -> void:
 	_show_action(&"idle")
 
 
+func _select_skin(index: int) -> void:
+	var skins := RenderedAtlasCharacter.skin_options()
+	if index < 0 or index >= skins.size():
+		return
+	var skin := skins[index] as Dictionary
+	if is_instance_valid(_character) and _character.select_skin(skin["id"] as StringName):
+		_set_mode_text("材质样板已同步到当前动作与四方向")
+
+
 func _connect_action(button: Button, action_name: StringName) -> void:
 	button.pressed.connect(_play_action.bind(action_name))
 
@@ -179,10 +192,10 @@ func _play_selected_melee_action(action_name: StringName) -> void:
 	var equipment: Dictionary = MELEE_EQUIPMENT[_melee_selector.selected]
 	_character.select_preview_family(equipment.family)
 	if _character.play_preview_action(action_name):
-		_mode_label.text = "当前动作：%s · %s · 专属透明武器层" % [
+		_set_mode_text("%s · %s · 专属透明武器层" % [
 			str(equipment.label),
 			"待机" if action_name == &"one_hand_melee_idle" else "攻击",
-		]
+		])
 
 
 func _select_firearm_equipment(index: int) -> void:
@@ -197,10 +210,10 @@ func _play_selected_firearm_action(action_name: StringName) -> void:
 	var equipment: Dictionary = FIREARM_EQUIPMENT[_firearm_selector.selected]
 	_character.select_preview_family(equipment.family)
 	if _character.play_preview_action(action_name):
-		_mode_label.text = "当前动作：%s · %s · 专属透明武器层" % [
+		_set_mode_text("%s · %s · 专属透明武器层" % [
 			str(equipment.label),
 			str(ACTION_LABELS.get(action_name, String(action_name))),
-		]
+		])
 
 
 func _select_staff_equipment(index: int) -> void:
@@ -228,10 +241,10 @@ func _play_selected_other_action(
 	var equipment: Dictionary = equipment_list[selector.selected]
 	_character.select_preview_family(equipment.family)
 	if _character.play_preview_action(action_name):
-		_mode_label.text = "当前动作：%s · %s · 专属透明装备层" % [
+		_set_mode_text("%s · %s · 专属透明装备层" % [
 			str(equipment.label),
 			str(ACTION_LABELS.get(action_name, String(action_name))),
-		]
+		])
 
 
 func _select_unarmed() -> void:
@@ -272,4 +285,13 @@ func _reset_demo() -> void:
 
 func _show_action(action_name: StringName) -> void:
 	var label := str(ACTION_LABELS.get(action_name, String(action_name)))
-	_mode_label.text = "当前动作：%s · 原始动作帧序列" % label
+	_set_mode_text("%s · 原始动作帧序列" % label)
+
+
+func _set_mode_text(details: String) -> void:
+	var skin_label := "原始角色"
+	for skin in RenderedAtlasCharacter.skin_options():
+		if skin["id"] == _character.selected_skin():
+			skin_label = str(skin["label"])
+			break
+	_mode_label.text = "当前皮肤：%s · 当前动作：%s" % [skin_label, details]
