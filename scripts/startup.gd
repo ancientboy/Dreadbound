@@ -10,6 +10,7 @@ var world_grid: GridContainer
 var primary_button: Button
 var profile_button: Button
 var demo_button: Button
+var map_demo_button: Button
 var settings_button: Button
 var audio_settings: PanelContainer
 
@@ -163,6 +164,19 @@ func _build_home() -> void:
 	demo_button.add_theme_stylebox_override("pressed", _button_style(Color("151109"), Color("96783e")))
 	demo_button.pressed.connect(_open_character_feel_demo)
 	actions.add_child(demo_button)
+	map_demo_button = Button.new()
+	map_demo_button.name = "OpenMapStyleDemo"
+	map_demo_button.text = "新地图 Demo"
+	map_demo_button.tooltip_text = "体验伪2.5D连通房间、战斗闸门、前景遮挡与路线分支"
+	map_demo_button.custom_minimum_size = Vector2(200, 64)
+	map_demo_button.add_theme_font_size_override("font_size", 17)
+	map_demo_button.add_theme_color_override("font_color", Color("b9ece1"))
+	map_demo_button.add_theme_color_override("font_hover_color", Color("e7fff9"))
+	map_demo_button.add_theme_stylebox_override("normal", _button_style(Color("0b201f"), Color("39786f")))
+	map_demo_button.add_theme_stylebox_override("hover", _button_style(Color("123632"), Color("61b9aa")))
+	map_demo_button.add_theme_stylebox_override("pressed", _button_style(Color("081715"), Color("4a9588")))
+	map_demo_button.pressed.connect(_open_map_style_demo)
+	actions.add_child(map_demo_button)
 
 	var loop := Label.new()
 	loop.text = "选择整备  →  投送副本  →  探索与抉择  →  撤离结算  →  装备进化与世界变化"
@@ -282,9 +296,11 @@ func _apply_responsive_ui() -> void:
 	primary_button.custom_minimum_size.x = 0 if compact else 360
 	profile_button.custom_minimum_size.x = 0 if compact else 260
 	demo_button.custom_minimum_size.x = 0 if compact else 220
+	map_demo_button.custom_minimum_size.x = 0 if compact else 200
 	primary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	profile_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	demo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_demo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.custom_minimum_size.x = 0
 	queue_redraw()
 
@@ -366,3 +382,7 @@ func _open_profiles() -> void:
 
 func _open_character_feel_demo() -> void:
 	get_tree().change_scene_to_file("res://scenes/test/character_feel_demo.tscn")
+
+
+func _open_map_style_demo() -> void:
+	get_tree().change_scene_to_file("res://scenes/test/map_style_demo.tscn")

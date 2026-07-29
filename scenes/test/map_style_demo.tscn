@@ -1,0 +1,184 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_style_demo.gd" id="1_demo"]
+[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/map_style_demo_v1.png" id="2_map"]
+[ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="3_player"]
+[ext_resource type="Script" path="res://scripts/demo_weapon_vfx.gd" id="4_vfx"]
+[ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
+[ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
+
+[sub_resource type="RectangleShape2D" id="GateShape"]
+size = Vector2(34, 174)
+
+[sub_resource type="RectangleShape2D" id="EliteTriggerShape"]
+size = Vector2(430, 430)
+
+[sub_resource type="RectangleShape2D" id="BranchTriggerShape"]
+size = Vector2(180, 150)
+
+[sub_resource type="StyleBoxFlat" id="TopPanelStyle"]
+bg_color = Color(0.018, 0.043, 0.049, 0.93)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.66, 0.58, 0.72)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="Theme" id="DemoTheme"]
+default_font = ExtResource("6_font")
+
+[node name="MapStyleDemo" type="Node2D"]
+script = ExtResource("1_demo")
+
+[node name="MapBackground" type="Sprite2D" parent="."]
+texture = ExtResource("2_map")
+centered = false
+texture_filter = 1
+
+[node name="WorldCollision" type="Node2D" parent="."]
+
+[node name="CentralGate" type="StaticBody2D" parent="WorldCollision"]
+position = Vector2(826, 433)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WorldCollision/CentralGate"]
+shape = SubResource("GateShape")
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Triggers" type="Node2D" parent="."]
+
+[node name="EliteRoom" type="Area2D" parent="Triggers"]
+position = Vector2(1120, 455)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/EliteRoom"]
+shape = SubResource("EliteTriggerShape")
+
+[node name="UpperBranch" type="Area2D" parent="Triggers"]
+position = Vector2(1510, 132)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/UpperBranch"]
+shape = SubResource("BranchTriggerShape")
+
+[node name="LowerBranch" type="Area2D" parent="Triggers"]
+position = Vector2(1540, 824)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/LowerBranch"]
+shape = SubResource("BranchTriggerShape")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(420, 475)
+use_runtime_progress = false
+demo_weapon_slots = Array[String](["service_crowbar", "balanced_pistol", "echo_staff"])
+demo_offhand_item = ""
+demo_charm_item = ""
+
+[node name="Camera2D" parent="Player" index="1"]
+limit_right = 1672
+limit_bottom = 941
+
+[node name="RenderedAtlasCharacter" parent="Player" index="2"]
+runtime_sync_enabled = false
+
+[node name="DemoWeaponVFX" type="Node2D" parent="."]
+script = ExtResource("4_vfx")
+
+[node name="Foreground" type="Node2D" parent="."]
+z_index = 40
+
+[node name="LowerLeftWall" type="Polygon2D" parent="Foreground"]
+polygon = PackedVector2Array(210, 806, 592, 806, 650, 865, 650, 908, 225, 908, 175, 854)
+color = Color(0.055, 0.073, 0.072, 0.82)
+
+[node name="LowerRightWall" type="Polygon2D" parent="Foreground"]
+polygon = PackedVector2Array(910, 716, 1395, 716, 1440, 760, 1440, 790, 930, 790)
+color = Color(0.048, 0.066, 0.066, 0.76)
+
+[node name="CentralGateVisual" type="Polygon2D" parent="Foreground"]
+polygon = PackedVector2Array(808, 352, 844, 352, 844, 514, 808, 514)
+color = Color(0.13, 0.29, 0.27, 0.94)
+
+[node name="GateGlow" type="Polygon2D" parent="Foreground/CentralGateVisual"]
+polygon = PackedVector2Array(12, 3, 24, 3, 24, 159, 12, 159)
+color = Color(0.28, 0.95, 0.81, 0.42)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="MobileControls" type="Control" parent="HUD" groups=["mobile_controls"]]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_mobile")
+
+[node name="TopPanel" type="PanelContainer" parent="HUD"]
+offset_left = 170.0
+offset_top = 18.0
+offset_right = 1110.0
+offset_bottom = 94.0
+theme = SubResource("DemoTheme")
+theme_override_styles/panel = SubResource("TopPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="HUD/TopPanel"]
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 8
+
+[node name="Rows" type="VBoxContainer" parent="HUD/TopPanel/Margin"]
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
+theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
+theme_override_font_sizes/font_size = 17
+text = "新地图风格 Demo · 伪 2.5D 连通房间"
+horizontal_alignment = 1
+
+[node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
+theme_override_colors/font_color = Color(0.42, 0.87, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = "普通战房：清除目标"
+horizontal_alignment = 1
+
+[node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
+theme_override_colors/font_color = Color(0.66, 0.72, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+text = "中央闸门锁定"
+horizontal_alignment = 1
+
+[node name="Return" type="Button" parent="HUD"]
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 150.0
+offset_bottom = 62.0
+theme = SubResource("DemoTheme")
+theme_override_font_sizes/font_size = 15
+text = "← 返回首页"
+
+[node name="BranchHint" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -112.0
+offset_right = 250.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+theme = SubResource("DemoTheme")
+theme_override_colors/font_color = Color(0.72, 0.95, 0.86, 1)
+theme_override_font_sizes/font_size = 16
+text = "两个分支出口已开放"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[editable path="Player"]
