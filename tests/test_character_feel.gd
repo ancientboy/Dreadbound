@@ -526,6 +526,30 @@ func _run_test() -> void:
 		)
 	)
 	assert(not crowbar_idle_frame.get_image().is_invisible())
+	for crowbar_action in [&"one_hand_melee_idle", &"attack_melee"]:
+		for direction in [&"front", &"left", &"back", &"right"]:
+			var crowbar_animation := StringName(
+				"crowbar__%s_%s" % [crowbar_action, direction]
+			)
+			assert(
+				weapon_sprite.sprite_frames.get_frame_count(crowbar_animation)
+				== int(RenderedAtlasCharacter.ANIMATION_FRAMES[crowbar_action])
+			)
+			for frame_index in weapon_sprite.sprite_frames.get_frame_count(
+				crowbar_animation,
+			):
+				var crowbar_frame := (
+					weapon_sprite.sprite_frames.get_frame_texture(
+						crowbar_animation,
+						frame_index,
+					) as AtlasTexture
+				)
+				assert(crowbar_frame != null)
+				assert(
+					not crowbar_frame.get_image().is_invisible(),
+					"Transparent crowbar frame: %s[%d]"
+					% [crowbar_animation, frame_index],
+				)
 	assert(rendered.play_preview_action(&"attack_melee"))
 	await process_frame
 	assert(rendered_sprite.animation == &"attack_melee_right")
