@@ -50,7 +50,9 @@ func _run_test() -> void:
 	state.selected_pathway = "armorer"
 	rendered._process(1.0 / 60.0)
 	assert(rendered.selected_skin() == &"armorer_demo_v1")
-	assert(not rendered.runtime_weapon_layer_visible())
+	assert(rendered.runtime_weapon_layer_visible())
+	assert(rendered.runtime_weapon_family() == &"mourning_bow")
+	assert(rendered.selected_preview_idle() == &"bow_idle")
 	assert(rendered.selected_preview_attack() == &"bow_release")
 
 	var demo := load("res://scenes/test/character_feel_demo.tscn") as PackedScene

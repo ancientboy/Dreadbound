@@ -11,10 +11,6 @@ const REQUIRED_IMAGES := {
 		"path": "res://assets/art/worlds/corridor/corridor_tileset.png",
 		"size": Vector2i(256, 256),
 	},
-	"art_player_drifter": {
-		"path": "res://assets/art/characters/drifter/drifter_spritesheet.png",
-		"size": Vector2i(288, 256),
-	},
 	"art_enemy_patient": {
 		"path": "res://assets/art/characters/sanatorium/patient_spritesheet.png",
 		"size": Vector2i(288, 256),
@@ -50,9 +46,7 @@ func _init() -> void:
 		assert(not image.is_empty(), "O1 image cannot load: %s" % spec.path)
 		assert(image.get_size() == spec.size, "O1 image has wrong size: %s" % spec.path)
 
-	var drifter := (load(str(REQUIRED_IMAGES.art_player_drifter.path)) as Texture2D).get_image()
 	var patient := (load(str(REQUIRED_IMAGES.art_enemy_patient.path)) as Texture2D).get_image()
-	assert(drifter.detect_alpha() != Image.ALPHA_NONE)
 	assert(patient.detect_alpha() != Image.ALPHA_NONE)
 
 	var startup_source := FileAccess.get_file_as_string("res://scripts/startup.gd")
@@ -60,9 +54,10 @@ func _init() -> void:
 	var patient_source := FileAccess.get_file_as_string("res://scripts/patient.gd")
 	var corridor_source := FileAccess.get_file_as_string("res://scripts/corridor.gd")
 	assert(startup_source.contains("home_keyart.png"))
-	assert(player_source.contains("drifter_spritesheet.png"))
+	assert(player_source.contains("_setup_runtime_weapon_vfx"))
+	assert(not player_source.contains("drifter_spritesheet.png"))
 	assert(patient_source.contains("patient_spritesheet.png"))
 	assert(corridor_source.contains("corridor_floor_tile.png"))
 
-	print("O1 visual slice passed: five review assets have exact dimensions, alpha where required, and live game references")
+	print("O1 visual slice passed: review assets have exact dimensions, alpha where required, and live game references")
 	quit()

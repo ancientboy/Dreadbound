@@ -2,7 +2,6 @@ extends SceneTree
 
 const REVIEW_ASSETS := {
 	"art_boss_conductor_echo": ["res://assets/art/characters/metro/last_train_conductor_spritesheet.png", Vector2i(576, 384)],
-	"art_weapon_conductor_railgun_growth": ["res://assets/art/weapons/conductor_railgun_growth.png", Vector2i(384, 64)],
 	"art_vfx_metro_enemy_skills": ["res://assets/art/vfx/metro_enemy_skills.png", Vector2i(512, 256)],
 	"art_vfx_metro_flood_layers": ["res://assets/art/vfx/metro_flood_layers.png", Vector2i(512, 256)],
 	"art_vfx_player_states_lighting": ["res://assets/art/vfx/player_states_lighting.png", Vector2i(512, 256)],
@@ -63,7 +62,7 @@ func _run_test() -> void:
 	assert(main_source.find("_draw_zones()") < main_source.find("if metro and metro_tide_level > 0"))
 	assert(player_source.contains("_draw_deep_water_occlusion()"))
 	assert(player_source.contains("environment_water_depth < 2"))
-	assert(player_source.contains("_draw_conductor_railgun"))
+	assert(not player_source.contains("_draw_conductor_railgun"))
 	assert(player_source.contains("PLAYER_STATES_LIGHTING"))
 	# Exploration lighting was intentionally removed. Keep this older visual
 	# batch from silently reintroducing the player-mounted flashlight.

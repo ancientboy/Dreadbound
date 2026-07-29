@@ -2,8 +2,6 @@ extends SceneTree
 
 const ASSETS := {
 	"art_vfx_sanatorium_enemy_skills": ["res://assets/art/vfx/sanatorium_enemy_skills.png", Vector2i(512, 256), Vector2i(4, 2)],
-	"art_weapon_advanced_runtime": ["res://assets/art/weapons/advanced_weapons.png", Vector2i(320, 64), Vector2i(5, 1)],
-	"art_weapon_boss_evolution_branches": ["res://assets/art/weapons/boss_evolution_weapons.png", Vector2i(384, 128), Vector2i(3, 2)],
 	"art_material_world_and_enemy_affixes": ["res://assets/art/vfx/materials_enemy_affixes.png", Vector2i(320, 128), Vector2i(5, 2)],
 	"art_vfx_profession_skills_steadfast_animated": ["res://assets/art/vfx/profession_skills_steadfast.png", Vector2i(512, 512), Vector2i(4, 4)],
 	"art_vfx_profession_skills_armorer_animated": ["res://assets/art/vfx/profession_skills_armorer.png", Vector2i(512, 512), Vector2i(4, 4)],
@@ -96,10 +94,11 @@ func _run_test() -> void:
 	assert(crawler_source.contains("crawler_lunge") and crawler_source.contains("crawler_tear"))
 	assert(orderly_source.contains("orderly_heavy"))
 	assert(boss_source.contains("director_sweep") and boss_source.contains("director_slam") and boss_source.contains("director_mutation"))
-	assert(player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
+	assert(not player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
 	assert(not player_source.contains("direction_column * 128"))
-	assert(player_source.contains("_draw_boss_evolution"))
-	assert(player_source.contains("_has_profession_combat_presentation"))
+	assert(not player_source.contains("_draw_boss_evolution"))
+	assert(not player_source.contains("_has_profession_combat_presentation"))
+	assert(player_source.contains("_setup_runtime_weapon_vfx"))
 	assert(main_source.contains("_draw_metro_maintenance_level"))
 	assert(main_source.contains("_set_narrative_portrait"))
 	assert(main_source.contains("_refresh_status_icons"))

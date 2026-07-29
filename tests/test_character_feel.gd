@@ -64,9 +64,6 @@ func _run_test() -> void:
 		0.02,
 	)
 	assert(boosted_turn.x < normal_turn.x)
-	assert(is_equal_approx(Player.grounded_sprite_y(61, 64, 1.0, 8.0), -21.0))
-	assert(is_equal_approx(Player.grounded_sprite_y(242, 256, 0.55, 8.0), -54.7))
-
 	var demo := load("res://scenes/test/character_feel_demo.tscn") as PackedScene
 	assert(demo != null)
 	var instance := demo.instantiate()
@@ -77,14 +74,11 @@ func _run_test() -> void:
 	var camera := player.get_node("Camera2D") as PlayerFeelCamera
 	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
 	var weapon_vfx := instance.get_node("DemoWeaponVFX") as DemoWeaponVFX
-	var humanoid := player.get_node_or_null(
-		"UniversalHumanoidActionCharacter"
-	) as UniversalHumanoidActionCharacter
 	assert(player != null)
 	assert(camera != null)
 	assert(rendered != null)
 	assert(weapon_vfx != null)
-	assert(humanoid == null)
+	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
 	assert(player.get_node_or_null("ProfessionSkeletonRig") == null)
 	assert(camera.position_smoothing_enabled)
 	assert(player.movement_speed == 210.0)
@@ -94,8 +88,7 @@ func _run_test() -> void:
 	assert(player.demo_charm_item.is_empty())
 	assert(player.equipped_weapon_item.is_empty())
 	assert(player.has_signal("footstep_requested"))
-	assert(player._body_frame_ground_y.size() == 24)
-	assert(not player._body_sprite.visible)
+	assert(player.get_node_or_null("BodySprite") == null)
 	assert(weapon_vfx.active_effect_count() == 0)
 	weapon_vfx.play_melee(player.global_position, Vector2.RIGHT, &"volatile_edge")
 	assert(weapon_vfx.active_effect_count() == 1)

@@ -20,7 +20,7 @@ func _run_test() -> void:
 		as RenderedAtlasCharacter
 	)
 	assert(hub_atlas != null and hub_atlas.visible)
-	assert(not corridor.walker_avatar._body_sprite.visible)
+	assert(corridor.walker_avatar.get_node_or_null("BodySprite") == null)
 	var hub_sprite := hub_atlas.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	assert(hub_sprite != null)
 	for required_animation in [
@@ -59,12 +59,14 @@ func _run_test() -> void:
 	corridor.set_process(true)
 	state.selected_pathway = "armorer"
 	state.active_combat_style = ""
-	assert(corridor._walker_body_texture().resource_path.ends_with("armorer_spritesheet.png"))
 	await process_frame
-	assert(hub_sprite.animation.begins_with("idle_"))
+	hub_atlas._process(1.0 / 30.0)
+	assert(hub_atlas.selected_skin() == &"armorer_demo_v1")
+	assert(String(hub_sprite.animation).contains("idle_"))
 	state.active_combat_style = "heavy_suppression"
-	assert(corridor._walker_body_texture().resource_path.ends_with("heavy_suppression_spritesheet.png"))
 	await process_frame
+	hub_atlas._process(1.0 / 30.0)
+	assert(hub_atlas.selected_skin() == &"armorer_demo_v1")
 	assert(corridor.walker_avatar.get_node_or_null("ProfessionSkeletonRig") == null)
 	state.active_combat_style = ""
 	state.selected_pathway = original_pathway

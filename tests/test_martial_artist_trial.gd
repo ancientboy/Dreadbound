@@ -21,10 +21,7 @@ func _run_test() -> void:
 	assert(rendered != null)
 	assert(rendered_sprite != null and rendered_sprite.visible)
 	assert(player.get_node_or_null("MartialArtistTrialCharacter") == null)
-	var humanoid := player.get_node_or_null(
-		"UniversalHumanoidActionCharacter"
-	) as UniversalHumanoidActionCharacter
-	assert(humanoid == null)
+	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
 	assert(instance.get_node_or_null("HUD/TouchTestButtons/Trial") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/EquipmentButtons") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/OffhandButtons") == null)

@@ -3,7 +3,6 @@ extends SceneTree
 const MANIFEST_PATH := "res://content/alpha_asset_manifest.json"
 const REVIEW_ASSETS := {
 	"art_corridor_props": ["res://assets/art/worlds/corridor/corridor_props.png", Vector2i(384, 256)],
-	"art_weapon_world_basic": ["res://assets/art/weapons/basic_weapons.png", Vector2i(96, 32)],
 	"art_icon_service_crowbar": ["res://assets/art/icons/equipment/service_crowbar.png", Vector2i(32, 32)],
 	"art_icon_balanced_pistol": ["res://assets/art/icons/equipment/balanced_pistol.png", Vector2i(32, 32)],
 	"art_icon_breach_shotgun": ["res://assets/art/icons/equipment/breach_shotgun.png", Vector2i(32, 32)],
@@ -43,36 +42,28 @@ func _run_test() -> void:
 	root.add_child(patient)
 	await process_frame
 
-	var player_sprite := player.get_node_or_null("BodySprite") as Sprite2D
+	var player_character := player.get_node_or_null("RenderedAtlasCharacter") as RenderedAtlasCharacter
 	var patient_sprite := patient.get_node_or_null("BodySprite") as Sprite2D
-	assert(player_sprite != null and player_sprite.texture != null)
+	assert(player_character != null)
+	assert(player.get_node_or_null("BodySprite") == null)
+	assert(player_character.get_node_or_null("AnimatedSprite2D") != null)
 	assert(patient_sprite != null and patient_sprite.texture != null)
-	assert(player_sprite.hframes == 6 and player_sprite.vframes == 4)
 	assert(patient_sprite.hframes == 6 and patient_sprite.vframes == 4)
-	assert(player_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
 	assert(patient_sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
-	# Character Feel v2 grounds each animation frame from its actual alpha
-	# footprint. Validate that dynamic foot anchor instead of the legacy -26 px
-	# offset, which only matched the previous sprite sheet.
-	assert(is_equal_approx(player_sprite.position.x, 0.0))
-	var grounded_idle_y := player._current_body_rest_position().y
-	assert(is_finite(grounded_idle_y))
-	assert(is_equal_approx(grounded_idle_y, player._body_frame_ground_y[0]))
-	assert(grounded_idle_y >= -64.0 and grounded_idle_y <= 8.0)
 	assert(patient_sprite.position == Vector2(0, -26))
 
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	var patient_source := FileAccess.get_file_as_string("res://scripts/patient.gd")
 	var combat_source := FileAccess.get_file_as_string("res://scripts/combat_fx.gd")
 	var corridor_source := FileAccess.get_file_as_string("res://scripts/corridor.gd")
-	assert(player_source.contains("_draw_visible_body_fallback"))
+	assert(not player_source.contains("_setup_body_sprite"))
+	assert(player_source.contains("_setup_runtime_weapon_vfx"))
 	assert(patient_source.contains("using visible fallback silhouette"))
-	assert(player_source.contains("basic_weapons.png"))
 	assert(combat_source.contains("combat_core.png"))
 	assert(corridor_source.contains("corridor_props.png"))
 	assert(corridor_source.contains("_draw_walker_fallback"))
 
 	player.queue_free()
 	patient.queue_free()
-	print("O1 batch 2 passed: stable Sprite2D bodies, visible fallbacks, corridor props, weapon sprites and combat atlas")
+	print("O1 batch 2 passed: rendered player, enemy fallback, corridor props and combat atlas")
 	quit()

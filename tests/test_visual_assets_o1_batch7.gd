@@ -1,10 +1,6 @@
 extends SceneTree
 
 const REVIEW_ASSETS := {
-	"art_player_drifter_highres": ["res://assets/art/characters/drifter/drifter_highres_spritesheet.png", Vector2i(1536, 1024)],
-	"art_player_profession_steadfast": ["res://assets/art/characters/professions/steadfast_spritesheet.png", Vector2i(288, 256)],
-	"art_player_profession_armorer": ["res://assets/art/characters/professions/armorer_spritesheet.png", Vector2i(288, 256)],
-	"art_player_profession_resonant": ["res://assets/art/characters/professions/resonant_spritesheet.png", Vector2i(288, 256)],
 	"art_vfx_profession_skills": ["res://assets/art/vfx/profession_skills.png", Vector2i(512, 384)],
 	"art_npc_story_cast": ["res://assets/art/characters/npcs/story_npcs_idle.png", Vector2i(384, 480)],
 }
@@ -14,16 +10,6 @@ const STYLE_ORDER := [
 	"weakpoint_sniper", "heavy_suppression", "demolition_traps", "relic_engineer",
 	"psychic_sense", "anomaly_ingestion", "echo_summoner", "aberrant_form",
 ]
-
-const STYLE_SPRITESHEETS := {
-	"barrier_counter": "barrier_counter_spritesheet.png", "last_stand": "last_stand_spritesheet.png",
-	"sacrifice_medic": "sacrifice_medic_walk_spritesheet.png", "choke_control": "choke_control_spritesheet.png",
-	"weakpoint_sniper": "weakpoint_sniper_spritesheet.png", "heavy_suppression": "heavy_suppression_spritesheet.png",
-	"demolition_traps": "demolition_traps_spritesheet.png", "relic_engineer": "relic_engineer_spritesheet.png",
-	"psychic_sense": "psychic_sense_spritesheet.png", "anomaly_ingestion": "anomaly_ingestion_spritesheet.png",
-	"echo_summoner": "echo_summoner_spritesheet.png", "aberrant_form": "aberrant_form_spritesheet.png",
-}
-
 
 func _init() -> void:
 	call_deferred("_run_test")
@@ -50,40 +36,22 @@ func _run_test() -> void:
 	var original_style := state.active_combat_style
 	state.selected_pathway = ""
 	state.active_combat_style = ""
-	var male_player := load("res://scenes/entities/player.tscn").instantiate() as Player
-	root.add_child(male_player)
-	await process_frame
-	var male_sprite := male_player.get_node_or_null("BodySprite") as Sprite2D
-	assert(male_sprite != null and male_sprite.texture != null)
-	assert(male_sprite.texture.resource_path.ends_with("drifter_spritesheet.png"))
-	male_player.queue_free()
-	await process_frame
 	var profession_paths := {
-		"steadfast": "steadfast_spritesheet.png",
-		"armorer": "armorer_spritesheet.png",
-		"resonant": "resonant_spritesheet.png",
+		"steadfast": &"steadfast_demo_v1",
+		"armorer": &"armorer_demo_v1",
+		"resonant": &"resonant_demo_v1",
 	}
 	for pathway in profession_paths:
 		state.selected_pathway = pathway
 		var player := load("res://scenes/entities/player.tscn").instantiate() as Player
 		root.add_child(player)
 		await process_frame
-		var sprite := player.get_node_or_null("BodySprite") as Sprite2D
-		assert(sprite != null and sprite.texture != null)
-		assert(sprite.hframes == 6 and sprite.vframes == 4)
-		assert(sprite.texture.resource_path.ends_with(profession_paths[pathway]))
+		await process_frame
+		var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
+		assert(rendered != null)
+		assert(rendered.selected_skin() == profession_paths[pathway])
+		assert(player.get_node_or_null("BodySprite") == null)
 		player.queue_free()
-		await process_frame
-	for style_id in STYLE_ORDER:
-		state.active_combat_style = style_id
-		var style_player := load("res://scenes/entities/player.tscn").instantiate() as Player
-		root.add_child(style_player)
-		await process_frame
-		var style_sprite := style_player.get_node_or_null("BodySprite") as Sprite2D
-		assert(style_sprite != null and style_sprite.texture != null)
-		assert(style_sprite.texture.resource_path.ends_with("styles/%s" % STYLE_SPRITESHEETS[style_id]))
-		assert(style_sprite.hframes == 6 and style_sprite.vframes == 4)
-		style_player.queue_free()
 		await process_frame
 
 	var fx := CombatFX.new()
@@ -116,9 +84,9 @@ func _run_test() -> void:
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	var npc_source := FileAccess.get_file_as_string("res://scripts/objective_interactable.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
-	assert(player_source.contains("_profession_body_texture"))
+	assert(not player_source.contains("_profession_body_texture"))
 	assert(not player_source.contains("FemaleDrifterRig"))
-	assert(player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
+	assert(not player_source.contains("COMBAT_STYLE_SPRITESHEETS"))
 	assert(not player_source.contains("_draw_combat_style_form"))
 	assert(player_source.contains("_play_weapon_attack_vfx"))
 	assert(not player_source.contains("_play_attack_style_vfx"))
@@ -129,7 +97,7 @@ func _run_test() -> void:
 	state.selected_pathway = original_pathway
 	state.active_combat_style = original_style
 	fx.queue_free()
-	print("O1 batch 7 passed: three profession bodies, twelve forms/skills and five authored story NPCs")
+	print("O1 batch 7 passed: three rendered profession skins, twelve skills and five authored story NPCs")
 	quit()
 
 

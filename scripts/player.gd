@@ -1,31 +1,6 @@
 class_name Player
 extends CharacterBody2D
 
-const DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_spritesheet.png")
-const HIGHRES_DRIFTER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/drifter/drifter_highres_spritesheet.png")
-const STEADFAST_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/steadfast_spritesheet.png")
-const ARMORER_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/armorer_spritesheet.png")
-const RESONANT_SPRITESHEET: Texture2D = preload("res://assets/art/characters/professions/resonant_spritesheet.png")
-const COMBAT_STYLE_SPRITESHEETS := {
-	"barrier_counter": preload("res://assets/art/characters/professions/styles/barrier_counter_spritesheet.png"),
-	"last_stand": preload("res://assets/art/characters/professions/styles/last_stand_spritesheet.png"),
-	"sacrifice_medic": preload("res://assets/art/characters/professions/styles/sacrifice_medic_walk_spritesheet.png"),
-	"choke_control": preload("res://assets/art/characters/professions/styles/choke_control_spritesheet.png"),
-	"weakpoint_sniper": preload("res://assets/art/characters/professions/styles/weakpoint_sniper_spritesheet.png"),
-	"heavy_suppression": preload("res://assets/art/characters/professions/styles/heavy_suppression_spritesheet.png"),
-	"demolition_traps": preload("res://assets/art/characters/professions/styles/demolition_traps_spritesheet.png"),
-	"relic_engineer": preload("res://assets/art/characters/professions/styles/relic_engineer_spritesheet.png"),
-	"psychic_sense": preload("res://assets/art/characters/professions/styles/psychic_sense_spritesheet.png"),
-	"anomaly_ingestion": preload("res://assets/art/characters/professions/styles/anomaly_ingestion_spritesheet.png"),
-	"echo_summoner": preload("res://assets/art/characters/professions/styles/echo_summoner_spritesheet.png"),
-	"aberrant_form": preload("res://assets/art/characters/professions/styles/aberrant_form_spritesheet.png"),
-}
-const BASIC_WEAPONS: Texture2D = preload("res://assets/art/weapons/basic_weapons.png")
-const ADVANCED_WEAPONS: Texture2D = preload("res://assets/art/weapons/advanced_weapons.png")
-const DIRECTOR_REAPER_GROWTH: Texture2D = preload("res://assets/art/weapons/director_reaper_growth.png")
-const CONDUCTOR_RAILGUN_GROWTH: Texture2D = preload("res://assets/art/weapons/conductor_railgun_growth.png")
-const BOSS_EVOLUTION_WEAPONS: Texture2D = preload("res://assets/art/weapons/boss_evolution_weapons.png")
-const EQUIPMENT_RUNTIME: Texture2D = preload("res://assets/art/weapons/equipment_runtime.png")
 const PLAYER_STATES_LIGHTING: Texture2D = preload("res://assets/art/vfx/player_states_lighting.png")
 const METRO_FLOOD_LAYERS: Texture2D = preload("res://assets/art/vfx/metro_flood_layers.png")
 
@@ -107,16 +82,11 @@ var _idle_animation_time := 0.0
 var _step_phase := 0.0
 var _was_moving := false
 var _smoothed_move_direction := Vector2.ZERO
-var _body_sprite: Sprite2D
-var _body_sprite_rest_position := Vector2.ZERO
-var _body_sprite_rest_scale := Vector2.ONE
-var _body_frame_ground_y := PackedFloat32Array()
 var _locked_ranged_target: Node2D
 var _skill_pose_timer := 0.0
 
 
 func _ready() -> void:
-	_setup_body_sprite()
 	_apply_permanent_upgrades()
 	pathway_effects = PathwayEffects.new()
 	pathway_effects.setup(self, get_node_or_null("/root/GameState") as GameProgress)
@@ -292,8 +262,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		_idle_animation_time += delta
 	_sync_footsteps(delta, target_speed)
-	_sync_body_sprite()
-	_update_body_feedback(delta, target_speed)
 	_update_ranged_lock()
 	if wants_to_attack:
 		try_attack()
@@ -376,124 +344,6 @@ func _footstep_surface_hint() -> String:
 	if environment_water_depth == 1:
 		return "shallow_water"
 	return "default"
-
-
-func _setup_body_sprite() -> void:
-	var body_texture := _profession_body_texture()
-	if body_texture == null or not _is_valid_body_spritesheet(body_texture):
-		push_warning("Drifter sprite sheet unavailable or invalid; using visible fallback silhouette.")
-		return
-	_body_sprite = Sprite2D.new()
-	_body_sprite.name = "BodySprite"
-	_body_sprite.texture = body_texture
-	_body_sprite.hframes = 6
-	_body_sprite.vframes = 4
-	if body_texture == HIGHRES_DRIFTER_SPRITESHEET:
-		# The high-detail sheet is intentionally rendered at half scale.  This keeps
-		# the original collision footprint while making the coat, materials and
-		# lighting readable in the actual top-down game camera.
-		_body_sprite.position = Vector2(0, -57)
-		_body_sprite.scale = Vector2(0.55, 0.55)
-		_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	else:
-		_body_sprite.position = Vector2(0, -26)
-		_body_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_body_sprite_rest_position = _body_sprite.position
-	_body_sprite_rest_scale = _body_sprite.scale
-	_cache_body_frame_grounding()
-	_body_sprite.z_index = 1
-	add_child(_body_sprite)
-	_sync_body_sprite()
-
-
-func _is_valid_body_spritesheet(texture: Texture2D) -> bool:
-	return texture.get_size() == Vector2(288, 256) or texture.get_size() == Vector2(1536, 1024)
-
-
-func _cache_body_frame_grounding() -> void:
-	_body_frame_ground_y.clear()
-	var image := _body_sprite.texture.get_image()
-	if image == null or image.is_empty():
-		return
-	var frame_width := image.get_width() / _body_sprite.hframes
-	var frame_height := image.get_height() / _body_sprite.vframes
-	for row in range(_body_sprite.vframes):
-		for column in range(_body_sprite.hframes):
-			var alpha_bottom := 0
-			for pixel_y in range(frame_height - 1, -1, -1):
-				var found_opaque_pixel := false
-				for pixel_x in range(frame_width):
-					if image.get_pixel(column * frame_width + pixel_x, row * frame_height + pixel_y).a > 0.08:
-						found_opaque_pixel = true
-						break
-				if found_opaque_pixel:
-					alpha_bottom = pixel_y + 1
-					break
-			_body_frame_ground_y.append(
-				grounded_sprite_y(alpha_bottom, frame_height, _body_sprite.scale.y, 8.0)
-			)
-
-
-static func grounded_sprite_y(alpha_bottom: int, frame_height: int, scale_y: float, ground_y: float) -> float:
-	if alpha_bottom <= 0 or frame_height <= 0:
-		return ground_y
-	return ground_y - (float(alpha_bottom) - float(frame_height) * 0.5) * scale_y
-
-
-func _current_body_rest_position() -> Vector2:
-	var grounded_position := _body_sprite_rest_position
-	var frame_index := _body_sprite.frame_coords.y * _body_sprite.hframes + _body_sprite.frame_coords.x
-	if frame_index >= 0 and frame_index < _body_frame_ground_y.size():
-		grounded_position.y = _body_frame_ground_y[frame_index]
-	return grounded_position
-
-
-func _sync_body_sprite() -> void:
-	if not is_instance_valid(_body_sprite) or _body_sprite.texture == null:
-		return
-	var row := 0
-	if absf(facing.x) > absf(facing.y):
-		row = 2 if facing.x > 0.0 else 1
-	elif facing.y < 0.0:
-		row = 3
-	var frame := int(_step_phase * 6.0) % 6 if velocity.length() > 2.0 else 0
-	_body_sprite.frame_coords = Vector2i(frame, row)
-	_body_sprite.modulate = Color("ffb5ad") if _hurt_flash > 0.0 else (Color("c8ffdc") if _heal_flash > 0.0 else Color.WHITE)
-
-
-func _update_body_feedback(delta: float, target_speed: float) -> void:
-	if not is_instance_valid(_body_sprite):
-		return
-	var speed_ratio := clampf(velocity.length() / maxf(target_speed, 1.0), 0.0, 1.0)
-	var moving := speed_ratio > 0.04
-	var position_target := _current_body_rest_position()
-	var scale_target := _body_sprite_rest_scale
-	var rotation_target := 0.0
-	if moving:
-		var stride := sin(_step_phase * TAU)
-		var foot_contact := pow(absf(cos(_step_phase * TAU)), 4.0)
-		# Keep the feet on the ground. Weight shifts sideways and compresses on
-		# contact instead of lifting the entire character above its shadow.
-		position_target.x += stride * 1.35 * speed_ratio
-		position_target.y += foot_contact * 0.75 * speed_ratio
-		scale_target *= Vector2(
-			1.0 + foot_contact * 0.012 * speed_ratio,
-			1.0 - foot_contact * 0.014 * speed_ratio
-		)
-		rotation_target = stride * 0.012 * speed_ratio
-	else:
-		var breath := sin(_idle_animation_time * 2.2)
-		position_target.y += maxf(breath, 0.0) * 0.25
-		scale_target *= Vector2(1.0 - breath * 0.004, 1.0 + breath * 0.007)
-	if _skill_pose_timer > 0.0:
-		var pose_strength := clampf(_skill_pose_timer / 0.24, 0.0, 1.0)
-		position_target -= facing * 2.8 * pose_strength
-		scale_target *= Vector2(1.0 + 0.025 * pose_strength, 1.0 - 0.018 * pose_strength)
-		rotation_target += facing.x * 0.035 * pose_strength
-	var feedback_weight := 1.0 - exp(-14.0 * delta)
-	_body_sprite.position = _body_sprite.position.lerp(position_target, feedback_weight)
-	_body_sprite.scale = _body_sprite.scale.lerp(scale_target, feedback_weight)
-	_body_sprite.rotation = lerp_angle(_body_sprite.rotation, rotation_target, feedback_weight)
 
 
 func try_attack() -> bool:
@@ -868,23 +718,6 @@ func _pathway_visual() -> Dictionary:
 	return {"id": "", "accent": Color("36dbc0"), "tracer": Color("6fe8c8"), "muzzle": Color("f5e6b2")}
 
 
-func _profession_body_texture() -> Texture2D:
-	var state := get_node_or_null("/root/GameState")
-	var style := str(state.active_combat_style) if state != null else ""
-	var style_texture: Texture2D = COMBAT_STYLE_SPRITESHEETS.get(style)
-	if style_texture != null:
-		return style_texture
-	var pathway := str(state.selected_pathway) if state != null else ""
-	match pathway:
-		"steadfast":
-			return STEADFAST_SPRITESHEET
-		"armorer":
-			return ARMORER_SPRITESHEET
-		"resonant":
-			return RESONANT_SPRITESHEET
-	return DRIFTER_SPRITESHEET
-
-
 func _active_combat_style() -> String:
 	var state := get_node_or_null("/root/GameState")
 	return str(state.active_combat_style) if state != null else ""
@@ -977,11 +810,6 @@ func _update_ranged_lock() -> void:
 			_locked_ranged_target = candidate as Node2D
 	if combat_fx != null:
 		combat_fx.set_target_lock(_locked_ranged_target)
-
-
-func _has_profession_combat_presentation() -> bool:
-	var state := get_node_or_null("/root/GameState") as GameProgress
-	return state != null and not state.selected_pathway.is_empty()
 
 
 func play_profession_skill(style_id: String) -> void:
@@ -1110,45 +938,6 @@ func _emit_pathway_movement_echo() -> void:
 func _draw() -> void:
 	_draw_character_shadow()
 	_draw_pathway_state_vfx()
-	var visual := _pathway_visual()
-	if not is_instance_valid(_body_sprite):
-		_draw_visible_body_fallback(Color("ffb5ad") if _hurt_flash > 0.0 else Color("7d9b76"))
-	if not _has_profession_combat_presentation() and not _trial_owns_equipment_visuals():
-		# Only the unbound starting drifter carries an actual weapon silhouette.
-		# Equipment continues to govern stats, traits, mastery and evolutions for every path.
-		var state := get_node_or_null("/root/GameState") as GameProgress
-		var weapon_item := equipped_weapon_item
-		var growth_level := state.get_relic_growth(weapon_item) if state else 0
-		var weapon_visual := EquipmentDatabase.weapon_visual(weapon_item, growth_level)
-		var weapon_color: Color = weapon_visual.color if not weapon_item.is_empty() else visual.tracer
-		var weapon_scale := float(weapon_visual.get("scale", 1.0))
-		var growth := int(weapon_visual.get("growth", 0))
-		var evolution_id := str(state.current_equipment_evolution(weapon_item).get("id", "")) if state else ""
-		if str(weapon_visual.shape) == "reaper":
-			if evolution_id in ["watcher_form", "execution_form", "abyss_form"]:
-				_draw_boss_evolution(["watcher_form", "execution_form", "abyss_form"].find(evolution_id), weapon_scale)
-			else:
-				_draw_director_reaper(growth, weapon_scale, weapon_color)
-			if growth >= 3:
-				draw_arc(Vector2.ZERO, 30.0 + growth * 3.0, facing.angle() - 0.8, facing.angle() + 0.55, 18, Color(weapon_color, 0.2), 2.0)
-		elif str(weapon_visual.shape) == "railgun":
-			if evolution_id in ["hunter_form", "storm_form", "runaway_form"]:
-				_draw_boss_evolution(3 + ["hunter_form", "storm_form", "runaway_form"].find(evolution_id), weapon_scale)
-			else:
-				_draw_conductor_railgun(growth, weapon_scale, weapon_color)
-		elif str(weapon_visual.shape) == "advanced":
-			_draw_advanced_weapon(int(weapon_visual.get("atlas_index", 0)))
-		elif str(weapon_visual.shape) == "equipment":
-			_draw_equipment_weapon(
-				int(weapon_visual.get("atlas_index", 0)),
-				float(weapon_visual.get("rotation_offset", 0.0)),
-			)
-		elif _weapon_attack_type() == "ranged":
-			_draw_basic_weapon(1)
-		elif _weapon_attack_type() == "shotgun":
-			_draw_basic_weapon(2)
-		else:
-			_draw_basic_weapon(0)
 	_draw_deep_water_occlusion()
 	_draw_health_bar()
 
@@ -1214,102 +1003,6 @@ func _draw_player_state_cell(index: int, center: Vector2, size: float, rotation:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-func _draw_basic_weapon(atlas_index: int) -> void:
-	if BASIC_WEAPONS == null or BASIC_WEAPONS.get_size() != Vector2(96, 32):
-		draw_line(facing * 7.0 + Vector2(0, -22), facing * 34.0 + Vector2(0, -22), Color("8a5147"), 6.0)
-		return
-	var hand_position := _equipment_anchor(&"main_hand")
-	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
-	draw_texture_rect_region(
-		BASIC_WEAPONS,
-		Rect2(-16, -16, 32, 32),
-		Rect2(atlas_index * 32, 0, 32, 32),
-		Color(1.15, 1.15, 1.15, 1.0) if _attack_flash > 0.0 else Color.WHITE
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_advanced_weapon(atlas_index: int) -> void:
-	if ADVANCED_WEAPONS == null or ADVANCED_WEAPONS.get_size() != Vector2(320, 64):
-		_draw_basic_weapon(int(current_weapon))
-		return
-	var hand_position := _equipment_anchor(&"main_hand")
-	draw_set_transform(hand_position, facing.angle() + PI * 0.25, Vector2.ONE)
-	draw_texture_rect_region(
-		ADVANCED_WEAPONS,
-		Rect2(-32, -32, 64, 64),
-		Rect2(clampi(atlas_index, 0, 4) * 64, 0, 64, 64),
-		Color(1.16, 1.14, 1.12, 1.0) if _attack_flash > 0.0 else Color.WHITE,
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_boss_evolution(atlas_index: int, scale: float) -> void:
-	if BOSS_EVOLUTION_WEAPONS == null or BOSS_EVOLUTION_WEAPONS.get_size() != Vector2(384, 128):
-		return
-	var column := atlas_index % 3
-	var row := floori(float(atlas_index) / 3.0)
-	var hand_position := _equipment_anchor(&"main_hand")
-	draw_set_transform(hand_position, facing.angle() + (PI * 0.5 if row == 0 else 0.0), Vector2.ONE * scale)
-	draw_texture_rect_region(
-		BOSS_EVOLUTION_WEAPONS,
-		Rect2(-48, -32, 96, 64),
-		Rect2(column * 128, row * 64, 128, 64),
-		Color(1.18, 1.12, 1.1, 1.0) if _attack_flash > 0.0 else Color.WHITE,
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_director_reaper(growth: int, scale: float, fallback_color: Color) -> void:
-	if DIRECTOR_REAPER_GROWTH == null or DIRECTOR_REAPER_GROWTH.get_size() != Vector2(384, 64):
-		draw_line(facing * 7.0, facing * (41.0 * scale), fallback_color.darkened(0.35), 6.0 + growth * 0.5)
-		draw_arc(facing * (42.0 * scale), 15.0 * scale, facing.angle() - 1.35, facing.angle() + 0.55, 10, fallback_color, 5.0 + growth * 0.45)
-		return
-	var frame := clampi(growth, 0, 5)
-	var hand_position := _equipment_anchor(&"main_hand") + facing * growth * 0.8
-	draw_set_transform(hand_position, facing.angle() + PI * 0.5, Vector2.ONE * scale)
-	draw_texture_rect_region(
-		DIRECTOR_REAPER_GROWTH,
-		Rect2(-32, -32, 64, 64),
-		Rect2(frame * 64, 0, 64, 64),
-		Color(1.18, 1.1, 1.08, 1.0) if _attack_flash > 0.0 else Color.WHITE
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_conductor_railgun(growth: int, scale: float, fallback_color: Color) -> void:
-	if CONDUCTOR_RAILGUN_GROWTH == null or CONDUCTOR_RAILGUN_GROWTH.get_size() != Vector2(384, 64):
-		draw_line(facing * 9.0, facing * (45.0 * scale), fallback_color, 7.0)
-		return
-	var frame := clampi(growth, 0, 5)
-	var hand_position := _equipment_anchor(&"main_hand") + facing * growth * 0.6
-	draw_set_transform(hand_position, facing.angle(), Vector2.ONE * scale)
-	draw_texture_rect_region(
-		CONDUCTOR_RAILGUN_GROWTH,
-		Rect2(-18, -38, 64, 64),
-		Rect2(frame * 64, 0, 64, 64),
-		Color(1.14, 1.12, 1.1, 1.0) if _attack_flash > 0.0 else Color.WHITE,
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_equipment_weapon(atlas_index: int, rotation_offset: float) -> void:
-	if EQUIPMENT_RUNTIME == null or EQUIPMENT_RUNTIME.get_size() != Vector2(256, 64):
-		return
-	draw_set_transform(
-		_equipment_anchor(&"main_hand"),
-		facing.angle() - PI * 0.5 + rotation_offset,
-		Vector2.ONE,
-	)
-	draw_texture_rect_region(
-		EQUIPMENT_RUNTIME,
-		Rect2(-32, -32, 64, 64),
-		Rect2(clampi(atlas_index, 0, 3) * 64, 0, 64, 64),
-		Color(1.16, 1.14, 1.12, 1.0) if _attack_flash > 0.0 else Color.WHITE,
-	)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
 func _active_offhand_item() -> String:
 	if not use_runtime_progress:
 		return demo_offhand_item
@@ -1318,46 +1011,5 @@ func _active_offhand_item() -> String:
 
 
 func _equipment_anchor(slot: StringName) -> Vector2:
-	var humanoid_actions := get_node_or_null("UniversalHumanoidActionCharacter")
-	if (
-		humanoid_actions != null
-		and humanoid_actions.has_method("is_action_library_enabled")
-		and humanoid_actions.is_action_library_enabled()
-	):
-		return humanoid_actions.equipment_anchor(slot)
-	var trial := get_node_or_null("MartialArtistTrialCharacter")
-	if trial != null and trial.has_method("equipment_anchor"):
-		return trial.equipment_anchor(slot)
 	var side := -1.0 if slot == &"off_hand" else 1.0
 	return Vector2(0, -27) + facing * 13.0 + facing.orthogonal() * 5.0 * side
-
-
-func _trial_owns_equipment_visuals() -> bool:
-	var rendered := get_node_or_null("RenderedAtlasCharacter")
-	if (
-		rendered != null
-		and rendered.has_method("owns_equipment_visuals")
-		and rendered.owns_equipment_visuals()
-	):
-		return true
-	var humanoid_actions := get_node_or_null("UniversalHumanoidActionCharacter")
-	if (
-		humanoid_actions != null
-		and humanoid_actions.has_method("owns_equipment_visuals")
-		and humanoid_actions.owns_equipment_visuals()
-	):
-		return true
-	var trial := get_node_or_null("MartialArtistTrialCharacter")
-	return (
-		trial != null
-		and trial.has_method("is_trial_enabled")
-		and trial.is_trial_enabled()
-	)
-
-
-func _draw_visible_body_fallback(color: Color) -> void:
-	draw_circle(Vector2(0, -42), 9.0, Color("c9c2ae"))
-	draw_rect(Rect2(-13, -34, 26, 31), color)
-	draw_line(Vector2(-8, -4), Vector2(-10, 8), Color("2b343b"), 7.0)
-	draw_line(Vector2(8, -4), Vector2(10, 8), Color("2b343b"), 7.0)
-	draw_circle(Vector2(-12, -25), 3.0, Color("59e1e6"))

@@ -3,7 +3,6 @@ extends SceneTree
 const MANIFEST_PATH := "res://content/alpha_asset_manifest.json"
 const REVIEW_ASSETS := {
 	"art_boss_stitch_director": ["res://assets/art/characters/sanatorium/stitch_director_spritesheet.png", Vector2i(576, 384)],
-	"art_weapon_director_reaper_growth": ["res://assets/art/weapons/director_reaper_growth.png", Vector2i(384, 64)],
 	"art_icon_echo_edge": ["res://assets/art/icons/equipment/echo_edge.png", Vector2i(32, 32)],
 	"art_icon_medical_tag": ["res://assets/art/icons/equipment/medical_tag.png", Vector2i(32, 32)],
 	"art_icon_calming_coil": ["res://assets/art/icons/equipment/calming_coil.png", Vector2i(32, 32)],
@@ -73,7 +72,7 @@ func _run_test() -> void:
 	var pickup_source := FileAccess.get_file_as_string("res://scripts/pickup.gd")
 	assert(player_source.contains("if visual.id != \"resonant\""))
 	assert(not player_source.contains("_draw_flashlight()"))
-	assert(player_source.contains("director_reaper_growth.png"))
+	assert(not player_source.contains("director_reaper_growth.png"))
 	assert(main_source.contains("_draw_sanatorium_passages()"))
 	assert(main_source.find("_draw_sanatorium_passages()") < main_source.find("_draw_grid()"))
 	assert(main_source.contains("_draw_sanatorium_lights()"))

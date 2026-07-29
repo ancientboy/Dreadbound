@@ -49,10 +49,7 @@ func _run_test() -> void:
 	assert(rendered != null)
 	assert(rendered.get_node("AnimatedSprite2D").visible)
 	assert(player.get_node_or_null("MartialArtistTrialCharacter") == null)
-	var humanoid := player.get_node_or_null(
-		"UniversalHumanoidActionCharacter"
-	) as UniversalHumanoidActionCharacter
-	assert(humanoid == null)
+	assert(player.get_node_or_null("UniversalHumanoidActionCharacter") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/EquipmentButtons") == null)
 	assert(instance.get_node_or_null("HUD/Panel/Margin/Text/OffhandButtons") == null)
 	assert(player.equipped_weapon_item.is_empty())

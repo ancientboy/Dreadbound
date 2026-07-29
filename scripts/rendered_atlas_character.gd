@@ -541,8 +541,6 @@ func _process(_delta: float) -> void:
 
 
 func _activate_presentation() -> void:
-	if is_instance_valid(_player._body_sprite):
-		_player._body_sprite.hide()
 	_play_locomotion()
 
 
@@ -752,9 +750,6 @@ func select_preview_family(family: StringName) -> void:
 func play_preview_action(logical_name: StringName) -> bool:
 	if not ANIMATION_FRAMES.has(logical_name):
 		return false
-	var skeleton := _skeleton_character()
-	if skeleton != null and skeleton.is_action_library_enabled():
-		skeleton.play_preview_action(logical_name)
 	if logical_name == &"attack_melee" or String(logical_name).begins_with("one_hand_melee"):
 		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
 			_preview_weapon_family,
@@ -808,6 +803,10 @@ func selected_preview_attack() -> StringName:
 	return _preview_attack
 
 
+func selected_preview_idle() -> StringName:
+	return _preview_idle
+
+
 func owns_equipment_visuals() -> bool:
 	return true
 
@@ -831,25 +830,18 @@ func _sync_runtime_presentation() -> void:
 	var weapon_item := _player.equipped_weapon_item
 	var family := _runtime_family_for_weapon(weapon_item, state)
 	var desired_skin := _runtime_skin_for_pathway(pathway)
-	_runtime_show_weapon_layer = pathway.is_empty()
-	var presentation_changed := false
+	# Profession skins and the starting drifter share the same transparent
+	# main-hand layer. A selected pathway changes only the body skin; it must not
+	# make the equipped weapon disappear in the hub or a dungeon.
+	_runtime_show_weapon_layer = not weapon_item.is_empty()
 	if pathway != _runtime_pathway:
 		_runtime_pathway = pathway
-		presentation_changed = true
 		if desired_skin != _active_skin_id:
 			select_skin(desired_skin)
 	if weapon_item != _runtime_weapon_item or family != _runtime_weapon_family:
 		_runtime_weapon_item = weapon_item
 		_runtime_weapon_family = family
-		presentation_changed = true
 		select_preview_family(family)
-	# Profession skins keep a natural unarmed idle because their equipment is
-	# intentionally invisible. The equipped weapon still selects the attack
-	# action and VFX, so combat rules and weapon identity remain intact.
-	if not pathway.is_empty() and _preview_idle != &"idle":
-		_preview_idle = &"idle"
-		if presentation_changed and _active_one_shot.is_empty():
-			_play_locomotion()
 
 
 func _runtime_skin_for_pathway(pathway: String) -> StringName:
@@ -909,35 +901,13 @@ func set_body_layer_visible(value: bool) -> void:
 		_sprite.visible = value
 
 
-func _skeleton_character() -> UniversalHumanoidActionCharacter:
-	if not is_instance_valid(get_parent()):
-		return null
-	return get_parent().get_node_or_null(
-		"UniversalHumanoidActionCharacter"
-	) as UniversalHumanoidActionCharacter
-
-
 func _apply_skin_renderer() -> void:
 	if not is_instance_valid(_sprite):
 		return
 	_sprite.self_modulate = Color.WHITE
-	var preset := {}
-	for option in SKIN_PRESETS:
-		if option["id"] == _active_skin_id:
-			preset = option
-			break
-	var use_skeleton: bool = preset.get("renderer", &"atlas") == &"skeleton"
-	var skeleton := _skeleton_character()
-	if skeleton != null:
-		if use_skeleton:
-			assert(skeleton.set_skin(str(preset.get("skeleton_skin", "base_armorer"))))
-		skeleton.set_action_library_enabled(use_skeleton)
-	else:
-		set_body_layer_visible(not use_skeleton)
+	set_body_layer_visible(true)
 	if is_instance_valid(_weapon_sprite):
-		# The authored transparent weapon atlases remain independent from skin
-		# selection. Raise only that layer while the taller skeleton skin is active.
-		_weapon_sprite.z_index = 20 if use_skeleton else 1
+		_weapon_sprite.z_index = 1
 
 
 func selected_skin() -> StringName:
