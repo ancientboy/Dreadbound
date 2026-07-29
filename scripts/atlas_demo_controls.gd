@@ -168,7 +168,7 @@ func _select_skin(index: int) -> void:
 		return
 	var skin := skins[index] as Dictionary
 	if is_instance_valid(_character) and _character.select_skin(skin["id"] as StringName):
-		_set_mode_text("材质样板已同步到当前动作与四方向")
+		_set_mode_text("正式四方向骨骼皮肤已同步到当前动作")
 
 
 func _connect_action(button: Button, action_name: StringName) -> void:
