@@ -44,6 +44,68 @@ const WEAPON_ATTACK_PRESENTATIONS := {
 }
 
 
+# Combat rules stay in attack_profile. This table only selects the rendered
+# character action family and the future per-item appearance layer.
+# Until a unique layer exists, every item deliberately uses its family's
+# standard layer so no new body animation is required.
+const WEAPON_PRESENTATION_PROFILES := {
+	"service_crowbar": {"animation_family": "sword", "visual_asset": "service_crowbar", "layer_asset": "standard_melee_sword", "hand_mode": "one_handed"},
+	"balanced_pistol": {"animation_family": "pistol", "visual_asset": "balanced_pistol", "layer_asset": "standard_service_pistol", "hand_mode": "one_handed"},
+	"breach_shotgun": {"animation_family": "pistol", "visual_asset": "breach_shotgun", "layer_asset": "standard_service_pistol", "hand_mode": "one_handed"},
+	"echo_edge": {"animation_family": "sword", "visual_asset": "echo_edge", "layer_asset": "standard_melee_sword", "hand_mode": "one_handed"},
+	"insulated_crowbar": {"animation_family": "sword", "visual_asset": "insulated_crowbar", "layer_asset": "standard_melee_sword", "hand_mode": "one_handed"},
+	"nullpoint_sidearm": {"animation_family": "pistol", "visual_asset": "nullpoint_sidearm", "layer_asset": "standard_service_pistol", "hand_mode": "one_handed"},
+	"siege_core": {"animation_family": "pistol", "visual_asset": "siege_core", "layer_asset": "standard_service_pistol", "hand_mode": "one_handed"},
+	"volatile_edge": {"animation_family": "sword", "visual_asset": "volatile_edge", "layer_asset": "standard_melee_sword", "hand_mode": "one_handed"},
+	"director_reaper": {"animation_family": "sword", "visual_asset": "director_reaper", "layer_asset": "standard_melee_sword", "hand_mode": "one_handed"},
+	"conductor_railgun": {"animation_family": "pistol", "visual_asset": "conductor_railgun", "layer_asset": "standard_service_pistol", "hand_mode": "one_handed"},
+	"mourning_bow": {"animation_family": "bow", "visual_asset": "mourning_bow", "layer_asset": "standard_hunter_bow", "hand_mode": "two_handed"},
+	"echo_staff": {"animation_family": "staff", "visual_asset": "echo_staff", "layer_asset": "standard_echo_staff", "hand_mode": "two_handed"},
+}
+const OFFHAND_PRESENTATION_PROFILES := {
+	"riot_shield": {"animation_family": "shield", "visual_asset": "riot_shield", "layer_asset": "standard_guard_shield", "hand_mode": "off_hand"},
+	"field_codex": {"animation_family": "", "visual_asset": "field_codex", "layer_asset": "", "hand_mode": "off_hand"},
+}
+
+
+static func weapon_presentation(item_id: String) -> Dictionary:
+	var configured: Dictionary = WEAPON_PRESENTATION_PROFILES.get(item_id, {}).duplicate(true)
+	if not configured.is_empty():
+		return configured
+	var item := get_item(item_id)
+	if str(item.get("slot", "")) != "weapon":
+		return {}
+	var weapon_type := str(item.get("weapon_type", "melee"))
+	var family := "sword"
+	if weapon_type in ["ranged", "shotgun"]:
+		family = "pistol"
+	elif weapon_type == "arcane":
+		family = "staff"
+	return {
+		"animation_family": family,
+		"visual_asset": item_id,
+		"layer_asset": "standard_service_pistol" if family == "pistol" else ("standard_echo_staff" if family == "staff" else "standard_melee_sword"),
+		"hand_mode": "two_handed" if family == "staff" else "one_handed",
+	}
+
+
+static func weapon_animation_family(item_id: String) -> StringName:
+	return StringName(str(weapon_presentation(item_id).get("animation_family", "")))
+
+
+static func weapon_visual_asset(item_id: String) -> String:
+	return str(weapon_presentation(item_id).get("visual_asset", ""))
+
+
+static func weapon_hand_mode(item_id: String) -> StringName:
+	return StringName(str(weapon_presentation(item_id).get("hand_mode", "")))
+
+
+static func offhand_presentation(item_id: String) -> Dictionary:
+	return OFFHAND_PRESENTATION_PROFILES.get(item_id, {}).duplicate(true)
+
+
+
 static func weapon_visual(item_id: String, growth_level := 0) -> Dictionary:
 	var item := get_item(item_id)
 	var growth := relic_growth_profile(item_id, growth_level)
