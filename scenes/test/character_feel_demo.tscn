@@ -149,8 +149,11 @@ text = "当前动作：空手待机"
 label_settings = SubResource("Body_settings")
 
 [node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "近战动作对比：标准剑 / 游戏原装备“制式撬棍”专属透明层"
+text = "近战装备：统一剑类动作 / 每件装备使用原造型透明层"
 label_settings = SubResource("Body_settings")
+
+[node name="MeleeEquipment" type="OptionButton" parent="HUD/Panel/Margin/Text"]
+custom_minimum_size = Vector2(250, 0)
 
 [node name="SwordButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
@@ -162,10 +165,10 @@ text = "剑待机"
 text = "剑攻击"
 
 [node name="CrowbarIdle" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
-text = "撬棍待机"
+text = "装备待机"
 
 [node name="CrowbarAttack" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
-text = "撬棍攻击"
+text = "装备攻击"
 
 [node name="PistolLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "标准手枪（3D 模型 · hand_r 绑定 · 遮挡透明层）"

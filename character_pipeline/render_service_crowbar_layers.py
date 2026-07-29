@@ -16,16 +16,28 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 
-ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = Path(__file__).resolve().parent
+LOCAL_WORKSPACE = (SCRIPT_DIR / "templates").is_dir()
+ROOT = SCRIPT_DIR if LOCAL_WORKSPACE else SCRIPT_DIR.parents[0]
 SOURCE_DIR = (
     ROOT
-    / "assets/art/weapons/character_layers/standard_melee_sword"
+    / (
+        "templates/assets/art/weapons/character_layers/standard_melee_sword"
+        if LOCAL_WORKSPACE
+        else "assets/art/weapons/character_layers/standard_melee_sword"
+    )
 )
 OUTPUT_DIR = (
     ROOT
-    / "assets/art/weapons/character_layers/service_crowbar"
+    / (
+        "generated/assets/art/weapons/character_layers/service_crowbar"
+        if LOCAL_WORKSPACE
+        else "assets/art/weapons/character_layers/service_crowbar"
+    )
 )
-BASIC_WEAPONS = ROOT / "assets/art/weapons/basic_weapons.png"
+BASIC_WEAPONS = (
+    ROOT / ("templates/assets/art/weapons/basic_weapons.png" if LOCAL_WORKSPACE else "assets/art/weapons/basic_weapons.png")
+)
 FRAME_SIZE = 128
 SUPERSAMPLE = 4
 
@@ -101,13 +113,17 @@ def _render_crowbar(reference: Image.Image, direction: str) -> Image.Image:
     )
     draw = ImageDraw.Draw(canvas)
 
-    shaft_start = grip + axis * min(2.0, length * 0.06)
-    hook_base = tip - axis * min(4.0, length * 0.12)
+    # A crowbar is held around the wrapped lower third, not by the flat pry
+    # tip. Keep a short tail behind the hand while the hook remains outward.
+    pry_tip = grip - axis * length * 0.14
+    hook_tip = grip + axis * length * 0.86
+    shaft_start = pry_tip + axis * min(2.0, length * 0.06)
+    hook_base = hook_tip - axis * min(4.0, length * 0.12)
     # Keep the hook's handedness stable across the four orthographic views.
     hook_sign = -1.0 if direction in {"back", "right"} else 1.0
     hook_normal = normal * hook_sign
-    hook_control = tip + axis * 1.5 + hook_normal * min(6.0, length * 0.22)
-    hook_end = tip - axis * min(5.5, length * 0.19) + hook_normal * min(
+    hook_control = hook_tip + axis * 1.5 + hook_normal * min(6.0, length * 0.22)
+    hook_end = hook_tip - axis * min(5.5, length * 0.19) + hook_normal * min(
         7.5,
         length * 0.27,
     )
@@ -136,7 +152,7 @@ def _render_crowbar(reference: Image.Image, direction: str) -> Image.Image:
     )
 
     # The source crowbar has a worn brass grip wrap.
-    wrap_start = shaft_start + axis * length * 0.12
+    wrap_start = grip - axis * length * 0.08
     for band in range(4):
         along = wrap_start + axis * band * 2.2
         _line(
@@ -147,7 +163,7 @@ def _render_crowbar(reference: Image.Image, direction: str) -> Image.Image:
         )
 
     # Flat pry end at the handle, matching the pale lower tip in the source art.
-    pry_center = grip - axis * 0.5
+    pry_center = pry_tip
     _line(
         draw,
         (
@@ -164,7 +180,9 @@ def _render_crowbar(reference: Image.Image, direction: str) -> Image.Image:
     # that visibility envelope lets the curved hook differ from the sword tip
     # without bringing weapon pixels back through the character.
     reference_alpha = reference.getchannel("A")
-    visibility = reference_alpha.filter(ImageFilter.MaxFilter(15))
+    # Only a tiny antialiasing allowance is needed. The previous 15-pixel
+    # expansion exposed weapon pixels that the Blender body had occluded.
+    visibility = reference_alpha.filter(ImageFilter.MaxFilter(3))
     crowbar_alpha = canvas.getchannel("A")
     masked_alpha = Image.fromarray(
         np.minimum(

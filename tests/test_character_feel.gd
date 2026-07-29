@@ -465,7 +465,7 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 88)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 120)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -554,6 +554,43 @@ func _run_test() -> void:
 	await process_frame
 	assert(rendered_sprite.animation == &"attack_melee_right")
 	assert(weapon_sprite.animation == &"crowbar__attack_melee_right")
+	for melee_family in [
+		&"echo_edge",
+		&"insulated_crowbar",
+		&"volatile_edge",
+		&"director_reaper",
+	]:
+		rendered.select_preview_family(melee_family)
+		assert(rendered.play_preview_action(&"one_hand_melee_idle"))
+		await process_frame
+		assert(
+			weapon_sprite.animation
+			== StringName("%s__one_hand_melee_idle_right" % melee_family)
+		)
+		for melee_action in [&"one_hand_melee_idle", &"attack_melee"]:
+			for direction in [&"front", &"left", &"back", &"right"]:
+				var melee_animation := StringName(
+					"%s__%s_%s" % [melee_family, melee_action, direction]
+				)
+				assert(
+					weapon_sprite.sprite_frames.get_frame_count(melee_animation)
+					== int(RenderedAtlasCharacter.ANIMATION_FRAMES[melee_action])
+				)
+				for frame_index in weapon_sprite.sprite_frames.get_frame_count(
+					melee_animation,
+				):
+					var melee_frame := (
+						weapon_sprite.sprite_frames.get_frame_texture(
+							melee_animation,
+							frame_index,
+						) as AtlasTexture
+					)
+					assert(melee_frame != null)
+					assert(
+						not melee_frame.get_image().is_invisible(),
+						"Transparent melee frame: %s[%d]"
+						% [melee_animation, frame_index],
+					)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))
@@ -572,5 +609,5 @@ func _run_test() -> void:
 	await process_frame
 	assert(rendered_sprite.animation == &"shield_bash_right")
 	assert(weapon_sprite.animation == &"shield_bash_right")
-	print("Character feel passed: synchronized sword, service crowbar, pistol, staff, bow, and shield layers")
+	print("Character feel passed: synchronized per-item melee, pistol, staff, bow, and shield layers")
 	quit()

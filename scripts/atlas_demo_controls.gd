@@ -24,21 +24,33 @@ const ACTION_LABELS := {
 	&"shield_bash": "盾击",
 }
 
+const MELEE_EQUIPMENT := [
+	{"family": &"crowbar", "label": "制式撬棍"},
+	{"family": &"echo_edge", "label": "回响切割器"},
+	{"family": &"insulated_crowbar", "label": "绝缘撬棍"},
+	{"family": &"volatile_edge", "label": "失控回响刃"},
+	{"family": &"director_reaper", "label": "主任的缝合镰"},
+]
+
 @onready var _character := get_node(
 	"../../../../Player/RenderedAtlasCharacter",
 ) as RenderedAtlasCharacter
 @onready var _mode_label := $ModeLabel as Label
+@onready var _melee_selector := $MeleeEquipment as OptionButton
 @onready var _demo_attack_button := $"../../../DemoAttackButton" as Button
 
 
 func _ready() -> void:
+	for equipment in MELEE_EQUIPMENT:
+		_melee_selector.add_item(str(equipment.label))
+	_melee_selector.item_selected.connect(_select_melee_equipment)
 	_connect_action($SwordButtons/Idle, &"one_hand_melee_idle")
 	_connect_action($SwordButtons/Attack, &"attack_melee")
 	$SwordButtons/CrowbarIdle.pressed.connect(
-		_play_crowbar_action.bind(&"one_hand_melee_idle"),
+		_play_selected_melee_action.bind(&"one_hand_melee_idle"),
 	)
 	$SwordButtons/CrowbarAttack.pressed.connect(
-		_play_crowbar_action.bind(&"attack_melee"),
+		_play_selected_melee_action.bind(&"attack_melee"),
 	)
 	_connect_action($PistolButtons/Idle, &"pistol_idle")
 	_connect_action($PistolButtons/AimDown, &"pistol_aim_down")
@@ -75,14 +87,22 @@ func _play_action(action_name: StringName) -> void:
 		_show_action(action_name)
 
 
-func _play_crowbar_action(action_name: StringName) -> void:
+func _select_melee_equipment(index: int) -> void:
+	if index < 0 or index >= MELEE_EQUIPMENT.size():
+		return
+	_play_selected_melee_action(&"one_hand_melee_idle")
+
+
+func _play_selected_melee_action(action_name: StringName) -> void:
 	if not is_instance_valid(_character):
 		return
-	_character.select_preview_family(&"crowbar")
+	var equipment: Dictionary = MELEE_EQUIPMENT[_melee_selector.selected]
+	_character.select_preview_family(equipment.family)
 	if _character.play_preview_action(action_name):
-		_mode_label.text = "当前动作：制式撬棍 · %s · 专属透明武器层" % (
-			"待机" if action_name == &"one_hand_melee_idle" else "攻击"
-		)
+		_mode_label.text = "当前动作：%s · %s · 专属透明武器层" % [
+			str(equipment.label),
+			"待机" if action_name == &"one_hand_melee_idle" else "攻击",
+		]
 
 
 func _select_unarmed() -> void:

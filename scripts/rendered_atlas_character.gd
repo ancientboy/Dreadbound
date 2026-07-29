@@ -258,6 +258,26 @@ const WEAPON_LAYER_SPECS := {
 		"prefix": "service_crowbar",
 		"animations": [&"one_hand_melee_idle", &"attack_melee"],
 	},
+	&"echo_edge": {
+		"directory": "res://assets/art/weapons/character_layers/echo_edge",
+		"prefix": "echo_edge",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
+	&"insulated_crowbar": {
+		"directory": "res://assets/art/weapons/character_layers/insulated_crowbar",
+		"prefix": "insulated_crowbar",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
+	&"volatile_edge": {
+		"directory": "res://assets/art/weapons/character_layers/volatile_edge",
+		"prefix": "volatile_edge",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
+	&"director_reaper": {
+		"directory": "res://assets/art/weapons/character_layers/director_reaper",
+		"prefix": "director_reaper",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
 	&"sword": {
 		"directory": "res://assets/art/weapons/character_layers/standard_melee_sword",
 		"prefix": "standard_sword",
@@ -509,10 +529,10 @@ func _on_animation_finished() -> void:
 
 func select_preview_family(family: StringName) -> void:
 	match family:
-		&"crowbar":
+		&"crowbar", &"echo_edge", &"insulated_crowbar", &"volatile_edge", &"director_reaper":
 			_preview_idle = &"one_hand_melee_idle"
 			_preview_attack = &"attack_melee"
-			_preview_weapon_family = &"crowbar"
+			_preview_weapon_family = family
 		&"sword":
 			_preview_idle = &"one_hand_melee_idle"
 			_preview_attack = &"attack_melee"
@@ -545,7 +565,12 @@ func play_preview_action(logical_name: StringName) -> bool:
 	if not ANIMATION_FRAMES.has(logical_name):
 		return false
 	if logical_name == &"attack_melee" or String(logical_name).begins_with("one_hand_melee"):
-		if _preview_weapon_family != &"crowbar":
+		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
+			_preview_weapon_family,
+			{},
+		)
+		var family_animations: Array = family_spec.get("animations", [])
+		if not family_animations.has(logical_name):
 			select_preview_family(&"sword")
 	elif String(logical_name).begins_with("pistol"):
 		select_preview_family(&"pistol")
@@ -593,9 +618,9 @@ static func weapon_layer_animation_name(
 	family: StringName,
 	body_animation: StringName,
 ) -> StringName:
-	if family == &"crowbar":
-		return StringName("crowbar__%s" % body_animation)
-	return body_animation
+	if family in [&"sword", &"pistol", &"staff", &"bow", &"shield"]:
+		return body_animation
+	return StringName("%s__%s" % [family, body_animation])
 
 
 static func _animation_name(logical_name: StringName, direction: StringName) -> StringName:
