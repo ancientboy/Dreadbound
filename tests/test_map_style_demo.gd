@@ -45,8 +45,13 @@ func _run_test() -> void:
 
 	var polygon_collision_found := false
 	for body in instance.get_node("WorldCollision").get_children():
-		if body is StaticBody2D and body.get_node_or_null("CollisionPolygon2D") != null:
-			polygon_collision_found = true
+		if not body is StaticBody2D:
+			continue
+		for collision_child in body.get_children():
+			if collision_child is CollisionPolygon2D:
+				polygon_collision_found = true
+				break
+		if polygon_collision_found:
 			break
 	assert(polygon_collision_found)
 
