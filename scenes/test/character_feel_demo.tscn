@@ -120,7 +120,7 @@ movement_only = true
 offset_left = 18.0
 offset_top = 18.0
 offset_right = 558.0
-offset_bottom = 548.0
+offset_bottom = 578.0
 theme = SubResource("Demo_theme")
 theme_override_styles/panel = SubResource("Panel_style")
 
@@ -145,8 +145,19 @@ label_settings = SubResource("Body_settings")
 autowrap_mode = 2
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "当前动作：空手待机"
+text = "当前皮肤：原始角色 · 当前动作：空手待机"
 label_settings = SubResource("Body_settings")
+
+[node name="SkinRow" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
+theme_override_constants/separation = 8
+
+[node name="SkinLabel" type="Label" parent="HUD/Panel/Margin/Text/SkinRow"]
+text = "角色皮肤"
+label_settings = SubResource("Body_settings")
+
+[node name="SkinSelector" type="OptionButton" parent="HUD/Panel/Margin/Text/SkinRow"]
+custom_minimum_size = Vector2(250, 0)
+tooltip_text = "材质样板与全部动作、四方向共享同一套帧位"
 
 [node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "近战装备：统一剑类动作 / 每件装备使用原造型透明层"
