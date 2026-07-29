@@ -28,14 +28,27 @@ func _run_test() -> void:
 	assert(rendered != null and not rendered.runtime_sync_enabled)
 	assert(background.texture != null)
 	assert(background.texture.get_size() == Vector2(1672, 941))
-	assert(camera.limit_right == 1672)
-	assert(camera.limit_bottom == 941)
+	assert(background.scale == Vector2(2, 2))
+	assert(MapStyleDemo.MAP_SIZE == Vector2(3344, 1882))
+	assert(camera.zoom == Vector2(1.24, 1.24))
+	assert(camera.limit_right == 1652)
+	assert(camera.limit_bottom == 1882)
+	assert(camera.position_smoothing_enabled)
 	assert(not gate_shape.disabled)
 	assert(get_nodes_in_group(MapStyleDemo.LEFT_ENCOUNTER).size() == 3)
 	assert(instance.get_node("Triggers/EliteRoom") is Area2D)
+	assert(instance.get_node("Triggers/LeftRoom") is Area2D)
 	assert(instance.get_node("Triggers/UpperBranch") is Area2D)
 	assert(instance.get_node("Triggers/LowerBranch") is Area2D)
-	assert(instance.get_node("Foreground/LowerLeftWall").z_index == 0)
+	assert(instance.get_node("Foreground/FadeZones/LowerLeftWallFade") is Area2D)
+	assert(instance.get_node("Foreground/FadeZones/LowerRightWallFade") is Area2D)
+
+	var polygon_collision_found := false
+	for body in instance.get_node("WorldCollision").get_children():
+		if body is StaticBody2D and body.get_node_or_null("CollisionPolygon2D") != null:
+			polygon_collision_found = true
+			break
+	assert(polygon_collision_found)
 
 	for enemy in get_nodes_in_group(MapStyleDemo.LEFT_ENCOUNTER):
 		enemy.queue_free()
@@ -45,9 +58,20 @@ func _run_test() -> void:
 	assert(not instance.get_node("Foreground/CentralGateVisual").visible)
 	assert("中央连廊已开启" in instance.objective_label.text)
 
+	instance._on_elite_room_entered(player)
+	assert(instance._current_room == &"right")
+	assert(camera.limit_left == 1652)
+	assert(camera.limit_right == 3344)
+	assert(get_nodes_in_group(MapStyleDemo.ELITE_ENCOUNTER).size() == 2)
+
+	instance._on_left_room_entered(player)
+	assert(instance._current_room == &"left")
+	assert(camera.limit_left == 0)
+	assert(camera.limit_right == 1652)
+
 	instance.queue_free()
 	print(
-		"Map style demo passed: HD oblique background, ordinary 2D collision, "
-		+ "combat gate, foreground occlusion and branch exits",
+		"Map style demo v2 passed: enlarged rooms, room camera, polygon collision, "
+		+ "foreground fading and branch exits",
 	)
 	quit()

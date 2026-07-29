@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/map_style_demo.gd" id="1_demo"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/map_style_demo_v1.png" id="2_map"]
@@ -8,13 +8,22 @@
 [ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
 
 [sub_resource type="RectangleShape2D" id="GateShape"]
-size = Vector2(34, 174)
+size = Vector2(68, 348)
 
 [sub_resource type="RectangleShape2D" id="EliteTriggerShape"]
-size = Vector2(430, 430)
+size = Vector2(180, 520)
+
+[sub_resource type="RectangleShape2D" id="LeftTriggerShape"]
+size = Vector2(160, 520)
 
 [sub_resource type="RectangleShape2D" id="BranchTriggerShape"]
-size = Vector2(180, 150)
+size = Vector2(360, 300)
+
+[sub_resource type="RectangleShape2D" id="LeftWallFadeShape"]
+size = Vector2(980, 260)
+
+[sub_resource type="RectangleShape2D" id="RightWallFadeShape"]
+size = Vector2(1120, 240)
 
 [sub_resource type="StyleBoxFlat" id="TopPanelStyle"]
 bg_color = Color(0.018, 0.043, 0.049, 0.93)
@@ -32,53 +41,64 @@ corner_radius_bottom_left = 8
 default_font = ExtResource("6_font")
 
 [node name="MapStyleDemo" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_demo")
 
 [node name="MapBackground" type="Sprite2D" parent="."]
 texture = ExtResource("2_map")
 centered = false
+scale = Vector2(2, 2)
 texture_filter = 1
+z_index = -20
 
 [node name="WorldCollision" type="Node2D" parent="."]
 
 [node name="CentralGate" type="StaticBody2D" parent="WorldCollision"]
-position = Vector2(826, 433)
+position = Vector2(1652, 866)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WorldCollision/CentralGate"]
 shape = SubResource("GateShape")
 
 [node name="Enemies" type="Node2D" parent="."]
+y_sort_enabled = true
 
 [node name="Triggers" type="Node2D" parent="."]
 
+[node name="LeftRoom" type="Area2D" parent="Triggers"]
+position = Vector2(1530, 910)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/LeftRoom"]
+shape = SubResource("LeftTriggerShape")
+
 [node name="EliteRoom" type="Area2D" parent="Triggers"]
-position = Vector2(1120, 455)
+position = Vector2(1765, 910)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/EliteRoom"]
 shape = SubResource("EliteTriggerShape")
 
 [node name="UpperBranch" type="Area2D" parent="Triggers"]
-position = Vector2(1510, 132)
+position = Vector2(3020, 264)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/UpperBranch"]
 shape = SubResource("BranchTriggerShape")
 
 [node name="LowerBranch" type="Area2D" parent="Triggers"]
-position = Vector2(1540, 824)
+position = Vector2(3080, 1648)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/LowerBranch"]
 shape = SubResource("BranchTriggerShape")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(420, 475)
+position = Vector2(840, 950)
 use_runtime_progress = false
 demo_weapon_slots = Array[String](["service_crowbar", "balanced_pistol", "echo_staff"])
 demo_offhand_item = ""
 demo_charm_item = ""
 
 [node name="Camera2D" parent="Player" index="1"]
-limit_right = 1672
-limit_bottom = 941
+limit_right = 1652
+limit_bottom = 1882
+zoom = Vector2(1.24, 1.24)
 
 [node name="RenderedAtlasCharacter" parent="Player" index="2"]
 runtime_sync_enabled = false
@@ -90,20 +110,38 @@ script = ExtResource("4_vfx")
 z_index = 40
 
 [node name="LowerLeftWall" type="Polygon2D" parent="Foreground"]
-polygon = PackedVector2Array(210, 806, 592, 806, 650, 865, 650, 908, 225, 908, 175, 854)
+polygon = PackedVector2Array(420, 1612, 1184, 1612, 1300, 1730, 1300, 1816, 450, 1816, 350, 1708)
 color = Color(0.055, 0.073, 0.072, 0.82)
 
 [node name="LowerRightWall" type="Polygon2D" parent="Foreground"]
-polygon = PackedVector2Array(910, 716, 1395, 716, 1440, 760, 1440, 790, 930, 790)
+polygon = PackedVector2Array(1820, 1432, 2790, 1432, 2880, 1520, 2880, 1580, 1860, 1580)
 color = Color(0.048, 0.066, 0.066, 0.76)
 
 [node name="CentralGateVisual" type="Polygon2D" parent="Foreground"]
-polygon = PackedVector2Array(808, 352, 844, 352, 844, 514, 808, 514)
+polygon = PackedVector2Array(1616, 704, 1688, 704, 1688, 1028, 1616, 1028)
 color = Color(0.13, 0.29, 0.27, 0.94)
 
 [node name="GateGlow" type="Polygon2D" parent="Foreground/CentralGateVisual"]
-polygon = PackedVector2Array(12, 3, 24, 3, 24, 159, 12, 159)
+polygon = PackedVector2Array(24, 6, 48, 6, 48, 318, 24, 318)
 color = Color(0.28, 0.95, 0.81, 0.42)
+
+[node name="FadeZones" type="Node2D" parent="Foreground"]
+
+[node name="LowerLeftWallFade" type="Area2D" parent="Foreground/FadeZones"]
+position = Vector2(825, 1705)
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Foreground/FadeZones/LowerLeftWallFade"]
+shape = SubResource("LeftWallFadeShape")
+
+[node name="LowerRightWallFade" type="Area2D" parent="Foreground/FadeZones"]
+position = Vector2(2350, 1505)
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Foreground/FadeZones/LowerRightWallFade"]
+shape = SubResource("RightWallFadeShape")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -137,13 +175,13 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图风格 Demo · 伪 2.5D 连通房间"
+text = "新地图 Demo v2 · 大房间与房间级镜头"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.42, 0.87, 0.76, 1)
 theme_override_font_sizes/font_size = 14
-text = "普通战房：清除目标"
+text = "大房间战斗：探索空间并清除目标"
 horizontal_alignment = 1
 
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
