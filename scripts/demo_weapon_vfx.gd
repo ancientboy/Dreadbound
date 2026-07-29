@@ -1,27 +1,15 @@
 class_name DemoWeaponVFX
 extends Node2D
 
-## Demo-only scalable weapon effects. Projectile geometry stays procedural,
-## while melee attacks combine authored HD textures with runtime motion.
+## Demo-only scalable weapon effects. Most weapon geometry stays procedural.
+## Only signature melee gear uses authored HD textures with runtime motion.
 const MAX_EVENTS := 24
 const MELEE_VISUAL_SCALE := 0.78
 const MELEE_BACK_LAYER := 0
 const MELEE_FRONT_LAYER := 80
 const MELEE_TEXTURES := {
-	&"fast_sword": preload(
-		"res://assets/art/vfx/melee_hd/runtime/fast_sword_crescent.png"
-	),
-	&"heavy_cleave": preload(
-		"res://assets/art/vfx/melee_hd/runtime/heavy_cleave_impact.png"
-	),
-	&"blunt_pressure": preload(
-		"res://assets/art/vfx/melee_hd/runtime/blunt_pressure_impact.png"
-	),
 	&"echo_cross": preload(
 		"res://assets/art/vfx/melee_hd/runtime/echo_cross_slash.png"
-	),
-	&"anomaly_rift": preload(
-		"res://assets/art/vfx/melee_hd/runtime/anomaly_rift_slash.png"
 	),
 	&"reaper_arc": preload(
 		"res://assets/art/vfx/melee_hd/runtime/director_reaper_arc.png"
@@ -29,9 +17,7 @@ const MELEE_TEXTURES := {
 }
 const MELEE_PROFILES := {
 	&"sword": {
-		"texture": &"fast_sword",
-		"size": 176.0,
-		"pivot": Vector2(0.18, 0.76),
+		"style": &"light_arc",
 		"rotation": -0.10,
 		"delay": 0.08,
 		"duration": 0.30,
@@ -39,9 +25,7 @@ const MELEE_PROFILES := {
 		"shake": 2.6,
 	},
 	&"heavy_blade": {
-		"texture": &"heavy_cleave",
-		"size": 196.0,
-		"pivot": Vector2(0.68, 0.78),
+		"style": &"heavy_arc",
 		"rotation": -PI * 0.5,
 		"delay": 0.15,
 		"duration": 0.42,
@@ -49,9 +33,7 @@ const MELEE_PROFILES := {
 		"shake": 5.0,
 	},
 	&"crowbar": {
-		"texture": &"blunt_pressure",
-		"size": 154.0,
-		"pivot": Vector2(0.42, 0.54),
+		"style": &"blunt_arc",
 		"rotation": 0.0,
 		"delay": 0.11,
 		"duration": 0.32,
@@ -59,9 +41,7 @@ const MELEE_PROFILES := {
 		"shake": 3.4,
 	},
 	&"insulated_crowbar": {
-		"texture": &"blunt_pressure",
-		"size": 164.0,
-		"pivot": Vector2(0.42, 0.54),
+		"style": &"electric_arc",
 		"rotation": 0.0,
 		"delay": 0.11,
 		"duration": 0.34,
@@ -69,6 +49,7 @@ const MELEE_PROFILES := {
 		"shake": 3.6,
 	},
 	&"echo_edge": {
+		"style": &"hd",
 		"texture": &"echo_cross",
 		"size": 174.0,
 		"pivot": Vector2(0.50, 0.50),
@@ -79,9 +60,7 @@ const MELEE_PROFILES := {
 		"shake": 3.0,
 	},
 	&"volatile_edge": {
-		"texture": &"anomaly_rift",
-		"size": 188.0,
-		"pivot": Vector2(0.44, 0.57),
+		"style": &"rift_arc",
 		"rotation": -0.18,
 		"delay": 0.12,
 		"duration": 0.40,
@@ -89,6 +68,7 @@ const MELEE_PROFILES := {
 		"shake": 4.4,
 	},
 	&"director_reaper": {
+		"style": &"hd",
 		"texture": &"reaper_arc",
 		"size": 202.0,
 		"pivot": Vector2(0.50, 0.50),
@@ -99,6 +79,7 @@ const MELEE_PROFILES := {
 		"shake": 4.2,
 	},
 	&"director_reaper_awakened": {
+		"style": &"hd",
 		"texture": &"reaper_arc",
 		"size": 230.0,
 		"pivot": Vector2(0.50, 0.50),
@@ -109,6 +90,7 @@ const MELEE_PROFILES := {
 		"shake": 5.0,
 	},
 	&"director_reaper_final": {
+		"style": &"hd",
 		"texture": &"reaper_arc",
 		"size": 258.0,
 		"pivot": Vector2(0.50, 0.50),
@@ -259,7 +241,12 @@ func last_direction() -> Vector2:
 
 func melee_texture_id(family: StringName) -> StringName:
 	var profile: Dictionary = MELEE_PROFILES.get(family, MELEE_PROFILES[&"sword"])
-	return profile.texture as StringName
+	return profile.get("texture", &"") as StringName
+
+
+func melee_uses_hd_texture(family: StringName) -> bool:
+	var profile: Dictionary = MELEE_PROFILES.get(family, MELEE_PROFILES[&"sword"])
+	return profile.get("style", &"") == &"hd"
 
 
 func melee_layer_for_direction(direction: Vector2) -> int:
@@ -333,6 +320,8 @@ func _prepare_melee_sprites(event: Dictionary) -> void:
 		event.family as StringName,
 		MELEE_PROFILES[&"sword"],
 	)
+	if profile.get("style", &"") != &"hd":
+		return
 	var texture := MELEE_TEXTURES[profile.texture] as Texture2D
 	var pivot := profile.pivot as Vector2
 	for sprite_key in [&"sprite", &"trail"]:
@@ -360,6 +349,9 @@ func _update_melee_sprites(event: Dictionary) -> void:
 		event.family as StringName,
 		MELEE_PROFILES[&"sword"],
 	)
+	if profile.get("style", &"") != &"hd":
+		_hide_melee_sprites(event)
+		return
 	var texture := MELEE_TEXTURES[profile.texture] as Texture2D
 	var direction := event.direction as Vector2
 	var normal := direction.orthogonal()
@@ -429,6 +421,12 @@ func _draw_melee_accents(event: Dictionary, progress: float) -> void:
 	var origin: Vector2 = event.origin
 	var direction: Vector2 = event.direction
 	var color: Color = event.color
+	var profile: Dictionary = MELEE_PROFILES.get(
+		event.family as StringName,
+		MELEE_PROFILES[&"sword"],
+	)
+	if profile.get("style", &"") != &"hd":
+		_draw_procedural_melee(event, progress, profile)
 	var fade := 1.0 - smoothstep(0.62, 1.0, progress)
 	var radius := float(event.reach)
 	var tip := origin + direction * radius
@@ -449,6 +447,108 @@ func _draw_melee_accents(event: Dictionary, progress: float) -> void:
 			(progress - 0.56) / 0.44,
 			true,
 		)
+
+
+func _draw_procedural_melee(
+	event: Dictionary,
+	progress: float,
+	profile: Dictionary,
+) -> void:
+	var origin: Vector2 = event.origin
+	var direction: Vector2 = event.direction
+	var normal := direction.orthogonal()
+	var color: Color = event.color
+	var style := profile.get("style", &"light_arc") as StringName
+	var reveal := ease(clampf(progress / 0.62, 0.0, 1.0), -1.2)
+	var fade := 1.0 - smoothstep(0.58, 1.0, progress)
+	var radius := 43.0
+	var thickness := 7.0
+	var half_sweep := 0.82
+	match style:
+		&"heavy_arc":
+			radius = 54.0
+			thickness = 12.0
+			half_sweep = 1.02
+		&"blunt_arc":
+			radius = 39.0
+			thickness = 9.0
+			half_sweep = 0.72
+		&"electric_arc":
+			radius = 42.0
+			thickness = 8.0
+			half_sweep = 0.78
+		&"rift_arc":
+			radius = 48.0
+			thickness = 9.0
+			half_sweep = 0.94
+
+	var center_angle := direction.angle() + float(profile.rotation)
+	var start_angle := center_angle - half_sweep
+	var end_angle := lerpf(start_angle, center_angle + half_sweep, reveal)
+	_draw_arc_ribbon(
+		origin,
+		radius - thickness * 1.35,
+		radius + thickness * 0.75,
+		start_angle,
+		end_angle,
+		Color(color, 0.12 * fade),
+	)
+	_draw_arc_ribbon(
+		origin,
+		radius - thickness * 0.35,
+		radius + thickness * 0.28,
+		start_angle,
+		end_angle,
+		Color(color.lightened(0.36), 0.72 * fade),
+	)
+	draw_arc(
+		origin,
+		radius,
+		start_angle,
+		end_angle,
+		20,
+		Color(Color.WHITE, 0.72 * fade),
+		1.4 if style != &"heavy_arc" else 2.0,
+		true,
+	)
+
+	if style == &"blunt_arc":
+		var pressure_center := origin + direction * radius * 0.72
+		draw_arc(
+			pressure_center,
+			lerpf(5.0, 17.0, reveal),
+			0.0,
+			TAU,
+			18,
+			Color(color, 0.55 * fade),
+			2.0,
+			true,
+		)
+	elif style == &"electric_arc":
+		for strand in range(2):
+			var points := PackedVector2Array()
+			for index in range(7):
+				var ratio := float(index) / 6.0
+				var angle := lerpf(start_angle, end_angle, ratio)
+				var jitter := sin(ratio * 23.0 + strand * 2.1) * 3.2
+				points.append(
+					origin
+					+ Vector2.from_angle(angle) * (radius + jitter)
+					+ normal * (strand * 2.0 - 1.0)
+				)
+			draw_polyline(points, Color(color.lightened(0.45), 0.74 * fade), 1.5, true)
+	elif style == &"rift_arc":
+		for side in [-1.0, 1.0]:
+			draw_arc(
+				origin + normal * side * 2.5,
+				radius + side * 3.0,
+				start_angle,
+				end_angle,
+				20,
+				Color(color.darkened(0.08), 0.48 * fade),
+				2.4,
+				true,
+			)
 
 
 func _draw_ballistic(event: Dictionary, progress: float) -> void:

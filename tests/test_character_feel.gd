@@ -102,9 +102,18 @@ func _run_test() -> void:
 	assert(weapon_vfx.last_effect() == &"melee")
 	assert(weapon_vfx.last_family() == &"volatile_edge")
 	assert(weapon_vfx.last_direction() == Vector2.RIGHT)
-	assert(weapon_vfx.melee_texture_id(&"volatile_edge") == &"anomaly_rift")
-	assert(weapon_vfx.melee_texture_id(&"heavy_blade") == &"heavy_cleave")
+	assert(weapon_vfx.melee_texture_id(&"volatile_edge") == &"")
+	assert(weapon_vfx.melee_texture_id(&"heavy_blade") == &"")
+	assert(weapon_vfx.melee_texture_id(&"echo_edge") == &"echo_cross")
 	assert(weapon_vfx.melee_texture_id(&"director_reaper_final") == &"reaper_arc")
+	assert(not weapon_vfx.melee_uses_hd_texture(&"sword"))
+	assert(not weapon_vfx.melee_uses_hd_texture(&"crowbar"))
+	assert(not weapon_vfx.melee_uses_hd_texture(&"insulated_crowbar"))
+	assert(not weapon_vfx.melee_uses_hd_texture(&"volatile_edge"))
+	assert(weapon_vfx.melee_uses_hd_texture(&"echo_edge"))
+	assert(weapon_vfx.melee_uses_hd_texture(&"director_reaper"))
+	assert(weapon_vfx.melee_uses_hd_texture(&"director_reaper_awakened"))
+	assert(weapon_vfx.melee_uses_hd_texture(&"director_reaper_final"))
 	assert(weapon_vfx.melee_layer_for_direction(Vector2.UP) == 0)
 	assert(weapon_vfx.melee_layer_for_direction(Vector2.DOWN) > 0)
 	var melee_origin := player.global_position
@@ -128,6 +137,11 @@ func _run_test() -> void:
 	assert(weapon_vfx.last_direction() == Vector2.UP)
 	weapon_vfx.play_melee(player.global_position, Vector2(0.1, 0.9), &"sword")
 	assert(weapon_vfx.last_direction() == Vector2.DOWN)
+	weapon_vfx.play_melee(
+		player.global_position,
+		Vector2.UP,
+		&"director_reaper_final",
+	)
 	weapon_vfx._process(0.18)
 	var visible_melee_layers := 0
 	var has_back_layer := false
@@ -154,13 +168,13 @@ func _run_test() -> void:
 		Vector2.RIGHT,
 		&"conductor_railgun_final",
 	)
-	assert(weapon_vfx.active_effect_count() == 5)
+	assert(weapon_vfx.active_effect_count() == 6)
 	assert(weapon_vfx.last_effect() == &"rail")
 	weapon_vfx.play_arcane(player.global_position, Vector2.RIGHT, &"echo_staff")
-	assert(weapon_vfx.active_effect_count() == 6)
+	assert(weapon_vfx.active_effect_count() == 7)
 	assert(weapon_vfx.last_effect() == &"arcane")
 	weapon_vfx.play_bow(player.global_position, Vector2.RIGHT, &"mourning_bow")
-	assert(weapon_vfx.active_effect_count() == 7)
+	assert(weapon_vfx.active_effect_count() == 8)
 	assert(weapon_vfx.last_effect() == &"bow")
 	instance.get_node(
 		"HUD/Panel/Margin/Text/SwordButtons/CrowbarAttack",
