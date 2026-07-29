@@ -7,14 +7,13 @@ const SKIN_PRESETS := [
 	{
 		"id": &"base_drifter",
 		"label": "原始角色",
-		"tint": Color.WHITE,
+		"renderer": &"atlas",
 	},
 	{
-		"id": &"armed_specialist_test",
-		"label": "武装师 · 材质样板",
-		# The first skin changes material only, preserving the exact silhouette,
-		# direction mapping, frame cadence and weapon grip of every action.
-		"tint": Color("8fc9c4"),
+		"id": &"base_armorer",
+		"label": "武装师 · 正式骨骼皮肤",
+		"renderer": &"skeleton",
+		"skeleton_skin": "base_armorer",
 	},
 ]
 const SOURCE_DIRECTIONS := {
@@ -479,7 +478,7 @@ func _ready() -> void:
 	_sprite.scale = display_scale
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_sprite.sprite_frames = _build_sprite_frames()
-	_sprite.self_modulate = _skin_tint(_active_skin_id)
+	_sprite.self_modulate = Color.WHITE
 	_sprite.animation_finished.connect(_on_animation_finished)
 	add_child(_sprite)
 	_weapon_sprite = AnimatedSprite2D.new()
@@ -492,6 +491,7 @@ func _ready() -> void:
 	_weapon_sprite.hide()
 	add_child(_weapon_sprite)
 	call_deferred("_activate_presentation")
+	call_deferred("_apply_skin_renderer")
 
 
 func _process(_delta: float) -> void:
@@ -703,6 +703,9 @@ func select_preview_family(family: StringName) -> void:
 func play_preview_action(logical_name: StringName) -> bool:
 	if not ANIMATION_FRAMES.has(logical_name):
 		return false
+	var skeleton := _skeleton_character()
+	if skeleton != null and skeleton.is_action_library_enabled():
+		skeleton.play_preview_action(logical_name)
 	if logical_name == &"attack_melee" or String(logical_name).begins_with("one_hand_melee"):
 		var family_spec: Dictionary = WEAPON_LAYER_SPECS.get(
 			_preview_weapon_family,
@@ -760,10 +763,45 @@ func select_skin(skin_id: StringName) -> bool:
 	for preset in SKIN_PRESETS:
 		if preset["id"] == skin_id:
 			_active_skin_id = skin_id
-			if is_instance_valid(_sprite):
-				_sprite.self_modulate = preset["tint"] as Color
+			_apply_skin_renderer()
 			return true
 	return false
+
+
+func set_body_layer_visible(value: bool) -> void:
+	if is_instance_valid(_sprite):
+		_sprite.visible = value
+
+
+func _skeleton_character() -> UniversalHumanoidActionCharacter:
+	if not is_instance_valid(get_parent()):
+		return null
+	return get_parent().get_node_or_null(
+		"UniversalHumanoidActionCharacter"
+	) as UniversalHumanoidActionCharacter
+
+
+func _apply_skin_renderer() -> void:
+	if not is_instance_valid(_sprite):
+		return
+	_sprite.self_modulate = Color.WHITE
+	var preset := {}
+	for option in SKIN_PRESETS:
+		if option["id"] == _active_skin_id:
+			preset = option
+			break
+	var use_skeleton := preset.get("renderer", &"atlas") == &"skeleton"
+	var skeleton := _skeleton_character()
+	if skeleton != null:
+		if use_skeleton:
+			assert(skeleton.set_skin(str(preset.get("skeleton_skin", "base_armorer"))))
+		skeleton.set_action_library_enabled(use_skeleton)
+	else:
+		set_body_layer_visible(not use_skeleton)
+	if is_instance_valid(_weapon_sprite):
+		# The authored transparent weapon atlases remain independent from skin
+		# selection. Raise only that layer while the taller skeleton skin is active.
+		_weapon_sprite.z_index = 20 if use_skeleton else 1
 
 
 func selected_skin() -> StringName:
@@ -773,12 +811,6 @@ func selected_skin() -> StringName:
 static func skin_options() -> Array:
 	return SKIN_PRESETS.duplicate(true)
 
-
-static func _skin_tint(skin_id: StringName) -> Color:
-	for preset in SKIN_PRESETS:
-		if preset["id"] == skin_id:
-			return preset["tint"] as Color
-	return Color.WHITE
 
 
 static func direction_from_vector(value: Vector2) -> StringName:
