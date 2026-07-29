@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/map_style_demo.gd" id="1_demo"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/map_style_demo_v1.png" id="2_map"]
@@ -6,6 +6,8 @@
 [ext_resource type="Script" path="res://scripts/demo_weapon_vfx.gd" id="4_vfx"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
 [ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
+[ext_resource type="Script" path="res://scripts/map_room_module.gd" id="7_room"]
+[ext_resource type="Script" path="res://scripts/map_room_obstacle.gd" id="8_obstacle"]
 
 [sub_resource type="RectangleShape2D" id="GateShape"]
 size = Vector2(68, 348)
@@ -50,6 +52,133 @@ centered = false
 scale = Vector2(2, 2)
 texture_filter = 1
 z_index = -20
+
+[node name="Rooms" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="LeftRoom" type="Node2D" parent="Rooms"]
+y_sort_enabled = true
+script = ExtResource("7_room")
+room_id = &"left"
+room_kind = "combat"
+difficulty_tier = 1
+camera_bounds = Rect2(0, 0, 1652, 1882)
+walkable_outline = PackedVector2Array(90, 560, 140, 420, 250, 300, 470, 250, 650, 240, 700, 350, 880, 390, 880, 520, 1010, 620, 1390, 620, 1510, 760, 1820, 760, 1820, 1070, 1510, 1070, 1420, 1120, 1420, 1240, 1310, 1320, 1320, 1470, 1200, 1540, 1220, 1700, 1100, 1750, 470, 1750, 380, 1680, 360, 1590, 270, 1580, 170, 1490, 90, 1390, 40, 1230, 40, 1050, 90, 980, 120, 840, 100, 720)
+door_directions = PackedStringArray("east")
+
+[node name="EnemySpawns" type="Node2D" parent="Rooms/LeftRoom"]
+
+[node name="PatientA" type="Marker2D" parent="Rooms/LeftRoom/EnemySpawns"]
+position = Vector2(650, 560)
+
+[node name="PatientB" type="Marker2D" parent="Rooms/LeftRoom/EnemySpawns"]
+position = Vector2(1040, 930)
+
+[node name="PatientC" type="Marker2D" parent="Rooms/LeftRoom/EnemySpawns"]
+position = Vector2(590, 1320)
+
+[node name="Obstacles" type="Node2D" parent="Rooms/LeftRoom"]
+y_sort_enabled = true
+
+[node name="NorthWallConsole" type="StaticBody2D" parent="Rooms/LeftRoom/Obstacles"]
+position = Vector2(640, 390)
+script = ExtResource("8_obstacle")
+prop_kind = 0
+footprint_size = Vector2(210, 58)
+visual_height = 52.0
+placement_role = "wall"
+
+[node name="WestMedicalLocker" type="StaticBody2D" parent="Rooms/LeftRoom/Obstacles"]
+position = Vector2(238, 820)
+rotation = 1.5708
+script = ExtResource("8_obstacle")
+prop_kind = 1
+footprint_size = Vector2(92, 62)
+visual_height = 108.0
+placement_role = "wall"
+
+[node name="ArenaSupplyCrates" type="StaticBody2D" parent="Rooms/LeftRoom/Obstacles"]
+position = Vector2(1130, 1325)
+rotation = -0.12
+script = ExtResource("8_obstacle")
+prop_kind = 2
+footprint_size = Vector2(138, 84)
+visual_height = 66.0
+placement_role = "combat"
+
+[node name="ArenaBarricade" type="StaticBody2D" parent="Rooms/LeftRoom/Obstacles"]
+position = Vector2(805, 1090)
+rotation = -0.18
+script = ExtResource("8_obstacle")
+prop_kind = 4
+footprint_size = Vector2(184, 48)
+visual_height = 48.0
+placement_role = "combat"
+
+[node name="RightRoom" type="Node2D" parent="Rooms"]
+y_sort_enabled = true
+script = ExtResource("7_room")
+room_id = &"right"
+room_kind = "elite"
+difficulty_tier = 2
+camera_bounds = Rect2(1652, 0, 1692, 1882)
+walkable_outline = PackedVector2Array(1500, 760, 1800, 760, 1800, 500, 1950, 330, 2420, 330, 2540, 420, 2670, 300, 2760, 200, 2770, 110, 3060, 30, 3230, 100, 3230, 330, 3100, 430, 2890, 430, 2830, 520, 2860, 580, 3140, 620, 3220, 700, 3220, 950, 3120, 1040, 3030, 1180, 2860, 1380, 2780, 1490, 2940, 1490, 3070, 1430, 3130, 1500, 3130, 1630, 3310, 1830, 3270, 1880, 3150, 1810, 3030, 1690, 2950, 1590, 2780, 1540, 2600, 1550, 2140, 1550, 1990, 1470, 1870, 1400, 1800, 1220, 1800, 1120, 1500, 1120)
+door_directions = PackedStringArray("west", "north", "south")
+
+[node name="EnemySpawns" type="Node2D" parent="Rooms/RightRoom"]
+
+[node name="EliteA" type="Marker2D" parent="Rooms/RightRoom/EnemySpawns"]
+position = Vector2(2220, 620)
+
+[node name="EliteB" type="Marker2D" parent="Rooms/RightRoom/EnemySpawns"]
+position = Vector2(2580, 1160)
+
+[node name="Obstacles" type="Node2D" parent="Rooms/RightRoom"]
+y_sort_enabled = true
+
+[node name="NorthWallConsole" type="StaticBody2D" parent="Rooms/RightRoom/Obstacles"]
+position = Vector2(2280, 450)
+script = ExtResource("8_obstacle")
+prop_kind = 0
+footprint_size = Vector2(220, 58)
+visual_height = 54.0
+placement_role = "wall"
+
+[node name="EastMedicalLocker" type="StaticBody2D" parent="Rooms/RightRoom/Obstacles"]
+position = Vector2(3060, 900)
+rotation = 1.5708
+script = ExtResource("8_obstacle")
+prop_kind = 1
+footprint_size = Vector2(96, 62)
+visual_height = 112.0
+placement_role = "wall"
+
+[node name="EliteSupplyCrates" type="StaticBody2D" parent="Rooms/RightRoom/Obstacles"]
+position = Vector2(2670, 1180)
+rotation = 0.14
+script = ExtResource("8_obstacle")
+prop_kind = 2
+footprint_size = Vector2(146, 88)
+visual_height = 70.0
+placement_role = "combat"
+
+[node name="EliteBarricade" type="StaticBody2D" parent="Rooms/RightRoom/Obstacles"]
+position = Vector2(2180, 1020)
+rotation = 0.16
+script = ExtResource("8_obstacle")
+prop_kind = 4
+footprint_size = Vector2(196, 50)
+visual_height = 50.0
+placement_role = "combat"
+
+[node name="SouthGurney" type="StaticBody2D" parent="Rooms/RightRoom/Obstacles"]
+position = Vector2(2470, 1390)
+rotation = -0.1
+script = ExtResource("8_obstacle")
+prop_kind = 3
+footprint_size = Vector2(176, 72)
+visual_height = 42.0
+placement_role = "wall"
 
 [node name="WorldCollision" type="Node2D" parent="."]
 
@@ -175,13 +304,13 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图 Demo v2 · 大房间与房间级镜头"
+text = "新地图 Demo v3 · 精细房间模块与独立障碍物"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.42, 0.87, 0.76, 1)
 theme_override_font_sizes/font_size = 14
-text = "大房间战斗：探索空间并清除目标"
+text = "模块化战斗房：利用独立障碍物清除目标"
 horizontal_alignment = 1
 
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
