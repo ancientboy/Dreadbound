@@ -142,6 +142,18 @@ const HOLD_LAST_FRAME := {
 	&"bow_draw": true,
 	&"shield_raise": true,
 }
+# Blender exposes Image.pixels from the lower-left corner. Bow and shield are
+# the only current multi-row atlases packed through that API.
+const BOTTOM_UP_GRID_ACTIONS := {
+	&"bow_idle": true,
+	&"bow_draw": true,
+	&"bow_aim": true,
+	&"bow_release": true,
+	&"shield_raise": true,
+	&"shield_block": true,
+	&"shield_hit": true,
+	&"shield_bash": true,
+}
 const ATLAS_TEXTURES := {
 	&"idle_front": preload("res://assets/art/characters/rendered3d/base_drifter/idle_front.png"),
 	&"idle_left": preload("res://assets/art/characters/rendered3d/base_drifter/idle_left.png"),
@@ -376,9 +388,12 @@ func _build_sprite_frames() -> SpriteFrames:
 			for frame_index in frame_count:
 				var frame_texture := AtlasTexture.new()
 				frame_texture.atlas = texture
+				var atlas_row := frame_index / columns
+				if BOTTOM_UP_GRID_ACTIONS.has(logical_name):
+					atlas_row = rows - 1 - atlas_row
 				frame_texture.region = Rect2(
 					(frame_index % columns) * FRAME_SIZE.x,
-					(frame_index / columns) * FRAME_SIZE.y,
+					atlas_row * FRAME_SIZE.y,
 					FRAME_SIZE.x,
 					FRAME_SIZE.y,
 				)
@@ -424,9 +439,12 @@ func _build_weapon_layer_frames() -> SpriteFrames:
 				for frame_index in frame_count:
 					var frame_texture := AtlasTexture.new()
 					frame_texture.atlas = texture
+					var atlas_row := frame_index / columns
+					if BOTTOM_UP_GRID_ACTIONS.has(logical_name):
+						atlas_row = rows - 1 - atlas_row
 					frame_texture.region = Rect2(
 						(frame_index % columns) * FRAME_SIZE.x,
-						(frame_index / columns) * FRAME_SIZE.y,
+						atlas_row * FRAME_SIZE.y,
 						FRAME_SIZE.x,
 						FRAME_SIZE.y,
 					)
