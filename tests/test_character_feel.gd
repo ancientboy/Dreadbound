@@ -104,7 +104,7 @@ func _run_test() -> void:
 	assert(weapon_sprite != null)
 	assert(not weapon_sprite.visible)
 	assert(skin_selector != null)
-	assert(skin_selector.item_count == 2)
+	assert(skin_selector.item_count == 4)
 	assert(rendered.selected_skin() == &"base_drifter")
 	assert(rendered_sprite.self_modulate == Color.WHITE)
 	assert(rendered.ground_offset == Vector2(0.0, -12.0))
@@ -409,6 +409,36 @@ func _run_test() -> void:
 	assert(armorer_frame != null)
 	assert(armorer_frame.atlas.resource_path.contains("/armorer_demo_v1/"))
 	assert(weapon_sprite.self_modulate == Color.WHITE)
+	for skin_test in [
+		{
+			"index": 2,
+			"id": &"steadfast_demo_v1",
+			"directory": "/steadfast_demo_v1/",
+		},
+		{
+			"index": 3,
+			"id": &"resonant_demo_v1",
+			"directory": "/resonant_demo_v1/",
+		},
+	]:
+		skin_selector.select(int(skin_test["index"]))
+		skin_selector.item_selected.emit(int(skin_test["index"]))
+		await process_frame
+		assert(rendered.selected_skin() == skin_test["id"])
+		var profession_frame := (
+			rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0)
+			as AtlasTexture
+		)
+		assert(profession_frame != null)
+		assert(
+			profession_frame.atlas.resource_path.contains(
+				str(skin_test["directory"])
+			)
+		)
+	skin_selector.select(1)
+	skin_selector.item_selected.emit(1)
+	await process_frame
+	assert(rendered.selected_skin() == &"armorer_demo_v1")
 
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT

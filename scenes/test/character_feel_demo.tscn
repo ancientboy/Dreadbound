@@ -157,7 +157,7 @@ label_settings = SubResource("Body_settings")
 
 [node name="SkinSelector" type="OptionButton" parent="HUD/Panel/Margin/Text/SkinRow"]
 custom_minimum_size = Vector2(250, 0)
-tooltip_text = "切换原始动作图集与真正的四方向武装师分层骨骼皮肤"
+tooltip_text = "切换原始角色与三套复用统一骨骼动作的Blender职业样板"
 
 [node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "近战装备：统一剑类动作 / 每件装备使用原造型透明层"

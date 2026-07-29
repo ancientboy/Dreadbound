@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "source": "standard_humanoid_steadfast_blender",
+  "character_id": "steadfast_demo_v1",
+  "skeleton_id": "humanoid_v1",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 30,
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "idle": {
+      "frames": 36,
+      "columns": 18,
+      "loop": true,
+      "source_action": "Idle_Talking_Loop",
+      "facing_stabilized": false
+    },
+    "walk": {
+      "frames": 17,
+      "columns": 17,
+      "loop": true,
+      "source_action": "Walk_Loop",
+      "facing_stabilized": false
+    },
+    "attack_melee": {
+      "frames": 19,
+      "columns": 19,
+      "loop": false,
+      "source_action": "Sword_Attack",
+      "facing_stabilized": true
+    },
+    "hit": {
+      "frames": 5,
+      "columns": 5,
+      "loop": false,
+      "source_action": "Hit_Chest",
+      "facing_stabilized": false
+    },
+    "death": {
+      "frames": 30,
+      "columns": 30,
+      "loop": false,
+      "source_action": "Death01",
+      "facing_stabilized": false
+    },
+    "one_hand_melee_idle": {
+      "frames": 21,
+      "columns": 21,
+      "loop": true,
+      "source_action": "Sword_Idle",
+      "facing_stabilized": false
+    },
+    "pistol_idle": {
+      "frames": 21,
+      "columns": 21,
+      "loop": true,
+      "source_action": "Pistol_Idle_Loop",
+      "facing_stabilized": false
+    },
+    "pistol_aim_down": {
+      "frames": 3,
+      "columns": 3,
+      "loop": false,
+      "source_action": "Pistol_Aim_Down",
+      "facing_stabilized": false
+    },
+    "pistol_aim": {
+      "frames": 3,
+      "columns": 3,
+      "loop": false,
+      "source_action": "Pistol_Aim_Neutral",
+      "facing_stabilized": false
+    },
+    "pistol_aim_up": {
+      "frames": 3,
+      "columns": 3,
+      "loop": false,
+      "source_action": "Pistol_Aim_Up",
+      "facing_stabilized": false
+    },
+    "pistol_shoot": {
+      "frames": 8,
+      "columns": 8,
+      "loop": false,
+      "source_action": "Pistol_Shoot",
+      "facing_stabilized": false
+    },
+    "pistol_reload": {
+      "frames": 21,
+      "columns": 21,
+      "loop": false,
+      "source_action": "Pistol_Reload",
+      "facing_stabilized": false
+    },
+    "spell_enter": {
+      "frames": 7,
+      "columns": 7,
+      "loop": false,
+      "source_action": "Spell_Simple_Enter",
+      "facing_stabilized": false
+    },
+    "spell_idle": {
+      "frames": 26,
+      "columns": 26,
+      "loop": true,
+      "source_action": "Spell_Simple_Idle_Loop",
+      "facing_stabilized": false
+    },
+    "spell_shoot": {
+      "frames": 7,
+      "columns": 7,
+      "loop": false,
+      "source_action": "Spell_Simple_Shoot",
+      "facing_stabilized": false
+    },
+    "spell_exit": {
+      "frames": 6,
+      "columns": 6,
+      "loop": false,
+      "source_action": "Spell_Simple_Exit",
+      "facing_stabilized": false
+    },
+    "bow_idle": {
+      "frames": 48,
+      "columns": 28,
+      "loop": true,
+      "source_action": "KayKit_bow_idle",
+      "facing_stabilized": true
+    },
+    "bow_draw": {
+      "frames": 41,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_bow_draw",
+      "facing_stabilized": true
+    },
+    "bow_aim": {
+      "frames": 56,
+      "columns": 28,
+      "loop": true,
+      "source_action": "KayKit_bow_aim",
+      "facing_stabilized": true
+    },
+    "bow_release": {
+      "frames": 41,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_bow_release",
+      "facing_stabilized": true
+    },
+    "shield_raise": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_shield_raise",
+      "facing_stabilized": true
+    },
+    "shield_block": {
+      "frames": 33,
+      "columns": 28,
+      "loop": true,
+      "source_action": "KayKit_shield_block",
+      "facing_stabilized": true
+    },
+    "shield_hit": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_shield_hit",
+      "facing_stabilized": true
+    },
+    "shield_bash": {
+      "frames": 33,
+      "columns": 28,
+      "loop": false,
+      "source_action": "KayKit_shield_bash",
+      "facing_stabilized": true
+    }
+  }
+}

@@ -16,6 +16,20 @@ const SKIN_PRESETS := [
 		"atlas_directory": "res://assets/art/characters/rendered3d/armorer_demo_v1",
 		"direct_directions": true,
 	},
+	{
+		"id": &"steadfast_demo_v1",
+		"label": "坚守者 · Blender样板",
+		"renderer": &"atlas",
+		"atlas_directory": "res://assets/art/characters/rendered3d/steadfast_demo_v1",
+		"direct_directions": true,
+	},
+	{
+		"id": &"resonant_demo_v1",
+		"label": "共鸣者 · Blender样板",
+		"renderer": &"atlas",
+		"atlas_directory": "res://assets/art/characters/rendered3d/resonant_demo_v1",
+		"direct_directions": true,
+	},
 ]
 const SOURCE_DIRECTIONS := {
 	&"front": &"front",
