@@ -6,6 +6,29 @@ func _init() -> void:
 
 
 func _run_test() -> void:
+	var expected_families := {
+		"service_crowbar": &"sword",
+		"balanced_pistol": &"pistol",
+		"breach_shotgun": &"pistol",
+		"echo_edge": &"sword",
+		"insulated_crowbar": &"sword",
+		"nullpoint_sidearm": &"pistol",
+		"siege_core": &"pistol",
+		"volatile_edge": &"sword",
+		"director_reaper": &"sword",
+		"conductor_railgun": &"pistol",
+		"mourning_bow": &"bow",
+		"echo_staff": &"staff",
+	}
+	for item_id in expected_families:
+		assert(
+			EquipmentDatabase.weapon_animation_family(item_id) == expected_families[item_id],
+			"Wrong animation family for %s" % item_id,
+		)
+	assert(
+		str(EquipmentDatabase.offhand_presentation("riot_shield").animation_family) == "shield",
+		"Riot shield must keep the shield action family",
+	)
 	var accelerated := Player.smooth_movement_velocity(
 		Vector2.ZERO,
 		Vector2(210.0, 0.0),
