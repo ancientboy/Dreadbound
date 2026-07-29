@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/character_feel_demo.gd" id="2_demo"]
 [ext_resource type="Script" path="res://scripts/atlas_demo_controls.gd" id="3_atlas_controls"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
+[ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_horizontal"]
 size = Vector2(440, 34)
@@ -108,12 +109,14 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_mobile")
+movement_only = true
 
 [node name="Panel" type="PanelContainer" parent="HUD"]
 offset_left = 28.0
 offset_top = 26.0
 offset_right = 1000.0
 offset_bottom = 534.0
+theme_override_fonts/font = ExtResource("6_font")
 theme_override_styles/panel = SubResource("Panel_style")
 
 [node name="Margin" type="MarginContainer" parent="HUD/Panel"]
@@ -209,3 +212,22 @@ text = "死亡"
 
 [node name="Reset" type="Button" parent="HUD/Panel/Margin/Text/BaselineButtons"]
 text = "重置"
+
+[node name="DemoAttackButton" type="Button" parent="HUD"]
+anchors_preset = 8
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -270.0
+offset_top = -250.0
+offset_right = -50.0
+offset_bottom = -90.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.92, 0.98, 0.96, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.72, 1, 0.91, 1)
+theme_override_fonts/font = ExtResource("6_font")
+theme_override_font_sizes/font_size = 26
+text = "测试攻击"

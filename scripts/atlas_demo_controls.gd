@@ -20,6 +20,7 @@ const ACTION_LABELS := {
 	"../../../../Player/RenderedAtlasCharacter",
 ) as RenderedAtlasCharacter
 @onready var _mode_label := $ModeLabel as Label
+@onready var _demo_attack_button := $"../../../DemoAttackButton" as Button
 
 
 func _ready() -> void:
@@ -39,6 +40,7 @@ func _ready() -> void:
 	$BaselineButtons/Hit.pressed.connect(_trigger_hit)
 	$BaselineButtons/Death.pressed.connect(_trigger_death)
 	$BaselineButtons/Reset.pressed.connect(_reset_demo)
+	_demo_attack_button.pressed.connect(_trigger_demo_attack)
 	_show_action(&"idle")
 
 
@@ -70,6 +72,17 @@ func _trigger_death() -> void:
 	if player != null and not player._dead:
 		player.take_damage(player.health, player.global_position + Vector2.RIGHT * 40.0)
 		_show_action(&"death")
+
+
+func _trigger_demo_attack() -> void:
+	if not is_instance_valid(_character):
+		return
+	var player := _character.get_parent() as Player
+	if player == null or player._dead:
+		return
+	var action_name := _character.selected_preview_attack()
+	if _character.play_preview_action(action_name):
+		_show_action(action_name)
 
 
 func _reset_demo() -> void:

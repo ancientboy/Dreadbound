@@ -1,6 +1,8 @@
 class_name MobileControls
 extends Control
 
+@export var movement_only := false
+
 const UI_FONT: Font = preload("res://assets/fonts/DreadboundChineseFull.otf")
 const MOBILE_CONTROL_ICONS: Texture2D = preload("res://assets/art/ui/mobile_controls.png")
 
@@ -90,6 +92,8 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		if _move_touch == -1 and event.position.x < size.x * 0.5:
 			_move_touch = event.index
 			_update_stick(event.position)
+		elif movement_only:
+			return
 		elif _attack_touch == -1 and event.position.distance_to(_attack_center()) <= ACTION_RADIUS * 1.45:
 			_attack_touch = event.index
 			_attack_queued = true
@@ -187,6 +191,21 @@ func _skill_center() -> Vector2:
 
 func _draw() -> void:
 	var stick_center := _stick_center()
+	draw_circle(stick_center, STICK_RADIUS, Color(0.04, 0.11, 0.1, 0.68))
+	draw_arc(stick_center, STICK_RADIUS, 0.0, TAU, 48, Color(0.25, 0.58, 0.52, 0.72), 3.0)
+	_draw_control_icon(0, stick_center, 76.0, Color(0.78, 0.9, 0.86, 0.58))
+	draw_circle(stick_center + movement_vector * STICK_RADIUS, KNOB_RADIUS, Color(0.27, 0.72, 0.63, 0.82))
+	if movement_only:
+		draw_string(
+			UI_FONT,
+			stick_center + Vector2(-36, 116),
+			"移动",
+			HORIZONTAL_ALIGNMENT_CENTER,
+			72,
+			15,
+			Color(0.55, 0.8, 0.73, 0.9),
+		)
+		return
 	var action_center := _action_center()
 	var attack_center := _attack_center()
 	var item_center := _item_center()
@@ -194,10 +213,6 @@ func _draw() -> void:
 	var item_switch_center := _item_switch_center()
 	var trait_center := _trait_center()
 	var skill_center := _skill_center()
-	draw_circle(stick_center, STICK_RADIUS, Color(0.04, 0.11, 0.1, 0.68))
-	draw_arc(stick_center, STICK_RADIUS, 0.0, TAU, 48, Color(0.25, 0.58, 0.52, 0.72), 3.0)
-	_draw_control_icon(0, stick_center, 76.0, Color(0.78, 0.9, 0.86, 0.58))
-	draw_circle(stick_center + movement_vector * STICK_RADIUS, KNOB_RADIUS, Color(0.27, 0.72, 0.63, 0.82))
 	draw_circle(action_center, ACTION_RADIUS, Color(0.04, 0.15, 0.13, 0.86))
 	draw_arc(action_center, ACTION_RADIUS, 0.0, TAU, 48, Color(0.25, 0.88, 0.76, 0.9), 4.0)
 	if _action_touch != -1:

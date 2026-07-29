@@ -130,6 +130,15 @@ func _run_test() -> void:
 	var mobile_controls := instance.get_node("HUD/MobileControls") as MobileControls
 	assert(mobile_controls != null)
 	assert(mobile_controls.is_in_group("mobile_controls"))
+	assert(mobile_controls.movement_only)
+	var demo_attack_button := instance.get_node("HUD/DemoAttackButton") as Button
+	assert(demo_attack_button != null)
+	assert(demo_attack_button.text == "测试攻击")
+	var panel := instance.get_node("HUD/Panel") as PanelContainer
+	assert(
+		panel.get_theme_font("font")
+		== load("res://assets/fonts/DreadboundChineseFull.otf")
+	)
 	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Hit") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Death") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Reset") is Button)
@@ -146,9 +155,17 @@ func _run_test() -> void:
 	rendered.select_preview_family(&"pistol")
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_idle_right")
-	player._attack_flash = 0.2
+	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_shoot_right")
+	assert(rendered.play_preview_action(&"one_hand_melee_idle"))
+	demo_attack_button.pressed.emit()
+	await process_frame
+	assert(rendered_sprite.animation == &"attack_melee_right")
+	assert(rendered.play_preview_action(&"spell_idle"))
+	demo_attack_button.pressed.emit()
+	await process_frame
+	assert(rendered_sprite.animation == &"spell_shoot_right")
 	assert(rendered.play_preview_action(&"pistol_reload"))
 	assert(rendered_sprite.animation == &"pistol_reload_right")
 	assert(rendered.play_preview_action(&"spell_enter"))
