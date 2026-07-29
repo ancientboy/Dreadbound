@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "weapon_id": "standard_echo_staff",
+  "source": "bone_parented_blender_weapon_layer",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 12,
+  "bone": "hand_r",
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "spell_enter": {
+      "frames": 7,
+      "loop": false,
+      "source_action": "Spell_Simple_Enter"
+    },
+    "spell_idle": {
+      "frames": 26,
+      "loop": true,
+      "source_action": "Spell_Simple_Idle_Loop"
+    },
+    "spell_shoot": {
+      "frames": 7,
+      "loop": false,
+      "source_action": "Spell_Simple_Shoot"
+    },
+    "spell_exit": {
+      "frames": 6,
+      "loop": false,
+      "source_action": "Spell_Simple_Exit"
+    }
+  }
+}

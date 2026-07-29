@@ -86,10 +86,30 @@ func _run_test() -> void:
 			"res://assets/art/weapons/character_layers/standard_melee_sword/manifest.json"
 		)
 	)
+	var pistol_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/weapons/character_layers/standard_service_pistol/manifest.json"
+		)
+	)
+	var staff_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/weapons/character_layers/standard_echo_staff/manifest.json"
+		)
+	)
 	assert(body_manifest["animations"]["attack_melee"]["frames"] == 19)
 	assert(body_manifest["animations"]["attack_melee"]["facing_stabilized"])
 	assert(sword_manifest["animations"]["attack_melee"]["frames"] == 19)
 	assert(sword_manifest["animations"]["attack_melee"]["facing_stabilized"])
+	assert(pistol_manifest["bone"] == "hand_r")
+	assert(pistol_manifest["animations"]["pistol_idle"]["frames"] == 21)
+	assert(pistol_manifest["animations"]["pistol_aim"]["frames"] == 3)
+	assert(pistol_manifest["animations"]["pistol_shoot"]["frames"] == 8)
+	assert(pistol_manifest["animations"]["pistol_reload"]["frames"] == 21)
+	assert(staff_manifest["bone"] == "hand_r")
+	assert(staff_manifest["animations"]["spell_enter"]["frames"] == 7)
+	assert(staff_manifest["animations"]["spell_idle"]["frames"] == 26)
+	assert(staff_manifest["animations"]["spell_shoot"]["frames"] == 7)
+	assert(staff_manifest["animations"]["spell_exit"]["frames"] == 6)
 	var idle_frame_0 := (
 		rendered_sprite.sprite_frames.get_frame_texture(&"idle_front", 0) as AtlasTexture
 	)
@@ -207,6 +227,50 @@ func _run_test() -> void:
 			+ "standard_sword_one_hand_melee_idle_right.png"
 		)
 	)
+	var pistol_left_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(&"pistol_idle_left", 0)
+		as AtlasTexture
+	)
+	var pistol_right_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(&"pistol_idle_right", 0)
+		as AtlasTexture
+	)
+	assert(
+		pistol_left_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/standard_service_pistol/"
+			+ "standard_pistol_pistol_idle_left.png"
+		)
+	)
+	assert(
+		pistol_right_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/standard_service_pistol/"
+			+ "standard_pistol_pistol_idle_right.png"
+		)
+	)
+	var staff_left_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(&"spell_idle_left", 0)
+		as AtlasTexture
+	)
+	var staff_right_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(&"spell_idle_right", 0)
+		as AtlasTexture
+	)
+	assert(
+		staff_left_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/standard_echo_staff/"
+			+ "standard_staff_spell_idle_left.png"
+		)
+	)
+	assert(
+		staff_right_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/standard_echo_staff/"
+			+ "standard_staff_spell_idle_right.png"
+		)
+	)
 	assert(instance.get_node_or_null("SkillRangeDemo") == null)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Idle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Attack") is Button)
@@ -250,9 +314,15 @@ func _run_test() -> void:
 	rendered.select_preview_family(&"pistol")
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_idle_right")
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"pistol_idle_right")
+	assert(weapon_sprite.frame == rendered_sprite.frame)
 	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_shoot_right")
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"pistol_shoot_right")
+	assert(weapon_sprite.frame == rendered_sprite.frame)
 	assert(rendered.play_preview_action(&"one_hand_melee_idle"))
 	await process_frame
 	assert(weapon_sprite.visible)
@@ -279,15 +349,25 @@ func _run_test() -> void:
 	assert(weapon_sprite.frame == rendered_sprite.frame)
 	assert(rendered.play_preview_action(&"spell_idle"))
 	await process_frame
-	assert(not weapon_sprite.visible)
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"spell_idle_right")
+	assert(weapon_sprite.frame == rendered_sprite.frame)
 	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"spell_shoot_right")
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"spell_shoot_right")
+	assert(weapon_sprite.frame == rendered_sprite.frame)
 	assert(rendered.play_preview_action(&"pistol_reload"))
+	await process_frame
 	assert(rendered_sprite.animation == &"pistol_reload_right")
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"pistol_reload_right")
 	assert(rendered.play_preview_action(&"spell_enter"))
+	await process_frame
 	assert(rendered_sprite.animation == &"spell_enter_right")
 	assert(rendered.play_preview_action(&"spell_idle"))
+	await process_frame
 	assert(rendered_sprite.animation == &"spell_idle_right")
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"one_hand_melee_idle_front") == 21)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
@@ -298,7 +378,16 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_idle_front") == 26)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_shoot_front") == 7)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"spell_exit_front") == 6)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 48)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_reload_front") == 21)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_enter_front") == 7)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_idle_front") == 26)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_shoot_front") == 7)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"spell_exit_front") == 6)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
-	print("Character feel passed: isolated original sword, pistol, and staff actions")
+	print("Character feel passed: synchronized sword, pistol, and staff layers")
 	quit()

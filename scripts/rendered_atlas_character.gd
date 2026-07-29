@@ -166,15 +166,34 @@ const ATLAS_TEXTURES := {
 	&"spell_exit_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_back.png"),
 	&"spell_exit_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_right.png"),
 }
-const SWORD_LAYER_TEXTURES := {
-	&"one_hand_melee_idle_front": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_front.png"),
-	&"one_hand_melee_idle_left": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_left.png"),
-	&"one_hand_melee_idle_back": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_back.png"),
-	&"one_hand_melee_idle_right": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_right.png"),
-	&"attack_melee_front": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_front.png"),
-	&"attack_melee_left": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_left.png"),
-	&"attack_melee_back": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_back.png"),
-	&"attack_melee_right": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_right.png"),
+const WEAPON_LAYER_SPECS := {
+	&"sword": {
+		"directory": "res://assets/art/weapons/character_layers/standard_melee_sword",
+		"prefix": "standard_sword",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
+	&"pistol": {
+		"directory": "res://assets/art/weapons/character_layers/standard_service_pistol",
+		"prefix": "standard_pistol",
+		"animations": [
+			&"pistol_idle",
+			&"pistol_aim_down",
+			&"pistol_aim",
+			&"pistol_aim_up",
+			&"pistol_shoot",
+			&"pistol_reload",
+		],
+	},
+	&"staff": {
+		"directory": "res://assets/art/weapons/character_layers/standard_echo_staff",
+		"prefix": "standard_staff",
+		"animations": [
+			&"spell_enter",
+			&"spell_idle",
+			&"spell_shoot",
+			&"spell_exit",
+		],
+	},
 }
 
 @export var ground_offset := Vector2(0.0, -12.0)
@@ -207,7 +226,7 @@ func _ready() -> void:
 	_weapon_sprite.position = ground_offset
 	_weapon_sprite.scale = display_scale
 	_weapon_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	_weapon_sprite.sprite_frames = _build_sword_layer_frames()
+	_weapon_sprite.sprite_frames = _build_weapon_layer_frames()
 	_weapon_sprite.z_index = 1
 	_weapon_sprite.hide()
 	add_child(_weapon_sprite)
@@ -278,43 +297,57 @@ func _build_sprite_frames() -> SpriteFrames:
 	return frames
 
 
-func _build_sword_layer_frames() -> SpriteFrames:
+func _build_weapon_layer_frames() -> SpriteFrames:
 	var frames := SpriteFrames.new()
 	frames.remove_animation(&"default")
-	for logical_name in [&"one_hand_melee_idle", &"attack_melee"]:
-		for direction in DIRECTIONS:
-			var animation_name := _animation_name(logical_name, direction)
-			# The downloaded character atlases have their side filenames reversed,
-			# but Blender exports weapon layers with logical left/right names.
-			# Applying the character correction here mirrors the sword a second time.
-			var source_name := _animation_name(logical_name, direction)
-			var texture := SWORD_LAYER_TEXTURES[source_name] as Texture2D
-			var frame_count := int(ANIMATION_FRAMES[logical_name])
-			assert(
-				texture.get_size() == Vector2(FRAME_SIZE.x * frame_count, FRAME_SIZE.y),
-				"Standard sword layer dimensions do not match: %s" % animation_name,
-			)
-			frames.add_animation(animation_name)
-			frames.set_animation_speed(animation_name, float(ANIMATION_SPEEDS[logical_name]))
-			frames.set_animation_loop(animation_name, bool(LOOPING_ANIMATIONS[logical_name]))
-			for frame_index in frame_count:
-				var frame_texture := AtlasTexture.new()
-				frame_texture.atlas = texture
-				frame_texture.region = Rect2(
-					frame_index * FRAME_SIZE.x,
-					0,
-					FRAME_SIZE.x,
-					FRAME_SIZE.y,
+	for family in WEAPON_LAYER_SPECS:
+		var spec := WEAPON_LAYER_SPECS[family] as Dictionary
+		for logical_name in spec["animations"] as Array:
+			for direction in DIRECTIONS:
+				var animation_name := _animation_name(logical_name, direction)
+				# Weapon layers are exported with logical left/right names. They
+				# must not inherit the legacy character atlas side correction.
+				var texture_path := (
+					"%s/%s_%s.png"
+					% [spec["directory"], spec["prefix"], animation_name]
 				)
-				frames.add_frame(animation_name, frame_texture)
+				var texture := load(texture_path) as Texture2D
+				assert(texture != null, "Missing weapon layer: %s" % texture_path)
+				var frame_count := int(ANIMATION_FRAMES[logical_name])
+				assert(
+					texture.get_size() == Vector2(FRAME_SIZE.x * frame_count, FRAME_SIZE.y),
+					"Weapon layer dimensions do not match: %s" % animation_name,
+				)
+				frames.add_animation(animation_name)
+				frames.set_animation_speed(
+					animation_name,
+					float(ANIMATION_SPEEDS[logical_name]),
+				)
+				frames.set_animation_loop(
+					animation_name,
+					bool(LOOPING_ANIMATIONS[logical_name]),
+				)
+				for frame_index in frame_count:
+					var frame_texture := AtlasTexture.new()
+					frame_texture.atlas = texture
+					frame_texture.region = Rect2(
+						frame_index * FRAME_SIZE.x,
+						0,
+						FRAME_SIZE.x,
+						FRAME_SIZE.y,
+					)
+					frames.add_frame(animation_name, frame_texture)
 	return frames
 
 
 func _sync_weapon_layer() -> void:
 	if not is_instance_valid(_weapon_sprite) or not is_instance_valid(_sprite):
 		return
-	var has_sword_animation := _weapon_sprite.sprite_frames.has_animation(_sprite.animation)
-	_weapon_sprite.visible = _preview_weapon_family == &"sword" and has_sword_animation
+	var has_weapon_animation := _weapon_sprite.sprite_frames.has_animation(_sprite.animation)
+	_weapon_sprite.visible = (
+		WEAPON_LAYER_SPECS.has(_preview_weapon_family)
+		and has_weapon_animation
+	)
 	if not _weapon_sprite.visible:
 		return
 	_weapon_sprite.animation = _sprite.animation
@@ -358,11 +391,11 @@ func select_preview_family(family: StringName) -> void:
 		&"pistol":
 			_preview_idle = &"pistol_idle"
 			_preview_attack = &"pistol_shoot"
-			_preview_weapon_family = &""
+			_preview_weapon_family = &"pistol"
 		&"staff":
 			_preview_idle = &"spell_idle"
 			_preview_attack = &"spell_shoot"
-			_preview_weapon_family = &""
+			_preview_weapon_family = &"staff"
 		_:
 			_preview_idle = &"idle"
 			_preview_attack = &"attack_melee"

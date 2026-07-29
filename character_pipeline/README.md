@@ -81,6 +81,23 @@ upper-body motion, and arm swing. The body must still be rendered from the
 approved `Superhero_Male_FullBody` source; the embedded mannequin is only an
 occlusion reference and must never replace the published character layer.
 
+## Standard pistol and staff weapon layers
+
+`render_standard_ranged_weapon_layers.py` uses the same calibrated camera,
+`hand_r` bone parenting and mannequin holdout contract as the sword exporter.
+It builds a service pistol and echo staff, then renders every original Pistol
+and Spell Simple action at its own published frame count:
+
+```bash
+blender --background character_pipeline/dreadbound_weapon_actions.blend \
+  --python character_pipeline/render_standard_ranged_weapon_layers.py -- \
+  --output-root assets/art/weapons/character_layers
+```
+
+The output directories are `standard_service_pistol` and
+`standard_echo_staff`. Their logical left/right filenames are already correct;
+do not apply the legacy base-character side swap to these weapon layers.
+
 ## Direction and camera contract
 
 - One model, armature, material set and animation take is used for all views.

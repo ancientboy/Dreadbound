@@ -162,7 +162,7 @@ text = "剑待机"
 text = "剑攻击"
 
 [node name="PistolLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "手枪动作（原 Pistol 系列）"
+text = "标准手枪（3D 模型 · hand_r 绑定 · 遮挡透明层）"
 label_settings = SubResource("Body_settings")
 
 [node name="PistolButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
@@ -187,7 +187,7 @@ text = "射击"
 text = "换弹"
 
 [node name="StaffLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "法杖动作（原 Spell Simple 系列）"
+text = "标准法杖（3D 模型 · hand_r 绑定 · 遮挡透明层）"
 label_settings = SubResource("Body_settings")
 
 [node name="StaffButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]

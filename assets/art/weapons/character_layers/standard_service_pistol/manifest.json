@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "weapon_id": "standard_service_pistol",
+  "source": "bone_parented_blender_weapon_layer",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 12,
+  "bone": "hand_r",
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "pistol_idle": {
+      "frames": 21,
+      "loop": true,
+      "source_action": "Pistol_Idle_Loop"
+    },
+    "pistol_aim_down": {
+      "frames": 3,
+      "loop": false,
+      "source_action": "Pistol_Aim_Down"
+    },
+    "pistol_aim": {
+      "frames": 3,
+      "loop": false,
+      "source_action": "Pistol_Aim_Neutral"
+    },
+    "pistol_aim_up": {
+      "frames": 3,
+      "loop": false,
+      "source_action": "Pistol_Aim_Up"
+    },
+    "pistol_shoot": {
+      "frames": 8,
+      "loop": false,
+      "source_action": "Pistol_Shoot"
+    },
+    "pistol_reload": {
+      "frames": 21,
+      "loop": false,
+      "source_action": "Pistol_Reload"
+    }
+  }
+}
