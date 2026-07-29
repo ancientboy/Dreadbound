@@ -93,9 +93,16 @@ func _run_test() -> void:
 
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
 	var weapon_sprite := rendered.get_node("WeaponLayer") as AnimatedSprite2D
+	var skin_selector := instance.get_node(
+		"HUD/Panel/Margin/Text/SkinRow/SkinSelector"
+	) as OptionButton
 	assert(rendered_sprite != null)
 	assert(weapon_sprite != null)
 	assert(not weapon_sprite.visible)
+	assert(skin_selector != null)
+	assert(skin_selector.item_count == 2)
+	assert(rendered.selected_skin() == &"base_drifter")
+	assert(rendered_sprite.self_modulate == Color.WHITE)
 	assert(rendered.ground_offset == Vector2(0.0, -12.0))
 	assert(rendered_sprite.position == Vector2(0.0, -12.0))
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 96)
@@ -377,7 +384,7 @@ func _run_test() -> void:
 	assert(demo_attack_button.text == "测试攻击")
 	var panel := instance.get_node("HUD/Panel") as PanelContainer
 	assert(panel.size.x <= 540.0)
-	assert(panel.size.y <= 530.0)
+	assert(panel.size.y <= 560.0)
 	assert(
 		panel.get_theme_font("font")
 		== load("res://assets/fonts/DreadboundChineseFull.otf")
@@ -385,6 +392,12 @@ func _run_test() -> void:
 	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Hit") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Death") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/BaselineButtons/Reset") is Button)
+	skin_selector.select(1)
+	skin_selector.item_selected.emit(1)
+	await process_frame
+	assert(rendered.selected_skin() == &"armed_specialist_test")
+	assert(rendered_sprite.self_modulate == Color("8fc9c4"))
+	assert(weapon_sprite.self_modulate == Color.WHITE)
 
 	player.velocity = Vector2(player.movement_speed, 0.0)
 	player.facing = Vector2.RIGHT
@@ -404,6 +417,8 @@ func _run_test() -> void:
 	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_shoot_right")
+	assert(rendered.selected_skin() == &"armed_specialist_test")
+	assert(rendered_sprite.self_modulate == Color("8fc9c4"))
 	assert(weapon_sprite.visible)
 	assert(weapon_sprite.animation == &"pistol_shoot_right")
 	assert(weapon_sprite.frame == rendered_sprite.frame)
