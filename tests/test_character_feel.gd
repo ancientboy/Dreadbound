@@ -105,8 +105,23 @@ func _run_test() -> void:
 	assert(weapon_vfx.melee_texture_id(&"volatile_edge") == &"anomaly_rift")
 	assert(weapon_vfx.melee_texture_id(&"heavy_blade") == &"heavy_cleave")
 	assert(weapon_vfx.melee_texture_id(&"director_reaper_final") == &"reaper_arc")
-	assert(weapon_vfx.melee_layer_for_direction(Vector2.UP) < 0)
+	assert(weapon_vfx.melee_layer_for_direction(Vector2.UP) == 0)
 	assert(weapon_vfx.melee_layer_for_direction(Vector2.DOWN) > 0)
+	var melee_origin := player.global_position
+	var sword_effect_origin := weapon_vfx.melee_effect_origin(
+		melee_origin,
+		Vector2.RIGHT,
+		&"sword",
+	)
+	assert(sword_effect_origin.x >= melee_origin.x + 48.0)
+	assert(sword_effect_origin.y == melee_origin.y)
+	var reaper_effect_origin := weapon_vfx.melee_effect_origin(
+		melee_origin,
+		Vector2.UP,
+		&"director_reaper_final",
+	)
+	assert(reaper_effect_origin.y <= melee_origin.y - 68.0)
+	assert(reaper_effect_origin.x == melee_origin.x)
 	weapon_vfx.play_melee(player.global_position, Vector2(-0.8, 0.1), &"echo_edge")
 	assert(weapon_vfx.last_direction() == Vector2.LEFT)
 	weapon_vfx.play_melee(player.global_position, Vector2(0.1, -0.9), &"crowbar")
@@ -122,7 +137,10 @@ func _run_test() -> void:
 		if effect_sprite == null or not effect_sprite.visible:
 			continue
 		visible_melee_layers += 1
-		has_back_layer = has_back_layer or effect_sprite.z_index < 0
+		has_back_layer = (
+			has_back_layer
+			or effect_sprite.z_index == weapon_vfx.MELEE_BACK_LAYER
+		)
 		has_front_layer = has_front_layer or effect_sprite.z_index > 0
 		assert(maxi(
 			effect_sprite.texture.get_width(),

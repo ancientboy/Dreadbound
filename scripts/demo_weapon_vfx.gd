@@ -4,6 +4,9 @@ extends Node2D
 ## Demo-only scalable weapon effects. Projectile geometry stays procedural,
 ## while melee attacks combine authored HD textures with runtime motion.
 const MAX_EVENTS := 24
+const MELEE_VISUAL_SCALE := 0.78
+const MELEE_BACK_LAYER := 0
+const MELEE_FRONT_LAYER := 80
 const MELEE_TEXTURES := {
 	&"fast_sword": preload(
 		"res://assets/art/vfx/melee_hd/runtime/fast_sword_crescent.png"
@@ -176,11 +179,17 @@ func _process(delta: float) -> void:
 func play_melee(origin: Vector2, direction: Vector2, family: StringName) -> void:
 	var color := _family_color(family)
 	var profile: Dictionary = MELEE_PROFILES.get(family, MELEE_PROFILES[&"sword"])
+	var cardinal_direction := _cardinal_direction(direction)
+	var effect_origin := melee_effect_origin(origin, cardinal_direction, family)
+	var remaining_reach := maxf(
+		float(profile.reach) - origin.distance_to(effect_origin),
+		24.0,
+	)
 	_spawn(
 		&"melee",
-		origin,
-		_cardinal_direction(direction),
-		float(profile.reach),
+		effect_origin,
+		cardinal_direction,
+		remaining_reach,
 		float(profile.delay),
 		float(profile.duration),
 		color,
@@ -188,7 +197,7 @@ func play_melee(origin: Vector2, direction: Vector2, family: StringName) -> void
 	)
 	_last_effect = &"melee"
 	_last_family = family
-	_last_direction = _cardinal_direction(direction)
+	_last_direction = cardinal_direction
 	_kick_camera(float(profile.shake), minf(float(profile.duration) * 0.42, 0.18))
 
 
@@ -254,7 +263,22 @@ func melee_texture_id(family: StringName) -> StringName:
 
 
 func melee_layer_for_direction(direction: Vector2) -> int:
-	return -10 if _cardinal_direction(direction).y < -0.5 else 80
+	return (
+		MELEE_BACK_LAYER
+		if _cardinal_direction(direction).y < -0.5
+		else MELEE_FRONT_LAYER
+	)
+
+
+func melee_effect_origin(
+	origin: Vector2,
+	direction: Vector2,
+	family: StringName,
+) -> Vector2:
+	var profile: Dictionary = MELEE_PROFILES.get(family, MELEE_PROFILES[&"sword"])
+	var cardinal_direction := _cardinal_direction(direction)
+	var cast_offset := clampf(float(profile.reach) * 0.56, 48.0, 68.0)
+	return origin + cardinal_direction * cast_offset
 
 
 func _family_color(family: StringName) -> Color:
@@ -343,7 +367,7 @@ func _update_melee_sprites(event: Dictionary) -> void:
 	var fade := 1.0 - smoothstep(0.58, 1.0, progress)
 	var sweep := ease(clampf(progress / 0.64, 0.0, 1.0), -1.45)
 	var max_edge := maxf(texture.get_width(), texture.get_height())
-	var base_scale := float(profile.size) / max_edge
+	var base_scale := float(profile.size) * MELEE_VISUAL_SCALE / max_edge
 	var rotation := (
 		direction.angle()
 		+ float(profile.rotation)
