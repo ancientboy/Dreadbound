@@ -49,7 +49,7 @@ WEAPONS = (
         BASIC_ATLAS,
         32,
         1,
-        (12.5, 18.0),
+        (5.0, 29.0),
         (25.5, 4.0),
         1.02,
         1.0,
@@ -61,7 +61,7 @@ WEAPONS = (
         BASIC_ATLAS,
         32,
         2,
-        (8.5, 23.0),
+        (3.0, 29.0),
         (25.0, 4.0),
         1.78,
         1.12,
@@ -73,7 +73,7 @@ WEAPONS = (
         ADVANCED_ATLAS,
         64,
         2,
-        (22.0, 38.0),
+        (18.0, 49.0),
         (43.0, 17.0),
         1.10,
         1.05,
@@ -85,7 +85,7 @@ WEAPONS = (
         ADVANCED_ATLAS,
         64,
         3,
-        (20.0, 39.0),
+        (16.0, 52.0),
         (46.0, 14.0),
         1.72,
         1.16,
@@ -97,7 +97,7 @@ WEAPONS = (
         RAILGUN_ATLAS,
         64,
         0,
-        (13.0, 24.0),
+        (2.0, 56.0),
         (61.0, 13.0),
         1.72,
         1.08,
@@ -109,7 +109,7 @@ WEAPONS = (
         RAILGUN_ATLAS,
         64,
         3,
-        (13.0, 24.0),
+        (2.0, 53.0),
         (61.0, 13.0),
         1.82,
         1.10,
@@ -121,7 +121,7 @@ WEAPONS = (
         RAILGUN_ATLAS,
         64,
         5,
-        (13.0, 24.0),
+        (2.0, 55.0),
         (61.0, 13.0),
         1.92,
         1.14,
@@ -257,6 +257,17 @@ def _affine_weapon(
             mode="L",
         )
     )
+    visible_points = _opaque_points(transformed)
+    grip_distance = np.linalg.norm(visible_points - target_grip, axis=1)
+    if float(grip_distance.min()) > 5.0:
+        raise RuntimeError(
+            f"Weapon rear grip detached from hand anchor: {spec.item_id}"
+        )
+    forward_projection = (visible_points - target_grip) @ target_axis
+    if float(forward_projection.max()) <= 4.0:
+        raise RuntimeError(
+            f"Weapon muzzle does not extend forward from grip: {spec.item_id}"
+        )
     return transformed
 
 
