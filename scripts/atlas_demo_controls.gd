@@ -34,6 +34,12 @@ const ACTION_LABELS := {
 func _ready() -> void:
 	_connect_action($SwordButtons/Idle, &"one_hand_melee_idle")
 	_connect_action($SwordButtons/Attack, &"attack_melee")
+	$SwordButtons/CrowbarIdle.pressed.connect(
+		_play_crowbar_action.bind(&"one_hand_melee_idle"),
+	)
+	$SwordButtons/CrowbarAttack.pressed.connect(
+		_play_crowbar_action.bind(&"attack_melee"),
+	)
 	_connect_action($PistolButtons/Idle, &"pistol_idle")
 	_connect_action($PistolButtons/AimDown, &"pistol_aim_down")
 	_connect_action($PistolButtons/Aim, &"pistol_aim")
@@ -67,6 +73,16 @@ func _connect_action(button: Button, action_name: StringName) -> void:
 func _play_action(action_name: StringName) -> void:
 	if is_instance_valid(_character) and _character.play_preview_action(action_name):
 		_show_action(action_name)
+
+
+func _play_crowbar_action(action_name: StringName) -> void:
+	if not is_instance_valid(_character):
+		return
+	_character.select_preview_family(&"crowbar")
+	if _character.play_preview_action(action_name):
+		_mode_label.text = "当前动作：制式撬棍 · %s · 专属透明武器层" % (
+			"待机" if action_name == &"one_hand_melee_idle" else "攻击"
+		)
 
 
 func _select_unarmed() -> void:

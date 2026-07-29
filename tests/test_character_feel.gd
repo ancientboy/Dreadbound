@@ -109,6 +109,11 @@ func _run_test() -> void:
 			"res://assets/art/weapons/character_layers/standard_melee_sword/manifest.json"
 		)
 	)
+	var crowbar_manifest: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(
+			"res://assets/art/weapons/character_layers/service_crowbar/manifest.json"
+		)
+	)
 	var pistol_manifest: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string(
 			"res://assets/art/weapons/character_layers/standard_service_pistol/manifest.json"
@@ -133,6 +138,11 @@ func _run_test() -> void:
 	assert(body_manifest["animations"]["attack_melee"]["facing_stabilized"])
 	assert(sword_manifest["animations"]["attack_melee"]["frames"] == 19)
 	assert(sword_manifest["animations"]["attack_melee"]["facing_stabilized"])
+	assert(crowbar_manifest["weapon_id"] == "service_crowbar")
+	assert(crowbar_manifest["motion_family"] == "sword")
+	assert(crowbar_manifest["appearance_reference"].ends_with("#cell-0"))
+	assert(crowbar_manifest["animations"]["one_hand_melee_idle"]["frames"] == 21)
+	assert(crowbar_manifest["animations"]["attack_melee"]["frames"] == 19)
 	assert(pistol_manifest["bone"] == "hand_r")
 	assert(pistol_manifest["animations"]["pistol_idle"]["frames"] == 21)
 	assert(pistol_manifest["animations"]["pistol_aim"]["frames"] == 3)
@@ -333,6 +343,8 @@ func _run_test() -> void:
 	assert(instance.get_node_or_null("SkillRangeDemo") == null)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Idle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Attack") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/CrowbarIdle") is Button)
+	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/CrowbarAttack") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Idle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/AimDown") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/PistolButtons/Aim") is Button)
@@ -453,7 +465,7 @@ func _run_test() -> void:
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(rendered_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
-	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 80)
+	assert(weapon_sprite.sprite_frames.get_animation_names().size() == 88)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_idle_front") == 21)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_aim_front") == 3)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"pistol_shoot_front") == 8)
@@ -493,6 +505,31 @@ func _run_test() -> void:
 					not body_frame.get_image().is_invisible(),
 					"Transparent character frame: %s[%d]" % [animation_name, frame_index],
 				)
+	rendered.select_preview_family(&"crowbar")
+	assert(rendered.play_preview_action(&"one_hand_melee_idle"))
+	await process_frame
+	assert(rendered_sprite.animation == &"one_hand_melee_idle_right")
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"crowbar__one_hand_melee_idle_right")
+	var crowbar_idle_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"crowbar__one_hand_melee_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	assert(crowbar_idle_frame != null)
+	assert(
+		crowbar_idle_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/service_crowbar/"
+			+ "service_crowbar_one_hand_melee_idle_right.png"
+		)
+	)
+	assert(not crowbar_idle_frame.get_image().is_invisible())
+	assert(rendered.play_preview_action(&"attack_melee"))
+	await process_frame
+	assert(rendered_sprite.animation == &"attack_melee_right")
+	assert(weapon_sprite.animation == &"crowbar__attack_melee_right")
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))
@@ -511,5 +548,5 @@ func _run_test() -> void:
 	await process_frame
 	assert(rendered_sprite.animation == &"shield_bash_right")
 	assert(weapon_sprite.animation == &"shield_bash_right")
-	print("Character feel passed: synchronized sword, pistol, staff, bow, and shield layers")
+	print("Character feel passed: synchronized sword, service crowbar, pistol, staff, bow, and shield layers")
 	quit()

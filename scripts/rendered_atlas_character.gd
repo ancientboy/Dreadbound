@@ -253,6 +253,11 @@ const ATLAS_TEXTURES := {
 	&"shield_bash_right": preload("res://assets/art/characters/rendered3d/base_drifter/shield_bash_right.png"),
 }
 const WEAPON_LAYER_SPECS := {
+	&"crowbar": {
+		"directory": "res://assets/art/weapons/character_layers/service_crowbar",
+		"prefix": "service_crowbar",
+		"animations": [&"one_hand_melee_idle", &"attack_melee"],
+	},
 	&"sword": {
 		"directory": "res://assets/art/weapons/character_layers/standard_melee_sword",
 		"prefix": "standard_sword",
@@ -411,6 +416,10 @@ func _build_weapon_layer_frames() -> SpriteFrames:
 		for logical_name in spec["animations"] as Array:
 			for direction in DIRECTIONS:
 				var animation_name := _animation_name(logical_name, direction)
+				var weapon_animation_name := weapon_layer_animation_name(
+					family,
+					animation_name,
+				)
 				# Weapon layers are exported with logical left/right names. They
 				# must not inherit the legacy character atlas side correction.
 				var texture_path := (
@@ -429,13 +438,13 @@ func _build_weapon_layer_frames() -> SpriteFrames:
 					),
 					"Weapon layer dimensions do not match: %s" % animation_name,
 				)
-				frames.add_animation(animation_name)
+				frames.add_animation(weapon_animation_name)
 				frames.set_animation_speed(
-					animation_name,
+					weapon_animation_name,
 					float(ANIMATION_SPEEDS[logical_name]),
 				)
 				frames.set_animation_loop(
-					animation_name,
+					weapon_animation_name,
 					bool(LOOPING_ANIMATIONS[logical_name]),
 				)
 				for frame_index in frame_count:
@@ -450,21 +459,25 @@ func _build_weapon_layer_frames() -> SpriteFrames:
 						FRAME_SIZE.x,
 						FRAME_SIZE.y,
 					)
-					frames.add_frame(animation_name, frame_texture)
+					frames.add_frame(weapon_animation_name, frame_texture)
 	return frames
 
 
 func _sync_weapon_layer() -> void:
 	if not is_instance_valid(_weapon_sprite) or not is_instance_valid(_sprite):
 		return
-	var has_weapon_animation := _weapon_sprite.sprite_frames.has_animation(_sprite.animation)
+	var weapon_animation := weapon_layer_animation_name(
+		_preview_weapon_family,
+		_sprite.animation,
+	)
+	var has_weapon_animation := _weapon_sprite.sprite_frames.has_animation(weapon_animation)
 	_weapon_sprite.visible = (
 		WEAPON_LAYER_SPECS.has(_preview_weapon_family)
 		and has_weapon_animation
 	)
 	if not _weapon_sprite.visible:
 		return
-	_weapon_sprite.animation = _sprite.animation
+	_weapon_sprite.animation = weapon_animation
 	_weapon_sprite.frame = _sprite.frame
 	_weapon_sprite.frame_progress = _sprite.frame_progress
 
@@ -510,6 +523,10 @@ func _sync_equipped_presentation() -> void:
 
 func select_preview_family(family: StringName) -> void:
 	match family:
+		&"crowbar":
+			_preview_idle = &"one_hand_melee_idle"
+			_preview_attack = &"attack_melee"
+			_preview_weapon_family = &"crowbar"
 		&"sword":
 			_preview_idle = &"one_hand_melee_idle"
 			_preview_attack = &"attack_melee"
@@ -542,7 +559,8 @@ func play_preview_action(logical_name: StringName) -> bool:
 	if not ANIMATION_FRAMES.has(logical_name):
 		return false
 	if logical_name == &"attack_melee" or String(logical_name).begins_with("one_hand_melee"):
-		select_preview_family(&"sword")
+		if _preview_weapon_family != &"crowbar":
+			select_preview_family(&"sword")
 	elif String(logical_name).begins_with("pistol"):
 		select_preview_family(&"pistol")
 	elif String(logical_name).begins_with("spell"):
@@ -583,6 +601,15 @@ static func source_direction_for_animation(
 	if DIRECT_SIDE_ACTIONS.has(logical_name):
 		return direction
 	return source_direction_for_logical(direction)
+
+
+static func weapon_layer_animation_name(
+	family: StringName,
+	body_animation: StringName,
+) -> StringName:
+	if family == &"crowbar":
+		return StringName("crowbar__%s" % body_animation)
+	return body_animation
 
 
 static func _animation_name(logical_name: StringName, direction: StringName) -> StringName:

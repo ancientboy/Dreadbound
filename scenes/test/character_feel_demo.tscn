@@ -149,7 +149,7 @@ text = "当前动作：空手待机"
 label_settings = SubResource("Body_settings")
 
 [node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "标准剑测试（3D 模型 · hand_r 绑定 · 遮挡透明层）"
+text = "近战动作对比：标准剑 / 游戏原装备“制式撬棍”专属透明层"
 label_settings = SubResource("Body_settings")
 
 [node name="SwordButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
@@ -160,6 +160,12 @@ text = "剑待机"
 
 [node name="Attack" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
 text = "剑攻击"
+
+[node name="CrowbarIdle" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
+text = "撬棍待机"
+
+[node name="CrowbarAttack" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
+text = "撬棍攻击"
 
 [node name="PistolLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "标准手枪（3D 模型 · hand_r 绑定 · 遮挡透明层）"
