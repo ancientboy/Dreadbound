@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "weapon_id": "standard_melee_sword",
+  "source": "bone_parented_blender_weapon_layer",
+  "frame_size": [
+    128,
+    128
+  ],
+  "fps": 12,
+  "bone": "hand_r",
+  "directions": [
+    "front",
+    "left",
+    "back",
+    "right"
+  ],
+  "animations": {
+    "one_hand_melee_idle": {
+      "frames": 21,
+      "loop": true,
+      "source_action": "Sword_Idle"
+    },
+    "attack_melee": {
+      "frames": 19,
+      "loop": false,
+      "source_action": "Sword_Attack"
+    }
+  }
+}

@@ -2,8 +2,8 @@ extends VBoxContainer
 
 const ACTION_LABELS := {
 	&"idle": "空手待机",
-	&"attack_melee": "剑攻击 / 空手基准攻击",
-	&"one_hand_melee_idle": "剑待机",
+	&"attack_melee": "标准剑攻击（透明武器层）",
+	&"one_hand_melee_idle": "标准剑待机（透明武器层）",
 	&"pistol_idle": "手枪待机",
 	&"pistol_aim_down": "手枪向下瞄准",
 	&"pistol_aim": "手枪平瞄",

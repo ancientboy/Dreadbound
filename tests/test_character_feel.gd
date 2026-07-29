@@ -69,7 +69,10 @@ func _run_test() -> void:
 	assert(not player._body_sprite.visible)
 
 	var rendered_sprite := rendered.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	var weapon_sprite := rendered.get_node("WeaponLayer") as AnimatedSprite2D
 	assert(rendered_sprite != null)
+	assert(weapon_sprite != null)
+	assert(not weapon_sprite.visible)
 	assert(rendered.ground_offset == Vector2(0.0, -12.0))
 	assert(rendered_sprite.position == Vector2(0.0, -12.0))
 	assert(rendered_sprite.sprite_frames.get_animation_names().size() == 64)
@@ -159,10 +162,32 @@ func _run_test() -> void:
 	await process_frame
 	assert(rendered_sprite.animation == &"pistol_shoot_right")
 	assert(rendered.play_preview_action(&"one_hand_melee_idle"))
+	await process_frame
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == rendered_sprite.animation)
+	assert(weapon_sprite.frame == rendered_sprite.frame)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"one_hand_melee_idle_front") == 21)
+	assert(weapon_sprite.sprite_frames.get_frame_count(&"attack_melee_front") == 19)
+	var sword_idle_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"one_hand_melee_idle_front",
+			0,
+		) as AtlasTexture
+	)
+	assert(sword_idle_frame != null)
+	assert(
+		sword_idle_frame.atlas.get_size()
+		== Vector2(21 * 128, 128)
+	)
 	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"attack_melee_right")
+	assert(weapon_sprite.visible)
+	assert(weapon_sprite.animation == &"attack_melee_right")
+	assert(weapon_sprite.frame == rendered_sprite.frame)
 	assert(rendered.play_preview_action(&"spell_idle"))
+	await process_frame
+	assert(not weapon_sprite.visible)
 	demo_attack_button.pressed.emit()
 	await process_frame
 	assert(rendered_sprite.animation == &"spell_shoot_right")

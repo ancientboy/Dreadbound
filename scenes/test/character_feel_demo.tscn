@@ -147,7 +147,7 @@ text = "当前动作：空手待机"
 label_settings = SubResource("Body_settings")
 
 [node name="SwordLabel" type="Label" parent="HUD/Panel/Margin/Text"]
-text = "剑动作（原 Sword_Idle / Sword_Attack）"
+text = "标准剑测试（3D 模型 · hand_r 绑定 · 遮挡透明层）"
 label_settings = SubResource("Body_settings")
 
 [node name="SwordButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]

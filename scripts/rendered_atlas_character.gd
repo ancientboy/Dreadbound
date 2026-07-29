@@ -152,17 +152,29 @@ const ATLAS_TEXTURES := {
 	&"spell_exit_back": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_back.png"),
 	&"spell_exit_right": preload("res://assets/art/characters/rendered3d/base_drifter/spell_exit_right.png"),
 }
+const SWORD_LAYER_TEXTURES := {
+	&"one_hand_melee_idle_front": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_front.png"),
+	&"one_hand_melee_idle_left": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_left.png"),
+	&"one_hand_melee_idle_back": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_back.png"),
+	&"one_hand_melee_idle_right": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_one_hand_melee_idle_right.png"),
+	&"attack_melee_front": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_front.png"),
+	&"attack_melee_left": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_left.png"),
+	&"attack_melee_back": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_back.png"),
+	&"attack_melee_right": preload("res://assets/art/weapons/character_layers/standard_melee_sword/standard_sword_attack_melee_right.png"),
+}
 
 @export var ground_offset := Vector2(0.0, -12.0)
 @export var display_scale := Vector2.ONE
 
 var _player: Player
 var _sprite: AnimatedSprite2D
+var _weapon_sprite: AnimatedSprite2D
 var _active_one_shot := &""
 var _attack_was_active := false
 var _hurt_was_active := false
 var _preview_idle := &"idle"
 var _preview_attack := &"attack_melee"
+var _preview_weapon_family := &""
 
 
 func _ready() -> void:
@@ -176,6 +188,15 @@ func _ready() -> void:
 	_sprite.sprite_frames = _build_sprite_frames()
 	_sprite.animation_finished.connect(_on_animation_finished)
 	add_child(_sprite)
+	_weapon_sprite = AnimatedSprite2D.new()
+	_weapon_sprite.name = "WeaponLayer"
+	_weapon_sprite.position = ground_offset
+	_weapon_sprite.scale = display_scale
+	_weapon_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_weapon_sprite.sprite_frames = _build_sword_layer_frames()
+	_weapon_sprite.z_index = 1
+	_weapon_sprite.hide()
+	add_child(_weapon_sprite)
 	call_deferred("_activate_presentation")
 
 
@@ -200,6 +221,7 @@ func _process(_delta: float) -> void:
 		if hurt_is_active
 		else (Color("c8ffdc") if _player._heal_flash > 0.0 else Color.WHITE)
 	)
+	_sync_weapon_layer()
 
 
 func _activate_presentation() -> void:
@@ -242,6 +264,50 @@ func _build_sprite_frames() -> SpriteFrames:
 	return frames
 
 
+func _build_sword_layer_frames() -> SpriteFrames:
+	var frames := SpriteFrames.new()
+	frames.remove_animation(&"default")
+	for logical_name in [&"one_hand_melee_idle", &"attack_melee"]:
+		for direction in DIRECTIONS:
+			var animation_name := _animation_name(logical_name, direction)
+			var source_name := _animation_name(
+				logical_name,
+				source_direction_for_logical(direction),
+			)
+			var texture := SWORD_LAYER_TEXTURES[source_name] as Texture2D
+			var frame_count := int(ANIMATION_FRAMES[logical_name])
+			assert(
+				texture.get_size() == Vector2(FRAME_SIZE.x * frame_count, FRAME_SIZE.y),
+				"Standard sword layer dimensions do not match: %s" % animation_name,
+			)
+			frames.add_animation(animation_name)
+			frames.set_animation_speed(animation_name, float(ANIMATION_SPEEDS[logical_name]))
+			frames.set_animation_loop(animation_name, bool(LOOPING_ANIMATIONS[logical_name]))
+			for frame_index in frame_count:
+				var frame_texture := AtlasTexture.new()
+				frame_texture.atlas = texture
+				frame_texture.region = Rect2(
+					frame_index * FRAME_SIZE.x,
+					0,
+					FRAME_SIZE.x,
+					FRAME_SIZE.y,
+				)
+				frames.add_frame(animation_name, frame_texture)
+	return frames
+
+
+func _sync_weapon_layer() -> void:
+	if not is_instance_valid(_weapon_sprite) or not is_instance_valid(_sprite):
+		return
+	var has_sword_animation := _weapon_sprite.sprite_frames.has_animation(_sprite.animation)
+	_weapon_sprite.visible = _preview_weapon_family == &"sword" and has_sword_animation
+	if not _weapon_sprite.visible:
+		return
+	_weapon_sprite.animation = _sprite.animation
+	_weapon_sprite.frame = _sprite.frame
+	_weapon_sprite.frame_progress = _sprite.frame_progress
+
+
 func _play_locomotion() -> void:
 	var direction := direction_from_vector(_player.facing)
 	var logical_name := &"walk" if _player.velocity.length() > 2.0 else _preview_idle
@@ -274,15 +340,19 @@ func select_preview_family(family: StringName) -> void:
 		&"sword":
 			_preview_idle = &"one_hand_melee_idle"
 			_preview_attack = &"attack_melee"
+			_preview_weapon_family = &"sword"
 		&"pistol":
 			_preview_idle = &"pistol_idle"
 			_preview_attack = &"pistol_shoot"
+			_preview_weapon_family = &""
 		&"staff":
 			_preview_idle = &"spell_idle"
 			_preview_attack = &"spell_shoot"
+			_preview_weapon_family = &""
 		_:
 			_preview_idle = &"idle"
 			_preview_attack = &"attack_melee"
+			_preview_weapon_family = &""
 	_active_one_shot = &""
 	_play_locomotion()
 

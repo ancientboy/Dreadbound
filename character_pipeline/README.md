@@ -56,6 +56,26 @@ horizontal space for side-view melee and death poses.
 The preset defaults to low-sample Cycles CPU rendering so the pipeline also
 works in headless build workers without EGL or a physical GPU.
 
+## Standard melee weapon-layer test
+
+`render_standard_melee_weapon.py` opens the checked-in
+`dreadbound_weapon_actions.blend`, builds a standard sword on `hand_r`, and
+renders synchronized `Sword_Idle` and `Sword_Attack` RGBA layers. The embedded
+mannequin is a render holdout: it writes no body pixels but removes sword pixels
+that pass behind the body. Camera calibration maps the mannequin joints to the
+published `base_drifter` atlases.
+
+```bash
+blender --background character_pipeline/dreadbound_weapon_actions.blend \
+  --python character_pipeline/render_standard_melee_weapon.py -- \
+  --output assets/art/weapons/character_layers/standard_melee_sword \
+  --preview-output /tmp/dreadbound-sword-preview
+```
+
+The runtime copies the body sprite's animation, frame, and frame progress to
+the weapon layer every update. It never runs a second independent animation
+clock.
+
 ## Direction and camera contract
 
 - One model, armature, material set and animation take is used for all views.
