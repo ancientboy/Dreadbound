@@ -1,5 +1,9 @@
 extends Node2D
 
+const PANEL_MAX_WIDTH := 540.0
+const PANEL_HEIGHT := 410.0
+const PANEL_MARGIN := 18.0
+
 @onready var _player := $Player as Player
 @onready var _hud_panel := $HUD/Panel as PanelContainer
 
@@ -40,6 +44,13 @@ func _reset_demo() -> void:
 
 func _layout_touch_ui() -> void:
 	var viewport_size := get_viewport_rect().size
-	var narrow := viewport_size.x < 900.0
-	_hud_panel.offset_right = minf(1000.0, viewport_size.x - 24.0)
-	_hud_panel.offset_bottom = 548.0 if narrow else 534.0
+	_hud_panel.offset_left = PANEL_MARGIN
+	_hud_panel.offset_top = PANEL_MARGIN
+	_hud_panel.offset_right = minf(
+		PANEL_MARGIN + PANEL_MAX_WIDTH,
+		viewport_size.x - PANEL_MARGIN,
+	)
+	_hud_panel.offset_bottom = minf(
+		PANEL_MARGIN + PANEL_HEIGHT,
+		viewport_size.y - PANEL_MARGIN,
+	)

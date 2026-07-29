@@ -270,10 +270,10 @@ func _build_sword_layer_frames() -> SpriteFrames:
 	for logical_name in [&"one_hand_melee_idle", &"attack_melee"]:
 		for direction in DIRECTIONS:
 			var animation_name := _animation_name(logical_name, direction)
-			var source_name := _animation_name(
-				logical_name,
-				source_direction_for_logical(direction),
-			)
+			# The downloaded character atlases have their side filenames reversed,
+			# but Blender exports weapon layers with logical left/right names.
+			# Applying the character correction here mirrors the sword a second time.
+			var source_name := _animation_name(logical_name, direction)
 			var texture := SWORD_LAYER_TEXTURES[source_name] as Texture2D
 			var frame_count := int(ANIMATION_FRAMES[logical_name])
 			assert(

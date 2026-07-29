@@ -117,6 +117,32 @@ func _run_test() -> void:
 		walk_right_frame.atlas
 		== load("res://assets/art/characters/rendered3d/base_drifter/walk_left.png")
 	)
+	var sword_left_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"one_hand_melee_idle_left",
+			0,
+		) as AtlasTexture
+	)
+	var sword_right_frame := (
+		weapon_sprite.sprite_frames.get_frame_texture(
+			&"one_hand_melee_idle_right",
+			0,
+		) as AtlasTexture
+	)
+	assert(
+		sword_left_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/standard_melee_sword/"
+			+ "standard_sword_one_hand_melee_idle_left.png"
+		)
+	)
+	assert(
+		sword_right_frame.atlas
+		== load(
+			"res://assets/art/weapons/character_layers/standard_melee_sword/"
+			+ "standard_sword_one_hand_melee_idle_right.png"
+		)
+	)
 	assert(instance.get_node_or_null("SkillRangeDemo") == null)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Idle") is Button)
 	assert(instance.get_node("HUD/Panel/Margin/Text/SwordButtons/Attack") is Button)
@@ -138,6 +164,8 @@ func _run_test() -> void:
 	assert(demo_attack_button != null)
 	assert(demo_attack_button.text == "测试攻击")
 	var panel := instance.get_node("HUD/Panel") as PanelContainer
+	assert(panel.size.x <= 540.0)
+	assert(panel.size.y <= 410.0)
 	assert(
 		panel.get_theme_font("font")
 		== load("res://assets/fonts/DreadboundChineseFull.otf")

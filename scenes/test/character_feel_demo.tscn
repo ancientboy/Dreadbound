@@ -29,12 +29,12 @@ default_font = ExtResource("6_font")
 
 [sub_resource type="LabelSettings" id="Title_settings"]
 font = ExtResource("6_font")
-font_size = 24
+font_size = 19
 font_color = Color(0.78, 0.98, 0.91, 1)
 
 [sub_resource type="LabelSettings" id="Body_settings"]
 font = ExtResource("6_font")
-font_size = 17
+font_size = 14
 font_color = Color(0.74, 0.81, 0.79, 1)
 
 [node name="CharacterFeelDemo" type="Node2D"]
@@ -117,30 +117,32 @@ script = ExtResource("5_mobile")
 movement_only = true
 
 [node name="Panel" type="PanelContainer" parent="HUD"]
-offset_left = 28.0
-offset_top = 26.0
-offset_right = 1000.0
-offset_bottom = 534.0
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 558.0
+offset_bottom = 428.0
 theme = SubResource("Demo_theme")
 theme_override_styles/panel = SubResource("Panel_style")
 
 [node name="Margin" type="MarginContainer" parent="HUD/Panel"]
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
 
 [node name="Text" type="VBoxContainer" parent="HUD/Panel/Margin"]
-theme_override_constants/separation = 8
+theme_override_constants/separation = 5
 script = ExtResource("3_atlas_controls")
 
 [node name="Title" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "CHARACTER ACTION DEMO · ORIGINAL UAL MOTIONS"
 label_settings = SubResource("Title_settings")
+autowrap_mode = 2
 
 [node name="Instructions" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "同一正确角色 · 原始下载动作按原时长离线渲染 · 四方向纯 2D\n不读取正式游戏装备、道具、背包图标；移动仍可验证原走路"
 label_settings = SubResource("Body_settings")
+autowrap_mode = 2
 
 [node name="ModeLabel" type="Label" parent="HUD/Panel/Margin/Text"]
 text = "当前动作：空手待机"
@@ -150,7 +152,7 @@ label_settings = SubResource("Body_settings")
 text = "标准剑测试（3D 模型 · hand_r 绑定 · 遮挡透明层）"
 label_settings = SubResource("Body_settings")
 
-[node name="SwordButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+[node name="SwordButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Idle" type="Button" parent="HUD/Panel/Margin/Text/SwordButtons"]
@@ -163,7 +165,7 @@ text = "剑攻击"
 text = "手枪动作（原 Pistol 系列）"
 label_settings = SubResource("Body_settings")
 
-[node name="PistolButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+[node name="PistolButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Idle" type="Button" parent="HUD/Panel/Margin/Text/PistolButtons"]
@@ -188,7 +190,7 @@ text = "换弹"
 text = "法杖动作（原 Spell Simple 系列）"
 label_settings = SubResource("Body_settings")
 
-[node name="StaffButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+[node name="StaffButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Enter" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
@@ -203,7 +205,7 @@ text = "施法"
 [node name="Exit" type="Button" parent="HUD/Panel/Margin/Text/StaffButtons"]
 text = "退出施法"
 
-[node name="BaselineButtons" type="HBoxContainer" parent="HUD/Panel/Margin/Text"]
+[node name="BaselineButtons" type="HFlowContainer" parent="HUD/Panel/Margin/Text"]
 theme_override_constants/separation = 8
 
 [node name="Unarmed" type="Button" parent="HUD/Panel/Margin/Text/BaselineButtons"]
