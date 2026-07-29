@@ -447,6 +447,40 @@ func _run_test() -> void:
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_block_front") == 33)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_hit_front") == 33)
 	assert(weapon_sprite.sprite_frames.get_frame_count(&"shield_bash_front") == 33)
+	for logical_name in [
+		&"bow_idle",
+		&"bow_draw",
+		&"bow_aim",
+		&"bow_release",
+		&"shield_raise",
+		&"shield_block",
+		&"shield_hit",
+		&"shield_bash",
+	]:
+		for direction in [&"front", &"left", &"back", &"right"]:
+			var animation_name := StringName("%s_%s" % [logical_name, direction])
+			for frame_index in rendered_sprite.sprite_frames.get_frame_count(animation_name):
+				var body_frame := (
+					rendered_sprite.sprite_frames.get_frame_texture(
+						animation_name,
+						frame_index,
+					) as AtlasTexture
+				)
+				assert(
+					not body_frame.get_image().is_invisible(),
+					"Transparent character frame: %s[%d]" % [animation_name, frame_index],
+				)
+			for frame_index in weapon_sprite.sprite_frames.get_frame_count(animation_name):
+				var equipment_frame := (
+					weapon_sprite.sprite_frames.get_frame_texture(
+						animation_name,
+						frame_index,
+					) as AtlasTexture
+				)
+				assert(
+					not equipment_frame.get_image().is_invisible(),
+					"Transparent equipment frame: %s[%d]" % [animation_name, frame_index],
+				)
 	camera.add_attack_shake(2.0)
 	assert(camera._shake_time_left > 0.0)
 	assert(rendered.play_preview_action(&"bow_aim"))
