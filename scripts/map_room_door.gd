@@ -161,12 +161,21 @@ func _build_visuals() -> void:
 
 func _build_tile_door_visuals() -> void:
 	_slide_axis = Vector2.DOWN
+	var recess_shadow := Polygon2D.new()
+	recess_shadow.name = "DoorRecessShadow"
+	recess_shadow.polygon = PackedVector2Array([
+		Vector2(-42, -68), Vector2(42, -68), Vector2(42, 68), Vector2(-42, 68),
+	])
+	recess_shadow.color = Color(0.005, 0.014, 0.018, 0.76)
+	recess_shadow.z_index = -4
+	add_child(recess_shadow)
+
 	var opening := Polygon2D.new()
 	opening.name = "DoorOpening"
 	opening.polygon = PackedVector2Array([
-		Vector2(-25, -62), Vector2(25, -62), Vector2(25, 62), Vector2(-25, 62),
+		Vector2(-29, -62), Vector2(29, -62), Vector2(29, 62), Vector2(-29, 62),
 	])
-	opening.color = Color(0.015, 0.035, 0.04, 1.0)
+	opening.color = Color(0.009, 0.026, 0.031, 1.0)
 	opening.z_index = -2
 	add_child(opening)
 
@@ -174,11 +183,18 @@ func _build_tile_door_visuals() -> void:
 	frame.name = "DoorFrame"
 	frame.z_index = 6
 	add_child(frame)
-	_add_frame_part(frame, "UpperPost", Rect2(-30, -72, 60, 14))
-	_add_frame_part(frame, "LowerPost", Rect2(-30, 58, 60, 14))
-	_add_frame_part(frame, "InnerRail", Rect2(-30, -58, 13, 116))
-	var outer_rail := Rect2(17, -58, 13, 116)
-	_add_frame_part(frame, "OuterRail", outer_rail)
+	_add_frame_part(frame, "UpperPost", Rect2(-39, -74, 78, 17), Color("38565b"))
+	_add_frame_part(frame, "LowerPost", Rect2(-39, 57, 78, 17), Color("263f45"))
+	_add_frame_part(frame, "InnerRail", Rect2(-39, -57, 17, 114), Color("45676b"))
+	_add_frame_part(frame, "OuterRail", Rect2(22, -57, 17, 114), Color("45676b"))
+	_add_frame_part(frame, "UpperHighlight", Rect2(-34, -70, 68, 3), Color(0.65, 0.84, 0.84, 0.72))
+	_add_frame_part(frame, "InnerRailHighlight", Rect2(-34, -53, 3, 106), Color(0.62, 0.82, 0.81, 0.52))
+	_add_frame_part(frame, "OuterRailShadow", Rect2(31, -53, 4, 106), Color(0.04, 0.12, 0.14, 0.75))
+	_add_frame_part(frame, "UpperAnchor", Rect2(-43, -52, 8, 24), Color("20373d"))
+	_add_frame_part(frame, "LowerAnchor", Rect2(-43, 28, 8, 24), Color("20373d"))
+	_add_frame_part(frame, "ControlHousing", Rect2(24, -18, 20, 36), Color("183239"))
+	_add_frame_part(frame, "ControlInset", Rect2(28, -12, 12, 24), Color("071a20"))
+	_add_door_warning_marks(frame)
 	if direction == &"east":
 		frame.scale.x = -1.0
 
@@ -188,18 +204,25 @@ func _build_tile_door_visuals() -> void:
 	_seal_glow = Polygon2D.new()
 	_seal_glow.name = "LockField"
 	_seal_glow.polygon = PackedVector2Array([
-		Vector2(-16, -56), Vector2(16, -56), Vector2(16, 56), Vector2(-16, 56),
+		Vector2(-21, -56), Vector2(21, -56), Vector2(21, 56), Vector2(-21, 56),
 	])
-	_seal_glow.color = Color(0.95, 0.12, 0.08, 0.11)
+	_seal_glow.color = Color(0.95, 0.12, 0.08, 0.075)
 	_seal_glow.z_index = 3
 	add_child(_seal_glow)
 	_locked_indicator = _make_indicator("LockedIndicator", Color(1.0, 0.12, 0.08, 0.9))
 	_open_indicator = _make_indicator("OpenIndicator", Color(0.18, 1.0, 0.72, 0.9))
+	_locked_indicator.position = Vector2(34, 0)
+	_open_indicator.position = Vector2(34, 0)
 	_open_indicator.visible = false
 	_open_indicator.modulate.a = 0.0
 
 
-func _add_frame_part(parent_node: Node2D, node_name: String, bounds: Rect2) -> void:
+func _add_frame_part(
+	parent_node: Node2D,
+	node_name: String,
+	bounds: Rect2,
+	color := Color(0.35, 0.55, 0.57, 1.0),
+) -> Polygon2D:
 	var part := Polygon2D.new()
 	part.name = node_name
 	part.polygon = PackedVector2Array([
@@ -208,8 +231,24 @@ func _add_frame_part(parent_node: Node2D, node_name: String, bounds: Rect2) -> v
 		bounds.end,
 		Vector2(bounds.position.x, bounds.end.y),
 	])
-	part.color = Color(0.35, 0.55, 0.57, 1.0)
+	part.color = color
 	parent_node.add_child(part)
+	return part
+
+
+func _add_door_warning_marks(frame: Node2D) -> void:
+	for index in 3:
+		var mark := Polygon2D.new()
+		mark.name = "WarningMark%d" % (index + 1)
+		var y_pos := -46.0 + index * 14.0
+		mark.polygon = PackedVector2Array([
+			Vector2(26, y_pos),
+			Vector2(35, y_pos + 5),
+			Vector2(35, y_pos + 9),
+			Vector2(26, y_pos + 4),
+		])
+		mark.color = Color(0.86, 0.66, 0.22, 0.78)
+		frame.add_child(mark)
 
 
 func _make_tile_leaf(node_name: String, center_y: float) -> Polygon2D:
@@ -217,11 +256,14 @@ func _make_tile_leaf(node_name: String, center_y: float) -> Polygon2D:
 	leaf.name = node_name
 	leaf.position = Vector2(0, center_y)
 	leaf.polygon = PackedVector2Array([
-		Vector2(-16, -29), Vector2(16, -29), Vector2(16, 29), Vector2(-16, 29),
+		Vector2(-21, -29), Vector2(21, -29), Vector2(21, 29), Vector2(-21, 29),
 	])
-	leaf.color = Color(0.16, 0.31, 0.34, 1.0)
+	leaf.color = Color(0.12, 0.27, 0.3, 1.0)
 	leaf.z_index = 2
 	add_child(leaf)
+	_add_frame_part(leaf, "InsetPanel", Rect2(-15, -21, 30, 40), Color("25444a"))
+	_add_frame_part(leaf, "InnerHighlight", Rect2(-12, -18, 3, 34), Color(0.43, 0.68, 0.69, 0.48))
+	_add_frame_part(leaf, "CenterSeam", Rect2(-2, -29, 4, 58), Color("081c22"))
 	return leaf
 
 
