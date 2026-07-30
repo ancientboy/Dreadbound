@@ -31,6 +31,17 @@ func _init() -> void:
 	assert(kinds.has("ambush"))
 	assert(kinds.has("boss"))
 	assert(textures.size() == rooms.size())
+	for asset_path in [
+		"res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_shell_v2.jpg",
+		"res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_foreground_v2.webp",
+		"res://assets/art/worlds/map_demo/sample_room_v2/doors/frame.png",
+		"res://assets/art/worlds/map_demo/sample_room_v2/doors/leaf_left.png",
+		"res://assets/art/worlds/map_demo/sample_room_v2/doors/leaf_right.png",
+		"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_locked.png",
+		"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_open.png",
+		"res://assets/art/worlds/map_demo/sample_room_v2/doors/threshold.png",
+	]:
+		assert(ResourceLoader.exists(asset_path)
 	var ring := rooms[4]
 	assert(ring["blocked_outlines"].size() == 1)
 	print("Map theme catalog passed: six hospital rooms have live compatible door anchors")

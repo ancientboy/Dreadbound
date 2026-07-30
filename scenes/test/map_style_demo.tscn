@@ -1,24 +1,17 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/map_style_demo.gd" id="1_demo"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/elite_room_shell.jpg" id="2_shell"]
+[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_shell_v2.jpg" id="2_shell"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="3_player"]
 [ext_resource type="Script" path="res://scripts/demo_weapon_vfx.gd" id="4_vfx"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
 [ext_resource type="FontFile" path="res://assets/fonts/DreadboundChineseFull.otf" id="6_font"]
 [ext_resource type="Script" path="res://scripts/map_room_module.gd" id="7_room"]
-[ext_resource type="Script" path="res://scripts/map_room_obstacle.gd" id="8_obstacle"]
-[ext_resource type="Script" path="res://scripts/map_encounter_zone.gd" id="9_zone"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/elite_room_foreground.jpg" id="10_front"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/props/bed.png" id="11_bed"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/props/cabinet.png" id="12_cabinet"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/props/console.png" id="13_console"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/props/gurney.png" id="14_gurney"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/props/crates.png" id="15_crates"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/elite_sample/props/barrier.png" id="16_barrier"]
+[ext_resource type="Script" path="res://scripts/map_encounter_zone.gd" id="8_zone"]
+[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_foreground_v2.webp" id="9_front"]
 
 [sub_resource type="RectangleShape2D" id="FadeShape"]
-size = Vector2(1240, 176)
+size = Vector2(1280, 210)
 
 [sub_resource type="StyleBoxFlat" id="TopPanelStyle"]
 bg_color = Color(0.018, 0.043, 0.049, 0.93)
@@ -45,148 +38,44 @@ centered = false
 texture_filter = 1
 z_index = -30
 
+[node name="ThemeGrade" type="CanvasModulate" parent="."]
+color = Color(0.86, 0.95, 1, 1)
+
 [node name="Rooms" type="Node2D" parent="."]
 y_sort_enabled = true
 
 [node name="SampleRoom" type="Node2D" parent="Rooms"]
 y_sort_enabled = true
 script = ExtResource("7_room")
-room_id = &"hospital_elite_large"
-room_kind = "elite"
-difficulty_tier = 2
-size_class = 1
-camera_zoom = Vector2(1.65, 1.65)
+room_id = &"hospital_standard_combat"
+room_kind = "combat"
+difficulty_tier = 1
+size_class = 0
+camera_zoom = Vector2(1.52, 1.52)
 camera_bounds = Rect2(0, 0, 1536, 1024)
-walkable_outline = PackedVector2Array(150, 150, 1386, 150, 1438, 250, 1438, 360, 1490, 410, 1490, 610, 1438, 664, 1438, 872, 1340, 930, 196, 930, 98, 872, 98, 664, 46, 610, 46, 410, 98, 360, 98, 250)
-camera_guide_outline = PackedVector2Array(400, 330, 1136, 330, 1240, 430, 1240, 594, 1136, 720, 400, 720, 296, 594, 296, 430)
+walkable_outline = PackedVector2Array(190, 280, 1346, 280, 1430, 350, 1430, 730, 1346, 820, 190, 820, 106, 730, 106, 350)
+camera_guide_outline = PackedVector2Array(390, 380, 1146, 380, 1240, 450, 1240, 630, 1146, 700, 390, 700, 296, 630, 296, 450)
 door_directions = PackedStringArray("west", "east")
 
 [node name="EncounterZones" type="Node2D" parent="Rooms/SampleRoom"]
 
-[node name="WestWing" type="Node2D" parent="Rooms/SampleRoom/EncounterZones"]
-script = ExtResource("9_zone")
-zone_id = &"west_wing"
-trigger_bounds = Rect2(80, 160, 460, 730)
+[node name="Arena" type="Node2D" parent="Rooms/SampleRoom/EncounterZones"]
+script = ExtResource("8_zone")
+zone_id = &"arena"
+trigger_bounds = Rect2(150, 290, 1230, 520)
 starts_active = true
 enemy_labels = PackedStringArray("游荡病患", "破损护理体")
 
-[node name="EnemySpawns" type="Node2D" parent="Rooms/SampleRoom/EncounterZones/WestWing"]
+[node name="EnemySpawns" type="Node2D" parent="Rooms/SampleRoom/EncounterZones/Arena"]
 
-[node name="WestA" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/WestWing/EnemySpawns"]
-position = Vector2(250, 360)
+[node name="EnemyA" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/Arena/EnemySpawns"]
+position = Vector2(650, 450)
 
-[node name="WestB" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/WestWing/EnemySpawns"]
-position = Vector2(430, 690)
-
-[node name="CentralWard" type="Node2D" parent="Rooms/SampleRoom/EncounterZones"]
-script = ExtResource("9_zone")
-zone_id = &"central_ward"
-trigger_bounds = Rect2(540, 160, 456, 730)
-enemy_labels = PackedStringArray("回声病患", "失序病患")
-
-[node name="EnemySpawns" type="Node2D" parent="Rooms/SampleRoom/EncounterZones/CentralWard"]
-
-[node name="CenterA" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/CentralWard/EnemySpawns"]
-position = Vector2(650, 360)
-
-[node name="CenterB" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/CentralWard/EnemySpawns"]
-position = Vector2(900, 700)
-
-[node name="EastControl" type="Node2D" parent="Rooms/SampleRoom/EncounterZones"]
-script = ExtResource("9_zone")
-zone_id = &"east_control"
-trigger_bounds = Rect2(996, 160, 460, 730)
-enemy_labels = PackedStringArray("值守残影", "精英医护残响")
-
-[node name="EnemySpawns" type="Node2D" parent="Rooms/SampleRoom/EncounterZones/EastControl"]
-
-[node name="EastA" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/EastControl/EnemySpawns"]
-position = Vector2(1090, 390)
-
-[node name="EastB" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/EastControl/EnemySpawns"]
-position = Vector2(1300, 700)
+[node name="EnemyB" type="Marker2D" parent="Rooms/SampleRoom/EncounterZones/Arena/EnemySpawns"]
+position = Vector2(980, 650)
 
 [node name="Obstacles" type="Node2D" parent="Rooms/SampleRoom"]
 y_sort_enabled = true
-
-[node name="NorthWestBed" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(330, 350)
-script = ExtResource("8_obstacle")
-prop_kind = 0
-prop_texture = ExtResource("11_bed")
-footprint_size = Vector2(150, 48)
-visual_scale = 0.5
-placement_role = "wall"
-wall_side = "north"
-
-[node name="NorthCenterBed" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(650, 350)
-script = ExtResource("8_obstacle")
-prop_kind = 0
-prop_texture = ExtResource("11_bed")
-footprint_size = Vector2(150, 48)
-visual_scale = 0.5
-placement_role = "wall"
-wall_side = "north"
-
-[node name="NorthEastBed" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(950, 350)
-script = ExtResource("8_obstacle")
-prop_kind = 0
-prop_texture = ExtResource("11_bed")
-footprint_size = Vector2(150, 48)
-visual_scale = 0.5
-placement_role = "wall"
-wall_side = "north"
-
-[node name="NorthCabinet" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(1160, 330)
-script = ExtResource("8_obstacle")
-prop_kind = 4
-prop_texture = ExtResource("12_cabinet")
-footprint_size = Vector2(72, 40)
-visual_scale = 0.56
-placement_role = "wall"
-wall_side = "north"
-
-[node name="NorthConsole" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(1320, 350)
-script = ExtResource("8_obstacle")
-prop_kind = 5
-prop_texture = ExtResource("13_console")
-footprint_size = Vector2(130, 46)
-visual_scale = 0.56
-placement_role = "wall"
-wall_side = "north"
-
-[node name="SouthEastGurney" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(1200, 820)
-script = ExtResource("8_obstacle")
-prop_kind = 1
-prop_texture = ExtResource("14_gurney")
-footprint_size = Vector2(170, 52)
-visual_scale = 0.58
-placement_role = "wall"
-wall_side = "south"
-
-[node name="SouthWestSupply" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(330, 820)
-script = ExtResource("8_obstacle")
-prop_kind = 2
-prop_texture = ExtResource("15_crates")
-footprint_size = Vector2(108, 52)
-visual_scale = 0.55
-placement_role = "wall"
-wall_side = "south"
-
-[node name="SouthBarrier" type="StaticBody2D" parent="Rooms/SampleRoom/Obstacles"]
-position = Vector2(760, 850)
-script = ExtResource("8_obstacle")
-prop_kind = 3
-prop_texture = ExtResource("16_barrier")
-footprint_size = Vector2(210, 44)
-visual_scale = 0.68
-placement_role = "combat"
 
 [node name="WorldCollision" type="Node2D" parent="."]
 
@@ -194,7 +83,7 @@ placement_role = "combat"
 y_sort_enabled = true
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(300, 560)
+position = Vector2(310, 540)
 use_runtime_progress = false
 demo_weapon_slots = Array[String](["service_crowbar", "balanced_pistol", "echo_staff"])
 demo_offhand_item = ""
@@ -203,10 +92,15 @@ demo_charm_item = ""
 [node name="Camera2D" parent="Player" index="1"]
 limit_right = 1536
 limit_bottom = 1024
-zoom = Vector2(1.65, 1.65)
+zoom = Vector2(1.52, 1.52)
 
 [node name="RenderedAtlasCharacter" parent="Player" index="2"]
 runtime_sync_enabled = false
+
+[node name="GroundingShadow" type="Polygon2D" parent="Player"]
+z_index = -2
+polygon = PackedVector2Array(-18, 5, -11, -2, 0, -5, 11, -2, 18, 5, 11, 10, 0, 12, -11, 10)
+color = Color(0.01, 0.025, 0.03, 0.48)
 
 [node name="DemoWeaponVFX" type="Node2D" parent="."]
 script = ExtResource("4_vfx")
@@ -215,13 +109,12 @@ script = ExtResource("4_vfx")
 z_index = 40
 
 [node name="WallsForeground" type="Sprite2D" parent="Foreground"]
-position = Vector2(0, 885)
-texture = ExtResource("10_front")
+texture = ExtResource("9_front")
 centered = false
 texture_filter = 1
 
 [node name="FadeZone" type="Area2D" parent="Foreground"]
-position = Vector2(768, 916)
+position = Vector2(768, 900)
 collision_layer = 0
 collision_mask = 1
 
@@ -260,19 +153,19 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图 Demo v4 · 多屏精英样板房"
+text = "新地图 Demo v5 · 65°准俯视医院样板房"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.42, 0.87, 0.76, 1)
 theme_override_font_sizes/font_size = 14
-text = "大型精英房：推进并清除当前区域"
+text = "清理房间后选择精细化出口"
 horizontal_alignment = 1
 
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.66, 0.72, 0.7, 1)
 theme_override_font_sizes/font_size = 13
-text = "区域 1/3 · 镜头跟随"
+text = "空房框架 / 独立门体 / 前景遮挡"
 horizontal_alignment = 1
 
 [node name="Return" type="Button" parent="HUD"]

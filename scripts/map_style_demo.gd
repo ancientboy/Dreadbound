@@ -20,7 +20,7 @@ const ROOM_DOOR_SCRIPT: Script = preload("res://scripts/map_room_door.gd")
 @onready var return_button := $HUD/Return as Button
 
 var room_variants: Array[Dictionary] = []
-var current_room_index := 1
+var current_room_index := 0
 var activated_zone_count := 0
 var variant_controls: HBoxContainer
 var exit_doors: Array[MapRoomDoor] = []
@@ -82,6 +82,7 @@ func _configure_player() -> void:
 	camera.limit_bottom = roundi(sample_room.camera_bounds.end.y)
 	player.weapon_vfx = weapon_vfx
 	rendered_character.select_preview_family(&"crowbar")
+	rendered_character.modulate = Color(0.84, 0.95, 1.0, 1.0)
 	_update_guided_camera()
 
 
@@ -127,7 +128,7 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	sample_room.door_directions = spec["door_directions"]
 	architecture.texture = load(spec["texture_path"]) as Texture2D
 
-	var show_original_detail_layers := current_room_index == 1
+	var show_original_detail_layers := current_room_index == 0
 	$Rooms/SampleRoom/Obstacles.visible = show_original_detail_layers
 	$Foreground.visible = show_original_detail_layers
 	_build_zones(spec["zones"])
