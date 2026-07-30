@@ -56,6 +56,15 @@ func _run_test() -> void:
 	assert(floor_macro.scale == Vector2(0.5, 0.5))
 	assert(floor_macro.z_index > floor_tiles.z_index)
 	assert(floor_macro.z_index < wall_tiles.z_index)
+	var wall_shell := modular.get_node("StandardWallShell") as Node2D
+	assert(wall_shell != null and wall_shell.get_child_count() == 4)
+	assert((wall_shell.get_node("BackWall") as Sprite2D).z_index == -7)
+	assert((wall_shell.get_node("WestWall") as Sprite2D).position == Vector2(0, 256))
+	assert((wall_shell.get_node("EastWall") as Sprite2D).position == Vector2(1280, 256))
+	assert((wall_shell.get_node("ForegroundWall") as Sprite2D).z_index == 38)
+	assert(not wall_tiles.visible)
+	assert(not side_wall_tiles.visible)
+	assert(not foreground_tiles.visible)
 	assert(not modular.has_node("FloorDetails/MedicalGuideLine"))
 	assert(not modular.has_node("FloorDetails/MedicalGuideGlow"))
 	assert(not modular.has_node("FloorDetails/ObjectiveBay"))
@@ -64,7 +73,7 @@ func _run_test() -> void:
 	assert(modular.theme.theme_id == MapThemeCatalog.HOSPITAL_THEME)
 	assert(modular.theme.display_name == "异常侵蚀医疗研究设施")
 	assert(modular is RoomBuilder)
-	assert(_sprite_count(modular) == 4)
+	assert(_sprite_count(modular) == 8)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	assert(camera.zoom == Vector2(0.72, 0.72))
 	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
@@ -102,6 +111,9 @@ func _run_test() -> void:
 		assert(door.get_node("OpenIndicator") is Polygon2D)
 		assert(door.get_node("DoorBlocker") is StaticBody2D)
 		assert(door._theme == modular.theme)
+		var expected_recess := door.outward_vector() * MapRoomDoor.SIDE_DOOR_VISUAL_RECESS
+		assert((door.get_node("DoorFrame") as Node2D).position == expected_recess)
+		assert((door.get_node("DoorOpening") as Polygon2D).position == expected_recess)
 
 	# Each of the two wall edges is split around a real door opening.
 	var boundary_segments := _boundary_segment_count(instance)
@@ -155,6 +167,7 @@ func _run_test() -> void:
 	assert(modular.get_node("ContentSlots").get_child_count() == 4)
 	assert(modular.get_node("ThemeProps").get_child_count() == 4)
 	assert(not modular.has_node("StandardFloorMacro"))
+	assert(not modular.has_node("StandardWallShell"))
 	assert(modular.get_node("FloorDetails/MedicalGuideLine") is Line2D)
 	assert(modular.get_node("FloorDetails/MedicalGuideGlow") is Line2D)
 	assert(room.camera_bounds == Rect2(0, 0, 2048, 1024))
@@ -182,6 +195,7 @@ func _run_test() -> void:
 	assert(modular.get_node("ContentSlots").get_child_count() == 4)
 	assert(modular.get_node("ThemeProps").get_child_count() == 4)
 	assert(not modular.has_node("StandardFloorMacro"))
+	assert(not modular.has_node("StandardWallShell"))
 	assert(room.camera_bounds == Rect2(0, 0, 2048, 1280))
 	assert(_boundary_segment_count(instance) == 10)
 	assert(room.contains_world_point(Vector2(512, 448)))
@@ -195,7 +209,7 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo v11 passed: standard-room floor macro and Resonant skin integrated "
+		"Map style demo v12 passed: continuous wall shell and recessed slim doors integrated "
 		+ "without changing long/L room generation, doors, navigation, or cameras",
 	)
 	quit()

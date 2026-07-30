@@ -23,6 +23,7 @@ func build_from_spec(spec: Dictionary) -> void:
 		theme.wall_atlas_size,
 	)
 	_build_standard_floor_macro()
+	_build_standard_wall_shell()
 	_build_floor_details()
 	_build_theme_props()
 	_build_light_accents()
@@ -57,6 +58,66 @@ func _uses_standard_floor_macro() -> bool:
 		theme.standard_floor_macro != null
 		and StringName(room_spec.get("room_id", &"")) == &"hospital_standard_combat"
 	)
+
+
+func _build_standard_wall_shell() -> void:
+	if not _uses_standard_floor_macro() or theme.standard_wall_shell == null:
+		return
+	var shell := Node2D.new()
+	shell.name = "StandardWallShell"
+	add_child(shell)
+	_add_wall_shell_region(
+		shell,
+		"BackWall",
+		Rect2(0, 0, 1536, 256),
+		Vector2.ZERO,
+		-7,
+	)
+	_add_wall_shell_region(
+		shell,
+		"WestWall",
+		Rect2(0, 256, 256, 640),
+		Vector2(0, 256),
+		4,
+	)
+	_add_wall_shell_region(
+		shell,
+		"EastWall",
+		Rect2(1280, 256, 256, 640),
+		Vector2(1280, 256),
+		4,
+	)
+	_add_wall_shell_region(
+		shell,
+		"ForegroundWall",
+		Rect2(0, 896, 1536, 128),
+		Vector2(0, 896),
+		38,
+	)
+	# Keep generated wall cells available for collision/layout inspection, while the
+	# standard room uses a continuous shell instead of visible 128 px repetition.
+	for tile_layer in [wall_base_tiles, side_wall_tiles, foreground_walls, corner_tiles]:
+		tile_layer.visible = false
+
+
+func _add_wall_shell_region(
+	parent: Node2D,
+	node_name: String,
+	region_rect: Rect2,
+	world_position: Vector2,
+	layer: int,
+) -> void:
+	var region := AtlasTexture.new()
+	region.atlas = theme.standard_wall_shell
+	region.region = region_rect
+	var sprite := Sprite2D.new()
+	sprite.name = node_name
+	sprite.texture = region
+	sprite.centered = false
+	sprite.position = world_position
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.z_index = layer
+	parent.add_child(sprite)
 
 
 func _build_floor_details() -> void:
@@ -221,7 +282,16 @@ func _build_light_accents() -> void:
 
 
 func set_foreground_faded(faded: bool) -> void:
-	if foreground_walls == null:
-		return
 	var target_alpha := 0.2 if faded else 1.0
-	create_tween().tween_property(foreground_walls, "modulate:a", target_alpha, 0.18)
+	if foreground_walls != null:
+		create_tween().tween_property(foreground_walls, "modulate:a", target_alpha, 0.18)
+	var shell_foreground := get_node_or_null(
+		"StandardWallShell/ForegroundWall"
+	) as Sprite2D
+	if shell_foreground != null:
+		create_tween().tween_property(
+			shell_foreground,
+			"modulate:a",
+			target_alpha,
+			0.18,
+		)
