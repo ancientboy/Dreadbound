@@ -46,7 +46,7 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/wall_atlas.svg",
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/prop_atlas.svg",
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/standard_floor_macro_v1.webp",
-		"res://assets/art/worlds/map_demo/dungeon1_hospital/standard_wall_shell_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_hospital/standard_wall_shell_v1.webp",
 		"res://resources/map_themes/dungeon1_hospital.tres",
 	]:
 		assert(ResourceLoader.exists(asset_path))

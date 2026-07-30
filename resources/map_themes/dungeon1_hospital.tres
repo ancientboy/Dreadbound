@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/wall_atlas.svg" id="3_wall"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/prop_atlas.svg" id="4_props"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/standard_floor_macro_v1.webp" id="5_floor_macro"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/standard_wall_shell_v1.png" id="6_wall_shell"]
+[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/standard_wall_shell_v1.webp" id="6_wall_shell"]
 
 [resource]
 script = ExtResource("1_theme")
