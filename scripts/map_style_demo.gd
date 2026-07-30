@@ -34,6 +34,7 @@ var room_cleared := false
 
 func _ready() -> void:
 	room_variants = MapThemeCatalog.hospital_rooms()
+	_apply_room_spec(room_variants[0])
 	_configure_player()
 	_build_collision()
 	_connect_areas()
@@ -119,24 +120,8 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	activated_zone_count = 0
 	room_cleared = false
 
-	sample_room.room_id = spec["room_id"]
-	sample_room.room_kind = spec["room_kind"]
-	sample_room.size_class = spec["size_class"]
-	sample_room.camera_zoom = spec["camera_zoom"]
-	sample_room.camera_bounds = Rect2(Vector2.ZERO, MAP_SIZE)
-	sample_room.walkable_outline = spec["walkable_outline"]
-	sample_room.blocked_outlines.clear()
-	for blocked_outline in spec.get("blocked_outlines", []):
-		sample_room.blocked_outlines.append(blocked_outline)
-	sample_room.camera_guide_outline = spec["camera_guide_outline"]
-	sample_room.door_directions = spec["door_directions"]
-
-	var use_modular_room := sample_room.room_id == &"hospital_standard_combat"
-	modular_architecture.visible = use_modular_room
-	architecture.visible = not use_modular_room
+	var use_modular_room := _apply_room_spec(spec)
 	$Foreground.visible = false
-	if not use_modular_room:
-		architecture.texture = load(spec["texture_path"]) as Texture2D
 	$Rooms/SampleRoom/Obstacles.visible = false
 
 	_build_zones(spec["zones"])
@@ -151,7 +136,7 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	_activate_starting_zones()
 	title_label.text = "医院主题房型 · %s" % spec["title"]
 	objective_label.text = (
-		"TileMap 样板：固定网格、低墙图块、预设门槽与独立碰撞"
+		"RoomBuilder：固定网格、自动墙线、预设门槽、导航与镜头约束"
 		if use_modular_room
 		else "主题锁定：当前旧房型仅用于流程回归"
 	)
@@ -279,9 +264,31 @@ func _find_connected_room(exit_direction: StringName) -> int:
 		if candidate_index == current_room_index:
 			continue
 		var candidate: Dictionary = room_variants[candidate_index]
-		if candidate["door_directions"].has(String(required_entry)):
+		if _spec_door_directions(candidate).has(String(required_entry)):
 			return candidate_index
 	return posmod(current_room_index + 1, room_variants.size())
+
+
+func _apply_room_spec(spec: Dictionary) -> bool:
+	var use_room_builder := spec.has("grid_cells")
+	modular_architecture.visible = use_room_builder
+	architecture.visible = not use_room_builder
+	if use_room_builder:
+		modular_architecture.build_from_spec(spec)
+		sample_room.apply_built_spec(spec, modular_architecture)
+	else:
+		sample_room.apply_legacy_spec(spec)
+		architecture.texture = load(spec["texture_path"]) as Texture2D
+	return use_room_builder
+
+
+func _spec_door_directions(spec: Dictionary) -> PackedStringArray:
+	if spec.has("door_directions"):
+		return spec["door_directions"]
+	var result := PackedStringArray()
+	for door_spec in spec.get("door_sockets", []):
+		result.append(String(door_spec["direction"]))
+	return result
 
 
 func _direction_label(direction_value: StringName) -> String:

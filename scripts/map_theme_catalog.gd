@@ -13,16 +13,23 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
 		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
 		"camera_zoom": Vector2(0.72, 0.72),
+		"map_bounds": Rect2(0, 0, 1536, 1024),
 		"spawn": Vector2(384, 576),
-		"walkable_outline": PackedVector2Array([
-			Vector2(256, 256), Vector2(1280, 256),
-			Vector2(1280, 896), Vector2(256, 896),
-		]),
+		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(8, 5)),
 		"camera_guide_outline": PackedVector2Array([
 			Vector2(704, 512), Vector2(832, 512),
 			Vector2(832, 640), Vector2(704, 640),
 		]),
-		"door_directions": PackedStringArray(["west", "east"]),
+		"door_sockets": [
+			_door("west", Vector2i(1, 4)),
+			_door("east", Vector2i(10, 4)),
+		],
+		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1262, 576)]),
+		"content_slots": [
+			_slot("west_cover", "cover", Vector2i(4, 3)),
+			_slot("objective", "objective", Vector2i(6, 4)),
+			_slot("east_cover", "cover", Vector2i(8, 5)),
+		],
 		"zones": [
 			_zone("arena", Rect2(256, 256, 1024, 640), true, [
 				Vector2(640, 448), Vector2(960, 704),
@@ -30,37 +37,37 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		],
 	},
 	{
-		"room_id": &"hospital_elite_large",
+		"room_id": &"hospital_long_ward",
 		"theme_id": HOSPITAL_THEME,
-		"title": "多屏精英房",
+		"title": "长条住院区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"texture_path": "res://assets/art/worlds/map_demo/elite_sample/elite_room_shell.jpg",
-		"camera_zoom": Vector2(1.65, 1.65),
-		"spawn": Vector2(300, 560),
-		"walkable_outline": PackedVector2Array([
-			Vector2(150, 150), Vector2(1386, 150), Vector2(1438, 250),
-			Vector2(1438, 360), Vector2(1490, 410), Vector2(1490, 610),
-			Vector2(1438, 664), Vector2(1438, 872), Vector2(1340, 930),
-			Vector2(196, 930), Vector2(98, 872), Vector2(98, 664),
-			Vector2(46, 610), Vector2(46, 410), Vector2(98, 360),
-			Vector2(98, 250),
-		]),
+		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
+		"camera_zoom": Vector2(0.72, 0.72),
+		"map_bounds": Rect2(0, 0, 2048, 1024),
+		"spawn": Vector2(384, 576),
+		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(12, 5)),
 		"camera_guide_outline": PackedVector2Array([
-			Vector2(400, 330), Vector2(1136, 330), Vector2(1240, 430),
-			Vector2(1240, 594), Vector2(1136, 720), Vector2(400, 720),
-			Vector2(296, 594), Vector2(296, 430),
+			Vector2(640, 512), Vector2(1408, 512),
+			Vector2(1408, 640), Vector2(640, 640),
 		]),
-		"door_directions": PackedStringArray(["west", "east"]),
+		"door_sockets": [
+			_door("west", Vector2i(1, 4)),
+			_door("east", Vector2i(14, 4)),
+		],
+		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1774, 576)]),
+		"content_slots": [
+			_slot("west_cover", "cover", Vector2i(4, 3)),
+			_slot("west_spawn", "enemy", Vector2i(6, 5)),
+			_slot("east_spawn", "enemy", Vector2i(10, 3)),
+			_slot("east_cover", "cover", Vector2i(12, 5)),
+		],
 		"zones": [
-			_zone("west_wing", Rect2(80, 160, 460, 730), true, [
-				Vector2(250, 360), Vector2(430, 690),
+			_zone("west_wing", Rect2(256, 256, 768, 640), true, [
+				Vector2(640, 448), Vector2(896, 704),
 			], ["游荡病患", "破损护理体"]),
-			_zone("central_ward", Rect2(540, 160, 456, 730), false, [
-				Vector2(650, 360), Vector2(900, 700),
-			], ["回声病患", "失序病患"]),
-			_zone("east_control", Rect2(996, 160, 460, 730), false, [
-				Vector2(1090, 390), Vector2(1300, 700),
+			_zone("east_wing", Rect2(1024, 256, 768, 640), false, [
+				Vector2(1216, 448), Vector2(1536, 704),
 			], ["值守残影", "精英医护残响"]),
 		],
 	},
@@ -70,26 +77,40 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "L 形精英病区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"texture_path": "res://assets/art/worlds/map_demo/themes/hospital/l_elite.jpg",
-		"camera_zoom": Vector2(1.58, 1.58),
-		"spawn": Vector2(260, 390),
-		"walkable_outline": PackedVector2Array([
-			Vector2(120, 140), Vector2(840, 140), Vector2(840, 450),
-			Vector2(1440, 450), Vector2(1440, 870), Vector2(520, 870),
-			Vector2(520, 610), Vector2(120, 610),
-		]),
+		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
+		"camera_zoom": Vector2(0.72, 0.72),
+		"map_bounds": Rect2(0, 0, 2048, 1280),
+		"spawn": Vector2(512, 448),
+		"grid_cells": (
+			_rect_cells(Vector2i(2, 2), Vector2i(7, 3))
+			+ _rect_cells(Vector2i(6, 5), Vector2i(8, 3))
+		),
 		"camera_guide_outline": PackedVector2Array([
-			Vector2(330, 300), Vector2(690, 300), Vector2(690, 560),
-			Vector2(1190, 560), Vector2(1190, 720), Vector2(650, 720),
-			Vector2(650, 470), Vector2(330, 470),
+			Vector2(512, 448), Vector2(1024, 448),
+			Vector2(1024, 704), Vector2(1536, 704),
+			Vector2(1536, 896), Vector2(896, 896),
+			Vector2(896, 576), Vector2(512, 576),
 		]),
-		"door_directions": PackedStringArray(["north", "east", "south"]),
+		"door_sockets": [
+			_door("west", Vector2i(1, 3)),
+			_door("east", Vector2i(14, 6)),
+		],
+		"guide_line": PackedVector2Array([
+			Vector2(274, 448), Vector2(960, 448),
+			Vector2(960, 832), Vector2(1774, 832),
+		]),
+		"content_slots": [
+			_slot("upper_cover", "cover", Vector2i(5, 3)),
+			_slot("junction", "objective", Vector2i(7, 4)),
+			_slot("lower_spawn", "enemy", Vector2i(9, 6)),
+			_slot("east_cover", "cover", Vector2i(12, 6)),
+		],
 		"zones": [
-			_zone("upper_ward", Rect2(120, 140, 720, 470), true, [
-				Vector2(380, 340), Vector2(690, 470),
+			_zone("upper_ward", Rect2(256, 256, 896, 384), true, [
+				Vector2(512, 448), Vector2(896, 448),
 			], ["隔离病患", "巡诊残响"]),
-			_zone("lower_ward", Rect2(520, 450, 920, 420), false, [
-				Vector2(850, 610), Vector2(1220, 720),
+			_zone("lower_ward", Rect2(768, 640, 1024, 384), false, [
+				Vector2(1088, 832), Vector2(1536, 832),
 			], ["破损护理体", "精英隔离体"]),
 		],
 	},
@@ -228,6 +249,29 @@ static func is_theme_locked(rooms: Array[Dictionary]) -> bool:
 		if room["theme_id"] != theme_id:
 			return false
 	return true
+
+
+static func _rect_cells(origin: Vector2i, size: Vector2i) -> Array:
+	var result: Array = []
+	for y_index in size.y:
+		for x_index in size.x:
+			result.append(origin + Vector2i(x_index, y_index))
+	return result
+
+
+static func _door(direction: String, cell: Vector2i) -> Dictionary:
+	return {
+		"direction": StringName(direction),
+		"cell": cell,
+	}
+
+
+static func _slot(id: String, type: String, cell: Vector2i) -> Dictionary:
+	return {
+		"id": StringName(id),
+		"type": StringName(type),
+		"cell": cell,
+	}
 
 
 static func _zone(

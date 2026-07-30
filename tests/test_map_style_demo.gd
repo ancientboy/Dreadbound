@@ -32,13 +32,18 @@ func _run_test() -> void:
 	assert(modular.visible)
 	var floor_tiles := modular.get_node("FloorTiles") as TileMapLayer
 	var wall_tiles := modular.get_node("WallBaseTiles") as TileMapLayer
+	var side_wall_tiles := modular.get_node("SideWallTiles") as TileMapLayer
 	var foreground_tiles := modular.get_node("ForegroundWalls") as TileMapLayer
 	assert(floor_tiles != null and floor_tiles.get_used_cells().size() == 40)
-	assert(wall_tiles != null and wall_tiles.get_used_cells().size() == 18)
-	assert(foreground_tiles != null and foreground_tiles.get_used_cells().size() == 10)
+	assert(wall_tiles != null and wall_tiles.get_used_cells().size() == 8)
+	assert(side_wall_tiles != null and side_wall_tiles.get_used_cells().size() == 8)
+	assert(foreground_tiles != null and foreground_tiles.get_used_cells().size() == 8)
+	assert(modular.wall_tile_count() == 28)
 	assert(floor_tiles.tile_set.tile_size == Vector2i(128, 128))
 	assert(modular.get_node("DoorSockets").get_child_count() == 2)
+	assert(modular.get_node("ContentSlots").get_child_count() == 3)
 	assert(modular.get_node("FloorDetails/MedicalGuideLine") is Line2D)
+	assert(modular is RoomBuilder)
 	assert(_sprite_count(modular) == 0)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	assert(camera.zoom == Vector2(0.72, 0.72))
@@ -52,7 +57,14 @@ func _run_test() -> void:
 	assert(room.walkable_outline.size() == 4)
 	assert(room.camera_guide_outline.size() == 4)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
+	assert(room.door_anchor_overrides.size() == 2)
 	assert(room.get_obstacles().is_empty())
+	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
+	assert((room.get_node("NavigationRegion2D") as NavigationRegion2D).enabled)
+	assert(
+		(room.get_node("NavigationRegion2D") as NavigationRegion2D)
+		.navigation_polygon.get_polygon_count() == 2
+	)
 	assert(zones.get_child_count() == 1)
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
@@ -98,38 +110,66 @@ func _run_test() -> void:
 		var blocker := door.get_node("DoorBlocker/CollisionShape2D") as CollisionShape2D
 		assert(blocker.disabled)
 
-	# Preserve old room-flow coverage while the remaining room art is migrated later.
+	# The second room uses the same builder but extends the long axis to 12 cells.
 	instance._show_room_variant(1)
 	await process_frame
-	assert(room.room_id == &"hospital_elite_large")
+	assert(room.room_id == &"hospital_long_ward")
 	assert(room.room_kind == "elite")
 	assert(room.size_class == MapRoomModule.RoomSizeClass.LARGE)
 	assert(room.is_multi_screen())
-	assert(room.walkable_outline.size() == 16)
-	assert(room.camera_guide_outline.size() == 8)
+	assert(room.walkable_outline.size() == 4)
+	assert(room.camera_guide_outline.size() == 4)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
-	assert(zones.get_child_count() == 3)
+	assert(zones.get_child_count() == 2)
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
-	assert(not modular.visible)
-	assert(architecture.visible)
+	assert(modular.visible)
+	assert(not architecture.visible)
+	assert(modular.floor_tiles.get_used_cells().size() == 60)
+	assert(modular.floor_tiles.get_cell_atlas_coords(Vector2i(10, 2)) == Vector2i(7, 0))
+	assert(
+		modular.floor_tiles.get_cell_alternative_tile(Vector2i(10, 2))
+		== RoomBuilder.TILE_FLIP_H
+	)
+	assert(modular.get_node("ContentSlots").get_child_count() == 4)
+	assert(room.camera_bounds == Rect2(0, 0, 2048, 1024))
+	assert(camera.limit_right == 2048 and camera.limit_bottom == 1024)
+	var west_camera := room.guided_camera_world_point(Vector2(384, 576))
+	var east_camera := room.guided_camera_world_point(Vector2(1664, 576))
+	assert(east_camera.x > west_camera.x)
+	assert(is_equal_approx(east_camera.y, west_camera.y))
 
-	player.global_position = Vector2(760, 520)
+	player.global_position = Vector2(1280, 520)
 	instance._physics_process(0.0)
 	await process_frame
 	assert(instance.activated_zone_count == 2)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 4)
 
-	player.global_position = Vector2(1200, 520)
-	instance._physics_process(0.0)
+	# The third room validates a concave L outline, automatic inner wall overlap,
+	# explicit door anchors, navigation triangulation, and two-axis camera travel.
+	instance._show_room_variant(2)
 	await process_frame
-	assert(instance.activated_zone_count == 3)
-	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 6)
+	assert(room.room_id == &"hospital_l_elite")
+	assert(room.walkable_outline.size() == 8)
+	assert(room.camera_guide_outline.size() == 8)
+	assert(room.door_directions == PackedStringArray(["west", "east"]))
+	assert(modular.floor_tiles.get_used_cells().size() == 45)
+	assert(modular.get_node("ContentSlots").get_child_count() == 4)
+	assert(room.camera_bounds == Rect2(0, 0, 2048, 1280))
+	assert(_boundary_segment_count(instance) == 10)
+	assert(room.contains_world_point(Vector2(512, 448)))
+	assert(room.contains_world_point(Vector2(1408, 832)))
+	assert(not room.contains_world_point(Vector2(1408, 448)))
+	var upper_camera := room.guided_camera_world_point(Vector2(512, 448))
+	var lower_camera := room.guided_camera_world_point(Vector2(1536, 896))
+	assert(lower_camera.x > upper_camera.x)
+	assert(lower_camera.y > upper_camera.y)
+	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
 
 	instance.queue_free()
 	print(
-		"Map style demo v8 passed: fixed 128-grid TileMap layers, low walls, door sockets, "
-		+ "real collision gaps, and legacy room-flow regression",
+		"Map style demo v9 passed: one RoomBuilder generated standard, long, and L rooms "
+		+ "with door gaps, navigation, content slots, and guided cameras",
 	)
 	quit()
 

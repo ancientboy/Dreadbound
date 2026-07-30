@@ -17,6 +17,37 @@ enum RoomSizeClass {
 @export var blocked_outlines: Array[PackedVector2Array] = []
 @export var camera_guide_outline := PackedVector2Array()
 @export var door_directions := PackedStringArray()
+var door_anchor_overrides: Dictionary = {}
+
+
+func apply_built_spec(spec: Dictionary, builder: RoomBuilder) -> void:
+	room_id = spec["room_id"]
+	room_kind = spec["room_kind"]
+	size_class = spec["size_class"]
+	camera_zoom = spec["camera_zoom"]
+	camera_bounds = builder.map_bounds
+	walkable_outline = builder.walkable_outline
+	blocked_outlines.clear()
+	camera_guide_outline = spec["camera_guide_outline"]
+	door_directions = builder.door_directions()
+	door_anchor_overrides = builder.door_anchor_points.duplicate()
+	_rebuild_navigation_region()
+
+
+func apply_legacy_spec(spec: Dictionary) -> void:
+	room_id = spec["room_id"]
+	room_kind = spec["room_kind"]
+	size_class = spec["size_class"]
+	camera_zoom = spec["camera_zoom"]
+	camera_bounds = spec.get("map_bounds", Rect2(Vector2.ZERO, Vector2(1536, 1024)))
+	walkable_outline = spec["walkable_outline"]
+	blocked_outlines.clear()
+	for blocked_outline in spec.get("blocked_outlines", []):
+		blocked_outlines.append(blocked_outline)
+	camera_guide_outline = spec["camera_guide_outline"]
+	door_directions = spec["door_directions"]
+	door_anchor_overrides.clear()
+	_rebuild_navigation_region()
 
 
 func contains_world_point(point: Vector2) -> bool:
@@ -72,6 +103,8 @@ func get_obstacles() -> Array[MapRoomObstacle]:
 
 
 func door_anchor_world(direction: StringName) -> Vector2:
+	if door_anchor_overrides.has(direction):
+		return to_global(door_anchor_overrides[direction])
 	if walkable_outline.size() < 2:
 		return global_position
 	var extreme := 0.0
@@ -161,3 +194,27 @@ func _polygon_center(polygon: PackedVector2Array) -> Vector2:
 	for point in polygon:
 		total += point
 	return total / maxf(float(polygon.size()), 1.0)
+
+
+func _rebuild_navigation_region() -> void:
+	var existing := get_node_or_null("NavigationRegion2D")
+	if existing != null:
+		existing.free()
+	if walkable_outline.size() < 3 or not blocked_outlines.is_empty():
+		return
+	var triangles := Geometry2D.triangulate_polygon(walkable_outline)
+	if triangles.is_empty():
+		push_error("Could not triangulate room navigation outline for %s" % room_id)
+		return
+	var navigation_polygon := NavigationPolygon.new()
+	navigation_polygon.vertices = walkable_outline
+	for index in range(0, triangles.size(), 3):
+		navigation_polygon.add_polygon(PackedInt32Array([
+			triangles[index],
+			triangles[index + 1],
+			triangles[index + 2],
+		]))
+	var region := NavigationRegion2D.new()
+	region.name = "NavigationRegion2D"
+	region.navigation_polygon = navigation_polygon
+	add_child(region)
