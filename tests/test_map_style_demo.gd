@@ -97,6 +97,7 @@ func _run_test() -> void:
 	var expected_cover_zoom := (
 		maxf(viewport_size.x / 1536.0, viewport_size.y / 1024.0)
 		* MapStyleDemo.CAMERA_COVER_OVERSCAN
+		* room.camera_overscan
 	)
 	assert(camera.zoom.is_equal_approx(Vector2.ONE * expected_cover_zoom))
 	assert(camera.zoom.x > 0.72)
@@ -239,6 +240,7 @@ func _run_test() -> void:
 	assert(room.room_kind == "boss")
 	assert(room.size_class == MapRoomModule.RoomSizeClass.BOSS)
 	assert(room.is_multi_screen())
+	assert(is_equal_approx(room.camera_overscan, 1.18))
 	assert(room.camera_bounds == Rect2(0, 0, 2560, 1792))
 	assert(room.walkable_outline.size() == 4)
 	assert(room.blocked_outlines.size() == 4)
@@ -277,6 +279,18 @@ func _run_test() -> void:
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 1)
 	for door in instance.exit_doors:
 		assert(door.state == MapRoomDoor.DoorState.SEALED)
+		assert(door._uses_containment_visuals())
+		assert(door.rotation == 0.0)
+		assert(door.get_node("DoorRecessShadow") is Polygon2D)
+		assert(door.get_node("DoorFrame") is Node2D)
+		assert(door.get_node("LeftLeaf") is Polygon2D)
+		assert(door.get_node("RightLeaf") is Polygon2D)
+		var expected_recess := door.outward_vector() * 58.0
+		assert((door.get_node("DoorFrame") as Node2D).position == expected_recess)
+		assert((door.get_node("DoorOpening") as Polygon2D).position == expected_recess)
+		if door.direction == &"south":
+			assert(door.z_index > (boss_shell.get_node("ForegroundWall") as Sprite2D).z_index)
+	assert(camera.zoom.x >= 0.78)
 	instance.active_boss.free()
 	await process_frame
 	await process_frame

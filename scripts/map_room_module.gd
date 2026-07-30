@@ -12,6 +12,7 @@ enum RoomSizeClass {
 @export var difficulty_tier := 1
 @export var size_class := RoomSizeClass.STANDARD
 @export var camera_zoom := Vector2(1.28, 1.28)
+@export var camera_overscan := 1.0
 @export var camera_bounds := Rect2()
 @export var walkable_outline := PackedVector2Array()
 @export var blocked_outlines: Array[PackedVector2Array] = []
@@ -25,6 +26,7 @@ func apply_built_spec(spec: Dictionary, builder: RoomBuilder) -> void:
 	room_kind = spec["room_kind"]
 	size_class = spec["size_class"]
 	camera_zoom = spec["camera_zoom"]
+	camera_overscan = float(spec.get("camera_overscan", 1.0))
 	camera_bounds = builder.map_bounds
 	walkable_outline = builder.walkable_outline
 	blocked_outlines.clear()
@@ -41,6 +43,7 @@ func apply_legacy_spec(spec: Dictionary) -> void:
 	room_kind = spec["room_kind"]
 	size_class = spec["size_class"]
 	camera_zoom = spec["camera_zoom"]
+	camera_overscan = float(spec.get("camera_overscan", 1.0))
 	camera_bounds = spec.get("map_bounds", Rect2(Vector2.ZERO, Vector2(1536, 1024)))
 	walkable_outline = spec["walkable_outline"]
 	blocked_outlines.clear()

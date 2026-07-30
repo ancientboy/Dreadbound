@@ -161,7 +161,8 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "深层收容手术厅",
 		"room_kind": "boss",
 		"size_class": MapRoomModule.RoomSizeClass.BOSS,
-		"camera_zoom": Vector2(0.72, 0.72),
+		"camera_zoom": Vector2(0.78, 0.78),
+		"camera_overscan": 1.18,
 		"map_bounds": Rect2(0, 0, 2560, 1792),
 		"spawn": Vector2(1280, 1408),
 		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(16, 10)),
@@ -179,6 +180,10 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_door("north", Vector2i(9, 1)),
 			_door("south", Vector2i(10, 12)),
 		],
+		"door_profile": {
+			"style": &"containment",
+			"recess": 58.0,
+		},
 		"floor_macro": {
 			"node_name": "BossFloorMacro",
 			"texture_path": HOSPITAL_BOSS_FLOOR_MACRO,

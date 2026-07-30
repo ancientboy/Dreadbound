@@ -28,6 +28,11 @@ default_font = ExtResource("6_font")
 y_sort_enabled = true
 script = ExtResource("1_demo")
 
+[node name="WorldBackdrop" type="Polygon2D" parent="."]
+z_index = -100
+polygon = PackedVector2Array(-4096, -4096, 6656, -4096, 6656, 5888, -4096, 5888)
+color = Color(0.012, 0.031, 0.04, 1)
+
 [node name="ModularArchitecture" type="Node2D" parent="."]
 script = ExtResource("10_modular")
 

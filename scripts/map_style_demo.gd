@@ -98,7 +98,7 @@ func _fit_camera_to_viewport() -> void:
 	var cover_zoom := maxf(
 		viewport_size.x / bounds.size.x,
 		viewport_size.y / bounds.size.y,
-	) * CAMERA_COVER_OVERSCAN
+	) * CAMERA_COVER_OVERSCAN * sample_room.camera_overscan
 	var authored_zoom := maxf(sample_room.camera_zoom.x, sample_room.camera_zoom.y)
 	var resolved_zoom := maxf(authored_zoom, cover_zoom)
 	camera.zoom = Vector2.ONE * resolved_zoom
@@ -180,6 +180,7 @@ func _create_exit_doors() -> void:
 			StringName(direction_value),
 			sample_room.door_anchor_world(StringName(direction_value)),
 			modular_architecture.theme if modular_architecture.visible else null,
+			room_variants[current_room_index].get("door_profile", {}),
 		)
 		sample_room.add_child(door)
 		door.traversal_requested.connect(_on_door_traversal_requested)
