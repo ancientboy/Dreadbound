@@ -1,7 +1,6 @@
 [gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/map_style_demo.gd" id="1_demo"]
-[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_shell_v2.jpg" id="2_shell"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player.tscn" id="3_player"]
 [ext_resource type="Script" path="res://scripts/demo_weapon_vfx.gd" id="4_vfx"]
 [ext_resource type="Script" path="res://scripts/mobile_controls.gd" id="5_mobile"]
@@ -9,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/map_room_module.gd" id="7_room"]
 [ext_resource type="Script" path="res://scripts/map_encounter_zone.gd" id="8_zone"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_foreground_v2.webp" id="9_front"]
+[ext_resource type="Script" path="res://scripts/modular_hospital_room.gd" id="10_modular"]
 
 [sub_resource type="RectangleShape2D" id="FadeShape"]
 size = Vector2(1280, 210)
@@ -33,10 +33,13 @@ y_sort_enabled = true
 script = ExtResource("1_demo")
 
 [node name="Architecture" type="Sprite2D" parent="."]
-texture = ExtResource("2_shell")
+visible = false
 centered = false
 texture_filter = 1
 z_index = -30
+
+[node name="ModularArchitecture" type="Node2D" parent="."]
+script = ExtResource("10_modular")
 
 [node name="ThemeGrade" type="CanvasModulate" parent="."]
 color = Color(0.86, 0.95, 1, 1)
@@ -106,6 +109,7 @@ color = Color(0.01, 0.025, 0.03, 0.48)
 script = ExtResource("4_vfx")
 
 [node name="Foreground" type="Node2D" parent="."]
+visible = false
 z_index = 40
 
 [node name="WallsForeground" type="Sprite2D" parent="Foreground"]
@@ -153,19 +157,19 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图 Demo v5 · 65°准俯视医院样板房"
+text = "新地图 Demo v6 · 真模块化医院样板房"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.42, 0.87, 0.76, 1)
 theme_override_font_sizes/font_size = 14
-text = "清理房间后选择精细化出口"
+text = "清理房间后选择独立方向出口"
 horizontal_alignment = 1
 
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.66, 0.72, 0.7, 1)
 theme_override_font_sizes/font_size = 13
-text = "空房框架 / 独立门体 / 前景遮挡"
+text = "平铺地面 / 分段墙体 / 真实门洞 / 独立门扇"
 horizontal_alignment = 1
 
 [node name="Return" type="Button" parent="HUD"]

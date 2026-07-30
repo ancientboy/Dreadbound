@@ -3,10 +3,12 @@ extends Node2D
 
 const MAP_SIZE := Vector2(1536.0, 1024.0)
 const SAMPLE_ENCOUNTER := &"map_demo_sample"
+const DOOR_GAP_HALF_WIDTH := 78.0
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const ROOM_DOOR_SCRIPT: Script = preload("res://scripts/map_room_door.gd")
 
 @onready var architecture := $Architecture as Sprite2D
+@onready var modular_architecture := $ModularArchitecture as ModularHospitalRoom
 @onready var player := $Player as Player
 @onready var camera := $Player/Camera2D as Camera2D
 @onready var rendered_character := $Player/RenderedAtlasCharacter as RenderedAtlasCharacter
@@ -126,11 +128,15 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 		sample_room.blocked_outlines.append(blocked_outline)
 	sample_room.camera_guide_outline = spec["camera_guide_outline"]
 	sample_room.door_directions = spec["door_directions"]
-	architecture.texture = load(spec["texture_path"]) as Texture2D
 
-	var show_original_detail_layers := current_room_index == 0
-	$Rooms/SampleRoom/Obstacles.visible = show_original_detail_layers
-	$Foreground.visible = show_original_detail_layers
+	var use_modular_room := sample_room.room_id == &"hospital_standard_combat"
+	modular_architecture.visible = use_modular_room
+	architecture.visible = not use_modular_room
+	$Foreground.visible = false
+	if not use_modular_room:
+		architecture.texture = load(spec["texture_path"]) as Texture2D
+	$Rooms/SampleRoom/Obstacles.visible = false
+
 	_build_zones(spec["zones"])
 	_build_collision()
 	_create_exit_doors()
@@ -142,7 +148,11 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	_configure_player()
 	_activate_starting_zones()
 	title_label.text = "医院主题房型 · %s" % spec["title"]
-	objective_label.text = "主题锁定：墙体、地板、门、灯光、敌人保持医院风格"
+	objective_label.text = (
+		"模块化样板：地面、墙段、门洞、门扇、碰撞与灯光独立"
+		if use_modular_room
+		else "主题锁定：当前旧房型仅用于流程回归"
+	)
 	room_switching = false
 	_update_encounter_state()
 
@@ -161,8 +171,11 @@ func _create_exit_doors() -> void:
 	for direction_value in sample_room.door_directions:
 		var door := ROOM_DOOR_SCRIPT.new() as MapRoomDoor
 		door.name = "Door_%s" % String(direction_value).capitalize()
+		door.configure(
+			StringName(direction_value),
+			sample_room.door_anchor_world(StringName(direction_value)),
+		)
 		sample_room.add_child(door)
-		door.configure(StringName(direction_value), sample_room.door_anchor_world(StringName(direction_value)))
 		door.traversal_requested.connect(_on_door_traversal_requested)
 		exit_doors.append(door)
 
@@ -189,8 +202,8 @@ func _unlock_exit_doors() -> void:
 	room_cleared = true
 	for door in exit_doors:
 		door.unlock()
-	objective_label.text = "房间已清理，出口正在开启 · 请选择下一房间"
-	state_label.text = "走近任意发光出口即可进入，镜头会跟随切换"
+	objective_label.text = "房间已清理，独立门扇正在滑入墙体 · 请选择出口"
+	state_label.text = "门洞碰撞已开放，走近任意青色出口即可进入"
 
 
 func _on_door_traversal_requested(door: MapRoomDoor) -> void:
@@ -257,7 +270,10 @@ func _find_connected_room(exit_direction: StringName) -> int:
 		&"west": 4,
 	}.get(exit_direction, 1)
 	for step in room_variants.size():
-		var candidate_index := posmod(current_room_index + directional_offset + step, room_variants.size())
+		var candidate_index := posmod(
+			current_room_index + directional_offset + step,
+			room_variants.size(),
+		)
 		if candidate_index == current_room_index:
 			continue
 		var candidate: Dictionary = room_variants[candidate_index]
@@ -309,16 +325,46 @@ func _update_guided_camera() -> void:
 
 
 func _build_collision() -> void:
-	_build_polygon_collision(sample_room.walkable_outline)
+	_build_polygon_collision(sample_room.walkable_outline, true)
 	for blocked_outline in sample_room.blocked_outlines:
-		_build_polygon_collision(blocked_outline)
+		_build_polygon_collision(blocked_outline, false)
 
 
-func _build_polygon_collision(outline: PackedVector2Array) -> void:
+func _build_polygon_collision(outline: PackedVector2Array, cut_door_gaps: bool) -> void:
 	for index in outline.size():
 		var start := sample_room.to_global(outline[index])
 		var finish := sample_room.to_global(outline[(index + 1) % outline.size()])
+		if cut_door_gaps and _add_segment_with_door_gap(start, finish):
+			continue
 		_add_wall_segment(start, finish, 28.0)
+
+
+func _add_segment_with_door_gap(start: Vector2, finish: Vector2) -> bool:
+	var segment_length := start.distance_to(finish)
+	if segment_length <= DOOR_GAP_HALF_WIDTH * 2.5:
+		return false
+	for direction_value in sample_room.door_directions:
+		var anchor := sample_room.door_anchor_world(StringName(direction_value))
+		var closest := Geometry2D.get_closest_point_to_segment(anchor, start, finish)
+		if closest.distance_to(anchor) > 3.0:
+			continue
+		if closest.distance_to(start) <= DOOR_GAP_HALF_WIDTH:
+			continue
+		if closest.distance_to(finish) <= DOOR_GAP_HALF_WIDTH:
+			continue
+		var tangent := start.direction_to(finish)
+		_add_wall_segment(
+			start,
+			closest - tangent * DOOR_GAP_HALF_WIDTH,
+			28.0,
+		)
+		_add_wall_segment(
+			closest + tangent * DOOR_GAP_HALF_WIDTH,
+			finish,
+			28.0,
+		)
+		return true
+	return false
 
 
 func _add_wall_segment(start: Vector2, finish: Vector2, thickness: float) -> void:
@@ -353,11 +399,13 @@ func _connect_areas() -> void:
 func _on_wall_fade_entered(body: Node) -> void:
 	if body == player:
 		create_tween().tween_property(foreground_walls, "modulate:a", 0.22, 0.16)
+		modular_architecture.set_foreground_faded(true)
 
 
 func _on_wall_fade_exited(body: Node) -> void:
 	if body == player:
 		create_tween().tween_property(foreground_walls, "modulate:a", 1.0, 0.2)
+		modular_architecture.set_foreground_faded(false)
 
 
 func _activate_starting_zones() -> void:
@@ -370,7 +418,11 @@ func _activate_starting_zones() -> void:
 func _activate_entered_zone() -> void:
 	for child in $Rooms/SampleRoom/EncounterZones.get_children():
 		var zone := child as MapEncounterZone
-		if zone != null and not zone.activated and zone.contains_world_point(player.global_position):
+		if (
+			zone != null
+			and not zone.activated
+			and zone.contains_world_point(player.global_position)
+		):
 			_activate_zone(zone)
 
 

@@ -11,26 +11,32 @@ enum DoorState {
 }
 
 const VALID_DIRECTIONS := ["north", "south", "west", "east"]
-const FRAME_TEXTURE := preload(
+const LEGACY_FRAME := preload(
 	"res://assets/art/worlds/map_demo/sample_room_v2/doors/frame.png"
 )
-const LEFT_LEAF_TEXTURE := preload(
+const LEGACY_LEFT_LEAF := preload(
 	"res://assets/art/worlds/map_demo/sample_room_v2/doors/leaf_left.png"
 )
-const RIGHT_LEAF_TEXTURE := preload(
+const LEGACY_RIGHT_LEAF := preload(
 	"res://assets/art/worlds/map_demo/sample_room_v2/doors/leaf_right.png"
 )
-const LINTEL_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/sample_room_v2/doors/lintel.png"
+const WEST_FRAME := preload(
+	"res://assets/art/worlds/map_demo/modular_hospital/doors/west_frame_v2.png"
 )
-const LOCKED_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_locked.png"
+const WEST_LEFT_LEAF := preload(
+	"res://assets/art/worlds/map_demo/modular_hospital/doors/west_leaf_left_v2.png"
 )
-const OPEN_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_open.png"
+const WEST_RIGHT_LEAF := preload(
+	"res://assets/art/worlds/map_demo/modular_hospital/doors/west_leaf_right_v2.png"
 )
-const THRESHOLD_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/sample_room_v2/doors/threshold.png"
+const EAST_FRAME := preload(
+	"res://assets/art/worlds/map_demo/modular_hospital/doors/east_frame_v2.png"
+)
+const EAST_LEFT_LEAF := preload(
+	"res://assets/art/worlds/map_demo/modular_hospital/doors/east_leaf_left_v2.png"
+)
+const EAST_RIGHT_LEAF := preload(
+	"res://assets/art/worlds/map_demo/modular_hospital/doors/east_leaf_right_v2.png"
 )
 
 var direction: StringName = &"north"
@@ -39,9 +45,10 @@ var open_progress := 0.0
 var _blocker_shape: CollisionShape2D
 var _left_leaf: Sprite2D
 var _right_leaf: Sprite2D
-var _locked_indicator: Sprite2D
-var _open_indicator: Sprite2D
+var _locked_indicator: Polygon2D
+var _open_indicator: Polygon2D
 var _seal_glow: Polygon2D
+var _slide_axis := Vector2.RIGHT
 
 
 func _ready() -> void:
@@ -59,15 +66,11 @@ func configure(new_direction: StringName, world_anchor: Vector2) -> void:
 	assert(VALID_DIRECTIONS.has(String(new_direction)))
 	direction = new_direction
 	global_position = world_anchor
-	match direction:
-		&"north":
-			rotation = 0.0
-		&"south":
-			rotation = PI
-		&"west":
-			rotation = -PI * 0.5
-		&"east":
-			rotation = PI * 0.5
+	rotation = 0.0
+	if direction == &"north":
+		rotation = 0.0
+	elif direction == &"south":
+		rotation = PI
 
 
 func unlock() -> void:
@@ -78,19 +81,16 @@ func unlock() -> void:
 		_blocker_shape.set_deferred("disabled", true)
 	var status_tween := create_tween()
 	status_tween.tween_property(_locked_indicator, "modulate:a", 0.0, 0.14)
-	status_tween.tween_callback(func() -> void:
-		_open_indicator.visible = true
-	)
+	status_tween.tween_callback(func() -> void: _open_indicator.visible = true)
 	status_tween.tween_property(_open_indicator, "modulate:a", 1.0, 0.16)
+	var travel := _slide_axis * 78.0
 	var door_tween := create_tween().set_parallel(true)
 	door_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	door_tween.tween_property(_left_leaf, "position:x", -92.0, 0.48)
-	door_tween.tween_property(_right_leaf, "position:x", 92.0, 0.48)
+	door_tween.tween_property(_left_leaf, "position", -travel, 0.48)
+	door_tween.tween_property(_right_leaf, "position", travel, 0.48)
 	door_tween.tween_property(_seal_glow, "modulate:a", 0.0, 0.32)
 	door_tween.tween_method(_set_open_progress, 0.0, 1.0, 0.48)
-	door_tween.finished.connect(func() -> void:
-		state = DoorState.OPEN
-	)
+	door_tween.finished.connect(func() -> void: state = DoorState.OPEN)
 
 
 func begin_traversal() -> void:
@@ -129,37 +129,62 @@ static func opposite_direction(value: StringName) -> StringName:
 
 
 func _build_visuals() -> void:
-	var threshold := _make_sprite("Threshold", THRESHOLD_TEXTURE, 0.17, -4)
-	threshold.position = Vector2(0.0, 30.0)
+	var frame_texture := LEGACY_FRAME
+	var left_texture := LEGACY_LEFT_LEAF
+	var right_texture := LEGACY_RIGHT_LEAF
+	var visual_scale := 0.145
+	if direction == &"west":
+		frame_texture = WEST_FRAME
+		left_texture = WEST_LEFT_LEAF
+		right_texture = WEST_RIGHT_LEAF
+		visual_scale = 0.205
+		_slide_axis = Vector2(1.0, -0.11).normalized()
+	elif direction == &"east":
+		frame_texture = EAST_FRAME
+		left_texture = EAST_LEFT_LEAF
+		right_texture = EAST_RIGHT_LEAF
+		visual_scale = 0.205
+		_slide_axis = Vector2(1.0, 0.11).normalized()
 
-	_left_leaf = _make_sprite("LeftLeaf", LEFT_LEAF_TEXTURE, 0.145, 0)
-	_left_leaf.position = Vector2(-43.0, -8.0)
-	_right_leaf = _make_sprite("RightLeaf", RIGHT_LEAF_TEXTURE, 0.145, 0)
-	_right_leaf.position = Vector2(43.0, -8.0)
+	var opening := Polygon2D.new()
+	opening.name = "DoorOpening"
+	opening.polygon = PackedVector2Array([
+		Vector2(-64.0, -52.0),
+		Vector2(64.0, -52.0),
+		Vector2(64.0, 52.0),
+		Vector2(-64.0, 52.0),
+	])
+	opening.color = Color(0.004, 0.014, 0.018, 1.0)
+	opening.z_index = -6
+	add_child(opening)
 
-	var frame := _make_sprite("DoorFrame", FRAME_TEXTURE, 0.16, 3)
-	frame.position = Vector2(0.0, -45.0)
-	var lintel := _make_sprite("ForegroundLintel", LINTEL_TEXTURE, 0.205, 7)
-	lintel.position = Vector2(0.0, -66.0)
-
-	_locked_indicator = _make_sprite("LockedIndicator", LOCKED_TEXTURE, 0.22, 8)
-	_locked_indicator.position = Vector2(0.0, -75.0)
-	_open_indicator = _make_sprite("OpenIndicator", OPEN_TEXTURE, 0.22, 8)
-	_open_indicator.position = Vector2(0.0, -75.0)
-	_open_indicator.visible = false
-	_open_indicator.modulate.a = 0.0
+	var frame := _make_sprite("DoorFrame", frame_texture, visual_scale, 6)
+	_left_leaf = _make_sprite("LeftLeaf", left_texture, visual_scale, 1)
+	_right_leaf = _make_sprite("RightLeaf", right_texture, visual_scale, 1)
+	frame.position = Vector2.ZERO
 
 	_seal_glow = Polygon2D.new()
 	_seal_glow.name = "LockField"
 	_seal_glow.polygon = PackedVector2Array([
-		Vector2(-63.0, -29.0),
-		Vector2(63.0, -29.0),
-		Vector2(63.0, 27.0),
-		Vector2(-63.0, 27.0),
+		Vector2(-54.0, -38.0),
+		Vector2(54.0, -38.0),
+		Vector2(54.0, 38.0),
+		Vector2(-54.0, 38.0),
 	])
-	_seal_glow.color = Color(0.96, 0.13, 0.11, 0.1)
-	_seal_glow.z_index = 2
+	_seal_glow.color = Color(0.96, 0.13, 0.11, 0.075)
+	_seal_glow.z_index = 3
 	add_child(_seal_glow)
+
+	_locked_indicator = _make_indicator(
+		"LockedIndicator",
+		Color(1.0, 0.12, 0.08, 0.9),
+	)
+	_open_indicator = _make_indicator(
+		"OpenIndicator",
+		Color(0.18, 1.0, 0.72, 0.9),
+	)
+	_open_indicator.visible = false
+	_open_indicator.modulate.a = 0.0
 
 
 func _make_sprite(
@@ -178,13 +203,29 @@ func _make_sprite(
 	return sprite
 
 
+func _make_indicator(node_name: String, color: Color) -> Polygon2D:
+	var indicator := Polygon2D.new()
+	indicator.name = node_name
+	indicator.polygon = PackedVector2Array([
+		Vector2(-7.0, -3.0),
+		Vector2(7.0, -3.0),
+		Vector2(7.0, 3.0),
+		Vector2(-7.0, 3.0),
+	])
+	indicator.position = Vector2(0.0, -69.0)
+	indicator.color = color
+	indicator.z_index = 9
+	add_child(indicator)
+	return indicator
+
+
 func _build_collision() -> void:
 	var trigger := CollisionShape2D.new()
 	trigger.name = "TraversalTrigger"
 	var trigger_shape := RectangleShape2D.new()
 	trigger_shape.size = Vector2(134.0, 122.0)
 	trigger.shape = trigger_shape
-	trigger.position = Vector2(0.0, 34.0)
+	trigger.position = inward_vector() * 30.0
 	add_child(trigger)
 
 	var blocker := StaticBody2D.new()
@@ -193,7 +234,11 @@ func _build_collision() -> void:
 	blocker.collision_mask = 1
 	_blocker_shape = CollisionShape2D.new()
 	var blocker_rectangle := RectangleShape2D.new()
-	blocker_rectangle.size = Vector2(140.0, 34.0)
+	blocker_rectangle.size = (
+		Vector2(34.0, 142.0)
+		if direction == &"west" or direction == &"east"
+		else Vector2(142.0, 34.0)
+	)
 	_blocker_shape.shape = blocker_rectangle
 	blocker.add_child(_blocker_shape)
 	add_child(blocker)

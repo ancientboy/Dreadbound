@@ -17,28 +17,22 @@ func _run_test() -> void:
 	var camera := player.get_node("Camera2D") as Camera2D
 	var room := instance.get_node("Rooms/SampleRoom") as MapRoomModule
 	var architecture := instance.get_node("Architecture") as Sprite2D
-	var foreground := instance.get_node("Foreground/WallsForeground") as Sprite2D
+	var modular := instance.get_node("ModularArchitecture") as ModularHospitalRoom
 	var zones := instance.get_node("Rooms/SampleRoom/EncounterZones")
 
 	assert(player != null and not player.use_runtime_progress)
-	assert(architecture.texture != null)
-	assert(
-		architecture.texture.resource_path
-		== "res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_shell_v2.jpg"
-	)
-	assert(architecture.texture.get_size() == Vector2(1536, 1024))
-	assert(architecture.scale == Vector2.ONE)
-	assert(foreground.texture != null)
-	assert(
-		foreground.texture.resource_path
-		== "res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_foreground_v2.webp"
-	)
+	assert(not architecture.visible)
+	assert(modular.visible)
+	assert(modular.get_node("FloorSurface") is Polygon2D)
+	assert(modular.get_node("BackWalls").get_child_count() == 5)
+	assert(modular.get_node("WestWalls").get_child_count() == 2)
+	assert(modular.get_node("EastWalls").get_child_count() == 2)
+	assert(modular.get_node("ForegroundWalls").get_child_count() == 5)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	assert(camera.zoom == Vector2(1.52, 1.52))
 	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
 	assert(camera.position_smoothing_enabled)
 
-	# The default vertical slice is the polished, empty standard room.
 	assert(room.room_id == &"hospital_standard_combat")
 	assert(room.room_kind == "combat")
 	assert(room.size_class == MapRoomModule.RoomSizeClass.STANDARD)
@@ -55,16 +49,18 @@ func _run_test() -> void:
 	for door in instance.exit_doors:
 		assert(door is MapRoomDoor)
 		assert(door.state == MapRoomDoor.DoorState.SEALED)
+		assert(door.rotation == 0.0)
+		assert(door.get_node("DoorOpening") is Polygon2D)
 		assert(door.get_node("DoorFrame") is Sprite2D)
 		assert(door.get_node("LeftLeaf") is Sprite2D)
 		assert(door.get_node("RightLeaf") is Sprite2D)
-		assert(door.get_node("ForegroundLintel") is Sprite2D)
-		assert(door.get_node("LockedIndicator") is Sprite2D)
-		assert(door.get_node("OpenIndicator") is Sprite2D)
+		assert(door.get_node("LockedIndicator") is Polygon2D)
+		assert(door.get_node("OpenIndicator") is Polygon2D)
 		assert(door.get_node("DoorBlocker") is StaticBody2D)
 
+	# Each of the two wall edges is split around a real door opening.
 	var boundary_segments := _boundary_segment_count(instance)
-	assert(boundary_segments == room.walkable_outline.size())
+	assert(boundary_segments == room.walkable_outline.size() + 2)
 
 	var outside_corner := Vector2(60, 180)
 	assert(not room.contains_world_point(outside_corner))
@@ -80,7 +76,6 @@ func _run_test() -> void:
 		room.camera_guide_outline,
 	))
 
-	# Clearing the single standard-room encounter unlocks both real door prefabs.
 	for enemy in get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER):
 		enemy.free()
 	await process_frame
@@ -88,8 +83,10 @@ func _run_test() -> void:
 	assert(instance.room_cleared)
 	for door in instance.exit_doors:
 		assert(door.state != MapRoomDoor.DoorState.SEALED)
+		var blocker := door.get_node("DoorBlocker/CollisionShape2D") as CollisionShape2D
+		assert(blocker.disabled)
 
-	# Preserve the previous multi-screen elite-room regression coverage.
+	# Preserve old room-flow coverage while the remaining room art is migrated later.
 	instance._show_room_variant(1)
 	await process_frame
 	assert(room.room_id == &"hospital_elite_large")
@@ -102,7 +99,8 @@ func _run_test() -> void:
 	assert(zones.get_child_count() == 3)
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
-	assert(_boundary_segment_count(instance) == room.walkable_outline.size())
+	assert(not modular.visible)
+	assert(architecture.visible)
 
 	player.global_position = Vector2(760, 520)
 	instance._physics_process(0.0)
@@ -116,11 +114,10 @@ func _run_test() -> void:
 	assert(instance.activated_zone_count == 3)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 6)
 
-	assert(instance.get_node("Foreground/FadeZone") is Area2D)
 	instance.queue_free()
 	print(
-		"Map style demo v5 passed: polished empty room, modular doors, guided camera, "
-		+ "and multi-screen elite-room regression",
+		"Map style demo v6 passed: tiled floor, segmented walls, direction-specific doors, "
+		+ "real collision gaps, independent leaves, and legacy room-flow regression",
 	)
 	quit()
 
