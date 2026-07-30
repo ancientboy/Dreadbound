@@ -116,7 +116,7 @@ func _run_test() -> void:
 	assert((room.get_node("NavigationRegion2D") as NavigationRegion2D).enabled)
 	assert(
 		(room.get_node("NavigationRegion2D") as NavigationRegion2D)
-		.navigation_polygon.get_polygon_count() == 2
+		.navigation_polygon.get_polygon_count() >= 1
 	)
 	assert(zones.get_child_count() == 1)
 	assert(instance.activated_zone_count == 1)
@@ -230,10 +230,51 @@ func _run_test() -> void:
 	assert(lower_camera.y > upper_camera.y)
 	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
 
+	# The fourth room is a 16x10 Boss graybox with data-driven encounter slots,
+	# solid obstacle footprints, navigation holes, sealed doors, and a reward hook.
+	instance._show_room_variant(3)
+	await process_frame
+	await process_frame
+	assert(room.room_id == &"hospital_boss_arena_graybox")
+	assert(room.room_kind == "boss")
+	assert(room.size_class == MapRoomModule.RoomSizeClass.BOSS)
+	assert(room.is_multi_screen())
+	assert(room.camera_bounds == Rect2(0, 0, 2560, 1792))
+	assert(room.walkable_outline.size() == 4)
+	assert(room.blocked_outlines.size() == 4)
+	assert(room.door_directions == PackedStringArray(["north", "south"]))
+	assert(modular.floor_tiles.get_used_cells().size() == 160)
+	assert(modular.get_node("ContentSlots").get_child_count() == 10)
+	assert(modular.get_node("ThemeProps").get_child_count() == 4)
+	assert(not modular.has_node("RoomFloorMacro"))
+	assert(not modular.has_node("RoomWallShell"))
+	assert(not room.contains_world_point(Vector2(704, 704)))
+	assert(room.contains_world_point(Vector2(1280, 896)))
+	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
+	assert(
+		(room.get_node("NavigationRegion2D") as NavigationRegion2D)
+		.navigation_polygon.get_polygon_count() >= 1
+	)
+	assert(instance.active_boss != null)
+	assert(instance.active_boss.visible)
+	assert(instance.active_boss.get_meta(&"summon_points").size() == 4)
+	assert(instance.active_boss.get_meta(&"phase_thresholds") == PackedFloat32Array([0.5]))
+	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 1)
+	for door in instance.exit_doors:
+		assert(door.state == MapRoomDoor.DoorState.SEALED)
+	instance.active_boss.free()
+	await process_frame
+	await process_frame
+	assert(instance.room_cleared)
+	assert(instance.boss_reward_preview != null)
+	assert(instance.boss_reward_preview.get_node("RewardGlow") is Polygon2D)
+	for door in instance.exit_doors:
+		assert(door.state != MapRoomDoor.DoorState.SEALED)
+
 	instance.queue_free()
 	print(
-		"Map style demo passed: standard, long, and L RoomBuilder samples remain "
-		+ "with continuous walls, doors, navigation, and cameras",
+		"Map style demo passed: modular samples plus the Boss graybox retain "
+		+ "continuous walls, encounters, obstacle navigation, doors, and cameras",
 	)
 	quit()
 

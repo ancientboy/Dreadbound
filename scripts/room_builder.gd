@@ -34,8 +34,11 @@ var door_sockets: Node2D
 var content_slots: Node2D
 var room_spec: Dictionary = {}
 var walkable_outline := PackedVector2Array()
+var blocked_outlines: Array[PackedVector2Array] = []
 var map_bounds := Rect2()
 var door_anchor_points: Dictionary = {}
+var room_floor_macro: Node2D
+var room_wall_shell: Node2D
 
 var _floor_texture: Texture2D
 var _wall_texture: Texture2D
@@ -43,6 +46,7 @@ var _floor_atlas_size := FLOOR_ATLAS_SIZE
 var _wall_atlas_size := WALL_ATLAS_SIZE
 var _occupied_cells: Dictionary = {}
 var _door_cells: Dictionary = {}
+var _foreground_shell_sprites: Array[Sprite2D] = []
 
 
 func build(
@@ -70,9 +74,12 @@ func build(
 		_door_cells[cell] = direction
 		door_anchor_points[direction] = _door_anchor_for_cell(cell, direction)
 	walkable_outline = _trace_walkable_outline()
+	_build_blocked_outlines()
 	map_bounds = spec.get("map_bounds", _default_map_bounds())
 	_build_floor_tiles()
+	_build_floor_macro()
 	_build_wall_tiles()
+	_build_wall_shell()
 	_build_door_sockets()
 	_build_content_slots()
 
@@ -90,6 +97,25 @@ func door_directions() -> PackedStringArray:
 	for door_spec in room_spec.get("door_sockets", []):
 		result.append(String(door_spec["direction"]))
 	return result
+
+
+func set_foreground_faded(faded: bool) -> void:
+	var target_alpha := 0.2 if faded else 1.0
+	if foreground_walls != null:
+		create_tween().tween_property(
+			foreground_walls,
+			"modulate:a",
+			target_alpha,
+			0.18,
+		)
+	for sprite in _foreground_shell_sprites:
+		if is_instance_valid(sprite):
+			create_tween().tween_property(
+				sprite,
+				"modulate:a",
+				target_alpha,
+				0.18,
+			)
 
 
 func _build_floor_tiles() -> void:
@@ -116,6 +142,67 @@ func _build_floor_tiles() -> void:
 		)
 
 
+func _build_floor_macro() -> void:
+	var macro_spec: Dictionary = room_spec.get("floor_macro", {})
+	if macro_spec.is_empty():
+		return
+	var texture := _load_room_texture(macro_spec)
+	if texture == null:
+		return
+	var source_region: Rect2 = macro_spec.get(
+		"source_region",
+		Rect2(Vector2.ZERO, texture.get_size()),
+	)
+	var world_rect: Rect2 = macro_spec.get("world_rect", Rect2())
+	assert(source_region.has_area(), "Room floor macro requires a source_region")
+	assert(world_rect.has_area(), "Room floor macro requires a world_rect")
+	var corner_cut: Vector2 = macro_spec.get("corner_cut", Vector2.ZERO)
+	if corner_cut.x > 0.0 or corner_cut.y > 0.0:
+		var floor_polygon := Polygon2D.new()
+		floor_polygon.name = String(macro_spec.get("node_name", "RoomFloorMacro"))
+		floor_polygon.texture = texture
+		floor_polygon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		floor_polygon.position = world_rect.position
+		floor_polygon.polygon = _cut_corner_outline(world_rect.size, corner_cut)
+		var texture_uv := PackedVector2Array()
+		for point in floor_polygon.polygon:
+			texture_uv.append(
+				source_region.position
+				+ point / world_rect.size * source_region.size
+			)
+		floor_polygon.uv = texture_uv
+		floor_polygon.z_index = int(macro_spec.get("z_index", -24))
+		room_floor_macro = floor_polygon
+		add_child(room_floor_macro)
+		return
+	var region := AtlasTexture.new()
+	region.atlas = texture
+	region.region = source_region
+	var floor_sprite := Sprite2D.new()
+	floor_sprite.name = String(macro_spec.get("node_name", "RoomFloorMacro"))
+	floor_sprite.texture = region
+	floor_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	floor_sprite.centered = false
+	floor_sprite.position = world_rect.position
+	floor_sprite.scale = world_rect.size / source_region.size
+	floor_sprite.z_index = int(macro_spec.get("z_index", -24))
+	room_floor_macro = floor_sprite
+	add_child(room_floor_macro)
+
+
+func _cut_corner_outline(size: Vector2, cut: Vector2) -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(cut.x, 0.0),
+		Vector2(size.x - cut.x, 0.0),
+		Vector2(size.x, cut.y),
+		Vector2(size.x, size.y - cut.y),
+		Vector2(size.x - cut.x, size.y),
+		Vector2(cut.x, size.y),
+		Vector2(0.0, size.y - cut.y),
+		Vector2(0.0, cut.y),
+	])
+
+
 func _build_wall_tiles() -> void:
 	var wall_tileset := _make_atlas_tileset(_wall_texture, _wall_atlas_size)
 	wall_base_tiles = _make_layer("WallBaseTiles", wall_tileset, -8)
@@ -132,6 +219,46 @@ func _build_wall_tiles() -> void:
 			var layer: TileMapLayer = _wall_layer(direction)
 			layer.set_cell(wall_cell, 0, WALL_ATLAS_CELLS[direction], 0)
 			_add_outer_corner_if_needed(cell, direction)
+
+
+func _build_wall_shell() -> void:
+	var shell_spec: Dictionary = room_spec.get("wall_shell", {})
+	if shell_spec.is_empty():
+		return
+	var texture := _load_room_texture(shell_spec)
+	if texture == null:
+		return
+	room_wall_shell = Node2D.new()
+	room_wall_shell.name = String(shell_spec.get("node_name", "RoomWallShell"))
+	add_child(room_wall_shell)
+	for region_spec_value in shell_spec.get("regions", []):
+		var region_spec: Dictionary = region_spec_value
+		var source_region: Rect2 = region_spec.get("source_region", Rect2())
+		var world_rect: Rect2 = region_spec.get("world_rect", Rect2())
+		assert(source_region.has_area(), "Wall shell region requires a source_region")
+		assert(world_rect.has_area(), "Wall shell region requires a world_rect")
+		var region := AtlasTexture.new()
+		region.atlas = texture
+		region.region = source_region
+		var sprite := Sprite2D.new()
+		sprite.name = String(region_spec.get("id", "WallRegion")).to_pascal_case()
+		sprite.texture = region
+		sprite.centered = false
+		sprite.position = world_rect.position
+		sprite.scale = world_rect.size / source_region.size
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		sprite.z_index = int(region_spec.get("z_index", -7))
+		room_wall_shell.add_child(sprite)
+		if bool(region_spec.get("foreground", false)):
+			_foreground_shell_sprites.append(sprite)
+	if bool(shell_spec.get("hide_generated_walls", true)):
+		for tile_layer in [
+			wall_base_tiles,
+			side_wall_tiles,
+			foreground_walls,
+			corner_tiles,
+		]:
+			tile_layer.visible = false
 
 
 func _add_outer_corner_if_needed(cell: Vector2i, direction: StringName) -> void:
@@ -181,24 +308,33 @@ func _build_content_slots() -> void:
 		marker.name = String(slot_spec["id"]).to_pascal_case()
 		marker.position = _cell_center(slot_spec["cell"])
 		marker.set_meta(&"slot_type", StringName(slot_spec["type"]))
+		marker.set_meta(
+			&"visual_id",
+			StringName(slot_spec.get("visual_id", &"")),
+		)
+		marker.set_meta(&"phase", int(slot_spec.get("phase", 0)))
 		content_slots.add_child(marker)
 
 
 func _trace_walkable_outline() -> PackedVector2Array:
+	return _trace_cell_outline(_occupied_cells)
+
+
+func _trace_cell_outline(cells: Dictionary) -> PackedVector2Array:
 	var edges: Array[Dictionary] = []
-	for cell_value in _occupied_cells:
+	for cell_value in cells:
 		var cell: Vector2i = cell_value
 		var top_left := cell
 		var top_right := cell + Vector2i.RIGHT
 		var bottom_right := cell + Vector2i.ONE
 		var bottom_left := cell + Vector2i.DOWN
-		if not _occupied_cells.has(cell + Vector2i.UP):
+		if not cells.has(cell + Vector2i.UP):
 			edges.append({"start": top_left, "finish": top_right})
-		if not _occupied_cells.has(cell + Vector2i.RIGHT):
+		if not cells.has(cell + Vector2i.RIGHT):
 			edges.append({"start": top_right, "finish": bottom_right})
-		if not _occupied_cells.has(cell + Vector2i.DOWN):
+		if not cells.has(cell + Vector2i.DOWN):
 			edges.append({"start": bottom_right, "finish": bottom_left})
-		if not _occupied_cells.has(cell + Vector2i.LEFT):
+		if not cells.has(cell + Vector2i.LEFT):
 			edges.append({"start": bottom_left, "finish": top_left})
 	assert(not edges.is_empty(), "RoomBuilder could not trace a room boundary")
 	var ordered := PackedVector2Array()
@@ -219,6 +355,42 @@ func _trace_walkable_outline() -> PackedVector2Array:
 		cursor = next_edge["finish"]
 	assert(edges.is_empty(), "Room grid cells must not contain holes or disconnected islands")
 	return _simplify_outline(ordered)
+
+
+func _build_blocked_outlines() -> void:
+	blocked_outlines.clear()
+	for outline_value in room_spec.get("blocked_outlines", []):
+		var outline := PackedVector2Array(outline_value)
+		assert(outline.size() >= 3, "Blocked outlines require at least three points")
+		blocked_outlines.append(outline)
+	var obstacle_lookup := _cell_lookup(room_spec.get("obstacle_cells", []))
+	for cell_value in obstacle_lookup:
+		assert(
+			_occupied_cells.has(cell_value),
+			"Obstacle cells must be inside the walkable room grid",
+		)
+	for group in _connected_cell_groups(obstacle_lookup):
+		blocked_outlines.append(_trace_cell_outline(group))
+
+
+func _connected_cell_groups(cells: Dictionary) -> Array[Dictionary]:
+	var remaining := cells.duplicate()
+	var result: Array[Dictionary] = []
+	while not remaining.is_empty():
+		var seed: Vector2i = remaining.keys()[0]
+		var pending: Array[Vector2i] = [seed]
+		var group: Dictionary = {}
+		remaining.erase(seed)
+		while not pending.is_empty():
+			var cell: Vector2i = pending.pop_back()
+			group[cell] = true
+			for offset in CARDINAL_OFFSETS.values():
+				var neighbor: Vector2i = cell + offset
+				if remaining.has(neighbor):
+					remaining.erase(neighbor)
+					pending.append(neighbor)
+		result.append(group)
+	return result
 
 
 func _simplify_outline(outline: PackedVector2Array) -> PackedVector2Array:
@@ -278,6 +450,18 @@ func _make_atlas_tileset(texture: Texture2D, atlas_size: Vector2i) -> TileSet:
 	return tile_set
 
 
+func _load_room_texture(visual_spec: Dictionary) -> Texture2D:
+	var texture := visual_spec.get("texture") as Texture2D
+	if texture != null:
+		return texture
+	var texture_path := String(visual_spec.get("texture_path", ""))
+	assert(
+		not texture_path.is_empty() and ResourceLoader.exists(texture_path),
+		"Configured room visual texture does not exist: %s" % texture_path,
+	)
+	return load(texture_path) as Texture2D
+
+
 func _cell_lookup(cells: Array) -> Dictionary:
 	var result := {}
 	for cell in cells:
@@ -317,3 +501,7 @@ func _clear_generated_nodes() -> void:
 	corner_tiles = null
 	door_sockets = null
 	content_slots = null
+	room_floor_macro = null
+	room_wall_shell = null
+	blocked_outlines.clear()
+	_foreground_shell_sprites.clear()

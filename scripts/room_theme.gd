@@ -11,6 +11,12 @@ extends Resource
 @export var floor_atlas_size := Vector2i(8, 6)
 @export var wall_atlas_size := Vector2i(8, 1)
 @export var prop_region_size := Vector2i(128, 128)
+@export var prop_visual_ids := PackedStringArray([
+	"cover_a",
+	"cover_b",
+	"objective",
+	"enemy",
+])
 @export var ambient_tint := Color(0.68, 0.84, 0.9, 1.0)
 @export var guide_color := Color(0.15, 0.78, 0.74, 0.34)
 @export var warning_color := Color(0.98, 0.28, 0.18, 0.82)

@@ -3,6 +3,14 @@ extends RefCounted
 
 const HOSPITAL_THEME := &"abandoned_hospital"
 const HOSPITAL_THEME_RESOURCE := "res://resources/map_themes/dungeon1_hospital.tres"
+const HOSPITAL_FLOOR_MACRO := (
+	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
+	+ "standard_floor_macro_v1.webp"
+)
+const HOSPITAL_WALL_SHELL := (
+	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
+	+ "standard_wall_shell_v1.webp"
+)
 
 static func _hospital_rooms() -> Array[Dictionary]:
 	return [
@@ -25,11 +33,34 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_door("west", Vector2i(1, 4)),
 			_door("east", Vector2i(10, 4)),
 		],
+		"floor_macro": {
+			"node_name": "StandardFloorMacro",
+			"texture_path": HOSPITAL_FLOOR_MACRO,
+			"world_rect": Rect2(152, 192, 1232, 768),
+			"corner_cut": Vector2(44, 44),
+			"z_index": -24,
+		},
+		"wall_shell": {
+			"node_name": "StandardWallShell",
+			"texture_path": HOSPITAL_WALL_SHELL,
+			"hide_generated_walls": true,
+			"regions": [
+				_shell_region("back_wall", Rect2(0, 0, 1536, 256), -7),
+				_shell_region("west_wall", Rect2(0, 256, 256, 640), 4),
+				_shell_region("east_wall", Rect2(1280, 256, 256, 640), 4),
+				_shell_region(
+					"foreground_wall",
+					Rect2(0, 896, 1536, 128),
+					38,
+					true,
+				),
+			],
+		},
 		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1262, 576)]),
 		"content_slots": [
-			_slot("west_cover", "cover", Vector2i(4, 3)),
-			_slot("objective", "objective", Vector2i(6, 4)),
-			_slot("east_cover", "cover", Vector2i(8, 5)),
+			_slot("west_cover", "cover", Vector2i(4, 3), "cover_a"),
+			_slot("objective", "objective", Vector2i(6, 4), "objective"),
+			_slot("east_cover", "cover", Vector2i(8, 5), "cover_b"),
 		],
 		"zones": [
 			_zone("arena", Rect2(256, 256, 1024, 640), true, [
@@ -58,10 +89,10 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		],
 		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1774, 576)]),
 		"content_slots": [
-			_slot("west_cover", "cover", Vector2i(4, 3)),
-			_slot("west_spawn", "enemy", Vector2i(6, 5)),
-			_slot("east_spawn", "enemy", Vector2i(10, 3)),
-			_slot("east_cover", "cover", Vector2i(12, 5)),
+			_slot("west_cover", "cover", Vector2i(4, 3), "cover_a"),
+			_slot("west_spawn", "enemy", Vector2i(6, 5), "enemy"),
+			_slot("east_spawn", "enemy", Vector2i(10, 3), "enemy"),
+			_slot("east_cover", "cover", Vector2i(12, 5), "cover_b"),
 		],
 		"zones": [
 			_zone("west_wing", Rect2(256, 256, 768, 640), true, [
@@ -101,10 +132,10 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			Vector2(960, 832), Vector2(1774, 832),
 		]),
 		"content_slots": [
-			_slot("upper_cover", "cover", Vector2i(5, 3)),
-			_slot("junction", "objective", Vector2i(7, 4)),
-			_slot("lower_spawn", "enemy", Vector2i(9, 6)),
-			_slot("east_cover", "cover", Vector2i(12, 6)),
+			_slot("upper_cover", "cover", Vector2i(5, 3), "cover_a"),
+			_slot("junction", "objective", Vector2i(7, 4), "objective"),
+			_slot("lower_spawn", "enemy", Vector2i(9, 6), "enemy"),
+			_slot("east_cover", "cover", Vector2i(12, 6), "cover_b"),
 		],
 		"zones": [
 			_zone("upper_ward", Rect2(256, 256, 896, 384), true, [
@@ -115,7 +146,78 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			], ["破损护理体", "精英隔离体"]),
 		],
 	},
-]
+	{
+		"room_id": &"hospital_boss_arena_graybox",
+		"theme_id": HOSPITAL_THEME,
+		"theme_resource": HOSPITAL_THEME_RESOURCE,
+		"title": "大型 Boss 房灰盒",
+		"room_kind": "boss",
+		"size_class": MapRoomModule.RoomSizeClass.BOSS,
+		"camera_zoom": Vector2(0.72, 0.72),
+		"map_bounds": Rect2(0, 0, 2560, 1792),
+		"spawn": Vector2(1280, 1408),
+		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(16, 10)),
+		"obstacle_cells": [
+			Vector2i(5, 5),
+			Vector2i(14, 5),
+			Vector2i(5, 9),
+			Vector2i(14, 9),
+		],
+		"camera_guide_outline": PackedVector2Array([
+			Vector2(640, 512), Vector2(1920, 512),
+			Vector2(1920, 1280), Vector2(640, 1280),
+		]),
+		"door_sockets": [
+			_door("north", Vector2i(9, 1)),
+			_door("south", Vector2i(10, 12)),
+		],
+		"guide_line": PackedVector2Array([
+			Vector2(1280, 1536),
+			Vector2(1280, 896),
+			Vector2(1216, 832),
+		]),
+		"content_slots": [
+			_slot("boss_spawn", "boss", Vector2i(9, 6)),
+			_slot("summon_north_west", "enemy", Vector2i(6, 4)),
+			_slot("summon_north_east", "enemy", Vector2i(13, 4)),
+			_slot("summon_south_west", "enemy", Vector2i(6, 10)),
+			_slot("summon_south_east", "enemy", Vector2i(13, 10)),
+			_slot("pillar_north_west", "cover", Vector2i(5, 5), "cover_a"),
+			_slot("pillar_north_east", "cover", Vector2i(14, 5), "cover_b"),
+			_slot("pillar_south_west", "cover", Vector2i(5, 9), "cover_b"),
+			_slot("pillar_south_east", "cover", Vector2i(14, 9), "cover_a"),
+			_slot("reward", "reward", Vector2i(9, 8)),
+		],
+		"zones": [
+			_zone(
+				"boss_arena",
+				Rect2(256, 256, 2048, 1280),
+				true,
+				[],
+				[],
+			),
+		],
+		"boss": {
+			"scene": "res://scenes/entities/boss.tscn",
+			"spawn_slot": &"boss_spawn",
+			"summon_slots": PackedStringArray([
+				"summon_north_west",
+				"summon_north_east",
+				"summon_south_west",
+				"summon_south_east",
+			]),
+			"phase_thresholds": PackedFloat32Array([0.5]),
+			"reward_slot": &"reward",
+			"lock_on_enter": true,
+		},
+		"art_contract": {
+			"canvas_size": Vector2i(2560, 1792),
+			"combat_rect": Rect2i(256, 256, 2048, 1280),
+			"floor_asset": "boss_floor_macro.webp",
+			"wall_asset": "boss_wall_shell.webp",
+		},
+	},
+	]
 
 
 static func hospital_rooms() -> Array[Dictionary]:
@@ -160,11 +262,34 @@ static func _door(direction: String, cell: Vector2i) -> Dictionary:
 	}
 
 
-static func _slot(id: String, type: String, cell: Vector2i) -> Dictionary:
-	return {
+static func _slot(
+	id: String,
+	type: String,
+	cell: Vector2i,
+	visual_id := "",
+) -> Dictionary:
+	var result := {
 		"id": StringName(id),
 		"type": StringName(type),
 		"cell": cell,
+	}
+	if not visual_id.is_empty():
+		result["visual_id"] = StringName(visual_id)
+	return result
+
+
+static func _shell_region(
+	id: String,
+	rect: Rect2,
+	z_index: int,
+	foreground := false,
+) -> Dictionary:
+	return {
+		"id": StringName(id),
+		"source_region": rect,
+		"world_rect": rect,
+		"z_index": z_index,
+		"foreground": foreground,
 	}
 
 

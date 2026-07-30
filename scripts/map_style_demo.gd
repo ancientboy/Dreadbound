@@ -29,6 +29,8 @@ var transition_fade: ColorRect
 var transition_in_progress := false
 var room_switching := false
 var room_cleared := false
+var active_boss: Node2D
+var boss_reward_preview: Node2D
 
 
 func _ready() -> void:
@@ -127,6 +129,10 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	var spec := room_variants[current_room_index]
 	for enemy in get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER):
 		enemy.free()
+	if is_instance_valid(boss_reward_preview):
+		boss_reward_preview.free()
+	active_boss = null
+	boss_reward_preview = null
 	_clear_children($Rooms/SampleRoom/EncounterZones)
 	_clear_children($WorldCollision)
 	_clear_exit_doors()
@@ -147,7 +153,11 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	_configure_player()
 	_activate_starting_zones()
 	title_label.text = "医院主题房型 · %s" % spec["title"]
-	objective_label.text = "RoomBuilder：固定网格、自动墙线、预设门槽、导航与镜头约束"
+	objective_label.text = (
+		"Boss 房：大型画布、障碍导航、阶段槽位与封门流程"
+		if spec["room_kind"] == "boss"
+		else "RoomBuilder：固定网格、自动墙线、预设门槽、导航与镜头约束"
+	)
 	room_switching = false
 	_update_encounter_state()
 
@@ -435,7 +445,50 @@ func _activate_zone(zone: MapEncounterZone) -> void:
 		enemy.add_to_group(SAMPLE_ENCOUNTER)
 		enemy.tree_exited.connect(_on_enemy_removed)
 		$Enemies.add_child(enemy)
+	if sample_room.room_kind == "boss" and active_boss == null:
+		_spawn_configured_boss()
 	_update_encounter_state()
+
+
+func _spawn_configured_boss() -> void:
+	var boss_spec: Dictionary = room_variants[current_room_index].get("boss", {})
+	assert(not boss_spec.is_empty(), "Boss rooms require a boss configuration")
+	var scene_path := String(boss_spec.get("scene", ""))
+	assert(ResourceLoader.exists(scene_path), "Boss scene does not exist: %s" % scene_path)
+	var boss_scene := load(scene_path) as PackedScene
+	active_boss = boss_scene.instantiate() as Node2D
+	assert(active_boss != null, "Configured boss scene must instantiate a Node2D")
+	active_boss.global_position = _content_slot_world_position(
+		StringName(boss_spec["spawn_slot"]),
+	)
+	active_boss.set_meta(
+		&"phase_thresholds",
+		boss_spec.get("phase_thresholds", PackedFloat32Array()),
+	)
+	active_boss.set_meta(
+		&"summon_points",
+		_content_slot_world_positions(boss_spec.get("summon_slots", PackedStringArray())),
+	)
+	active_boss.add_to_group(SAMPLE_ENCOUNTER)
+	active_boss.tree_exited.connect(_on_enemy_removed)
+	$Enemies.add_child(active_boss)
+	if active_boss.has_method("activate"):
+		active_boss.call("activate", player)
+
+
+func _content_slot_world_position(slot_id: StringName) -> Vector2:
+	var marker := modular_architecture.content_slots.get_node_or_null(
+		NodePath(String(slot_id).to_pascal_case()),
+	) as Marker2D
+	assert(marker != null, "Room content slot does not exist: %s" % slot_id)
+	return marker.global_position
+
+
+func _content_slot_world_positions(slot_ids: PackedStringArray) -> PackedVector2Array:
+	var result := PackedVector2Array()
+	for slot_id in slot_ids:
+		result.append(_content_slot_world_position(StringName(slot_id)))
+	return result
 
 
 func _on_enemy_removed() -> void:
@@ -449,7 +502,11 @@ func _update_encounter_state() -> void:
 	var remaining := get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER).size()
 	var total_zones := $Rooms/SampleRoom/EncounterZones.get_child_count()
 	if remaining > 0:
-		objective_label.text = "医院主题：推进并清除当前区域"
+		objective_label.text = (
+			"Boss 房已封锁：击败首领后开启出口"
+			if sample_room.room_kind == "boss"
+			else "医院主题：推进并清除当前区域"
+		)
 		state_label.text = "房型 %d/%d · 区域 %d/%d · 当前敌人 %d" % [
 			current_room_index + 1,
 			room_variants.size(),
@@ -462,7 +519,38 @@ func _update_encounter_state() -> void:
 		objective_label.text = "当前区域已清除，继续探索房间"
 		state_label.text = "镜头跟随 · 未进入区域不会提前刷怪"
 		return
+	if sample_room.room_kind == "boss":
+		_spawn_boss_reward_preview()
 	_unlock_exit_doors()
+
+
+func _spawn_boss_reward_preview() -> void:
+	if boss_reward_preview != null:
+		return
+	var boss_spec: Dictionary = room_variants[current_room_index].get("boss", {})
+	boss_reward_preview = Node2D.new()
+	boss_reward_preview.name = "BossRewardPreview"
+	boss_reward_preview.global_position = _content_slot_world_position(
+		StringName(boss_spec["reward_slot"]),
+	)
+	var glow := Polygon2D.new()
+	glow.name = "RewardGlow"
+	glow.polygon = PackedVector2Array([
+		Vector2(0, -42),
+		Vector2(36, -20),
+		Vector2(36, 20),
+		Vector2(0, 42),
+		Vector2(-36, 20),
+		Vector2(-36, -20),
+	])
+	glow.color = theme_reward_color()
+	boss_reward_preview.add_child(glow)
+	$Rooms/SampleRoom.add_child(boss_reward_preview)
+
+
+func theme_reward_color() -> Color:
+	var color := modular_architecture.theme.door_open_color
+	return Color(color.r, color.g, color.b, 0.48)
 
 
 func _return_home() -> void:

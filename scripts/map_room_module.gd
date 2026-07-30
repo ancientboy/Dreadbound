@@ -28,6 +28,8 @@ func apply_built_spec(spec: Dictionary, builder: RoomBuilder) -> void:
 	camera_bounds = builder.map_bounds
 	walkable_outline = builder.walkable_outline
 	blocked_outlines.clear()
+	for blocked_outline in builder.blocked_outlines:
+		blocked_outlines.append(blocked_outline)
 	camera_guide_outline = spec["camera_guide_outline"]
 	door_directions = builder.door_directions()
 	door_anchor_overrides = builder.door_anchor_points.duplicate()
@@ -200,20 +202,20 @@ func _rebuild_navigation_region() -> void:
 	var existing := get_node_or_null("NavigationRegion2D")
 	if existing != null:
 		existing.free()
-	if walkable_outline.size() < 3 or not blocked_outlines.is_empty():
-		return
-	var triangles := Geometry2D.triangulate_polygon(walkable_outline)
-	if triangles.is_empty():
-		push_error("Could not triangulate room navigation outline for %s" % room_id)
+	if walkable_outline.size() < 3:
 		return
 	var navigation_polygon := NavigationPolygon.new()
-	navigation_polygon.vertices = walkable_outline
-	for index in range(0, triangles.size(), 3):
-		navigation_polygon.add_polygon(PackedInt32Array([
-			triangles[index],
-			triangles[index + 1],
-			triangles[index + 2],
-		]))
+	var source_geometry := NavigationMeshSourceGeometryData2D.new()
+	source_geometry.add_traversable_outline(walkable_outline)
+	for blocked_outline in blocked_outlines:
+		source_geometry.add_obstruction_outline(blocked_outline)
+	NavigationServer2D.bake_from_source_geometry_data(
+		navigation_polygon,
+		source_geometry,
+	)
+	if navigation_polygon.get_polygon_count() == 0:
+		push_error("Could not build room navigation polygon for %s" % room_id)
+		return
 	var region := NavigationRegion2D.new()
 	region.name = "NavigationRegion2D"
 	region.navigation_polygon = navigation_polygon
