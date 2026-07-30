@@ -1,15 +1,17 @@
-[gd_resource type="Resource" script_class="RoomTheme" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="RoomTheme" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/room_theme.gd" id="1_theme"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/floor_atlas.svg" id="2_floor"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/wall_atlas.svg" id="3_wall"]
 [ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/prop_atlas.svg" id="4_props"]
+[ext_resource type="Texture2D" path="res://assets/art/worlds/map_demo/dungeon1_hospital/standard_floor_macro_v1.webp" id="5_floor_macro"]
 
 [resource]
 script = ExtResource("1_theme")
 theme_id = &"abandoned_hospital"
 display_name = "异常侵蚀医疗研究设施"
 floor_atlas = ExtResource("2_floor")
+standard_floor_macro = ExtResource("5_floor_macro")
 wall_atlas = ExtResource("3_wall")
 prop_atlas = ExtResource("4_props")
 floor_atlas_size = Vector2i(8, 6)

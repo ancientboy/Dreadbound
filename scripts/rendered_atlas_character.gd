@@ -472,6 +472,7 @@ const WEAPON_LAYER_SPECS := {
 @export var ground_offset := Vector2(0.0, -12.0)
 @export var display_scale := Vector2.ONE
 @export var runtime_sync_enabled := true
+@export var initial_skin_id: StringName = &"base_drifter"
 
 var _player: Player
 var _sprite: AnimatedSprite2D
@@ -492,6 +493,7 @@ var _runtime_show_weapon_layer := true
 func _ready() -> void:
 	assert(get_parent() is Player, "RenderedAtlasCharacter must be a child of Player")
 	_player = get_parent() as Player
+	_active_skin_id = initial_skin_id
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "AnimatedSprite2D"
 	_sprite.position = ground_offset

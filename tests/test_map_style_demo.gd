@@ -21,6 +21,10 @@ func _run_test() -> void:
 	await process_frame
 
 	var player := instance.get_node("Player") as Player
+	var rendered_player := (
+		player.get_node("RenderedAtlasCharacter")
+		as RenderedAtlasCharacter
+	)
 	var camera := player.get_node("Camera2D") as Camera2D
 	var room := instance.get_node("Rooms/SampleRoom") as MapRoomModule
 	var architecture := instance.get_node("Architecture") as Sprite2D
@@ -28,6 +32,9 @@ func _run_test() -> void:
 	var zones := instance.get_node("Rooms/SampleRoom/EncounterZones")
 
 	assert(player != null and not player.use_runtime_progress)
+	assert(rendered_player != null)
+	assert(not rendered_player.runtime_sync_enabled)
+	assert(rendered_player.selected_skin() == &"resonant_demo_v1")
 	assert(not architecture.visible)
 	assert(modular.visible)
 	var floor_tiles := modular.get_node("FloorTiles") as TileMapLayer
@@ -42,15 +49,22 @@ func _run_test() -> void:
 	assert(floor_tiles.tile_set.tile_size == Vector2i(128, 128))
 	assert(modular.get_node("DoorSockets").get_child_count() == 2)
 	assert(modular.get_node("ContentSlots").get_child_count() == 3)
-	assert(modular.get_node("FloorDetails/MedicalGuideLine") is Line2D)
-	assert(modular.get_node("FloorDetails/MedicalGuideGlow") is Line2D)
-	assert(modular.get_node("FloorDetails/ObjectiveBay") is Line2D)
+	var floor_macro := modular.get_node("StandardFloorMacro") as Sprite2D
+	assert(floor_macro != null)
+	assert(floor_macro.texture.get_size() == Vector2(2048, 1280))
+	assert(floor_macro.position == Vector2(256, 256))
+	assert(floor_macro.scale == Vector2(0.5, 0.5))
+	assert(floor_macro.z_index > floor_tiles.z_index)
+	assert(floor_macro.z_index < wall_tiles.z_index)
+	assert(not modular.has_node("FloorDetails/MedicalGuideLine"))
+	assert(not modular.has_node("FloorDetails/MedicalGuideGlow"))
+	assert(not modular.has_node("FloorDetails/ObjectiveBay"))
 	assert(modular.get_node("ThemeProps").get_child_count() == 3)
 	assert(modular.get_node("LightAccents").get_child_count() == 2)
 	assert(modular.theme.theme_id == MapThemeCatalog.HOSPITAL_THEME)
 	assert(modular.theme.display_name == "异常侵蚀医疗研究设施")
 	assert(modular is RoomBuilder)
-	assert(_sprite_count(modular) == 3)
+	assert(_sprite_count(modular) == 4)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	assert(camera.zoom == Vector2(0.72, 0.72))
 	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
@@ -140,6 +154,9 @@ func _run_test() -> void:
 	)
 	assert(modular.get_node("ContentSlots").get_child_count() == 4)
 	assert(modular.get_node("ThemeProps").get_child_count() == 4)
+	assert(not modular.has_node("StandardFloorMacro"))
+	assert(modular.get_node("FloorDetails/MedicalGuideLine") is Line2D)
+	assert(modular.get_node("FloorDetails/MedicalGuideGlow") is Line2D)
 	assert(room.camera_bounds == Rect2(0, 0, 2048, 1024))
 	assert(camera.limit_right == 2048 and camera.limit_bottom == 1024)
 	var west_camera := room.guided_camera_world_point(Vector2(384, 576))
@@ -164,6 +181,7 @@ func _run_test() -> void:
 	assert(modular.floor_tiles.get_used_cells().size() == 45)
 	assert(modular.get_node("ContentSlots").get_child_count() == 4)
 	assert(modular.get_node("ThemeProps").get_child_count() == 4)
+	assert(not modular.has_node("StandardFloorMacro"))
 	assert(room.camera_bounds == Rect2(0, 0, 2048, 1280))
 	assert(_boundary_segment_count(instance) == 10)
 	assert(room.contains_world_point(Vector2(512, 448)))
@@ -177,8 +195,8 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo v10 passed: Dungeon 1 theme generated standard, long, and L rooms "
-		+ "with themed atlases, props, doors, navigation, and guided cameras",
+		"Map style demo v11 passed: standard-room floor macro and Resonant skin integrated "
+		+ "without changing long/L room generation, doors, navigation, or cameras",
 	)
 	quit()
 

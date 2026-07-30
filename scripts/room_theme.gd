@@ -4,6 +4,7 @@ extends Resource
 @export var theme_id: StringName
 @export var display_name := ""
 @export var floor_atlas: Texture2D
+@export var standard_floor_macro: Texture2D
 @export var wall_atlas: Texture2D
 @export var prop_atlas: Texture2D
 @export var floor_atlas_size := Vector2i(8, 6)

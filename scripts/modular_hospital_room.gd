@@ -22,9 +22,41 @@ func build_from_spec(spec: Dictionary) -> void:
 		theme.floor_atlas_size,
 		theme.wall_atlas_size,
 	)
+	_build_standard_floor_macro()
 	_build_floor_details()
 	_build_theme_props()
 	_build_light_accents()
+
+
+func _build_standard_floor_macro() -> void:
+	if not _uses_standard_floor_macro():
+		return
+	var grid_cells: Array = room_spec.get("grid_cells", [])
+	var min_cell := Vector2i(1 << 20, 1 << 20)
+	var max_cell := Vector2i(-(1 << 20), -(1 << 20))
+	for cell_value in grid_cells:
+		var cell: Vector2i = cell_value
+		min_cell.x = mini(min_cell.x, cell.x)
+		min_cell.y = mini(min_cell.y, cell.y)
+		max_cell.x = maxi(max_cell.x, cell.x)
+		max_cell.y = maxi(max_cell.y, cell.y)
+	var floor_macro := Sprite2D.new()
+	floor_macro.name = "StandardFloorMacro"
+	floor_macro.texture = theme.standard_floor_macro
+	floor_macro.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	floor_macro.centered = false
+	floor_macro.position = Vector2(min_cell * TILE_SIZE)
+	var target_size := Vector2((max_cell - min_cell + Vector2i.ONE) * TILE_SIZE)
+	floor_macro.scale = target_size / Vector2(theme.standard_floor_macro.get_size())
+	floor_macro.z_index = -24
+	add_child(floor_macro)
+
+
+func _uses_standard_floor_macro() -> bool:
+	return (
+		theme.standard_floor_macro != null
+		and StringName(room_spec.get("room_id", &"")) == &"hospital_standard_combat"
+	)
 
 
 func _build_floor_details() -> void:
@@ -32,28 +64,29 @@ func _build_floor_details() -> void:
 	details.name = "FloorDetails"
 	details.z_index = -18
 	add_child(details)
-	var center_line := Line2D.new()
-	center_line.name = "MedicalGuideLine"
-	var line_points: PackedVector2Array = room_spec.get(
-		"guide_line",
-		PackedVector2Array(),
-	)
-	center_line.points = line_points
-	center_line.width = 4.0
-	center_line.default_color = theme.guide_color
-	center_line.antialiased = true
-	details.add_child(center_line)
-	var route_glow := center_line.duplicate() as Line2D
-	route_glow.name = "MedicalGuideGlow"
-	route_glow.width = 13.0
-	route_glow.default_color = Color(
-		theme.guide_color.r,
-		theme.guide_color.g,
-		theme.guide_color.b,
-		0.07,
-	)
-	route_glow.z_index = -1
-	details.add_child(route_glow)
+	if not _uses_standard_floor_macro():
+		var center_line := Line2D.new()
+		center_line.name = "MedicalGuideLine"
+		var line_points: PackedVector2Array = room_spec.get(
+			"guide_line",
+			PackedVector2Array(),
+		)
+		center_line.points = line_points
+		center_line.width = 4.0
+		center_line.default_color = theme.guide_color
+		center_line.antialiased = true
+		details.add_child(center_line)
+		var route_glow := center_line.duplicate() as Line2D
+		route_glow.name = "MedicalGuideGlow"
+		route_glow.width = 13.0
+		route_glow.default_color = Color(
+			theme.guide_color.r,
+			theme.guide_color.g,
+			theme.guide_color.b,
+			0.07,
+		)
+		route_glow.z_index = -1
+		details.add_child(route_glow)
 	for door_spec in room_spec.get("door_sockets", []):
 		var threshold := Polygon2D.new()
 		var direction := StringName(door_spec["direction"])
@@ -74,22 +107,23 @@ func _build_floor_details() -> void:
 		details.add_child(threshold)
 		_add_threshold_warning(details, threshold.position, direction)
 
-	for slot_spec in room_spec.get("content_slots", []):
-		if StringName(slot_spec["type"]) != &"objective":
-			continue
-		var center := _cell_center(slot_spec["cell"])
-		var objective_marker := Line2D.new()
-		objective_marker.name = "ObjectiveBay"
-		objective_marker.points = PackedVector2Array([
-			center + Vector2(-110, -78), center + Vector2(110, -78),
-			center + Vector2(110, 78), center + Vector2(-110, 78),
-			center + Vector2(-110, -78),
-		])
-		objective_marker.width = 3.0
-		objective_marker.default_color = Color(0.3, 0.78, 0.73, 0.18)
-		objective_marker.antialiased = true
-		details.add_child(objective_marker)
-		break
+	if not _uses_standard_floor_macro():
+		for slot_spec in room_spec.get("content_slots", []):
+			if StringName(slot_spec["type"]) != &"objective":
+				continue
+			var center := _cell_center(slot_spec["cell"])
+			var objective_marker := Line2D.new()
+			objective_marker.name = "ObjectiveBay"
+			objective_marker.points = PackedVector2Array([
+				center + Vector2(-110, -78), center + Vector2(110, -78),
+				center + Vector2(110, 78), center + Vector2(-110, 78),
+				center + Vector2(-110, -78),
+			])
+			objective_marker.width = 3.0
+			objective_marker.default_color = Color(0.3, 0.78, 0.73, 0.18)
+			objective_marker.antialiased = true
+			details.add_child(objective_marker)
+			break
 
 
 func _add_threshold_warning(

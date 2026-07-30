@@ -99,6 +99,7 @@ zoom = Vector2(0.72, 0.72)
 
 [node name="RenderedAtlasCharacter" parent="Player" index="2"]
 runtime_sync_enabled = false
+initial_skin_id = &"resonant_demo_v1"
 
 [node name="GroundingShadow" type="Polygon2D" parent="Player"]
 z_index = -2
