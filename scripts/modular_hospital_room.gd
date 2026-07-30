@@ -23,7 +23,7 @@ const OUTER_CORNER_TEXTURE := preload(
 	"res://assets/art/worlds/map_demo/modular_hospital/walls/outer_corner.png"
 )
 
-const FLOOR_OUTLINE := PackedVector2Array([
+const FLOOR_OUTLINE := [
 	Vector2(190.0, 280.0),
 	Vector2(1346.0, 280.0),
 	Vector2(1430.0, 350.0),
@@ -32,7 +32,7 @@ const FLOOR_OUTLINE := PackedVector2Array([
 	Vector2(190.0, 820.0),
 	Vector2(106.0, 730.0),
 	Vector2(106.0, 350.0),
-])
+]
 
 
 func _ready() -> void:
@@ -45,10 +45,11 @@ func _ready() -> void:
 
 
 func _build_floor() -> void:
+	var floor_outline := PackedVector2Array(FLOOR_OUTLINE)
 	var floor_surface := Polygon2D.new()
 	floor_surface.name = "FloorSurface"
-	floor_surface.polygon = FLOOR_OUTLINE
-	floor_surface.uv = FLOOR_OUTLINE
+	floor_surface.polygon = floor_outline
+	floor_surface.uv = floor_outline
 	floor_surface.texture = FLOOR_TEXTURE
 	floor_surface.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	floor_surface.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
@@ -57,7 +58,7 @@ func _build_floor() -> void:
 
 	var floor_base := Polygon2D.new()
 	floor_base.name = "FloorUnderlay"
-	floor_base.polygon = FLOOR_OUTLINE
+	floor_base.polygon = floor_outline
 	floor_base.color = Color(0.14, 0.24, 0.27, 1.0)
 	floor_base.z_index = -36
 	add_child(floor_base)
