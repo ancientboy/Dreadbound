@@ -4,6 +4,7 @@ extends Node2D
 const MAP_SIZE := Vector2(1536.0, 1024.0)
 const SAMPLE_ENCOUNTER := &"map_demo_sample"
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
+const ROOM_DOOR_SCRIPT: Script = preload("res://scripts/map_room_door.gd")
 
 @onready var architecture := $Architecture as Sprite2D
 @onready var player := $Player as Player
@@ -22,6 +23,11 @@ var room_variants: Array[Dictionary] = []
 var current_room_index := 1
 var activated_zone_count := 0
 var variant_controls: HBoxContainer
+var exit_doors: Array[MapRoomDoor] = []
+var transition_fade: ColorRect
+var transition_in_progress := false
+var room_switching := false
+var room_cleared := false
 
 
 func _ready() -> void:
@@ -30,6 +36,8 @@ func _ready() -> void:
 	_build_collision()
 	_connect_areas()
 	_create_variant_controls()
+	_create_transition_fade()
+	_create_exit_doors()
 	get_viewport().size_changed.connect(_layout_hud)
 	return_button.pressed.connect(_return_home)
 	_activate_starting_zones()
@@ -38,6 +46,9 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if transition_in_progress:
+		_update_guided_camera()
+		return
 	_keep_actor_on_floor(player)
 	for enemy in get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER):
 		_keep_actor_on_floor(enemy as Node2D)
@@ -46,6 +57,8 @@ func _physics_process(_delta: float) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if transition_in_progress:
+		return
 	var key_event := event as InputEventKey
 	if key_event == null or not key_event.pressed or key_event.echo:
 		return
@@ -87,16 +100,19 @@ func _create_variant_controls() -> void:
 	variant_controls.add_child(next)
 
 
-func _show_room_variant(index: int) -> void:
-	if room_variants.is_empty():
+func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
+	if room_variants.is_empty() or room_switching:
 		return
+	room_switching = true
 	current_room_index = posmod(index, room_variants.size())
 	var spec := room_variants[current_room_index]
 	for enemy in get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER):
 		enemy.free()
 	_clear_children($Rooms/SampleRoom/EncounterZones)
 	_clear_children($WorldCollision)
+	_clear_exit_doors()
 	activated_zone_count = 0
+	room_cleared = false
 
 	sample_room.room_id = spec["room_id"]
 	sample_room.room_kind = spec["room_kind"]
@@ -110,18 +126,156 @@ func _show_room_variant(index: int) -> void:
 	sample_room.camera_guide_outline = spec["camera_guide_outline"]
 	sample_room.door_directions = spec["door_directions"]
 	architecture.texture = load(spec["texture_path"]) as Texture2D
-	player.global_position = spec["spawn"]
 
 	var show_original_detail_layers := current_room_index == 1
 	$Rooms/SampleRoom/Obstacles.visible = show_original_detail_layers
 	$Foreground.visible = show_original_detail_layers
 	_build_zones(spec["zones"])
 	_build_collision()
+	_create_exit_doors()
+	var entrance := _door_for_direction(entry_direction)
+	if entrance != null:
+		player.global_position = entrance.global_position + entrance.outward_vector() * 54.0
+	else:
+		player.global_position = spec["spawn"]
 	_configure_player()
 	_activate_starting_zones()
 	title_label.text = "医院主题房型 · %s" % spec["title"]
 	objective_label.text = "主题锁定：墙体、地板、门、灯光、敌人保持医院风格"
+	room_switching = false
 	_update_encounter_state()
+
+
+func _create_transition_fade() -> void:
+	transition_fade = ColorRect.new()
+	transition_fade.name = "RoomTransitionFade"
+	transition_fade.color = Color(0.006, 0.018, 0.024, 0.0)
+	transition_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	transition_fade.position = Vector2.ZERO
+	transition_fade.size = get_viewport_rect().size
+	$HUD.add_child(transition_fade)
+
+
+func _create_exit_doors() -> void:
+	for direction_value in sample_room.door_directions:
+		var door := ROOM_DOOR_SCRIPT.new() as MapRoomDoor
+		door.name = "Door_%s" % String(direction_value).capitalize()
+		sample_room.add_child(door)
+		door.configure(StringName(direction_value), sample_room.door_anchor_world(StringName(direction_value)))
+		door.traversal_requested.connect(_on_door_traversal_requested)
+		exit_doors.append(door)
+
+
+func _clear_exit_doors() -> void:
+	for door in exit_doors:
+		if is_instance_valid(door):
+			door.free()
+	exit_doors.clear()
+
+
+func _door_for_direction(direction_value: StringName) -> MapRoomDoor:
+	if direction_value == &"":
+		return null
+	for door in exit_doors:
+		if door.direction == direction_value:
+			return door
+	return null
+
+
+func _unlock_exit_doors() -> void:
+	if room_cleared:
+		return
+	room_cleared = true
+	for door in exit_doors:
+		door.unlock()
+	objective_label.text = "房间已清理，出口正在开启 · 请选择下一房间"
+	state_label.text = "走近任意发光出口即可进入，镜头会跟随切换"
+
+
+func _on_door_traversal_requested(door: MapRoomDoor) -> void:
+	if transition_in_progress or not room_cleared:
+		return
+	_traverse_door(door)
+
+
+func _traverse_door(door: MapRoomDoor) -> void:
+	transition_in_progress = true
+	var chosen_direction := door.direction
+	var entry_direction := MapRoomDoor.opposite_direction(chosen_direction)
+	var target_room_index := _find_connected_room(chosen_direction)
+	door.begin_traversal()
+	for other_door in exit_doors:
+		if other_door != door:
+			other_door.monitoring = false
+	player.velocity = Vector2.ZERO
+	player.set_physics_process(false)
+	var saved_collision_layer := player.collision_layer
+	var saved_collision_mask := player.collision_mask
+	player.collision_layer = 0
+	player.collision_mask = 0
+	objective_label.text = "正在通过 %s 出口…" % _direction_label(chosen_direction)
+
+	var exit_tween := create_tween().set_parallel(true)
+	exit_tween.tween_property(
+		player,
+		"global_position",
+		door.global_position + door.outward_vector() * 88.0,
+		0.38,
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	exit_tween.tween_property(transition_fade, "color:a", 1.0, 0.28)
+	await exit_tween.finished
+
+	_show_room_variant(target_room_index, entry_direction)
+	var entrance := _door_for_direction(entry_direction)
+	if entrance != null:
+		var enter_tween := create_tween().set_parallel(true)
+		enter_tween.tween_property(
+			player,
+			"global_position",
+			entrance.global_position + entrance.inward_vector() * 92.0,
+			0.44,
+		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		enter_tween.tween_property(transition_fade, "color:a", 0.0, 0.3)
+		await enter_tween.finished
+	else:
+		transition_fade.color.a = 0.0
+
+	player.collision_layer = saved_collision_layer
+	player.collision_mask = saved_collision_mask
+	player.set_physics_process(true)
+	transition_in_progress = false
+	_update_encounter_state()
+
+
+func _find_connected_room(exit_direction: StringName) -> int:
+	var required_entry := MapRoomDoor.opposite_direction(exit_direction)
+	var directional_offset: int = {
+		&"north": 1,
+		&"east": 2,
+		&"south": 3,
+		&"west": 4,
+	}.get(exit_direction, 1)
+	for step in room_variants.size():
+		var candidate_index := posmod(current_room_index + directional_offset + step, room_variants.size())
+		if candidate_index == current_room_index:
+			continue
+		var candidate: Dictionary = room_variants[candidate_index]
+		if candidate["door_directions"].has(String(required_entry)):
+			return candidate_index
+	return posmod(current_room_index + 1, room_variants.size())
+
+
+func _direction_label(direction_value: StringName) -> String:
+	match direction_value:
+		&"north":
+			return "北侧"
+		&"south":
+			return "前门"
+		&"west":
+			return "左侧"
+		&"east":
+			return "右侧"
+	return "未知"
 
 
 func _build_zones(zone_specs: Array) -> void:
@@ -235,10 +389,13 @@ func _activate_zone(zone: MapEncounterZone) -> void:
 
 
 func _on_enemy_removed() -> void:
-	call_deferred("_update_encounter_state")
+	if not room_switching:
+		call_deferred("_update_encounter_state")
 
 
 func _update_encounter_state() -> void:
+	if room_switching:
+		return
 	var remaining := get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER).size()
 	var total_zones := $Rooms/SampleRoom/EncounterZones.get_child_count()
 	if remaining > 0:
@@ -255,8 +412,7 @@ func _update_encounter_state() -> void:
 		objective_label.text = "当前区域已清除，继续探索房间"
 		state_label.text = "镜头跟随 · 未进入区域不会提前刷怪"
 		return
-	objective_label.text = "当前医院房型验证完成"
-	state_label.text = "按 Q / E 或上方按钮切换统一主题房型"
+	_unlock_exit_doors()
 
 
 func _return_home() -> void:
@@ -265,6 +421,8 @@ func _return_home() -> void:
 
 func _layout_hud() -> void:
 	var viewport_size := get_viewport_rect().size
+	if transition_fade != null:
+		transition_fade.size = viewport_size
 	var compact := viewport_size.x < 760.0
 	if compact:
 		return_button.offset_left = 12.0

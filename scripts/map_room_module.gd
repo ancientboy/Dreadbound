@@ -71,6 +71,42 @@ func get_obstacles() -> Array[MapRoomObstacle]:
 	return result
 
 
+func door_anchor_world(direction: StringName) -> Vector2:
+	if walkable_outline.size() < 2:
+		return global_position
+	var extreme := 0.0
+	match direction:
+		&"north":
+			extreme = _outline_extreme(false, true)
+		&"south":
+			extreme = _outline_extreme(false, false)
+		&"west":
+			extreme = _outline_extreme(true, true)
+		&"east":
+			extreme = _outline_extreme(true, false)
+		_:
+			return to_global(_polygon_center(walkable_outline))
+	var anchors := PackedVector2Array()
+	for point in walkable_outline:
+		var coordinate := point.x if direction == &"west" or direction == &"east" else point.y
+		if absf(coordinate - extreme) <= 2.0:
+			anchors.append(point)
+	if anchors.is_empty():
+		return to_global(_polygon_center(walkable_outline))
+	var anchor := Vector2.ZERO
+	for point in anchors:
+		anchor += point
+	return to_global(anchor / float(anchors.size()))
+
+
+func _outline_extreme(use_x: bool, find_minimum: bool) -> float:
+	var result := INF if find_minimum else -INF
+	for point in walkable_outline:
+		var coordinate := point.x if use_x else point.y
+		result = minf(result, coordinate) if find_minimum else maxf(result, coordinate)
+	return result
+
+
 func _polygon_contains_world_point(polygon: PackedVector2Array, point: Vector2) -> bool:
 	return polygon.size() >= 3 and Geometry2D.is_point_in_polygon(to_local(point), polygon)
 
