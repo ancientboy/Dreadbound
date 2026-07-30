@@ -11,6 +11,14 @@ const HOSPITAL_WALL_SHELL := (
 	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
 	+ "standard_wall_shell_v1.webp"
 )
+const HOSPITAL_BOSS_FLOOR_MACRO := (
+	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
+	+ "boss_floor_macro_v1.webp"
+)
+const HOSPITAL_BOSS_WALL_SHELL := (
+	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
+	+ "boss_wall_shell_v1.webp"
+)
 
 static func _hospital_rooms() -> Array[Dictionary]:
 	return [
@@ -147,10 +155,10 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		],
 	},
 	{
-		"room_id": &"hospital_boss_arena_graybox",
+		"room_id": &"hospital_boss_containment_arena",
 		"theme_id": HOSPITAL_THEME,
 		"theme_resource": HOSPITAL_THEME_RESOURCE,
-		"title": "大型 Boss 房灰盒",
+		"title": "深层收容手术厅",
 		"room_kind": "boss",
 		"size_class": MapRoomModule.RoomSizeClass.BOSS,
 		"camera_zoom": Vector2(0.72, 0.72),
@@ -171,6 +179,28 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_door("north", Vector2i(9, 1)),
 			_door("south", Vector2i(10, 12)),
 		],
+		"floor_macro": {
+			"node_name": "BossFloorMacro",
+			"texture_path": HOSPITAL_BOSS_FLOOR_MACRO,
+			"world_rect": Rect2(152, 192, 2256, 1408),
+			"z_index": -24,
+		},
+		"wall_shell": {
+			"node_name": "BossWallShell",
+			"texture_path": HOSPITAL_BOSS_WALL_SHELL,
+			"hide_generated_walls": true,
+			"regions": [
+				_shell_region("back_wall", Rect2(0, 0, 2560, 384), -7),
+				_shell_region("west_wall", Rect2(0, 384, 384, 1024), 4),
+				_shell_region("east_wall", Rect2(2176, 384, 384, 1024), 4),
+				_shell_region(
+					"foreground_wall",
+					Rect2(0, 1408, 2560, 384),
+					38,
+					true,
+				),
+			],
+		},
 		"guide_line": PackedVector2Array([
 			Vector2(1280, 1536),
 			Vector2(1280, 896),
@@ -213,8 +243,9 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"art_contract": {
 			"canvas_size": Vector2i(2560, 1792),
 			"combat_rect": Rect2i(256, 256, 2048, 1280),
-			"floor_asset": "boss_floor_macro.webp",
-			"wall_asset": "boss_wall_shell.webp",
+			"floor_asset": "boss_floor_macro_v1.webp",
+			"floor_world_rect": Rect2i(152, 192, 2256, 1408),
+			"wall_asset": "boss_wall_shell_v1.webp",
 		},
 	},
 	]

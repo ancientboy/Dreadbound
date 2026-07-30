@@ -230,12 +230,12 @@ func _run_test() -> void:
 	assert(lower_camera.y > upper_camera.y)
 	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
 
-	# The fourth room is a 16x10 Boss graybox with data-driven encounter slots,
-	# solid obstacle footprints, navigation holes, sealed doors, and a reward hook.
+	# The fourth room is a fully themed 16x10 Boss arena with a unique authored
+	# floor, split wall shell, obstacle navigation, sealed doors, and reward hook.
 	instance._show_room_variant(3)
 	await process_frame
 	await process_frame
-	assert(room.room_id == &"hospital_boss_arena_graybox")
+	assert(room.room_id == &"hospital_boss_containment_arena")
 	assert(room.room_kind == "boss")
 	assert(room.size_class == MapRoomModule.RoomSizeClass.BOSS)
 	assert(room.is_multi_screen())
@@ -246,8 +246,23 @@ func _run_test() -> void:
 	assert(modular.floor_tiles.get_used_cells().size() == 160)
 	assert(modular.get_node("ContentSlots").get_child_count() == 10)
 	assert(modular.get_node("ThemeProps").get_child_count() == 4)
-	assert(not modular.has_node("RoomFloorMacro"))
-	assert(not modular.has_node("RoomWallShell"))
+	var boss_floor := modular.get_node("BossFloorMacro") as Sprite2D
+	assert(boss_floor != null)
+	assert(boss_floor.texture.get_size() == Vector2(2256, 1408))
+	assert(boss_floor.position == Vector2(152, 192))
+	assert(boss_floor.z_index == -24)
+	var boss_shell := modular.get_node("BossWallShell") as Node2D
+	assert(boss_shell != null and boss_shell.get_child_count() == 4)
+	assert((boss_shell.get_node("BackWall") as Sprite2D).position == Vector2.ZERO)
+	assert((boss_shell.get_node("WestWall") as Sprite2D).position == Vector2(0, 384))
+	assert((boss_shell.get_node("EastWall") as Sprite2D).position == Vector2(2176, 384))
+	assert((boss_shell.get_node("ForegroundWall") as Sprite2D).position == Vector2(0, 1408))
+	assert((boss_shell.get_node("ForegroundWall") as Sprite2D).z_index == 38)
+	assert(not modular.wall_base_tiles.visible)
+	assert(not modular.side_wall_tiles.visible)
+	assert(not modular.foreground_walls.visible)
+	assert(not modular.has_node("FloorDetails/MedicalGuideLine"))
+	assert(not modular.has_node("FloorDetails/MedicalGuideGlow"))
 	assert(not room.contains_world_point(Vector2(704, 704)))
 	assert(room.contains_world_point(Vector2(1280, 896)))
 	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
@@ -273,7 +288,7 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo passed: modular samples plus the Boss graybox retain "
+		"Map style demo passed: modular samples plus the themed Boss arena retain "
 		+ "continuous walls, encounters, obstacle navigation, doors, and cameras",
 	)
 	quit()

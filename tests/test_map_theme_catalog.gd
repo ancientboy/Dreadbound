@@ -48,6 +48,8 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/prop_atlas.svg",
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/standard_floor_macro_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/standard_wall_shell_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_hospital/boss_floor_macro_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_hospital/boss_wall_shell_v1.webp",
 		"res://resources/map_themes/dungeon1_hospital.tres",
 	]:
 		assert(ResourceLoader.exists(asset_path))
@@ -61,16 +63,23 @@ func _init() -> void:
 	assert(boss_room["map_bounds"] == Rect2(0, 0, 2560, 1792))
 	assert(boss_room["art_contract"]["canvas_size"] == Vector2i(2560, 1792))
 	assert(boss_room["art_contract"]["combat_rect"] == Rect2i(256, 256, 2048, 1280))
+	assert(boss_room["floor_macro"]["world_rect"] == Rect2(152, 192, 2256, 1408))
+	assert(boss_room["wall_shell"]["regions"].size() == 4)
 	assert(ResourceLoader.exists(boss_room["boss"]["scene"]))
 	assert(boss_room["boss"]["summon_slots"].size() == 4)
 	var boss_builder := ModularHospitalRoom.new()
 	boss_builder.build_from_spec(boss_room)
 	assert(boss_builder.blocked_outlines.size() == 4)
 	assert(boss_builder.content_slots.get_child_count() == 10)
+	assert(boss_builder.get_node("BossFloorMacro") is Sprite2D)
+	assert(boss_builder.get_node("BossWallShell").get_child_count() == 4)
+	assert(not boss_builder.wall_base_tiles.visible)
+	assert(not boss_builder.side_wall_tiles.visible)
+	assert(not boss_builder.foreground_walls.visible)
 	assert(
 		boss_builder.content_slots.get_node("PillarNorthWest").get_meta(&"visual_id")
 		== &"cover_a"
 	)
 	boss_builder.free()
-	print("Map theme catalog passed: three modular rooms and one Boss graybox")
+	print("Map theme catalog passed: three modular rooms and one themed Boss arena")
 	quit()
