@@ -10,7 +10,7 @@ enum DoorState {
 	TRAVERSING,
 }
 
-const VALID_DIRECTIONS := PackedStringArray(["north", "south", "west", "east"])
+const VALID_DIRECTIONS := ["north", "south", "west", "east"]
 
 var direction: StringName = &"north"
 var state := DoorState.SEALED
