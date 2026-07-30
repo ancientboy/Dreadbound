@@ -72,7 +72,10 @@ func build(
 		assert(CARDINAL_OFFSETS.has(direction), "Unsupported room door direction")
 		assert(not _occupied_cells.has(cell), "Door sockets must occupy a boundary wall cell")
 		_door_cells[cell] = direction
-		door_anchor_points[direction] = _door_anchor_for_cell(cell, direction)
+		door_anchor_points[direction] = door_spec.get(
+			"anchor",
+			_door_anchor_for_cell(cell, direction),
+		)
 	walkable_outline = _trace_walkable_outline()
 	_build_blocked_outlines()
 	map_bounds = spec.get("map_bounds", _default_map_bounds())

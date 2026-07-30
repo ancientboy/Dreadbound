@@ -161,8 +161,8 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "深层收容手术厅",
 		"room_kind": "boss",
 		"size_class": MapRoomModule.RoomSizeClass.BOSS,
-		"camera_zoom": Vector2(0.78, 0.78),
-		"camera_overscan": 1.18,
+		"camera_zoom": Vector2(0.84, 0.84),
+		"camera_overscan": 1.28,
 		"map_bounds": Rect2(0, 0, 2560, 1792),
 		"spawn": Vector2(1280, 1408),
 		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(16, 10)),
@@ -177,12 +177,11 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			Vector2(1920, 1280), Vector2(640, 1280),
 		]),
 		"door_sockets": [
-			_door("north", Vector2i(9, 1)),
-			_door("south", Vector2i(10, 12)),
+			_door_at("north", Vector2i(9, 1), Vector2(1280, 256)),
+			_door_at("south", Vector2i(10, 12), Vector2(1280, 1536)),
 		],
 		"door_profile": {
 			"style": &"containment",
-			"recess": 58.0,
 		},
 		"floor_macro": {
 			"node_name": "BossFloorMacro",
@@ -296,6 +295,12 @@ static func _door(direction: String, cell: Vector2i) -> Dictionary:
 		"direction": StringName(direction),
 		"cell": cell,
 	}
+
+
+static func _door_at(direction: String, cell: Vector2i, anchor: Vector2) -> Dictionary:
+	var result := _door(direction, cell)
+	result["anchor"] = anchor
+	return result
 
 
 static func _slot(

@@ -195,66 +195,33 @@ func _uses_containment_visuals() -> bool:
 
 func _build_containment_door_visuals() -> void:
 	_slide_axis = Vector2.RIGHT
-	var recess := float(_visual_profile.get("recess", 58.0))
-	var visual_offset := outward_vector() * recess
-	var frame_color := (
-		_theme.door_frame_color
-		if _theme != null
-		else Color("293f4b")
-	)
+	var visual_offset := Vector2.ZERO
 	var leaf_color := (
 		_theme.door_leaf_color
 		if _theme != null
 		else Color("142d36")
 	)
 
-	var recess_shadow := Polygon2D.new()
-	recess_shadow.name = "DoorRecessShadow"
-	recess_shadow.polygon = PackedVector2Array([
-		Vector2(-112, -62), Vector2(112, -62),
-		Vector2(112, 62), Vector2(-112, 62),
-	])
-	recess_shadow.color = Color(0.018, 0.047, 0.058, 1.0)
-	recess_shadow.z_index = -5
-	recess_shadow.position = visual_offset
-	add_child(recess_shadow)
-
 	var opening := Polygon2D.new()
 	opening.name = "DoorOpening"
 	opening.polygon = PackedVector2Array([
-		Vector2(-92, -40), Vector2(92, -40),
-		Vector2(92, 40), Vector2(-92, 40),
+		Vector2(-98, -58), Vector2(98, -58),
+		Vector2(98, 58), Vector2(-98, 58),
 	])
-	opening.color = Color(0.025, 0.065, 0.078, 1.0)
+	opening.color = Color(0.012, 0.037, 0.046, 1.0)
 	opening.z_index = -2
 	opening.position = visual_offset
 	add_child(opening)
 
-	var frame := Node2D.new()
-	frame.name = "DoorFrame"
-	frame.z_index = 6
-	frame.position = visual_offset
-	add_child(frame)
-	_add_frame_part(frame, "UpperBeam", Rect2(-104, -58, 208, 18), frame_color.lightened(0.08))
-	_add_frame_part(frame, "LowerBeam", Rect2(-104, 40, 208, 18), frame_color.darkened(0.13))
-	_add_frame_part(frame, "LeftPost", Rect2(-104, -40, 18, 80), frame_color)
-	_add_frame_part(frame, "RightPost", Rect2(86, -40, 18, 80), frame_color)
-	_add_frame_part(frame, "UpperInset", Rect2(-84, -52, 168, 4), Color(0.34, 0.48, 0.54, 0.42))
-	_add_frame_part(frame, "LowerInset", Rect2(-84, 47, 168, 4), Color(0.025, 0.075, 0.09, 0.82))
-	_add_frame_part(frame, "LeftClamp", Rect2(-112, -27, 12, 54), Color("1b3039"))
-	_add_frame_part(frame, "RightClamp", Rect2(100, -27, 12, 54), Color("1b3039"))
-	_add_frame_part(frame, "ControlHousing", Rect2(88, -17, 22, 34), Color("173039"))
-	_add_frame_part(frame, "ControlInset", Rect2(94, -10, 10, 20), Color("092029"))
-
 	_left_leaf = _make_containment_leaf(
 		"LeftLeaf",
-		visual_offset + Vector2(-43, 0),
+		visual_offset + Vector2(-49, 0),
 		leaf_color,
 		false,
 	)
 	_right_leaf = _make_containment_leaf(
 		"RightLeaf",
-		visual_offset + Vector2(43, 0),
+		visual_offset + Vector2(49, 0),
 		leaf_color,
 		true,
 	)
@@ -264,8 +231,8 @@ func _build_containment_door_visuals() -> void:
 	_seal_glow = Polygon2D.new()
 	_seal_glow.name = "LockField"
 	_seal_glow.polygon = PackedVector2Array([
-		Vector2(-82, -33), Vector2(82, -33),
-		Vector2(82, 33), Vector2(-82, 33),
+		Vector2(-94, -54), Vector2(94, -54),
+		Vector2(94, 54), Vector2(-94, 54),
 	])
 	_seal_glow.color = Color(0.78, 0.08, 0.055, 0.07)
 	_seal_glow.z_index = 3
@@ -279,8 +246,8 @@ func _build_containment_door_visuals() -> void:
 		"OpenIndicator",
 		_theme.door_open_color if _theme != null else Color(0.18, 0.9, 0.68, 0.9),
 	)
-	_locked_indicator.position = visual_offset + Vector2(99, 0)
-	_open_indicator.position = visual_offset + Vector2(99, 0)
+	_locked_indicator.position = visual_offset + Vector2(82, 0)
+	_open_indicator.position = visual_offset + Vector2(82, 0)
 	_open_indicator.visible = false
 	_open_indicator.modulate.a = 0.0
 
@@ -295,19 +262,19 @@ func _make_containment_leaf(
 	leaf.name = node_name
 	leaf.position = center_position
 	leaf.polygon = PackedVector2Array([
-		Vector2(-43, -35), Vector2(43, -35),
-		Vector2(43, 35), Vector2(-43, 35),
+		Vector2(-49, -58), Vector2(49, -58),
+		Vector2(49, 58), Vector2(-49, 58),
 	])
 	leaf.color = color
 	leaf.z_index = 2
 	add_child(leaf)
-	_add_frame_part(leaf, "InsetPanel", Rect2(-35, -27, 70, 54), color.lightened(0.08))
-	_add_frame_part(leaf, "UpperEdge", Rect2(-34, -26, 68, 3), Color(0.31, 0.46, 0.51, 0.42))
-	_add_frame_part(leaf, "LowerEdge", Rect2(-34, 23, 68, 3), Color(0.02, 0.07, 0.085, 0.78))
-	var seam_x := -42.0 if mirror_details else 39.0
-	_add_frame_part(leaf, "CenterSeam", Rect2(seam_x, -34, 3, 68), Color("061920"))
-	var brace_x := 20.0 if mirror_details else -29.0
-	_add_frame_part(leaf, "Brace", Rect2(brace_x, -19, 9, 38), Color(0.12, 0.25, 0.29, 0.92))
+	_add_frame_part(leaf, "InsetPanel", Rect2(-41, -49, 82, 98), color.lightened(0.08))
+	_add_frame_part(leaf, "UpperEdge", Rect2(-40, -48, 80, 4), Color(0.31, 0.46, 0.51, 0.42))
+	_add_frame_part(leaf, "LowerEdge", Rect2(-40, 44, 80, 4), Color(0.02, 0.07, 0.085, 0.78))
+	var seam_x := -48.0 if mirror_details else 45.0
+	_add_frame_part(leaf, "CenterSeam", Rect2(seam_x, -56, 3, 112), Color("061920"))
+	var brace_x := 23.0 if mirror_details else -34.0
+	_add_frame_part(leaf, "Brace", Rect2(brace_x, -31, 11, 62), Color(0.12, 0.25, 0.29, 0.92))
 	return leaf
 
 
