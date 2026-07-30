@@ -63,10 +63,27 @@ jobs:
 
       - name: Run gameplay checks
         run: |
-          set -o pipefail
+          set -euo pipefail
           GODOT="./Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          # Fresh runners import fonts and Web assets on first boot; 60 seconds was too short.
+          python3 tools/validate_png_assets.py
+          # The first editor pass creates import artifacts. Some scripts can be
+          # discovered before their newly checked-out textures finish importing,
+          # so validate a second editor pass after the import cache is complete.
           timeout 180 "$GODOT" --headless --path . --editor --quit
+          import_log="$(mktemp)"
+          set +e
+          timeout 180 "$GODOT" --headless --path . --editor --quit 2>&1 | tee "$import_log"
+          import_exit=${PIPESTATUS[0]}
+          set -e
+          if [ "$import_exit" -ne 0 ]; then
+            echo "Godot cold import failed with exit code ${import_exit}"
+            exit "$import_exit"
+          fi
+          if grep -E 'ERROR|SCRIPT ERROR|Parse Error|Assertion failed' "$import_log" >/dev/null; then
+            echo "Godot reported an error during cold import"
+            exit 1
+          fi
+          rm -f "$import_log"
           for test_script in tests/test_*.gd; do
             echo "Running ${test_script}"
             log_file="$(mktemp)"

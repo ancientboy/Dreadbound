@@ -7,8 +7,15 @@ func _init() -> void:
 
 func _run_test() -> void:
 	var scene := load("res://scenes/test/map_style_demo.tscn") as PackedScene
-	assert(scene != null)
+	if scene == null:
+		push_error("Map style demo scene failed to load")
+		quit(1)
+		return
 	var instance := scene.instantiate() as MapStyleDemo
+	if instance == null:
+		push_error("Map style demo scene failed to instantiate")
+		quit(1)
+		return
 	root.add_child(instance)
 	await process_frame
 	await process_frame
