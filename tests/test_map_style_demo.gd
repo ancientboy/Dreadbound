@@ -16,96 +16,77 @@ func _run_test() -> void:
 	var player := instance.get_node("Player") as Player
 	var rendered := player.get_node("RenderedAtlasCharacter") as RenderedAtlasCharacter
 	var camera := player.get_node("Camera2D") as Camera2D
-	var background := instance.get_node("MapBackground") as Sprite2D
-	var left_room := instance.get_node("Rooms/LeftRoom") as MapRoomModule
-	var right_room := instance.get_node("Rooms/RightRoom") as MapRoomModule
-	var gate_shape := instance.get_node(
-		"WorldCollision/CentralGate/CollisionShape2D",
-	) as CollisionShape2D
+	var floor := instance.get_node("Floor") as Sprite2D
+	var walls_back := instance.get_node("WallsBack") as Sprite2D
+	var walls_front := instance.get_node("Foreground/WallsForeground") as Sprite2D
+	var room := instance.get_node("Rooms/SampleRoom") as MapRoomModule
 
-	assert(player != null)
-	assert(not player.use_runtime_progress)
+	assert(player != null and not player.use_runtime_progress)
 	assert(player.demo_weapon_slots == ["service_crowbar", "balanced_pistol", "echo_staff"])
 	assert(player.weapon_vfx is DemoWeaponVFX)
 	assert(rendered != null and not rendered.runtime_sync_enabled)
-	assert(background.texture != null)
-	assert(background.texture.get_size() == Vector2(1672, 941))
-	assert(background.scale == Vector2(2, 2))
+	assert(floor.texture != null and floor.texture.get_size() == Vector2(1672, 941))
+	assert(floor.scale == Vector2(2, 2))
+	assert(walls_back.texture != null)
+	assert(walls_front.texture != null)
+	assert(walls_back.texture.resource_path != floor.texture.resource_path)
+	assert(walls_front.texture.resource_path != floor.texture.resource_path)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(3344, 1882))
-	assert(camera.zoom == Vector2(1.24, 1.24))
-	assert(camera.limit_right == 1652)
-	assert(camera.limit_bottom == 1882)
+	assert(camera.zoom == Vector2(1.28, 1.28))
+	assert(camera.limit_right == 3344 and camera.limit_bottom == 1882)
 	assert(camera.position_smoothing_enabled)
-	assert(left_room != null and left_room.room_id == &"left")
-	assert(right_room != null and right_room.room_id == &"right")
-	assert(left_room.room_kind == "combat")
-	assert(right_room.room_kind == "elite")
-	assert(left_room.walkable_outline.size() >= 24)
-	assert(right_room.walkable_outline.size() >= 32)
-	assert(left_room.door_directions == PackedStringArray(["east"]))
-	assert(right_room.door_directions == PackedStringArray(["west", "north", "south"]))
-	assert(left_room.get_spawn_points(&"EnemySpawns").size() == 3)
-	assert(right_room.get_spawn_points(&"EnemySpawns").size() == 2)
-	assert(left_room.get_obstacles().size() == 4)
-	assert(right_room.get_obstacles().size() == 5)
-	assert(not gate_shape.disabled)
-	assert(get_nodes_in_group(MapStyleDemo.LEFT_ENCOUNTER).size() == 3)
-	assert(instance.get_node("Triggers/EliteRoom") is Area2D)
-	assert(instance.get_node("Triggers/LeftRoom") is Area2D)
-	assert(instance.get_node("Triggers/UpperBranch") is Area2D)
-	assert(instance.get_node("Triggers/LowerBranch") is Area2D)
-	assert(instance.get_node("Foreground/FadeZones/LowerLeftWallFade") is Area2D)
-	assert(instance.get_node("Foreground/FadeZones/LowerRightWallFade") is Area2D)
+	assert(room.room_id == &"sample" and room.room_kind == "combat")
+	assert(room.walkable_outline.size() == 8)
+	assert(room.door_directions == PackedStringArray(["west", "east"]))
+	assert(room.get_spawn_points(&"EnemySpawns").size() == 4)
+	assert(room.get_obstacles().size() == 8)
+	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 4)
+	assert(instance.get_node("Foreground/FadeZone") is Area2D)
 
-	var polygon_collision_found := false
-	var room_boundary_segments := 0
+	var boundary_segments := 0
 	for body in instance.get_node("WorldCollision").get_children():
-		if not body is StaticBody2D:
-			continue
-		if body.has_meta(&"room_boundary"):
-			room_boundary_segments += 1
-		for collision_child in body.get_children():
-			if collision_child is CollisionPolygon2D:
-				polygon_collision_found = true
-				break
-		if polygon_collision_found and room_boundary_segments >= 50:
-			break
-	assert(polygon_collision_found)
-	assert(room_boundary_segments >= 50)
+		if body is StaticBody2D and body.has_meta(&"room_boundary"):
+			boundary_segments += 1
+	assert(boundary_segments == room.walkable_outline.size())
 
+	var wall_roles := 0
+	var combat_roles := 0
+	var prop_paths := {}
 	for obstacle in get_nodes_in_group(&"map_room_obstacles"):
 		assert(obstacle is MapRoomObstacle)
 		assert(obstacle.get_node("FootprintCollision") is CollisionPolygon2D)
-		assert(obstacle.placement_role in ["wall", "combat"])
+		var sprite := obstacle.get_node("PropSprite") as Sprite2D
+		assert(sprite != null and sprite.texture != null)
+		assert(sprite.texture.resource_path.begins_with(
+			"res://assets/art/worlds/map_demo/sample_room/props/",
+		))
+		prop_paths[sprite.texture.resource_path] = true
+		if obstacle.placement_role == "wall":
+			wall_roles += 1
+			assert(not obstacle.wall_side.is_empty())
+		elif obstacle.placement_role == "combat":
+			combat_roles += 1
+		else:
+			assert(false)
+	assert(prop_paths.size() == 8)
+	assert(wall_roles == 6)
+	assert(combat_roles == 2)
 
-	# The floor constraint is the final guarantee against painted black void.
-	player.global_position = Vector2(300, 100)
+	player.global_position = Vector2(40, 40)
 	instance._physics_process(0.0)
-	assert(left_room.contains_world_point(player.global_position))
-	assert(player.global_position.y > 200.0)
+	assert(room.contains_world_point(player.global_position))
+	assert(player.global_position.x > 150.0)
+	assert(player.global_position.y > 300.0)
 
-	for enemy in get_nodes_in_group(MapStyleDemo.LEFT_ENCOUNTER):
+	for enemy in get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER):
 		enemy.queue_free()
 	await process_frame
 	await process_frame
-	assert(gate_shape.disabled)
-	assert(not instance.get_node("Foreground/CentralGateVisual").visible)
-	assert("中央连廊已开启" in instance.objective_label.text)
-
-	instance._on_elite_room_entered(player)
-	assert(instance._current_room == &"right")
-	assert(camera.limit_left == 1652)
-	assert(camera.limit_right == 3344)
-	assert(get_nodes_in_group(MapStyleDemo.ELITE_ENCOUNTER).size() == 2)
-
-	instance._on_left_room_entered(player)
-	assert(instance._current_room == &"left")
-	assert(camera.limit_left == 0)
-	assert(camera.limit_right == 1652)
+	assert("样板房验证完成" in instance.objective_label.text)
 
 	instance.queue_free()
 	print(
-		"Map style demo v3 passed: room modules, exact floor constraints, "
-		+ "independent obstacles, room camera and branch exits",
+		"Map style demo v3.5 passed: separate floor and wall layers, "
+		+ "eight detailed props, logical placement, exact collisions and occlusion",
 	)
 	quit()
