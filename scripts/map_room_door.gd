@@ -137,13 +137,13 @@ func _build_visuals() -> void:
 		frame_texture = WEST_FRAME
 		left_texture = WEST_LEFT_LEAF
 		right_texture = WEST_RIGHT_LEAF
-		visual_scale = 0.205
+		visual_scale = 0.185
 		_slide_axis = Vector2(1.0, -0.11).normalized()
 	elif direction == &"east":
 		frame_texture = EAST_FRAME
 		left_texture = EAST_LEFT_LEAF
 		right_texture = EAST_RIGHT_LEAF
-		visual_scale = 0.205
+		visual_scale = 0.185
 		_slide_axis = Vector2(1.0, 0.11).normalized()
 
 	var opening := Polygon2D.new()
@@ -212,7 +212,7 @@ func _make_indicator(node_name: String, color: Color) -> Polygon2D:
 		Vector2(7.0, 3.0),
 		Vector2(-7.0, 3.0),
 	])
-	indicator.position = Vector2(0.0, -69.0)
+	indicator.position = Vector2(0.0, -52.0)
 	indicator.color = color
 	indicator.z_index = 9
 	add_child(indicator)

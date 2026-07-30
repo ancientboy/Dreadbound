@@ -54,7 +54,7 @@ room_id = &"hospital_standard_combat"
 room_kind = "combat"
 difficulty_tier = 1
 size_class = 0
-camera_zoom = Vector2(1.52, 1.52)
+camera_zoom = Vector2(1.12, 1.12)
 camera_bounds = Rect2(0, 0, 1536, 1024)
 walkable_outline = PackedVector2Array(190, 280, 1346, 280, 1430, 350, 1430, 730, 1346, 820, 190, 820, 106, 730, 106, 350)
 camera_guide_outline = PackedVector2Array(390, 380, 1146, 380, 1240, 450, 1240, 630, 1146, 700, 390, 700, 296, 630, 296, 450)
@@ -95,7 +95,7 @@ demo_charm_item = ""
 [node name="Camera2D" parent="Player" index="1"]
 limit_right = 1536
 limit_bottom = 1024
-zoom = Vector2(1.52, 1.52)
+zoom = Vector2(1.12, 1.12)
 
 [node name="RenderedAtlasCharacter" parent="Player" index="2"]
 runtime_sync_enabled = false
@@ -157,7 +157,7 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图 Demo v6 · 真模块化医院样板房"
+text = "新地图 Demo v7 · 锚点规范化医院样板房"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
@@ -169,7 +169,7 @@ horizontal_alignment = 1
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.66, 0.72, 0.7, 1)
 theme_override_font_sizes/font_size = 13
-text = "平铺地面 / 分段墙体 / 真实门洞 / 独立门扇"
+text = "连续地面 / 基准线墙体 / 对齐门洞 / 独立门扇"
 horizontal_alignment = 1
 
 [node name="Return" type="Button" parent="HUD"]

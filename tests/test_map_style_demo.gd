@@ -24,12 +24,14 @@ func _run_test() -> void:
 	assert(not architecture.visible)
 	assert(modular.visible)
 	assert(modular.get_node("FloorSurface") is Polygon2D)
+	assert(modular.get_node("FloorPanels").get_child_count() > 10)
 	assert(modular.get_node("BackWalls").get_child_count() == 5)
 	assert(modular.get_node("WestWalls").get_child_count() == 2)
 	assert(modular.get_node("EastWalls").get_child_count() == 2)
 	assert(modular.get_node("ForegroundWalls").get_child_count() == 5)
+	assert(modular.get_node("CornerCaps").get_child_count() == 4)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
-	assert(camera.zoom == Vector2(1.52, 1.52))
+	assert(camera.zoom == Vector2(1.12, 1.12))
 	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
 	assert(camera.position_smoothing_enabled)
 
@@ -116,8 +118,8 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo v6 passed: tiled floor, segmented walls, direction-specific doors, "
-		+ "real collision gaps, independent leaves, and legacy room-flow regression",
+		"Map style demo v7 passed: anchored floor, aligned wall spans, direction-specific "
+		+ "doors, real collision gaps, and legacy room-flow regression",
 	)
 	quit()
 

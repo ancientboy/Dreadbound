@@ -12,7 +12,7 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"room_kind": "combat",
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
 		"texture_path": "res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_shell_v2.jpg",
-		"camera_zoom": Vector2(1.52, 1.52),
+		"camera_zoom": Vector2(1.12, 1.12),
 		"spawn": Vector2(310, 540),
 		"walkable_outline": PackedVector2Array([
 			Vector2(190, 280), Vector2(1346, 280), Vector2(1430, 350),

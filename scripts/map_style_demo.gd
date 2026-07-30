@@ -95,10 +95,12 @@ func _create_variant_controls() -> void:
 	$HUD.add_child(variant_controls)
 	var previous := Button.new()
 	previous.text = "‹ 上一房型"
+	previous.theme = top_panel.theme
 	previous.pressed.connect(func() -> void: _show_room_variant(current_room_index - 1))
 	variant_controls.add_child(previous)
 	var next := Button.new()
 	next.text = "下一房型 ›"
+	next.theme = top_panel.theme
 	next.pressed.connect(func() -> void: _show_room_variant(current_room_index + 1))
 	variant_controls.add_child(next)
 
