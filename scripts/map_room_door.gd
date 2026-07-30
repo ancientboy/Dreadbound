@@ -30,6 +30,7 @@ var _locked_indicator: Polygon2D
 var _open_indicator: Polygon2D
 var _seal_glow: Polygon2D
 var _slide_axis := Vector2.RIGHT
+var _theme: RoomTheme
 
 
 func _ready() -> void:
@@ -43,10 +44,15 @@ func _ready() -> void:
 	_build_collision()
 
 
-func configure(new_direction: StringName, world_anchor: Vector2) -> void:
+func configure(
+	new_direction: StringName,
+	world_anchor: Vector2,
+	new_theme: RoomTheme = null,
+) -> void:
 	assert(VALID_DIRECTIONS.has(String(new_direction)))
 	direction = new_direction
 	global_position = world_anchor
+	_theme = new_theme
 	rotation = 0.0
 	if direction == &"north":
 		rotation = 0.0
@@ -149,11 +155,11 @@ func _build_visuals() -> void:
 
 	_locked_indicator = _make_indicator(
 		"LockedIndicator",
-		Color(1.0, 0.12, 0.08, 0.9),
+		_theme.door_locked_color if _theme != null else Color(1.0, 0.12, 0.08, 0.9),
 	)
 	_open_indicator = _make_indicator(
 		"OpenIndicator",
-		Color(0.18, 1.0, 0.72, 0.9),
+		_theme.door_open_color if _theme != null else Color(0.18, 1.0, 0.72, 0.9),
 	)
 	_open_indicator.visible = false
 	_open_indicator.modulate.a = 0.0
@@ -183,10 +189,11 @@ func _build_tile_door_visuals() -> void:
 	frame.name = "DoorFrame"
 	frame.z_index = 6
 	add_child(frame)
-	_add_frame_part(frame, "UpperPost", Rect2(-39, -74, 78, 17), Color("38565b"))
-	_add_frame_part(frame, "LowerPost", Rect2(-39, 57, 78, 17), Color("263f45"))
-	_add_frame_part(frame, "InnerRail", Rect2(-39, -57, 17, 114), Color("45676b"))
-	_add_frame_part(frame, "OuterRail", Rect2(22, -57, 17, 114), Color("45676b"))
+	var frame_color := _theme.door_frame_color if _theme != null else Color("38565b")
+	_add_frame_part(frame, "UpperPost", Rect2(-39, -74, 78, 17), frame_color.lightened(0.12))
+	_add_frame_part(frame, "LowerPost", Rect2(-39, 57, 78, 17), frame_color.darkened(0.16))
+	_add_frame_part(frame, "InnerRail", Rect2(-39, -57, 17, 114), frame_color.lightened(0.08))
+	_add_frame_part(frame, "OuterRail", Rect2(22, -57, 17, 114), frame_color.lightened(0.08))
 	_add_frame_part(frame, "UpperHighlight", Rect2(-34, -70, 68, 3), Color(0.65, 0.84, 0.84, 0.72))
 	_add_frame_part(frame, "InnerRailHighlight", Rect2(-34, -53, 3, 106), Color(0.62, 0.82, 0.81, 0.52))
 	_add_frame_part(frame, "OuterRailShadow", Rect2(31, -53, 4, 106), Color(0.04, 0.12, 0.14, 0.75))
@@ -209,8 +216,14 @@ func _build_tile_door_visuals() -> void:
 	_seal_glow.color = Color(0.95, 0.12, 0.08, 0.075)
 	_seal_glow.z_index = 3
 	add_child(_seal_glow)
-	_locked_indicator = _make_indicator("LockedIndicator", Color(1.0, 0.12, 0.08, 0.9))
-	_open_indicator = _make_indicator("OpenIndicator", Color(0.18, 1.0, 0.72, 0.9))
+	_locked_indicator = _make_indicator(
+		"LockedIndicator",
+		_theme.door_locked_color if _theme != null else Color(1.0, 0.12, 0.08, 0.9),
+	)
+	_open_indicator = _make_indicator(
+		"OpenIndicator",
+		_theme.door_open_color if _theme != null else Color(0.18, 1.0, 0.72, 0.9),
+	)
 	_locked_indicator.position = Vector2(34, 0)
 	_open_indicator.position = Vector2(34, 0)
 	_open_indicator.visible = false
@@ -258,7 +271,11 @@ func _make_tile_leaf(node_name: String, center_y: float) -> Polygon2D:
 	leaf.polygon = PackedVector2Array([
 		Vector2(-21, -29), Vector2(21, -29), Vector2(21, 29), Vector2(-21, 29),
 	])
-	leaf.color = Color(0.12, 0.27, 0.3, 1.0)
+	leaf.color = (
+		_theme.door_leaf_color
+		if _theme != null
+		else Color(0.12, 0.27, 0.3, 1.0)
+	)
 	leaf.z_index = 2
 	add_child(leaf)
 	_add_frame_part(leaf, "InsetPanel", Rect2(-15, -21, 30, 40), Color("25444a"))

@@ -2,12 +2,14 @@ class_name MapThemeCatalog
 extends RefCounted
 
 const HOSPITAL_THEME := &"abandoned_hospital"
+const HOSPITAL_THEME_RESOURCE := "res://resources/map_themes/dungeon1_hospital.tres"
 
 static func _hospital_rooms() -> Array[Dictionary]:
 	return [
 	{
 		"room_id": &"hospital_standard_combat",
 		"theme_id": HOSPITAL_THEME,
+		"theme_resource": HOSPITAL_THEME_RESOURCE,
 		"title": "标准战斗房",
 		"room_kind": "combat",
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
@@ -39,6 +41,7 @@ static func _hospital_rooms() -> Array[Dictionary]:
 	{
 		"room_id": &"hospital_long_ward",
 		"theme_id": HOSPITAL_THEME,
+		"theme_resource": HOSPITAL_THEME_RESOURCE,
 		"title": "长条住院区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
@@ -74,6 +77,7 @@ static func _hospital_rooms() -> Array[Dictionary]:
 	{
 		"room_id": &"hospital_l_elite",
 		"theme_id": HOSPITAL_THEME,
+		"theme_resource": HOSPITAL_THEME_RESOURCE,
 		"title": "L 形精英病区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,

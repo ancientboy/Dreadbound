@@ -161,6 +161,7 @@ func _create_exit_doors() -> void:
 		door.configure(
 			StringName(direction_value),
 			sample_room.door_anchor_world(StringName(direction_value)),
+			modular_architecture.theme if modular_architecture.visible else null,
 		)
 		sample_room.add_child(door)
 		door.traversal_requested.connect(_on_door_traversal_requested)
@@ -276,9 +277,11 @@ func _apply_room_spec(spec: Dictionary) -> bool:
 	if use_room_builder:
 		modular_architecture.build_from_spec(spec)
 		sample_room.apply_built_spec(spec, modular_architecture)
+		$ThemeGrade.color = modular_architecture.theme.ambient_tint
 	else:
 		sample_room.apply_legacy_spec(spec)
 		architecture.texture = load(spec["texture_path"]) as Texture2D
+		$ThemeGrade.color = Color(0.86, 0.95, 1.0, 1.0)
 	return use_room_builder
 
 

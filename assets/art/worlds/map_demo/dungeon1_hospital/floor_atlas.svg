@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
+  <defs>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#18303a"/>
+      <stop offset=".55" stop-color="#10252e"/>
+      <stop offset="1" stop-color="#0b1b23"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#28444d"/>
+      <stop offset=".45" stop-color="#172f38"/>
+      <stop offset="1" stop-color="#10242c"/>
+    </linearGradient>
+    <radialGradient id="wear">
+      <stop offset="0" stop-color="#78949a" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#78949a" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grain" width="17" height="19" patternUnits="userSpaceOnUse">
+      <path d="M2 4h2M11 14h3M7 8h1" stroke="#a1bac0" stroke-opacity=".07"/>
+    </pattern>
+    <g id="base">
+      <rect width="128" height="128" fill="url(#floor)"/>
+      <rect x="5" y="5" width="118" height="118" rx="4" fill="url(#panel)" stroke="#31515a" stroke-width="2"/>
+      <path d="M7 20H121M7 108H121" stroke="#0a171d" stroke-width="3" opacity=".8"/>
+      <path d="M20 7V121M108 7V121" stroke="#42616a" stroke-width="1" opacity=".35"/>
+      <circle cx="13" cy="13" r="3" fill="#07151b" stroke="#53727a"/>
+      <circle cx="115" cy="13" r="3" fill="#07151b" stroke="#53727a"/>
+      <circle cx="13" cy="115" r="3" fill="#07151b" stroke="#53727a"/>
+      <circle cx="115" cy="115" r="3" fill="#07151b" stroke="#53727a"/>
+      <rect width="128" height="128" fill="url(#grain)"/>
+    </g>
+    <g id="medical">
+      <use href="#base"/>
+      <path d="M31 60H55V36H73V60H97V78H73V102H55V78H31Z" fill="#2a6a68" opacity=".18"/>
+      <path d="M31 60H55V36H73V60H97" fill="none" stroke="#64b8ae" stroke-width="2" opacity=".25"/>
+    </g>
+    <g id="rail">
+      <use href="#base"/>
+      <path d="M0 48H128V55H0ZM0 73H128V80H0Z" fill="#57b7ad" opacity=".14"/>
+      <path d="M0 52H128M0 76H128" stroke="#83d8cc" stroke-width="2" opacity=".2"/>
+    </g>
+    <g id="service">
+      <use href="#base"/>
+      <rect x="24" y="30" width="80" height="68" rx="8" fill="#07171e" opacity=".44" stroke="#41636b" stroke-width="2"/>
+      <path d="M32 42H96M32 86H96M42 34V94M86 34V94" stroke="#52727a" opacity=".22"/>
+      <circle cx="64" cy="64" r="12" fill="#0c222a" stroke="#4aa59c" stroke-opacity=".35" stroke-width="3"/>
+    </g>
+    <g id="hazard">
+      <use href="#base"/>
+      <g opacity=".2" fill="#d49c35">
+        <path d="M10 102l18 18H14L6 112Z"/><path d="M36 102l18 18H40l-18-18Z"/>
+        <path d="M62 102l18 18H66l-18-18Z"/><path d="M88 102l18 18H92l-18-18Z"/>
+      </g>
+    </g>
+    <g id="worn">
+      <use href="#base"/>
+      <ellipse cx="72" cy="62" rx="53" ry="38" fill="url(#wear)"/>
+      <path d="M28 86l19-15 16 4 17-19 23-7M39 39l17 10 15-8" fill="none" stroke="#07161c" stroke-width="3" opacity=".32"/>
+    </g>
+  </defs>
+  <rect width="1024" height="768" fill="#0b1b23"/>
+  <g>
+    <use href="#base" x="0"/><use href="#rail" x="128"/><use href="#base" x="256"/><use href="#medical" x="384"/>
+    <use href="#base" x="512"/><use href="#service" x="640"/><use href="#base" x="768"/><use href="#rail" x="896"/>
+    <use href="#worn" y="128"/><use href="#base" x="128" y="128"/><use href="#hazard" x="256" y="128"/><use href="#base" x="384" y="128"/>
+    <use href="#service" x="512" y="128"/><use href="#base" x="640" y="128"/><use href="#medical" x="768" y="128"/><use href="#base" x="896" y="128"/>
+    <use href="#base" y="256"/><use href="#medical" x="128" y="256"/><use href="#base" x="256" y="256"/><use href="#worn" x="384" y="256"/>
+    <use href="#base" x="512" y="256"/><use href="#rail" x="640" y="256"/><use href="#base" x="768" y="256"/><use href="#service" x="896" y="256"/>
+    <use href="#hazard" y="384"/><use href="#base" x="128" y="384"/><use href="#service" x="256" y="384"/><use href="#base" x="384" y="384"/>
+    <use href="#worn" x="512" y="384"/><use href="#base" x="640" y="384"/><use href="#rail" x="768" y="384"/><use href="#base" x="896" y="384"/>
+    <use href="#base" y="512"/><use href="#rail" x="128" y="512"/><use href="#base" x="256" y="512"/><use href="#medical" x="384" y="512"/>
+    <use href="#base" x="512" y="512"/><use href="#worn" x="640" y="512"/><use href="#base" x="768" y="512"/><use href="#hazard" x="896" y="512"/>
+    <use href="#service" y="640"/><use href="#base" x="128" y="640"/><use href="#worn" x="256" y="640"/><use href="#base" x="384" y="640"/>
+    <use href="#medical" x="512" y="640"/><use href="#base" x="640" y="640"/><use href="#service" x="768" y="640"/><use href="#base" x="896" y="640"/>
+  </g>
+</svg>

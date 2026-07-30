@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128" viewBox="0 0 512 128">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4c6970"/><stop offset=".42" stop-color="#233e47"/><stop offset="1" stop-color="#10242c"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#79e2d6" stop-opacity=".5"/><stop offset="1" stop-color="#163f48" stop-opacity=".3"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  <!-- Medical supply barrier -->
+  <g>
+    <ellipse cx="64" cy="105" rx="48" ry="11" fill="#02090d" opacity=".55"/>
+    <path d="M16 47L31 30H97L112 47V98L98 108H30L16 98Z" fill="url(#metal)" stroke="#0a171d" stroke-width="4"/>
+    <path d="M25 49H103V68H25Z" fill="#19333c" stroke="#5f7c82" stroke-width="2"/>
+    <path d="M37 75H91V99H37Z" fill="#0d2028" stroke="#35535b"/>
+    <path d="M55 78H73V84H80V94H73V100H55V94H48V84H55Z" fill="#56c5b8" opacity=".72"/>
+    <path d="M23 38H105" stroke="#9cb7ba" stroke-width="4" opacity=".42"/>
+    <path d="M19 89l16 16M28 83l22 22M78 83l22 22M93 85l15 15" stroke="#d49c35" stroke-width="5" opacity=".72"/>
+  </g>
+  <!-- Tall medical cabinet -->
+  <g transform="translate(128)">
+    <ellipse cx="64" cy="107" rx="39" ry="9" fill="#02090d" opacity=".55"/>
+    <path d="M28 18H100L106 27V105H22V27Z" fill="url(#metal)" stroke="#0a171d" stroke-width="4"/>
+    <path d="M31 30H61V71H31ZM67 30H97V71H67Z" fill="#142c35" stroke="#4f7077"/>
+    <path d="M36 36H56M72 36H92" stroke="#70b8b1" stroke-width="3" opacity=".38"/>
+    <path d="M31 78H97V98H31Z" fill="#0c1f27" stroke="#36545c"/>
+    <circle cx="92" cy="87" r="4" fill="#ef493b"/>
+    <path d="M18 23H110" stroke="#8ca8ac" stroke-width="5" opacity=".45"/>
+  </g>
+  <!-- Diagnostic console -->
+  <g transform="translate(256)">
+    <ellipse cx="64" cy="108" rx="45" ry="10" fill="#02090d" opacity=".55"/>
+    <path d="M31 59L41 31H87L98 59V105H30Z" fill="url(#metal)" stroke="#0a171d" stroke-width="4"/>
+    <path d="M43 38H85L91 61H37Z" fill="#071a21" stroke="#578089" stroke-width="2"/>
+    <path d="M46 43H82L86 56H42Z" fill="url(#glass)"/>
+    <path d="M48 49H65M69 49H79" stroke="#8ff6e7" stroke-width="2"/>
+    <rect x="42" y="70" width="44" height="20" rx="4" fill="#0a2028" stroke="#3a646a"/>
+    <circle cx="50" cy="80" r="3" fill="#45e0bd"/><circle cx="61" cy="80" r="3" fill="#e34b3e"/>
+    <path d="M23 103H105" stroke="#142e36" stroke-width="6"/>
+    <ellipse cx="64" cy="53" rx="27" ry="12" fill="#55e7d1" opacity=".12" filter="url(#glow)"/>
+  </g>
+  <!-- Quarantine pod -->
+  <g transform="translate(384)">
+    <ellipse cx="64" cy="108" rx="42" ry="10" fill="#02090d" opacity=".55"/>
+    <path d="M35 16H93L103 34V98L92 110H36L25 98V34Z" fill="url(#metal)" stroke="#0a171d" stroke-width="4"/>
+    <path d="M43 27H85L93 39V86L84 98H44L35 86V39Z" fill="url(#glass)" stroke="#5a8e94" stroke-width="2"/>
+    <path d="M48 39c12-8 21-8 32 0v47H48Z" fill="#153942" opacity=".45"/>
+    <path d="M30 52H40M88 52H98M30 79H40M88 79H98" stroke="#cc9231" stroke-width="5"/>
+    <circle cx="64" cy="27" r="4" fill="#ed493d"/>
+  </g>
+</svg>

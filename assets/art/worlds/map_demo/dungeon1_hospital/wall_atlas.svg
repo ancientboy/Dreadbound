@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="128" viewBox="0 0 1024 128">
+  <defs>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f9299"/><stop offset=".35" stop-color="#3a5962"/><stop offset="1" stop-color="#172f38"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#29464f"/><stop offset=".55" stop-color="#142f38"/><stop offset="1" stop-color="#081a22"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0a1c24"/><stop offset=".5" stop-color="#223e47"/><stop offset="1" stop-color="#4c6d73"/>
+    </linearGradient>
+    <pattern id="hazard" width="24" height="12" patternUnits="userSpaceOnUse" patternTransform="skewX(-25)">
+      <rect width="12" height="12" fill="#c68b2e"/><rect x="12" width="12" height="12" fill="#15262b"/>
+    </pattern>
+  </defs>
+  <!-- north -->
+  <g>
+    <path d="M0 38H128V65H0Z" fill="url(#cap)"/><path d="M0 65H128V128H0Z" fill="url(#face)"/>
+    <path d="M0 37H128M0 64H128M0 125H128" stroke="#06151c" stroke-width="5"/>
+    <path d="M8 46H120" stroke="#9ab3b6" stroke-width="4" opacity=".42"/>
+    <path d="M10 73H118V115H10Z" fill="#0e2630" stroke="#3e5d64" stroke-width="2"/>
+    <path d="M34 77V111M94 77V111" stroke="#59767c" stroke-width="2" opacity=".38"/>
+    <rect x="0" y="116" width="128" height="9" fill="url(#hazard)" opacity=".28"/>
+    <path d="M3 32H18V128H3ZM110 32H125V128H110Z" fill="#55727a" opacity=".28"/>
+  </g>
+  <!-- south -->
+  <g transform="translate(128)">
+    <path d="M0 0H128V27H0Z" fill="url(#cap)"/><path d="M0 27H128V91H0Z" fill="url(#face)"/>
+    <path d="M0 26H128M0 90H128" stroke="#06151c" stroke-width="5"/>
+    <path d="M8 8H120" stroke="#9ab3b6" stroke-width="4" opacity=".42"/>
+    <path d="M10 35H118V78H10Z" fill="#0e2630" stroke="#3e5d64" stroke-width="2"/>
+    <path d="M34 39V74M94 39V74" stroke="#59767c" stroke-width="2" opacity=".38"/>
+    <rect y="80" width="128" height="10" fill="url(#hazard)" opacity=".28"/>
+    <path d="M3 0H18V94H3ZM110 0H125V94H110Z" fill="#55727a" opacity=".28"/>
+    <ellipse cx="64" cy="96" rx="60" ry="12" fill="#02080c" opacity=".34"/>
+  </g>
+  <!-- west -->
+  <g transform="translate(256)">
+    <path d="M55 0H89V128H55Z" fill="url(#cap)"/><path d="M89 0H128V128H89Z" fill="url(#side)"/>
+    <path d="M54 0V128M90 0V128M125 0V128" stroke="#06151c" stroke-width="5"/>
+    <path d="M64 7V121" stroke="#9ab3b6" stroke-width="4" opacity=".38"/>
+    <path d="M96 7H117V121H96Z" fill="#0d2630" stroke="#426169"/>
+    <path d="M96 32H122M96 96H122" stroke="#b47f2d" stroke-width="4" opacity=".34"/>
+  </g>
+  <!-- east -->
+  <g transform="translate(384)">
+    <path d="M39 0H73V128H39Z" fill="url(#cap)"/><path d="M0 0H39V128H0Z" fill="url(#side)"/>
+    <path d="M3 0V128M38 0V128M74 0V128" stroke="#06151c" stroke-width="5"/>
+    <path d="M64 7V121" stroke="#9ab3b6" stroke-width="4" opacity=".38"/>
+    <path d="M11 7H32V121H11Z" fill="#0d2630" stroke="#426169"/>
+    <path d="M6 32H32M6 96H32" stroke="#b47f2d" stroke-width="4" opacity=".34"/>
+  </g>
+  <!-- corners -->
+  <g transform="translate(512)">
+    <path d="M55 38H128V65H89V128H55Z" fill="url(#cap)"/><path d="M89 65H128V128H89Z" fill="url(#face)"/>
+    <path d="M55 38H128M89 65H128M55 38V128" fill="none" stroke="#06151c" stroke-width="5"/>
+    <path d="M65 47H120" stroke="#9ab3b6" stroke-width="4" opacity=".4"/>
+  </g>
+  <g transform="translate(640)">
+    <path d="M0 38H73V128H39V65H0Z" fill="url(#cap)"/><path d="M0 65H39V128H0Z" fill="url(#face)"/>
+    <path d="M0 38H73M0 65H39M73 38V128" fill="none" stroke="#06151c" stroke-width="5"/>
+    <path d="M8 47H63" stroke="#9ab3b6" stroke-width="4" opacity=".4"/>
+  </g>
+  <g transform="translate(768)">
+    <path d="M55 0H89V27H128V54H89V128H55Z" fill="url(#cap)"/><path d="M89 27H128V91H89Z" fill="url(#face)"/>
+    <path d="M55 0V128M89 27H128M89 91H128" fill="none" stroke="#06151c" stroke-width="5"/>
+    <path d="M65 9H120" stroke="#9ab3b6" stroke-width="4" opacity=".4"/>
+  </g>
+  <g transform="translate(896)">
+    <path d="M39 0H73V128H39V54H0V27H39Z" fill="url(#cap)"/><path d="M0 27H39V91H0Z" fill="url(#face)"/>
+    <path d="M73 0V128M0 27H39M0 91H39" fill="none" stroke="#06151c" stroke-width="5"/>
+    <path d="M8 9H63" stroke="#9ab3b6" stroke-width="4" opacity=".4"/>
+  </g>
+</svg>

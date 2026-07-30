@@ -39,6 +39,8 @@ var door_anchor_points: Dictionary = {}
 
 var _floor_texture: Texture2D
 var _wall_texture: Texture2D
+var _floor_atlas_size := FLOOR_ATLAS_SIZE
+var _wall_atlas_size := WALL_ATLAS_SIZE
 var _occupied_cells: Dictionary = {}
 var _door_cells: Dictionary = {}
 
@@ -47,11 +49,15 @@ func build(
 	spec: Dictionary,
 	floor_texture: Texture2D,
 	wall_texture: Texture2D,
+	floor_atlas_size := FLOOR_ATLAS_SIZE,
+	wall_atlas_size := WALL_ATLAS_SIZE,
 ) -> void:
 	_clear_generated_nodes()
 	room_spec = spec.duplicate(true)
 	_floor_texture = floor_texture
 	_wall_texture = wall_texture
+	_floor_atlas_size = floor_atlas_size
+	_wall_atlas_size = wall_atlas_size
 	_occupied_cells = _cell_lookup(spec.get("grid_cells", []))
 	assert(not _occupied_cells.is_empty(), "RoomBuilder requires at least one floor cell")
 	_door_cells = {}
@@ -89,14 +95,14 @@ func door_directions() -> PackedStringArray:
 func _build_floor_tiles() -> void:
 	floor_tiles = _make_layer(
 		"FloorTiles",
-		_make_atlas_tileset(_floor_texture, FLOOR_ATLAS_SIZE),
+		_make_atlas_tileset(_floor_texture, _floor_atlas_size),
 		-30,
 	)
 	for cell_value in _occupied_cells:
 		var cell: Vector2i = cell_value
 		var local_cell := cell - Vector2i(2, 2)
-		var x_sample := _mirrored_atlas_axis(local_cell.x, FLOOR_ATLAS_SIZE.x)
-		var y_sample := _mirrored_atlas_axis(local_cell.y, FLOOR_ATLAS_SIZE.y)
+		var x_sample := _mirrored_atlas_axis(local_cell.x, _floor_atlas_size.x)
+		var y_sample := _mirrored_atlas_axis(local_cell.y, _floor_atlas_size.y)
 		var alternative := 0
 		if x_sample.y == 1:
 			alternative |= TILE_FLIP_H
@@ -111,7 +117,7 @@ func _build_floor_tiles() -> void:
 
 
 func _build_wall_tiles() -> void:
-	var wall_tileset := _make_atlas_tileset(_wall_texture, WALL_ATLAS_SIZE)
+	var wall_tileset := _make_atlas_tileset(_wall_texture, _wall_atlas_size)
 	wall_base_tiles = _make_layer("WallBaseTiles", wall_tileset, -8)
 	side_wall_tiles = _make_layer("SideWallTiles", wall_tileset, 4)
 	foreground_walls = _make_layer("ForegroundWalls", wall_tileset, 38)

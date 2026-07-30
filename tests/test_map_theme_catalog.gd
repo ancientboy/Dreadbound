@@ -21,6 +21,8 @@ func _init() -> void:
 			assert(not room["grid_cells"].is_empty())
 			assert(not room["door_sockets"].is_empty())
 			assert(not room["content_slots"].is_empty())
+			assert(room["theme_resource"] == MapThemeCatalog.HOSPITAL_THEME_RESOURCE)
+			assert(ResourceLoader.exists(room["theme_resource"]))
 			var builder := ModularHospitalRoom.new()
 			builder.build_from_spec(room)
 			assert(builder.walkable_outline.size() >= 4)
@@ -56,6 +58,10 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/sample_room_v2/doors/threshold.png",
 		"res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
 		"res://assets/art/worlds/map_demo/hospital_tiles_v8/wall_atlas.svg",
+		"res://assets/art/worlds/map_demo/dungeon1_hospital/floor_atlas.svg",
+		"res://assets/art/worlds/map_demo/dungeon1_hospital/wall_atlas.svg",
+		"res://assets/art/worlds/map_demo/dungeon1_hospital/prop_atlas.svg",
+		"res://resources/map_themes/dungeon1_hospital.tres",
 	]:
 		assert(ResourceLoader.exists(asset_path))
 	var ring := rooms[4]

@@ -42,7 +42,7 @@ z_index = -30
 script = ExtResource("10_modular")
 
 [node name="ThemeGrade" type="CanvasModulate" parent="."]
-color = Color(0.86, 0.95, 1, 1)
+color = Color(0.74, 0.88, 0.94, 1)
 
 [node name="Rooms" type="Node2D" parent="."]
 y_sort_enabled = true
@@ -157,7 +157,7 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图 Demo v9 · RoomBuilder 医院房型规范"
+text = "新地图 Demo v10 · 副本 1 科研医院主题样板房"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
@@ -169,7 +169,7 @@ horizontal_alignment = 1
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.66, 0.72, 0.7, 1)
 theme_override_font_sizes/font_size = 13
-text = "128 网格 / 自动墙线 / 固定门槽 / 导航与镜头约束"
+text = "主题图集 / 厚重墙体 / 医疗道具 / 动态门与冷色光影"
 horizontal_alignment = 1
 
 [node name="Return" type="Button" parent="HUD"]
