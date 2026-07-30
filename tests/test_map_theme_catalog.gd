@@ -41,7 +41,7 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_open.png",
 		"res://assets/art/worlds/map_demo/sample_room_v2/doors/threshold.png",
 	]:
-		assert(ResourceLoader.exists(asset_path)
+		assert(ResourceLoader.exists(asset_path))
 	var ring := rooms[4]
 	assert(ring["blocked_outlines"].size() == 1)
 	print("Map theme catalog passed: six hospital rooms have live compatible door anchors")
