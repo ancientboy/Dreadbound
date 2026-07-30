@@ -233,6 +233,7 @@ func _build_collision() -> void:
 	blocker.collision_layer = 1
 	blocker.collision_mask = 1
 	_blocker_shape = CollisionShape2D.new()
+	_blocker_shape.name = "CollisionShape2D"
 	var blocker_rectangle := RectangleShape2D.new()
 	blocker_rectangle.size = (
 		Vector2(34.0, 142.0)
