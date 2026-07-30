@@ -50,8 +50,8 @@ func _run_test() -> void:
 	var floor_macro := modular.get_node("StandardFloorMacro") as Sprite2D
 	assert(floor_macro != null)
 	assert(floor_macro.texture.get_size() == Vector2(2048, 1280))
-	assert(floor_macro.position == Vector2(256, 256))
-	assert(floor_macro.scale == Vector2(0.5, 0.5))
+	assert(floor_macro.position == Vector2(253, 253))
+	assert(floor_macro.scale == Vector2(1030.0 / 2048.0, 646.0 / 1280.0))
 	assert(floor_macro.z_index > floor_tiles.z_index)
 	assert(floor_macro.z_index < wall_tiles.z_index)
 	var wall_shell := modular.get_node("StandardWallShell") as Node2D
@@ -73,7 +73,13 @@ func _run_test() -> void:
 	assert(modular is RoomBuilder)
 	assert(_sprite_count(modular) == 8)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
-	assert(camera.zoom == Vector2(0.72, 0.72))
+	var viewport_size := instance.get_viewport_rect().size
+	var expected_cover_zoom := (
+		maxf(viewport_size.x / 1536.0, viewport_size.y / 1024.0)
+		* MapStyleDemo.CAMERA_COVER_OVERSCAN
+	)
+	assert(camera.zoom.is_equal_approx(Vector2.ONE * expected_cover_zoom))
+	assert(camera.zoom.x > 0.72)
 	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
 	assert(camera.position_smoothing_enabled)
 

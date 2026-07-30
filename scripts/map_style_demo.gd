@@ -4,6 +4,7 @@ extends Node2D
 const MAP_SIZE := Vector2(1536.0, 1024.0)
 const SAMPLE_ENCOUNTER := &"map_demo_sample"
 const DOOR_GAP_HALF_WIDTH := 78.0
+const CAMERA_COVER_OVERSCAN := 1.01
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const ROOM_DOOR_SCRIPT: Script = preload("res://scripts/map_room_door.gd")
 
@@ -72,7 +73,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _configure_player() -> void:
-	camera.zoom = sample_room.camera_zoom
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 6.5
 	camera.limit_smoothed = true
@@ -83,7 +83,23 @@ func _configure_player() -> void:
 	player.weapon_vfx = weapon_vfx
 	rendered_character.select_preview_family(&"crowbar")
 	rendered_character.modulate = Color(0.84, 0.95, 1.0, 1.0)
+	_fit_camera_to_viewport()
 	_update_guided_camera()
+
+
+func _fit_camera_to_viewport() -> void:
+	var bounds := sample_room.camera_bounds
+	var viewport_size := get_viewport_rect().size
+	if not bounds.has_area() or viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		camera.zoom = sample_room.camera_zoom
+		return
+	var cover_zoom := maxf(
+		viewport_size.x / bounds.size.x,
+		viewport_size.y / bounds.size.y,
+	) * CAMERA_COVER_OVERSCAN
+	var authored_zoom := maxf(sample_room.camera_zoom.x, sample_room.camera_zoom.y)
+	var resolved_zoom := maxf(authored_zoom, cover_zoom)
+	camera.zoom = Vector2.ONE * resolved_zoom
 
 
 func _create_variant_controls() -> void:
@@ -455,6 +471,7 @@ func _return_home() -> void:
 
 func _layout_hud() -> void:
 	var viewport_size := get_viewport_rect().size
+	_fit_camera_to_viewport()
 	if transition_fade != null:
 		transition_fade.size = viewport_size
 	var compact := viewport_size.x < 760.0

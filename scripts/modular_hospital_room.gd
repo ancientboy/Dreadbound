@@ -1,6 +1,7 @@
 class_name ModularHospitalRoom
 extends RoomBuilder
 
+const STANDARD_FLOOR_BLEED := 3.0
 const DEFAULT_THEME: RoomTheme = preload(
 	"res://resources/map_themes/dungeon1_hospital.tres"
 )
@@ -46,9 +47,12 @@ func _build_standard_floor_macro() -> void:
 	floor_macro.texture = theme.standard_floor_macro
 	floor_macro.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	floor_macro.centered = false
-	floor_macro.position = Vector2(min_cell * TILE_SIZE)
+	floor_macro.position = Vector2(min_cell * TILE_SIZE) - Vector2.ONE * STANDARD_FLOOR_BLEED
 	var target_size := Vector2((max_cell - min_cell + Vector2i.ONE) * TILE_SIZE)
-	floor_macro.scale = target_size / Vector2(theme.standard_floor_macro.get_size())
+	var bleed_size := Vector2.ONE * STANDARD_FLOOR_BLEED * 2.0
+	floor_macro.scale = (target_size + bleed_size) / Vector2(
+		theme.standard_floor_macro.get_size()
+	)
 	floor_macro.z_index = -24
 	add_child(floor_macro)
 
