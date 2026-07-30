@@ -50,12 +50,14 @@ func _run_test() -> void:
 	var floor_macro := modular.get_node("StandardFloorMacro") as Sprite2D
 	assert(floor_macro != null)
 	assert(floor_macro.texture.get_size() == Vector2(2048, 1280))
-	assert(floor_macro.position == Vector2(253, 253))
-	assert(floor_macro.scale == Vector2(1030.0 / 2048.0, 646.0 / 1280.0))
+	assert(floor_macro.position == Vector2(152, 192))
+	assert(floor_macro.scale == Vector2(1232.0 / 2048.0, 768.0 / 1280.0))
 	assert(floor_macro.z_index > floor_tiles.z_index)
 	assert(floor_macro.z_index < wall_tiles.z_index)
 	var wall_shell := modular.get_node("StandardWallShell") as Node2D
 	assert(wall_shell != null and wall_shell.get_child_count() == 4)
+	for wall_region in wall_shell.get_children():
+		assert((wall_region as Sprite2D).z_index > floor_macro.z_index)
 	assert((wall_shell.get_node("BackWall") as Sprite2D).z_index == -7)
 	assert((wall_shell.get_node("WestWall") as Sprite2D).position == Vector2(0, 256))
 	assert((wall_shell.get_node("EastWall") as Sprite2D).position == Vector2(1280, 256))
