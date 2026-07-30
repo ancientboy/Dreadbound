@@ -27,7 +27,6 @@ func _run_test() -> void:
 	)
 	var camera := player.get_node("Camera2D") as Camera2D
 	var room := instance.get_node("Rooms/SampleRoom") as MapRoomModule
-	var architecture := instance.get_node("Architecture") as Sprite2D
 	var modular := instance.get_node("ModularArchitecture") as ModularHospitalRoom
 	var zones := instance.get_node("Rooms/SampleRoom/EncounterZones")
 
@@ -35,7 +34,6 @@ func _run_test() -> void:
 	assert(rendered_player != null)
 	assert(not rendered_player.runtime_sync_enabled)
 	assert(rendered_player.selected_skin() == &"resonant_demo_v1")
-	assert(not architecture.visible)
 	assert(modular.visible)
 	var floor_tiles := modular.get_node("FloorTiles") as TileMapLayer
 	var wall_tiles := modular.get_node("WallBaseTiles") as TileMapLayer
@@ -157,7 +155,6 @@ func _run_test() -> void:
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
 	assert(modular.visible)
-	assert(not architecture.visible)
 	assert(modular.floor_tiles.get_used_cells().size() == 60)
 	assert(modular.floor_tiles.get_cell_atlas_coords(Vector2i(10, 2)) == Vector2i(7, 0))
 	assert(
@@ -209,8 +206,8 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo v12 passed: continuous wall shell and recessed slim doors integrated "
-		+ "without changing long/L room generation, doors, navigation, or cameras",
+		"Map style demo passed: standard, long, and L RoomBuilder samples remain "
+		+ "with continuous walls, doors, navigation, and cameras",
 	)
 	quit()
 

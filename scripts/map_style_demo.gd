@@ -7,14 +7,12 @@ const DOOR_GAP_HALF_WIDTH := 78.0
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const ROOM_DOOR_SCRIPT: Script = preload("res://scripts/map_room_door.gd")
 
-@onready var architecture := $Architecture as Sprite2D
 @onready var modular_architecture := $ModularArchitecture as ModularHospitalRoom
 @onready var player := $Player as Player
 @onready var camera := $Player/Camera2D as Camera2D
 @onready var rendered_character := $Player/RenderedAtlasCharacter as RenderedAtlasCharacter
 @onready var weapon_vfx := $DemoWeaponVFX as DemoWeaponVFX
 @onready var sample_room := $Rooms/SampleRoom as MapRoomModule
-@onready var foreground_walls := $Foreground/WallsForeground as Sprite2D
 @onready var objective_label := $HUD/TopPanel/Margin/Rows/Objective as Label
 @onready var state_label := $HUD/TopPanel/Margin/Rows/State as Label
 @onready var title_label := $HUD/TopPanel/Margin/Rows/Title as Label
@@ -37,7 +35,6 @@ func _ready() -> void:
 	_apply_room_spec(room_variants[0])
 	_configure_player()
 	_build_collision()
-	_connect_areas()
 	_create_variant_controls()
 	_create_transition_fade()
 	_create_exit_doors()
@@ -120,8 +117,7 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	activated_zone_count = 0
 	room_cleared = false
 
-	var use_modular_room := _apply_room_spec(spec)
-	$Foreground.visible = false
+	_apply_room_spec(spec)
 	$Rooms/SampleRoom/Obstacles.visible = false
 
 	_build_zones(spec["zones"])
@@ -135,11 +131,7 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	_configure_player()
 	_activate_starting_zones()
 	title_label.text = "医院主题房型 · %s" % spec["title"]
-	objective_label.text = (
-		"RoomBuilder：固定网格、自动墙线、预设门槽、导航与镜头约束"
-		if use_modular_room
-		else "主题锁定：当前旧房型仅用于流程回归"
-	)
+	objective_label.text = "RoomBuilder：固定网格、自动墙线、预设门槽、导航与镜头约束"
 	room_switching = false
 	_update_encounter_state()
 
@@ -271,18 +263,12 @@ func _find_connected_room(exit_direction: StringName) -> int:
 
 
 func _apply_room_spec(spec: Dictionary) -> bool:
-	var use_room_builder := spec.has("grid_cells")
-	modular_architecture.visible = use_room_builder
-	architecture.visible = not use_room_builder
-	if use_room_builder:
-		modular_architecture.build_from_spec(spec)
-		sample_room.apply_built_spec(spec, modular_architecture)
-		$ThemeGrade.color = modular_architecture.theme.ambient_tint
-	else:
-		sample_room.apply_legacy_spec(spec)
-		architecture.texture = load(spec["texture_path"]) as Texture2D
-		$ThemeGrade.color = Color(0.86, 0.95, 1.0, 1.0)
-	return use_room_builder
+	assert(spec.has("grid_cells"), "Map demo only accepts RoomBuilder room specs")
+	modular_architecture.visible = true
+	modular_architecture.build_from_spec(spec)
+	sample_room.apply_built_spec(spec, modular_architecture)
+	$ThemeGrade.color = modular_architecture.theme.ambient_tint
+	return true
 
 
 func _spec_door_directions(spec: Dictionary) -> PackedStringArray:
@@ -401,23 +387,6 @@ func _keep_actor_on_floor(actor: Node2D) -> void:
 	actor.global_position = sample_room.nearest_walkable_world_point(actor.global_position)
 	if actor is CharacterBody2D:
 		(actor as CharacterBody2D).velocity = Vector2.ZERO
-
-
-func _connect_areas() -> void:
-	$Foreground/FadeZone.body_entered.connect(_on_wall_fade_entered)
-	$Foreground/FadeZone.body_exited.connect(_on_wall_fade_exited)
-
-
-func _on_wall_fade_entered(body: Node) -> void:
-	if body == player:
-		create_tween().tween_property(foreground_walls, "modulate:a", 0.22, 0.16)
-		modular_architecture.set_foreground_faded(true)
-
-
-func _on_wall_fade_exited(body: Node) -> void:
-	if body == player:
-		create_tween().tween_property(foreground_walls, "modulate:a", 1.0, 0.2)
-		modular_architecture.set_foreground_faded(false)
 
 
 func _activate_starting_zones() -> void:

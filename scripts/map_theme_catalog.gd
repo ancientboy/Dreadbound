@@ -13,7 +13,6 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "标准战斗房",
 		"room_kind": "combat",
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
-		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
 		"camera_zoom": Vector2(0.72, 0.72),
 		"map_bounds": Rect2(0, 0, 1536, 1024),
 		"spawn": Vector2(384, 576),
@@ -45,7 +44,6 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "长条住院区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
 		"camera_zoom": Vector2(0.72, 0.72),
 		"map_bounds": Rect2(0, 0, 2048, 1024),
 		"spawn": Vector2(384, 576),
@@ -81,7 +79,6 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "L 形精英病区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
 		"camera_zoom": Vector2(0.72, 0.72),
 		"map_bounds": Rect2(0, 0, 2048, 1280),
 		"spawn": Vector2(512, 448),
@@ -116,113 +113,6 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_zone("lower_ward", Rect2(768, 640, 1024, 384), false, [
 				Vector2(1088, 832), Vector2(1536, 832),
 			], ["破损护理体", "精英隔离体"]),
-		],
-	},
-	{
-		"room_id": &"hospital_cross_ambush",
-		"theme_id": HOSPITAL_THEME,
-		"title": "十字伏击病区",
-		"room_kind": "ambush",
-		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"texture_path": "res://assets/art/worlds/map_demo/themes/hospital/cross_ambush.jpg",
-		"camera_zoom": Vector2(1.6, 1.6),
-		"spawn": Vector2(760, 800),
-		"walkable_outline": PackedVector2Array([
-			Vector2(570, 90), Vector2(970, 90), Vector2(970, 310),
-			Vector2(1450, 310), Vector2(1450, 710), Vector2(970, 710),
-			Vector2(970, 940), Vector2(570, 940), Vector2(570, 710),
-			Vector2(90, 710), Vector2(90, 310), Vector2(570, 310),
-		]),
-		"camera_guide_outline": PackedVector2Array([
-			Vector2(650, 300), Vector2(890, 300), Vector2(890, 410),
-			Vector2(1220, 410), Vector2(1220, 610), Vector2(890, 610),
-			Vector2(890, 740), Vector2(650, 740), Vector2(650, 610),
-			Vector2(320, 610), Vector2(320, 410), Vector2(650, 410),
-		]),
-		"door_directions": PackedStringArray(["north", "south", "west", "east"]),
-		"zones": [
-			_zone("center", Rect2(560, 300, 420, 420), true, [
-				Vector2(680, 440), Vector2(860, 590),
-			], ["诱导残响", "伏击护理体"]),
-			_zone("west_arm", Rect2(90, 310, 470, 400), false, [
-				Vector2(250, 450), Vector2(430, 600),
-			], ["西翼病患", "西翼病患"]),
-			_zone("east_arm", Rect2(980, 310, 470, 400), false, [
-				Vector2(1110, 440), Vector2(1320, 600),
-			], ["东翼病患", "精英医护残响"]),
-		],
-	},
-	{
-		"room_id": &"hospital_ring_quarantine",
-		"theme_id": HOSPITAL_THEME,
-		"title": "环形隔离病区",
-		"room_kind": "elite",
-		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"texture_path": "res://assets/art/worlds/map_demo/themes/hospital/ring_quarantine.jpg",
-		"camera_zoom": Vector2(1.55, 1.55),
-		"spawn": Vector2(770, 850),
-		"walkable_outline": PackedVector2Array([
-			Vector2(190, 120), Vector2(1346, 120), Vector2(1470, 260),
-			Vector2(1470, 780), Vector2(1346, 910), Vector2(190, 910),
-			Vector2(66, 780), Vector2(66, 260),
-		]),
-		"camera_guide_outline": PackedVector2Array([
-			Vector2(370, 300), Vector2(1166, 300), Vector2(1260, 400),
-			Vector2(1260, 630), Vector2(1166, 730), Vector2(370, 730),
-			Vector2(276, 630), Vector2(276, 400),
-		]),
-		"blocked_outlines": [
-			PackedVector2Array([
-				Vector2(515, 285), Vector2(1025, 285), Vector2(1070, 360),
-				Vector2(1070, 675), Vector2(1025, 745), Vector2(515, 745),
-				Vector2(470, 675), Vector2(470, 360),
-			]),
-		],
-		"door_directions": PackedStringArray(["north", "south", "west", "east"]),
-		"zones": [
-			_zone("west_loop", Rect2(70, 200, 530, 650), true, [
-				Vector2(260, 350), Vector2(340, 690),
-			], ["隔离巡游体", "回声病患"]),
-			_zone("east_loop", Rect2(936, 200, 530, 650), false, [
-				Vector2(1190, 350), Vector2(1270, 690),
-			], ["隔离巡游体", "精英隔离体"]),
-			_zone("north_loop", Rect2(520, 120, 500, 280), false, [
-				Vector2(680, 260), Vector2(870, 260),
-			], ["监护残响", "值守残影"]),
-		],
-	},
-	{
-		"room_id": &"hospital_asymmetric_boss",
-		"theme_id": HOSPITAL_THEME,
-		"title": "不对称手术 Boss 房",
-		"room_kind": "boss",
-		"size_class": MapRoomModule.RoomSizeClass.BOSS,
-		"texture_path": "res://assets/art/worlds/map_demo/themes/hospital/asymmetric_boss.jpg",
-		"camera_zoom": Vector2(1.48, 1.48),
-		"spawn": Vector2(760, 820),
-		"walkable_outline": PackedVector2Array([
-			Vector2(120, 160), Vector2(450, 160), Vector2(520, 90),
-			Vector2(1260, 90), Vector2(1260, 180), Vector2(1470, 240),
-			Vector2(1470, 800), Vector2(1280, 900), Vector2(1030, 900),
-			Vector2(960, 960), Vector2(580, 960), Vector2(520, 900),
-			Vector2(120, 840),
-		]),
-		"camera_guide_outline": PackedVector2Array([
-			Vector2(350, 320), Vector2(520, 260), Vector2(1120, 260),
-			Vector2(1250, 390), Vector2(1250, 690), Vector2(1080, 760),
-			Vector2(450, 760), Vector2(300, 650),
-		]),
-		"door_directions": PackedStringArray(["north", "south", "west"]),
-		"zones": [
-			_zone("preparation", Rect2(100, 160, 430, 680), true, [
-				Vector2(250, 360), Vector2(360, 650),
-			], ["手术前置体", "失序护理体"]),
-			_zone("boss_arena", Rect2(500, 100, 760, 800), false, [
-				Vector2(780, 420), Vector2(960, 620),
-			], ["阈值手术体", "手术护卫"]),
-			_zone("quarantine_bays", Rect2(1240, 220, 230, 600), false, [
-				Vector2(1340, 380), Vector2(1340, 680),
-			], ["隔离增援体", "隔离增援体"]),
 		],
 	},
 ]
