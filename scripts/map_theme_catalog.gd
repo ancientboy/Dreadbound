@@ -11,23 +11,21 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"title": "标准战斗房",
 		"room_kind": "combat",
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
-		"texture_path": "res://assets/art/worlds/map_demo/sample_room_v2/hospital_standard_shell_v2.jpg",
-		"camera_zoom": Vector2(1.12, 1.12),
-		"spawn": Vector2(310, 540),
+		"texture_path": "res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
+		"camera_zoom": Vector2(0.72, 0.72),
+		"spawn": Vector2(384, 576),
 		"walkable_outline": PackedVector2Array([
-			Vector2(190, 280), Vector2(1346, 280), Vector2(1430, 350),
-			Vector2(1430, 730), Vector2(1346, 820), Vector2(190, 820),
-			Vector2(106, 730), Vector2(106, 350),
+			Vector2(256, 256), Vector2(1280, 256),
+			Vector2(1280, 896), Vector2(256, 896),
 		]),
 		"camera_guide_outline": PackedVector2Array([
-			Vector2(390, 380), Vector2(1146, 380), Vector2(1240, 450),
-			Vector2(1240, 630), Vector2(1146, 700), Vector2(390, 700),
-			Vector2(296, 630), Vector2(296, 450),
+			Vector2(704, 512), Vector2(832, 512),
+			Vector2(832, 640), Vector2(704, 640),
 		]),
 		"door_directions": PackedStringArray(["west", "east"]),
 		"zones": [
-			_zone("arena", Rect2(150, 220, 1230, 640), true, [
-				Vector2(650, 430), Vector2(980, 650),
+			_zone("arena", Rect2(256, 256, 1024, 640), true, [
+				Vector2(640, 448), Vector2(960, 704),
 			], ["游荡病患", "破损护理体"]),
 		],
 	},

@@ -23,15 +23,18 @@ func _run_test() -> void:
 	assert(player != null and not player.use_runtime_progress)
 	assert(not architecture.visible)
 	assert(modular.visible)
-	assert(modular.get_node("FloorSurface") is Polygon2D)
-	assert(modular.get_node("FloorPanels").get_child_count() > 10)
-	assert(modular.get_node("BackWalls").get_child_count() == 5)
-	assert(modular.get_node("WestWalls").get_child_count() == 2)
-	assert(modular.get_node("EastWalls").get_child_count() == 2)
-	assert(modular.get_node("ForegroundWalls").get_child_count() == 5)
-	assert(modular.get_node("CornerCaps").get_child_count() == 4)
+	var floor_tiles := modular.get_node("FloorTiles") as TileMapLayer
+	var wall_tiles := modular.get_node("WallBaseTiles") as TileMapLayer
+	var foreground_tiles := modular.get_node("ForegroundWalls") as TileMapLayer
+	assert(floor_tiles != null and floor_tiles.get_used_cells().size() == 40)
+	assert(wall_tiles != null and wall_tiles.get_used_cells().size() == 18)
+	assert(foreground_tiles != null and foreground_tiles.get_used_cells().size() == 10)
+	assert(floor_tiles.tile_set.tile_size == Vector2i(128, 128))
+	assert(modular.get_node("DoorSockets").get_child_count() == 2)
+	assert(modular.get_node("FloorDetails/MedicalGuideLine") is Line2D)
+	assert(_sprite_count(modular) == 0)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
-	assert(camera.zoom == Vector2(1.12, 1.12))
+	assert(camera.zoom == Vector2(0.72, 0.72))
 	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
 	assert(camera.position_smoothing_enabled)
 
@@ -39,8 +42,8 @@ func _run_test() -> void:
 	assert(room.room_kind == "combat")
 	assert(room.size_class == MapRoomModule.RoomSizeClass.STANDARD)
 	assert(not room.is_multi_screen())
-	assert(room.walkable_outline.size() == 8)
-	assert(room.camera_guide_outline.size() == 8)
+	assert(room.walkable_outline.size() == 4)
+	assert(room.camera_guide_outline.size() == 4)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
 	assert(room.get_obstacles().is_empty())
 	assert(zones.get_child_count() == 1)
@@ -53,9 +56,9 @@ func _run_test() -> void:
 		assert(door.state == MapRoomDoor.DoorState.SEALED)
 		assert(door.rotation == 0.0)
 		assert(door.get_node("DoorOpening") is Polygon2D)
-		assert(door.get_node("DoorFrame") is Sprite2D)
-		assert(door.get_node("LeftLeaf") is Sprite2D)
-		assert(door.get_node("RightLeaf") is Sprite2D)
+		assert(door.get_node("DoorFrame") is Node2D)
+		assert(door.get_node("LeftLeaf") is Polygon2D)
+		assert(door.get_node("RightLeaf") is Polygon2D)
 		assert(door.get_node("LockedIndicator") is Polygon2D)
 		assert(door.get_node("OpenIndicator") is Polygon2D)
 		assert(door.get_node("DoorBlocker") is StaticBody2D)
@@ -118,8 +121,8 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo v7 passed: anchored floor, aligned wall spans, direction-specific "
-		+ "doors, real collision gaps, and legacy room-flow regression",
+		"Map style demo v8 passed: fixed 128-grid TileMap layers, low walls, door sockets, "
+		+ "real collision gaps, and legacy room-flow regression",
 	)
 	quit()
 
@@ -129,4 +132,13 @@ func _boundary_segment_count(instance: MapStyleDemo) -> int:
 	for body in instance.get_node("WorldCollision").get_children():
 		if body is StaticBody2D and body.has_meta(&"room_boundary"):
 			result += 1
+	return result
+
+
+func _sprite_count(root_node: Node) -> int:
+	var result := 0
+	for child in root_node.get_children():
+		if child is Sprite2D:
+			result += 1
+		result += _sprite_count(child)
 	return result

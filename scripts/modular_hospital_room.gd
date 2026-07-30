@@ -1,281 +1,136 @@
 class_name ModularHospitalRoom
 extends Node2D
 
-const NORTH_WALL_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/walls/north_wall.png"
+const TILE_SIZE := Vector2i(128, 128)
+const FLOOR_ATLAS := preload(
+	"res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png"
 )
-const SOUTH_WALL_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/walls/south_wall.png"
+const WALL_ATLAS := preload(
+	"res://assets/art/worlds/map_demo/hospital_tiles_v8/wall_atlas.svg"
 )
-const WEST_WALL_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/walls/west_wall.png"
-)
-const EAST_WALL_TEXTURE := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/walls/east_wall.png"
-)
+const ROOM_MIN_CELL := Vector2i(2, 2)
+const ROOM_SIZE_CELLS := Vector2i(8, 5)
+const ROOM_MAX_CELL := ROOM_MIN_CELL + ROOM_SIZE_CELLS - Vector2i.ONE
+const WEST_WALL_X := ROOM_MIN_CELL.x - 1
+const EAST_WALL_X := ROOM_MAX_CELL.x + 1
+const NORTH_WALL_Y := ROOM_MIN_CELL.y - 1
+const SOUTH_WALL_Y := ROOM_MAX_CELL.y + 1
+const DOOR_CELL_Y := 4
 
-# Every structural module is aligned from these world-space connection lines.
-# Sprites are never positioned from their arbitrary transparent-canvas centers.
-const FLOOR_LEFT := 190.0
-const FLOOR_RIGHT := 1346.0
-const FLOOR_TOP := 280.0
-const FLOOR_BOTTOM := 820.0
-const SIDE_OUTER_LEFT := 106.0
-const SIDE_OUTER_RIGHT := 1430.0
-const SIDE_TOP := 350.0
-const SIDE_BOTTOM := 730.0
-const DOOR_CENTER_Y := 540.0
-const DOOR_GAP_HALF_HEIGHT := 78.0
-const HORIZONTAL_MODULE_COUNT := 5
-const MODULE_JOIN_OVERLAP := 5.0
-
-const FLOOR_OUTLINE := [
-	Vector2(FLOOR_LEFT, FLOOR_TOP),
-	Vector2(FLOOR_RIGHT, FLOOR_TOP),
-	Vector2(SIDE_OUTER_RIGHT, SIDE_TOP),
-	Vector2(SIDE_OUTER_RIGHT, SIDE_BOTTOM),
-	Vector2(FLOOR_RIGHT, FLOOR_BOTTOM),
-	Vector2(FLOOR_LEFT, FLOOR_BOTTOM),
-	Vector2(SIDE_OUTER_LEFT, SIDE_BOTTOM),
-	Vector2(SIDE_OUTER_LEFT, SIDE_TOP),
-]
+var floor_tiles: TileMapLayer
+var wall_base_tiles: TileMapLayer
+var foreground_walls: TileMapLayer
+var door_sockets: Node2D
 
 
 func _ready() -> void:
-	_build_floor()
-	_build_back_wall()
-	_build_side_walls()
-	_build_foreground_wall()
-	_build_corner_caps()
-	_build_light_wash()
+	_build_floor_tiles()
+	_build_wall_tiles()
+	_build_door_sockets()
+	_build_floor_details()
 
 
-func _build_floor() -> void:
-	var floor_outline := PackedVector2Array(FLOOR_OUTLINE)
-
-	var floor_underlay := Polygon2D.new()
-	floor_underlay.name = "FloorUnderlay"
-	floor_underlay.polygon = floor_outline
-	floor_underlay.color = Color(0.205, 0.34, 0.38, 1.0)
-	floor_underlay.z_index = -36
-	add_child(floor_underlay)
-
-	# The first version repeated a non-seamless 384 px image with world coordinates
-	# as UVs. A single continuous surface avoids the four giant visible seams.
-	var floor_surface := Polygon2D.new()
-	floor_surface.name = "FloorSurface"
-	floor_surface.polygon = floor_outline
-	floor_surface.color = Color(0.49, 0.66, 0.69, 1.0)
-	floor_surface.z_index = -35
-	add_child(floor_surface)
-
-	var panels := Node2D.new()
-	panels.name = "FloorPanels"
-	panels.z_index = -34
-	add_child(panels)
-
-	for x_position in range(318, 1346, 128):
-		_add_floor_line(
-			panels,
-			"Vertical_%d" % x_position,
-			PackedVector2Array([
-				Vector2(x_position, FLOOR_TOP + 8.0),
-				Vector2(x_position, FLOOR_BOTTOM - 8.0),
-			]),
-			Color(0.19, 0.35, 0.39, 0.26),
-			2.0,
-		)
-	for y_position in range(400, 820, 120):
-		_add_floor_line(
-			panels,
-			"Horizontal_%d" % y_position,
-			PackedVector2Array([
-				Vector2(FLOOR_LEFT + 8.0, y_position),
-				Vector2(FLOOR_RIGHT - 8.0, y_position),
-			]),
-			Color(0.19, 0.35, 0.39, 0.22),
-			2.0,
-		)
-
-	var perimeter := Line2D.new()
-	perimeter.name = "FloorPerimeter"
-	perimeter.points = floor_outline
-	perimeter.closed = true
-	perimeter.width = 3.0
-	perimeter.default_color = Color(0.08, 0.2, 0.23, 0.72)
-	perimeter.antialiased = true
-	perimeter.z_index = -33
-	add_child(perimeter)
+func _build_floor_tiles() -> void:
+	floor_tiles = TileMapLayer.new()
+	floor_tiles.name = "FloorTiles"
+	floor_tiles.z_index = -30
+	floor_tiles.tile_set = _make_atlas_tileset(FLOOR_ATLAS, Vector2i(8, 6))
+	add_child(floor_tiles)
+	for y_index in ROOM_SIZE_CELLS.y:
+		for x_index in ROOM_SIZE_CELLS.x:
+			floor_tiles.set_cell(
+				ROOM_MIN_CELL + Vector2i(x_index, y_index),
+				0,
+				Vector2i(x_index, y_index),
+				0,
+			)
 
 
-func _build_back_wall() -> void:
-	var container := Node2D.new()
-	container.name = "BackWalls"
-	container.z_index = -12
-	add_child(container)
-	_add_horizontal_wall_run(
-		container,
-		NORTH_WALL_TEXTURE,
-		FLOOR_LEFT,
-		FLOOR_RIGHT,
-		240.0,
-	)
+func _build_wall_tiles() -> void:
+	var wall_tileset := _make_atlas_tileset(WALL_ATLAS, Vector2i(8, 1))
+	wall_base_tiles = TileMapLayer.new()
+	wall_base_tiles.name = "WallBaseTiles"
+	wall_base_tiles.z_index = -8
+	wall_base_tiles.tile_set = wall_tileset
+	add_child(wall_base_tiles)
+	for x_index in range(ROOM_MIN_CELL.x, ROOM_MAX_CELL.x + 1):
+		wall_base_tiles.set_cell(Vector2i(x_index, NORTH_WALL_Y), 0, Vector2i(0, 0), 0)
+	for y_index in range(ROOM_MIN_CELL.y, ROOM_MAX_CELL.y + 1):
+		if y_index == DOOR_CELL_Y:
+			continue
+		wall_base_tiles.set_cell(Vector2i(WEST_WALL_X, y_index), 0, Vector2i(2, 0), 0)
+		wall_base_tiles.set_cell(Vector2i(EAST_WALL_X, y_index), 0, Vector2i(3, 0), 0)
+	wall_base_tiles.set_cell(Vector2i(WEST_WALL_X, NORTH_WALL_Y), 0, Vector2i(4, 0), 0)
+	wall_base_tiles.set_cell(Vector2i(EAST_WALL_X, NORTH_WALL_Y), 0, Vector2i(5, 0), 0)
+
+	foreground_walls = TileMapLayer.new()
+	foreground_walls.name = "ForegroundWalls"
+	foreground_walls.z_index = 38
+	foreground_walls.tile_set = wall_tileset
+	add_child(foreground_walls)
+	for x_index in range(ROOM_MIN_CELL.x, ROOM_MAX_CELL.x + 1):
+		foreground_walls.set_cell(Vector2i(x_index, SOUTH_WALL_Y), 0, Vector2i(1, 0), 0)
+	foreground_walls.set_cell(Vector2i(WEST_WALL_X, SOUTH_WALL_Y), 0, Vector2i(6, 0), 0)
+	foreground_walls.set_cell(Vector2i(EAST_WALL_X, SOUTH_WALL_Y), 0, Vector2i(7, 0), 0)
 
 
-func _build_side_walls() -> void:
-	var west_container := Node2D.new()
-	west_container.name = "WestWalls"
-	west_container.z_index = 4
-	add_child(west_container)
-	_add_vertical_wall_span(
-		west_container,
-		WEST_WALL_TEXTURE,
-		Vector2((SIDE_OUTER_LEFT + FLOOR_LEFT) * 0.5, SIDE_TOP),
-		Vector2((SIDE_OUTER_LEFT + FLOOR_LEFT) * 0.5, DOOR_CENTER_Y - DOOR_GAP_HALF_HEIGHT),
-	)
-	_add_vertical_wall_span(
-		west_container,
-		WEST_WALL_TEXTURE,
-		Vector2((SIDE_OUTER_LEFT + FLOOR_LEFT) * 0.5, DOOR_CENTER_Y + DOOR_GAP_HALF_HEIGHT),
-		Vector2((SIDE_OUTER_LEFT + FLOOR_LEFT) * 0.5, SIDE_BOTTOM),
-	)
-
-	var east_container := Node2D.new()
-	east_container.name = "EastWalls"
-	east_container.z_index = 4
-	add_child(east_container)
-	_add_vertical_wall_span(
-		east_container,
-		EAST_WALL_TEXTURE,
-		Vector2((SIDE_OUTER_RIGHT + FLOOR_RIGHT) * 0.5, SIDE_TOP),
-		Vector2((SIDE_OUTER_RIGHT + FLOOR_RIGHT) * 0.5, DOOR_CENTER_Y - DOOR_GAP_HALF_HEIGHT),
-	)
-	_add_vertical_wall_span(
-		east_container,
-		EAST_WALL_TEXTURE,
-		Vector2((SIDE_OUTER_RIGHT + FLOOR_RIGHT) * 0.5, DOOR_CENTER_Y + DOOR_GAP_HALF_HEIGHT),
-		Vector2((SIDE_OUTER_RIGHT + FLOOR_RIGHT) * 0.5, SIDE_BOTTOM),
-	)
-
-
-func _build_foreground_wall() -> void:
-	var container := Node2D.new()
-	container.name = "ForegroundWalls"
-	container.z_index = 42
-	add_child(container)
-	_add_horizontal_wall_run(
-		container,
-		SOUTH_WALL_TEXTURE,
-		FLOOR_LEFT,
-		FLOOR_RIGHT,
-		820.0,
-	)
-	container.modulate.a = 0.88
-
-
-func _build_corner_caps() -> void:
-	var corners := Node2D.new()
-	corners.name = "CornerCaps"
-	corners.z_index = 44
-	add_child(corners)
-	var cap_points := [
-		Vector2(-42.0, -35.0),
-		Vector2(42.0, -35.0),
-		Vector2(42.0, 35.0),
-		Vector2(-42.0, 35.0),
-	]
+func _build_door_sockets() -> void:
+	door_sockets = Node2D.new()
+	door_sockets.name = "DoorSockets"
+	door_sockets.z_index = 2
+	add_child(door_sockets)
 	for entry in [
-		{"name": "NorthWest", "position": Vector2(148.0, 315.0)},
-		{"name": "NorthEast", "position": Vector2(1388.0, 315.0)},
-		{"name": "SouthWest", "position": Vector2(148.0, 775.0)},
-		{"name": "SouthEast", "position": Vector2(1388.0, 775.0)},
+		{"name": "West", "cell": Vector2i(WEST_WALL_X, DOOR_CELL_Y)},
+		{"name": "East", "cell": Vector2i(EAST_WALL_X, DOOR_CELL_Y)},
 	]:
-		var cap := Polygon2D.new()
-		cap.name = entry["name"]
-		cap.position = entry["position"]
-		cap.polygon = PackedVector2Array(cap_points)
-		cap.color = Color(0.24, 0.38, 0.42, 0.96)
-		corners.add_child(cap)
+		var socket := Marker2D.new()
+		socket.name = "%sSocket" % entry["name"]
+		socket.position = floor_tiles.map_to_local(entry["cell"])
+		socket.set_meta(&"tile_cell", entry["cell"])
+		door_sockets.add_child(socket)
 
 
-func _build_light_wash() -> void:
-	var wash := Polygon2D.new()
-	wash.name = "CenterLightWash"
-	wash.polygon = PackedVector2Array([
-		Vector2(320.0, 350.0),
-		Vector2(1216.0, 350.0),
-		Vector2(1320.0, 720.0),
-		Vector2(216.0, 720.0),
-	])
-	wash.color = Color(0.22, 0.82, 0.78, 0.055)
-	wash.z_index = -18
-	add_child(wash)
+func _build_floor_details() -> void:
+	var details := Node2D.new()
+	details.name = "FloorDetails"
+	details.z_index = -18
+	add_child(details)
+	var center_line := Line2D.new()
+	center_line.name = "MedicalGuideLine"
+	center_line.points = PackedVector2Array([Vector2(274, 576), Vector2(1262, 576)])
+	center_line.width = 5.0
+	center_line.default_color = Color(0.16, 0.68, 0.64, 0.24)
+	center_line.antialiased = true
+	details.add_child(center_line)
+	for entry in [
+		{"name": "WestThreshold", "position": Vector2(256, 576)},
+		{"name": "EastThreshold", "position": Vector2(1280, 576)},
+	]:
+		var threshold := Polygon2D.new()
+		threshold.name = entry["name"]
+		threshold.position = entry["position"]
+		threshold.polygon = PackedVector2Array([
+			Vector2(-18, -58), Vector2(18, -58), Vector2(18, 58), Vector2(-18, 58),
+		])
+		threshold.color = Color(0.16, 0.25, 0.27, 0.92)
+		details.add_child(threshold)
+
+
+func _make_atlas_tileset(texture: Texture2D, atlas_size: Vector2i) -> TileSet:
+	var tile_set := TileSet.new()
+	tile_set.tile_size = TILE_SIZE
+	var source := TileSetAtlasSource.new()
+	source.texture = texture
+	source.texture_region_size = TILE_SIZE
+	for y_index in atlas_size.y:
+		for x_index in atlas_size.x:
+			source.create_tile(Vector2i(x_index, y_index))
+	tile_set.add_source(source, 0)
+	return tile_set
 
 
 func set_foreground_faded(faded: bool) -> void:
-	var foreground := get_node_or_null("ForegroundWalls") as Node2D
-	if foreground == null:
+	if foreground_walls == null:
 		return
-	var target_alpha := 0.2 if faded else 0.88
-	create_tween().tween_property(foreground, "modulate:a", target_alpha, 0.18)
-
-
-func _add_horizontal_wall_run(
-	parent_node: Node2D,
-	texture: Texture2D,
-	start_x: float,
-	end_x: float,
-	baseline_y: float,
-) -> void:
-	var span := end_x - start_x
-	var module_width := (
-		span + MODULE_JOIN_OVERLAP * float(HORIZONTAL_MODULE_COUNT - 1)
-	) / float(HORIZONTAL_MODULE_COUNT)
-	var module_step := module_width - MODULE_JOIN_OVERLAP
-	var scale_factor := module_width / float(texture.get_width())
-	for index in HORIZONTAL_MODULE_COUNT:
-		var sprite := _make_wall_sprite(parent_node, texture)
-		sprite.name = "Module_%02d" % index
-		sprite.scale = Vector2.ONE * scale_factor
-		sprite.position = Vector2(
-			start_x + module_width * 0.5 + module_step * float(index),
-			baseline_y,
-		)
-
-
-func _add_vertical_wall_span(
-	parent_node: Node2D,
-	texture: Texture2D,
-	start: Vector2,
-	finish: Vector2,
-) -> void:
-	var span := finish.y - start.y
-	var scale_factor := span / float(texture.get_height())
-	var sprite := _make_wall_sprite(parent_node, texture)
-	sprite.name = "Module_%02d" % parent_node.get_child_count()
-	sprite.scale = Vector2.ONE * scale_factor
-	sprite.position = (start + finish) * 0.5
-
-
-func _make_wall_sprite(parent_node: Node2D, texture: Texture2D) -> Sprite2D:
-	var sprite := Sprite2D.new()
-	sprite.texture = texture
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	parent_node.add_child(sprite)
-	return sprite
-
-
-func _add_floor_line(
-	parent_node: Node2D,
-	line_name: String,
-	line_points: PackedVector2Array,
-	color: Color,
-	line_width: float,
-) -> void:
-	var line := Line2D.new()
-	line.name = line_name
-	line.points = line_points
-	line.width = line_width
-	line.default_color = color
-	line.antialiased = true
-	parent_node.add_child(line)
+	var target_alpha := 0.2 if faded else 1.0
+	create_tween().tween_property(foreground_walls, "modulate:a", target_alpha, 0.18)

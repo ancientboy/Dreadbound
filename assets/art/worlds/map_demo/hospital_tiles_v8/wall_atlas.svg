@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="128" viewBox="0 0 1024 128">
+  <defs>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8d0d1"/><stop offset="1" stop-color="#75969a"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#58787d"/><stop offset="1" stop-color="#29494f"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#29484e"/><stop offset=".5" stop-color="#66888c"/><stop offset="1" stop-color="#a9c3c4"/>
+    </linearGradient>
+  </defs>
+  <!-- North wall: its foot is exactly the tile's y=128 connection edge. -->
+  <g>
+    <path d="M0 70H128V90H0Z" fill="url(#cap)"/><path d="M0 90H128V128H0Z" fill="url(#face)"/>
+    <path d="M0 89H128M0 126H128" stroke="#18363d" stroke-width="3"/><path d="M32 94V124M96 94V124" stroke="#789a9c" stroke-width="2" opacity=".42"/><path d="M8 76H120" stroke="#d4e5e4" stroke-width="3" opacity=".5"/>
+  </g>
+  <!-- South foreground wall: its foot starts at the tile's y=0 connection edge. -->
+  <g transform="translate(128)">
+    <path d="M0 0H128V20H0Z" fill="url(#cap)"/><path d="M0 20H128V58H0Z" fill="url(#face)"/>
+    <path d="M0 19H128M0 57H128" stroke="#17343b" stroke-width="3"/><path d="M32 24V54M96 24V54" stroke="#789a9c" stroke-width="2" opacity=".42"/><path d="M8 6H120" stroke="#d4e5e4" stroke-width="3" opacity=".5"/>
+  </g>
+  <!-- West wall: its foot is exactly the tile's x=128 connection edge. -->
+  <g transform="translate(256)">
+    <path d="M80 0H99V128H80Z" fill="url(#cap)"/><path d="M99 0H128V128H99Z" fill="url(#side)"/>
+    <path d="M79 0V128M126 0V128" stroke="#17343b" stroke-width="3"/><path d="M86 8V120" stroke="#d4e5e4" stroke-width="3" opacity=".48"/><path d="M103 32H124M103 96H124" stroke="#26474d" stroke-width="2" opacity=".55"/>
+  </g>
+  <!-- East wall: its foot starts at the tile's x=0 connection edge. -->
+  <g transform="translate(384)">
+    <path d="M29 0H48V128H29Z" fill="url(#cap)"/><path d="M0 0H29V128H0Z" fill="url(#side)"/>
+    <path d="M2 0V128M49 0V128" stroke="#17343b" stroke-width="3"/><path d="M42 8V120" stroke="#d4e5e4" stroke-width="3" opacity=".48"/><path d="M4 32H25M4 96H25" stroke="#26474d" stroke-width="2" opacity=".55"/>
+  </g>
+  <!-- Exact edge-anchored corners. -->
+  <g transform="translate(512)">
+    <path d="M80 70H128V90H99V128H80Z" fill="url(#cap)"/><path d="M99 90H128V128H99Z" fill="url(#face)"/>
+    <path d="M80 70H128M99 90H128M80 70V128" fill="none" stroke="#17343b" stroke-width="3"/><path d="M87 76H120" stroke="#d4e5e4" stroke-width="3" opacity=".48"/>
+  </g>
+  <g transform="translate(640)">
+    <path d="M0 70H48V128H29V90H0Z" fill="url(#cap)"/><path d="M0 90H29V128H0Z" fill="url(#face)"/>
+    <path d="M0 70H48M0 90H29M48 70V128" fill="none" stroke="#17343b" stroke-width="3"/><path d="M8 76H41" stroke="#d4e5e4" stroke-width="3" opacity=".48"/>
+  </g>
+  <g transform="translate(768)">
+    <path d="M80 0H99V20H128V40H99V128H80Z" fill="url(#cap)"/><path d="M99 20H128V58H99Z" fill="url(#face)"/>
+    <path d="M80 0V128M99 20H128M99 58H128" fill="none" stroke="#17343b" stroke-width="3"/><path d="M87 6H120" stroke="#d4e5e4" stroke-width="3" opacity=".48"/>
+  </g>
+  <g transform="translate(896)">
+    <path d="M29 0H48V128H29V40H0V20H29Z" fill="url(#cap)"/><path d="M0 20H29V58H0Z" fill="url(#face)"/>
+    <path d="M48 0V128M0 20H29M0 58H29" fill="none" stroke="#17343b" stroke-width="3"/><path d="M8 6H41" stroke="#d4e5e4" stroke-width="3" opacity=".48"/>
+  </g>
+</svg>

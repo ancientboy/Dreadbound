@@ -54,10 +54,10 @@ room_id = &"hospital_standard_combat"
 room_kind = "combat"
 difficulty_tier = 1
 size_class = 0
-camera_zoom = Vector2(1.12, 1.12)
+camera_zoom = Vector2(0.72, 0.72)
 camera_bounds = Rect2(0, 0, 1536, 1024)
-walkable_outline = PackedVector2Array(190, 280, 1346, 280, 1430, 350, 1430, 730, 1346, 820, 190, 820, 106, 730, 106, 350)
-camera_guide_outline = PackedVector2Array(390, 380, 1146, 380, 1240, 450, 1240, 630, 1146, 700, 390, 700, 296, 630, 296, 450)
+walkable_outline = PackedVector2Array(256, 256, 1280, 256, 1280, 896, 256, 896)
+camera_guide_outline = PackedVector2Array(704, 512, 832, 512, 832, 640, 704, 640)
 door_directions = PackedStringArray("west", "east")
 
 [node name="EncounterZones" type="Node2D" parent="Rooms/SampleRoom"]
@@ -86,7 +86,7 @@ y_sort_enabled = true
 y_sort_enabled = true
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(310, 540)
+position = Vector2(384, 576)
 use_runtime_progress = false
 demo_weapon_slots = Array[String](["service_crowbar", "balanced_pistol", "echo_staff"])
 demo_offhand_item = ""
@@ -95,7 +95,7 @@ demo_charm_item = ""
 [node name="Camera2D" parent="Player" index="1"]
 limit_right = 1536
 limit_bottom = 1024
-zoom = Vector2(1.12, 1.12)
+zoom = Vector2(0.72, 0.72)
 
 [node name="RenderedAtlasCharacter" parent="Player" index="2"]
 runtime_sync_enabled = false
@@ -157,7 +157,7 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.83, 0.96, 0.92, 1)
 theme_override_font_sizes/font_size = 17
-text = "新地图 Demo v7 · 锚点规范化医院样板房"
+text = "新地图 Demo v8 · 近正俯视 TileMap 医院样板房"
 horizontal_alignment = 1
 
 [node name="Objective" type="Label" parent="HUD/TopPanel/Margin/Rows"]
@@ -169,7 +169,7 @@ horizontal_alignment = 1
 [node name="State" type="Label" parent="HUD/TopPanel/Margin/Rows"]
 theme_override_colors/font_color = Color(0.66, 0.72, 0.7, 1)
 theme_override_font_sizes/font_size = 13
-text = "连续地面 / 基准线墙体 / 对齐门洞 / 独立门扇"
+text = "128 网格 / 低墙图块 / 固定门槽 / 手工房间模板"
 horizontal_alignment = 1
 
 [node name="Return" type="Button" parent="HUD"]

@@ -151,7 +151,7 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	_activate_starting_zones()
 	title_label.text = "医院主题房型 · %s" % spec["title"]
 	objective_label.text = (
-		"模块化样板：地面、墙段、门洞、门扇、碰撞与灯光独立"
+		"TileMap 样板：固定网格、低墙图块、预设门槽与独立碰撞"
 		if use_modular_room
 		else "主题锁定：当前旧房型仅用于流程回归"
 	)

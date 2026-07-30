@@ -20,31 +20,12 @@ const LEGACY_LEFT_LEAF := preload(
 const LEGACY_RIGHT_LEAF := preload(
 	"res://assets/art/worlds/map_demo/sample_room_v2/doors/leaf_right.png"
 )
-const WEST_FRAME := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/doors/west_frame_v2.png"
-)
-const WEST_LEFT_LEAF := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/doors/west_leaf_left_v2.png"
-)
-const WEST_RIGHT_LEAF := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/doors/west_leaf_right_v2.png"
-)
-const EAST_FRAME := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/doors/east_frame_v2.png"
-)
-const EAST_LEFT_LEAF := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/doors/east_leaf_left_v2.png"
-)
-const EAST_RIGHT_LEAF := preload(
-	"res://assets/art/worlds/map_demo/modular_hospital/doors/east_leaf_right_v2.png"
-)
-
 var direction: StringName = &"north"
 var state := DoorState.SEALED
 var open_progress := 0.0
 var _blocker_shape: CollisionShape2D
-var _left_leaf: Sprite2D
-var _right_leaf: Sprite2D
+var _left_leaf: Node2D
+var _right_leaf: Node2D
 var _locked_indicator: Polygon2D
 var _open_indicator: Polygon2D
 var _seal_glow: Polygon2D
@@ -129,22 +110,13 @@ static func opposite_direction(value: StringName) -> StringName:
 
 
 func _build_visuals() -> void:
+	if direction == &"west" or direction == &"east":
+		_build_tile_door_visuals()
+		return
 	var frame_texture := LEGACY_FRAME
 	var left_texture := LEGACY_LEFT_LEAF
 	var right_texture := LEGACY_RIGHT_LEAF
 	var visual_scale := 0.145
-	if direction == &"west":
-		frame_texture = WEST_FRAME
-		left_texture = WEST_LEFT_LEAF
-		right_texture = WEST_RIGHT_LEAF
-		visual_scale = 0.185
-		_slide_axis = Vector2(1.0, -0.11).normalized()
-	elif direction == &"east":
-		frame_texture = EAST_FRAME
-		left_texture = EAST_LEFT_LEAF
-		right_texture = EAST_RIGHT_LEAF
-		visual_scale = 0.185
-		_slide_axis = Vector2(1.0, 0.11).normalized()
 
 	var opening := Polygon2D.new()
 	opening.name = "DoorOpening"
@@ -185,6 +157,72 @@ func _build_visuals() -> void:
 	)
 	_open_indicator.visible = false
 	_open_indicator.modulate.a = 0.0
+
+
+func _build_tile_door_visuals() -> void:
+	_slide_axis = Vector2.DOWN
+	var opening := Polygon2D.new()
+	opening.name = "DoorOpening"
+	opening.polygon = PackedVector2Array([
+		Vector2(-25, -62), Vector2(25, -62), Vector2(25, 62), Vector2(-25, 62),
+	])
+	opening.color = Color(0.015, 0.035, 0.04, 1.0)
+	opening.z_index = -2
+	add_child(opening)
+
+	var frame := Node2D.new()
+	frame.name = "DoorFrame"
+	frame.z_index = 6
+	add_child(frame)
+	_add_frame_part(frame, "UpperPost", Rect2(-30, -72, 60, 14))
+	_add_frame_part(frame, "LowerPost", Rect2(-30, 58, 60, 14))
+	_add_frame_part(frame, "InnerRail", Rect2(-30, -58, 13, 116))
+	var outer_rail := Rect2(17, -58, 13, 116)
+	_add_frame_part(frame, "OuterRail", outer_rail)
+	if direction == &"east":
+		frame.scale.x = -1.0
+
+	_left_leaf = _make_tile_leaf("LeftLeaf", -30.0)
+	_right_leaf = _make_tile_leaf("RightLeaf", 30.0)
+
+	_seal_glow = Polygon2D.new()
+	_seal_glow.name = "LockField"
+	_seal_glow.polygon = PackedVector2Array([
+		Vector2(-16, -56), Vector2(16, -56), Vector2(16, 56), Vector2(-16, 56),
+	])
+	_seal_glow.color = Color(0.95, 0.12, 0.08, 0.11)
+	_seal_glow.z_index = 3
+	add_child(_seal_glow)
+	_locked_indicator = _make_indicator("LockedIndicator", Color(1.0, 0.12, 0.08, 0.9))
+	_open_indicator = _make_indicator("OpenIndicator", Color(0.18, 1.0, 0.72, 0.9))
+	_open_indicator.visible = false
+	_open_indicator.modulate.a = 0.0
+
+
+func _add_frame_part(parent_node: Node2D, node_name: String, bounds: Rect2) -> void:
+	var part := Polygon2D.new()
+	part.name = node_name
+	part.polygon = PackedVector2Array([
+		bounds.position,
+		Vector2(bounds.end.x, bounds.position.y),
+		bounds.end,
+		Vector2(bounds.position.x, bounds.end.y),
+	])
+	part.color = Color(0.35, 0.55, 0.57, 1.0)
+	parent_node.add_child(part)
+
+
+func _make_tile_leaf(node_name: String, center_y: float) -> Polygon2D:
+	var leaf := Polygon2D.new()
+	leaf.name = node_name
+	leaf.position = Vector2(0, center_y)
+	leaf.polygon = PackedVector2Array([
+		Vector2(-16, -29), Vector2(16, -29), Vector2(16, 29), Vector2(-16, 29),
+	])
+	leaf.color = Color(0.16, 0.31, 0.34, 1.0)
+	leaf.z_index = 2
+	add_child(leaf)
+	return leaf
 
 
 func _make_sprite(

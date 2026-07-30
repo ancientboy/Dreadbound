@@ -11,8 +11,8 @@ func _init() -> void:
 	var textures := {}
 	for room in rooms:
 		assert(room["theme_id"] == MapThemeCatalog.HOSPITAL_THEME)
-		assert(room["walkable_outline"].size() >= 8)
-		assert(room["camera_guide_outline"].size() >= 8)
+		assert(room["walkable_outline"].size() >= 4)
+		assert(room["camera_guide_outline"].size() >= 4)
 		assert(not room["zones"].is_empty())
 		assert(ResourceLoader.exists(room["texture_path"]))
 		assert(not room["door_directions"].is_empty())
@@ -40,6 +40,8 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_locked.png",
 		"res://assets/art/worlds/map_demo/sample_room_v2/doors/indicator_open.png",
 		"res://assets/art/worlds/map_demo/sample_room_v2/doors/threshold.png",
+		"res://assets/art/worlds/map_demo/hospital_tiles_v8/floor_atlas.png",
+		"res://assets/art/worlds/map_demo/hospital_tiles_v8/wall_atlas.svg",
 	]:
 		assert(ResourceLoader.exists(asset_path))
 	var ring := rooms[4]
