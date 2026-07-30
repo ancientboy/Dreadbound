@@ -49,9 +49,14 @@ func _run_test() -> void:
 	assert(modular.get_node("ContentSlots").get_child_count() == 3)
 	var floor_macro := modular.get_node("StandardFloorMacro") as Sprite2D
 	assert(floor_macro != null)
-	assert(floor_macro.texture.get_size() == Vector2(2048, 1280))
+	assert(floor_macro.texture is AtlasTexture)
+	assert((floor_macro.texture as AtlasTexture).atlas.get_size() == Vector2(2048, 1280))
+	assert(
+		(floor_macro.texture as AtlasTexture).region
+		== ModularHospitalRoom.STANDARD_FLOOR_INTERIOR_REGION
+	)
 	assert(floor_macro.position == Vector2(152, 192))
-	assert(floor_macro.scale == Vector2(1232.0 / 2048.0, 768.0 / 1280.0))
+	assert(floor_macro.scale == Vector2(1232.0 / 1280.0, 768.0 / 1024.0))
 	assert(floor_macro.z_index > floor_tiles.z_index)
 	assert(floor_macro.z_index < wall_tiles.z_index)
 	var wall_shell := modular.get_node("StandardWallShell") as Node2D

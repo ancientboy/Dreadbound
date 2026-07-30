@@ -2,6 +2,7 @@ class_name ModularHospitalRoom
 extends RoomBuilder
 
 const STANDARD_FLOOR_WALL_OVERLAP := Vector2(104.0, 64.0)
+const STANDARD_FLOOR_INTERIOR_REGION := Rect2(384, 128, 1280, 1024)
 const DEFAULT_THEME: RoomTheme = preload(
 	"res://resources/map_themes/dungeon1_hospital.tres"
 )
@@ -42,9 +43,12 @@ func _build_standard_floor_macro() -> void:
 		min_cell.y = mini(min_cell.y, cell.y)
 		max_cell.x = maxi(max_cell.x, cell.x)
 		max_cell.y = maxi(max_cell.y, cell.y)
+	var floor_region := AtlasTexture.new()
+	floor_region.atlas = theme.standard_floor_macro
+	floor_region.region = STANDARD_FLOOR_INTERIOR_REGION
 	var floor_macro := Sprite2D.new()
 	floor_macro.name = "StandardFloorMacro"
-	floor_macro.texture = theme.standard_floor_macro
+	floor_macro.texture = floor_region
 	floor_macro.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	floor_macro.centered = false
 	floor_macro.position = (
@@ -54,7 +58,7 @@ func _build_standard_floor_macro() -> void:
 	floor_macro.scale = (
 		target_size + STANDARD_FLOOR_WALL_OVERLAP * 2.0
 	) / Vector2(
-		theme.standard_floor_macro.get_size()
+		floor_region.get_size()
 	)
 	floor_macro.z_index = -24
 	add_child(floor_macro)
