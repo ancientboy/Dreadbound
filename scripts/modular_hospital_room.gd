@@ -2,7 +2,7 @@ class_name ModularHospitalRoom
 extends RoomBuilder
 
 const STANDARD_FLOOR_WALL_OVERLAP := Vector2(104.0, 64.0)
-const STANDARD_FLOOR_INTERIOR_REGION := Rect2(384, 128, 1280, 1024)
+const STANDARD_FLOOR_CORNER_CUT := Vector2(44.0, 44.0)
 const DEFAULT_THEME: RoomTheme = preload(
 	"res://resources/map_themes/dungeon1_hospital.tres"
 )
@@ -43,25 +43,39 @@ func _build_standard_floor_macro() -> void:
 		min_cell.y = mini(min_cell.y, cell.y)
 		max_cell.x = maxi(max_cell.x, cell.x)
 		max_cell.y = maxi(max_cell.y, cell.y)
-	var floor_region := AtlasTexture.new()
-	floor_region.atlas = theme.standard_floor_macro
-	floor_region.region = STANDARD_FLOOR_INTERIOR_REGION
-	var floor_macro := Sprite2D.new()
+	var target_size := (
+		Vector2((max_cell - min_cell + Vector2i.ONE) * TILE_SIZE)
+		+ STANDARD_FLOOR_WALL_OVERLAP * 2.0
+	)
+	var floor_macro := Polygon2D.new()
 	floor_macro.name = "StandardFloorMacro"
-	floor_macro.texture = floor_region
+	floor_macro.texture = theme.standard_floor_macro
 	floor_macro.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	floor_macro.centered = false
 	floor_macro.position = (
 		Vector2(min_cell * TILE_SIZE) - STANDARD_FLOOR_WALL_OVERLAP
 	)
-	var target_size := Vector2((max_cell - min_cell + Vector2i.ONE) * TILE_SIZE)
-	floor_macro.scale = (
-		target_size + STANDARD_FLOOR_WALL_OVERLAP * 2.0
-	) / Vector2(
-		floor_region.get_size()
-	)
+	floor_macro.polygon = _standard_floor_outline(target_size)
+	var texture_size := Vector2(theme.standard_floor_macro.get_size())
+	var texture_uv := PackedVector2Array()
+	for point in floor_macro.polygon:
+		texture_uv.append(point / target_size * texture_size)
+	floor_macro.uv = texture_uv
 	floor_macro.z_index = -24
 	add_child(floor_macro)
+
+
+func _standard_floor_outline(size: Vector2) -> PackedVector2Array:
+	var cut := STANDARD_FLOOR_CORNER_CUT
+	return PackedVector2Array([
+		Vector2(cut.x, 0.0),
+		Vector2(size.x - cut.x, 0.0),
+		Vector2(size.x, cut.y),
+		Vector2(size.x, size.y - cut.y),
+		Vector2(size.x - cut.x, size.y),
+		Vector2(cut.x, size.y),
+		Vector2(0.0, size.y - cut.y),
+		Vector2(0.0, cut.y),
+	])
 
 
 func _uses_standard_floor_macro() -> bool:

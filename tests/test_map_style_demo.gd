@@ -47,16 +47,29 @@ func _run_test() -> void:
 	assert(floor_tiles.tile_set.tile_size == Vector2i(128, 128))
 	assert(modular.get_node("DoorSockets").get_child_count() == 2)
 	assert(modular.get_node("ContentSlots").get_child_count() == 3)
-	var floor_macro := modular.get_node("StandardFloorMacro") as Sprite2D
+	var floor_macro := modular.get_node("StandardFloorMacro") as Polygon2D
 	assert(floor_macro != null)
-	assert(floor_macro.texture is AtlasTexture)
-	assert((floor_macro.texture as AtlasTexture).atlas.get_size() == Vector2(2048, 1280))
-	assert(
-		(floor_macro.texture as AtlasTexture).region
-		== ModularHospitalRoom.STANDARD_FLOOR_INTERIOR_REGION
-	)
+	assert(floor_macro.texture.get_size() == Vector2(2048, 1280))
 	assert(floor_macro.position == Vector2(152, 192))
-	assert(floor_macro.scale == Vector2(1232.0 / 1280.0, 768.0 / 1024.0))
+	assert(floor_macro.scale == Vector2.ONE)
+	assert(floor_macro.polygon == PackedVector2Array([
+		Vector2(44, 0),
+		Vector2(1188, 0),
+		Vector2(1232, 44),
+		Vector2(1232, 724),
+		Vector2(1188, 768),
+		Vector2(44, 768),
+		Vector2(0, 724),
+		Vector2(0, 44),
+	]))
+	assert(floor_macro.uv.size() == floor_macro.polygon.size())
+	for point_index in floor_macro.polygon.size():
+		var expected_uv := (
+			floor_macro.polygon[point_index]
+			/ Vector2(1232, 768)
+			* Vector2(2048, 1280)
+		)
+		assert(floor_macro.uv[point_index].is_equal_approx(expected_uv))
 	assert(floor_macro.z_index > floor_tiles.z_index)
 	assert(floor_macro.z_index < wall_tiles.z_index)
 	var wall_shell := modular.get_node("StandardWallShell") as Node2D
@@ -78,7 +91,7 @@ func _run_test() -> void:
 	assert(modular.theme.theme_id == MapThemeCatalog.HOSPITAL_THEME)
 	assert(modular.theme.display_name == "异常侵蚀医疗研究设施")
 	assert(modular is RoomBuilder)
-	assert(_sprite_count(modular) == 8)
+	assert(_sprite_count(modular) == 7)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	var viewport_size := instance.get_viewport_rect().size
 	var expected_cover_zoom := (
