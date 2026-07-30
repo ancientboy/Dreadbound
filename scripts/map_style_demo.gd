@@ -5,6 +5,7 @@ const MAP_SIZE := Vector2(1536.0, 1024.0)
 const SAMPLE_ENCOUNTER := &"map_demo_sample"
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 
+@onready var architecture := $Architecture as Sprite2D
 @onready var player := $Player as Player
 @onready var camera := $Player/Camera2D as Camera2D
 @onready var rendered_character := $Player/RenderedAtlasCharacter as RenderedAtlasCharacter
@@ -13,16 +14,22 @@ const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 @onready var foreground_walls := $Foreground/WallsForeground as Sprite2D
 @onready var objective_label := $HUD/TopPanel/Margin/Rows/Objective as Label
 @onready var state_label := $HUD/TopPanel/Margin/Rows/State as Label
+@onready var title_label := $HUD/TopPanel/Margin/Rows/Title as Label
 @onready var top_panel := $HUD/TopPanel as PanelContainer
 @onready var return_button := $HUD/Return as Button
 
+var room_variants: Array[Dictionary] = []
+var current_room_index := 1
 var activated_zone_count := 0
+var variant_controls: HBoxContainer
 
 
 func _ready() -> void:
+	room_variants = MapThemeCatalog.hospital_rooms()
 	_configure_player()
 	_build_collision()
 	_connect_areas()
+	_create_variant_controls()
 	get_viewport().size_changed.connect(_layout_hud)
 	return_button.pressed.connect(_return_home)
 	_activate_starting_zones()
@@ -40,9 +47,15 @@ func _physics_process(_delta: float) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key_event := event as InputEventKey
-	if key_event != null and key_event.pressed and not key_event.echo:
-		if key_event.physical_keycode == KEY_ESCAPE:
+	if key_event == null or not key_event.pressed or key_event.echo:
+		return
+	match key_event.physical_keycode:
+		KEY_ESCAPE:
 			_return_home()
+		KEY_Q, KEY_COMMA:
+			_show_room_variant(current_room_index - 1)
+		KEY_E, KEY_PERIOD:
+			_show_room_variant(current_room_index + 1)
 
 
 func _configure_player() -> void:
@@ -59,13 +72,94 @@ func _configure_player() -> void:
 	_update_guided_camera()
 
 
+func _create_variant_controls() -> void:
+	variant_controls = HBoxContainer.new()
+	variant_controls.name = "RoomVariantControls"
+	variant_controls.add_theme_constant_override("separation", 8)
+	$HUD.add_child(variant_controls)
+	var previous := Button.new()
+	previous.text = "‹ 上一房型"
+	previous.pressed.connect(func() -> void: _show_room_variant(current_room_index - 1))
+	variant_controls.add_child(previous)
+	var next := Button.new()
+	next.text = "下一房型 ›"
+	next.pressed.connect(func() -> void: _show_room_variant(current_room_index + 1))
+	variant_controls.add_child(next)
+
+
+func _show_room_variant(index: int) -> void:
+	if room_variants.is_empty():
+		return
+	current_room_index = posmod(index, room_variants.size())
+	var spec := room_variants[current_room_index]
+	for enemy in get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER):
+		enemy.free()
+	_clear_children($Rooms/SampleRoom/EncounterZones)
+	_clear_children($WorldCollision)
+	activated_zone_count = 0
+
+	sample_room.room_id = spec["room_id"]
+	sample_room.room_kind = spec["room_kind"]
+	sample_room.size_class = spec["size_class"]
+	sample_room.camera_zoom = spec["camera_zoom"]
+	sample_room.camera_bounds = Rect2(Vector2.ZERO, MAP_SIZE)
+	sample_room.walkable_outline = spec["walkable_outline"]
+	sample_room.blocked_outlines.clear()
+	for blocked_outline in spec.get("blocked_outlines", []):
+		sample_room.blocked_outlines.append(blocked_outline)
+	sample_room.camera_guide_outline = spec["camera_guide_outline"]
+	sample_room.door_directions = spec["door_directions"]
+	architecture.texture = load(spec["texture_path"]) as Texture2D
+	player.global_position = spec["spawn"]
+
+	var show_original_detail_layers := current_room_index == 1
+	$Rooms/SampleRoom/Obstacles.visible = show_original_detail_layers
+	$Foreground.visible = show_original_detail_layers
+	_build_zones(spec["zones"])
+	_build_collision()
+	_configure_player()
+	_activate_starting_zones()
+	title_label.text = "医院主题房型 · %s" % spec["title"]
+	objective_label.text = "主题锁定：墙体、地板、门、灯光、敌人保持医院风格"
+	_update_encounter_state()
+
+
+func _build_zones(zone_specs: Array) -> void:
+	var container := $Rooms/SampleRoom/EncounterZones
+	for zone_spec in zone_specs:
+		var zone := MapEncounterZone.new()
+		zone.name = String(zone_spec["id"])
+		zone.zone_id = zone_spec["id"]
+		zone.trigger_bounds = zone_spec["bounds"]
+		zone.starts_active = zone_spec["starts_active"]
+		zone.enemy_labels = zone_spec["labels"]
+		container.add_child(zone)
+		var spawns := Node2D.new()
+		spawns.name = "EnemySpawns"
+		zone.add_child(spawns)
+		for spawn_position in zone_spec["spawns"]:
+			var marker := Marker2D.new()
+			marker.position = spawn_position
+			spawns.add_child(marker)
+
+
+func _clear_children(node: Node) -> void:
+	for child in node.get_children():
+		child.free()
+
+
 func _update_guided_camera() -> void:
 	var guided_position := sample_room.guided_camera_world_point(player.global_position)
 	camera.position = guided_position - player.global_position
 
 
 func _build_collision() -> void:
-	var outline := sample_room.walkable_outline
+	_build_polygon_collision(sample_room.walkable_outline)
+	for blocked_outline in sample_room.blocked_outlines:
+		_build_polygon_collision(blocked_outline)
+
+
+func _build_polygon_collision(outline: PackedVector2Array) -> void:
 	for index in outline.size():
 		var start := sample_room.to_global(outline[index])
 		var finish := sample_room.to_global(outline[(index + 1) % outline.size()])
@@ -148,8 +242,10 @@ func _update_encounter_state() -> void:
 	var remaining := get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER).size()
 	var total_zones := $Rooms/SampleRoom/EncounterZones.get_child_count()
 	if remaining > 0:
-		objective_label.text = "大型精英房：推进并清除当前区域"
-		state_label.text = "区域 %d/%d · 当前敌人 %d" % [
+		objective_label.text = "医院主题：推进并清除当前区域"
+		state_label.text = "房型 %d/%d · 区域 %d/%d · 当前敌人 %d" % [
+			current_room_index + 1,
+			room_variants.size(),
 			activated_zone_count,
 			total_zones,
 			remaining,
@@ -159,8 +255,8 @@ func _update_encounter_state() -> void:
 		objective_label.text = "当前区域已清除，继续探索房间"
 		state_label.text = "镜头跟随 · 未进入区域不会提前刷怪"
 		return
-	objective_label.text = "大型精英样板房验证完成"
-	state_label.text = "异形边界、镜头引导与分区战斗已验证"
+	objective_label.text = "当前医院房型验证完成"
+	state_label.text = "按 Q / E 或上方按钮切换统一主题房型"
 
 
 func _return_home() -> void:
@@ -179,6 +275,7 @@ func _layout_hud() -> void:
 		top_panel.offset_top = 58.0
 		top_panel.offset_right = viewport_size.x - 12.0
 		top_panel.offset_bottom = 142.0
+		variant_controls.position = Vector2(12.0, 150.0)
 	else:
 		return_button.offset_left = 18.0
 		return_button.offset_top = 18.0
@@ -188,3 +285,7 @@ func _layout_hud() -> void:
 		top_panel.offset_top = 18.0
 		top_panel.offset_right = viewport_size.x - 170.0
 		top_panel.offset_bottom = 94.0
+		variant_controls.position = Vector2(
+			viewport_size.x * 0.5 - 116.0,
+			104.0,
+		)

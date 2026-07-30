@@ -14,16 +14,27 @@ enum RoomSizeClass {
 @export var camera_zoom := Vector2(1.28, 1.28)
 @export var camera_bounds := Rect2()
 @export var walkable_outline := PackedVector2Array()
+@export var blocked_outlines: Array[PackedVector2Array] = []
 @export var camera_guide_outline := PackedVector2Array()
 @export var door_directions := PackedStringArray()
 
 
 func contains_world_point(point: Vector2) -> bool:
-	return _polygon_contains_world_point(walkable_outline, point)
+	if not _polygon_contains_world_point(walkable_outline, point):
+		return false
+	for blocked_outline in blocked_outlines:
+		if _polygon_contains_world_point(blocked_outline, point):
+			return false
+	return true
 
 
 func nearest_walkable_world_point(point: Vector2) -> Vector2:
-	return _nearest_world_point_in_polygon(walkable_outline, point, 12.0)
+	if not _polygon_contains_world_point(walkable_outline, point):
+		return _nearest_world_point_in_polygon(walkable_outline, point, 12.0)
+	for blocked_outline in blocked_outlines:
+		if _polygon_contains_world_point(blocked_outline, point):
+			return _nearest_world_point_outside_polygon(blocked_outline, point, 12.0)
+	return point
 
 
 func guided_camera_world_point(target: Vector2) -> Vector2:
@@ -86,6 +97,26 @@ func _nearest_world_point_in_polygon(
 			nearest_distance = distance
 	if inset > 0.0:
 		nearest += nearest.direction_to(_polygon_center(polygon)) * inset
+	return to_global(nearest)
+
+
+func _nearest_world_point_outside_polygon(
+	polygon: PackedVector2Array,
+	point: Vector2,
+	outset: float,
+) -> Vector2:
+	var local_point := to_local(point)
+	var nearest := polygon[0]
+	var nearest_distance := INF
+	for index in polygon.size():
+		var start := polygon[index]
+		var finish := polygon[(index + 1) % polygon.size()]
+		var candidate := Geometry2D.get_closest_point_to_segment(local_point, start, finish)
+		var distance := candidate.distance_squared_to(local_point)
+		if distance < nearest_distance:
+			nearest = candidate
+			nearest_distance = distance
+	nearest += _polygon_center(polygon).direction_to(nearest) * outset
 	return to_global(nearest)
 
 
