@@ -191,10 +191,10 @@ func _run_test() -> void:
 		Vector2(448, 448), Vector2(1600, 448),
 		Vector2(1600, 672), Vector2(448, 672),
 	]))
-	assert(room.blocked_outlines.size() == 18)
+	assert(room.blocked_outlines.size() == 11)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
-	assert(room.door_anchor_world(&"west") == Vector2(190, 484))
-	assert(room.door_anchor_world(&"east") == Vector2(1858, 484))
+	assert(room.door_anchor_world(&"west") == Vector2(256, 512))
+	assert(room.door_anchor_world(&"east") == Vector2(1792, 512))
 	assert(zones.get_child_count() == 2)
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
@@ -227,8 +227,9 @@ func _run_test() -> void:
 	assert(is_equal_approx(east_camera.y, west_camera.y))
 	assert(room.contains_world_point(Vector2(760, 500)))
 	assert(room.contains_world_point(Vector2(1260, 500)))
-	assert(not room.contains_world_point(Vector2(390, 260)))
-	assert(not room.contains_world_point(Vector2(1010, 500)))
+	assert(not room.contains_world_point(Vector2(410, 310)))
+	for corridor_x in range(288, 1793, 128):
+		assert(room.contains_world_point(Vector2(corridor_x, 512)))
 	for door in instance.exit_doors:
 		assert(door.get_node("LeftLeaf") is Sprite2D)
 		assert(door.get_node("RightLeaf") is Sprite2D)
@@ -251,10 +252,10 @@ func _run_test() -> void:
 	assert(room.size_class == MapRoomModule.RoomSizeClass.LARGE)
 	assert(room.walkable_outline.size() >= 6)
 	assert(room.camera_guide_outline.size() == 8)
-	assert(room.blocked_outlines.size() == 12)
+	assert(room.blocked_outlines.size() == 7)
 	assert(room.door_directions == PackedStringArray(["west", "south"]))
-	assert(room.door_anchor_world(&"west") == Vector2(176, 350))
-	assert(room.door_anchor_world(&"south") == Vector2(1354, 1380))
+	assert(room.door_anchor_world(&"west") == Vector2(128, 405))
+	assert(room.door_anchor_world(&"south") == Vector2(1320, 1305))
 	assert(modular.floor_tiles.get_used_cells().size() == 66)
 	assert(modular.get_node("ContentSlots").get_child_count() == 6)
 	assert(modular.get_node("ThemeProps").get_child_count() == 0)
@@ -278,7 +279,15 @@ func _run_test() -> void:
 	assert(room.contains_world_point(Vector2(720, 380)))
 	assert(room.contains_world_point(Vector2(1380, 1180)))
 	assert(not room.contains_world_point(Vector2(500, 900)))
-	assert(not room.contains_world_point(Vector2(1180, 900)))
+	for route_point in [
+		Vector2(180, 405),
+		Vector2(600, 405),
+		Vector2(950, 405),
+		Vector2(1120, 600),
+		Vector2(1320, 1120),
+		Vector2(1320, 1280),
+	]:
+		assert(room.contains_world_point(route_point))
 	var upper_camera := room.guided_camera_world_point(Vector2(512, 384))
 	var lower_camera := room.guided_camera_world_point(Vector2(1380, 1120))
 	assert(lower_camera.x > upper_camera.x)

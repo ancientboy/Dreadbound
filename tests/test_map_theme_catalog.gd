@@ -1,6 +1,12 @@
 extends SceneTree
 
 
+func _texture_image(path: String) -> Image:
+	var texture := load(path) as Texture2D
+	assert(texture != null)
+	return texture.get_image()
+
+
 func _init() -> void:
 	var rooms := MapThemeCatalog.hospital_rooms()
 	assert(rooms.size() == 4)
@@ -115,50 +121,79 @@ func _init() -> void:
 	assert(rooms[1]["camera_zoom"] == Vector2(0.92, 0.92))
 	assert(is_equal_approx(float(rooms[1]["camera_overscan"]), 1.04))
 	assert(rooms[1]["camera_view_bounds"] == Rect2(64, 64, 1920, 896))
-	assert(rooms[1]["blocked_outlines"].size() == 18)
-	assert(rooms[1]["door_sockets"][0]["anchor"] == Vector2(190, 484))
-	assert(rooms[1]["door_sockets"][1]["anchor"] == Vector2(1858, 484))
+	assert(rooms[1]["blocked_outlines"].size() == 11)
+	assert(rooms[1]["door_sockets"][0]["anchor"] == Vector2(256, 512))
+	assert(rooms[1]["door_sockets"][1]["anchor"] == Vector2(1792, 512))
 	assert(rooms[1]["door_profile"].has("art_texture_path"))
 	assert(rooms[1]["floor_macro"]["world_rect"] == Rect2(0, 0, 2048, 1024))
 	assert(rooms[1]["wall_shell"]["regions"].size() == 4)
 	assert(rooms[1]["content_slots"].size() == 5)
 	assert(rooms[1]["zones"].size() == 2)
+	var long_wall_image := _texture_image(
+		MapThemeCatalog.SANATORIUM_LONG_WARD_WALL_SHELL
+	)
+	var long_props_image := _texture_image(
+		MapThemeCatalog.SANATORIUM_LONG_WARD_PROPS
+	)
+	assert(long_wall_image.get_pixel(256, 512).a < 0.05)
+	assert(long_wall_image.get_pixel(1792, 512).a < 0.05)
+	for corridor_x in range(288, 1793, 128):
+		assert(long_props_image.get_pixel(corridor_x, 512).a < 0.05)
 	var long_builder := ModularHospitalRoom.new()
 	long_builder.build_from_spec(rooms[1])
 	var long_module := MapRoomModule.new()
 	long_module.apply_built_spec(rooms[1], long_builder)
 	assert(long_builder.get_node("LongWardFloorMacro") is Sprite2D)
 	assert(long_builder.get_node("LongWardWallShell").get_child_count() == 4)
-	assert(long_builder.blocked_outlines.size() == 18)
+	assert(long_builder.blocked_outlines.size() == 11)
 	assert(long_module.contains_world_point(Vector2(760, 500)))
-	assert(not long_module.contains_world_point(Vector2(390, 260)))
-	assert(not long_module.contains_world_point(Vector2(1010, 500)))
+	assert(not long_module.contains_world_point(Vector2(410, 310)))
+	for corridor_x in range(288, 1793, 128):
+		assert(long_module.contains_world_point(Vector2(corridor_x, 512)))
 	long_module.free()
 	long_builder.free()
 	assert(rooms[2]["grid_cells"].size() == 66)
 	assert(rooms[2]["title"] == "L 形精英收容区")
 	assert(rooms[2]["map_bounds"] == Rect2(0, 0, 2048, 1536))
 	assert(rooms[2]["camera_view_bounds"] == Rect2(64, 64, 1920, 1408))
-	assert(rooms[2]["blocked_outlines"].size() == 12)
-	assert(rooms[2]["door_sockets"][0]["anchor"] == Vector2(176, 350))
+	assert(rooms[2]["blocked_outlines"].size() == 7)
+	assert(rooms[2]["door_sockets"][0]["anchor"] == Vector2(128, 405))
 	assert(rooms[2]["door_sockets"][1]["direction"] == &"south")
-	assert(rooms[2]["door_sockets"][1]["anchor"] == Vector2(1354, 1380))
+	assert(rooms[2]["door_sockets"][1]["anchor"] == Vector2(1320, 1305))
 	assert(rooms[2]["door_profile"].has("south_source_region"))
 	assert(rooms[2]["floor_macro"]["world_rect"] == Rect2(0, 0, 2048, 1536))
 	assert(rooms[2]["wall_shell"]["regions"].size() == 4)
 	assert(rooms[2]["content_slots"].size() == 6)
 	assert(rooms[2]["zones"].size() == 2)
+	var elite_wall_image := _texture_image(
+		MapThemeCatalog.SANATORIUM_L_ELITE_WALL_SHELL
+	)
+	var elite_props_image := _texture_image(
+		MapThemeCatalog.SANATORIUM_L_ELITE_PROPS
+	)
+	assert(elite_wall_image.get_pixel(128, 405).a < 0.15)
+	assert(elite_wall_image.get_pixel(1320, 1305).a < 0.05)
+	assert(elite_props_image.get_pixel(128, 405).a < 0.05)
+	assert(elite_props_image.get_pixel(1320, 1305).a < 0.05)
 	var elite_builder := ModularHospitalRoom.new()
 	elite_builder.build_from_spec(rooms[2])
 	var elite_module := MapRoomModule.new()
 	elite_module.apply_built_spec(rooms[2], elite_builder)
 	assert(elite_builder.get_node("LEliteFloorMacro") is Sprite2D)
 	assert(elite_builder.get_node("LEliteWallShell").get_child_count() == 4)
-	assert(elite_builder.blocked_outlines.size() == 12)
+	assert(elite_builder.blocked_outlines.size() == 7)
 	assert(elite_module.contains_world_point(Vector2(720, 380)))
 	assert(elite_module.contains_world_point(Vector2(1380, 1180)))
 	assert(not elite_module.contains_world_point(Vector2(500, 900)))
-	assert(not elite_module.contains_world_point(Vector2(1180, 900)))
+	for route_point in [
+		Vector2(180, 405),
+		Vector2(600, 405),
+		Vector2(950, 405),
+		Vector2(1120, 600),
+		Vector2(1320, 1120),
+		Vector2(1320, 1280),
+	]:
+		assert(elite_module.contains_world_point(route_point))
 	elite_module.free()
 	elite_builder.free()
 	var boss_room: Dictionary = rooms[3]
