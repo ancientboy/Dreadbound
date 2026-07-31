@@ -80,15 +80,16 @@ func _run_test() -> void:
 	assert(_sprite_count(modular) == 5)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	var viewport_size := instance.get_viewport_rect().size
-	var expected_cover_zoom := (
-		maxf(viewport_size.x / 1280.0, viewport_size.y / 768.0)
+	var expected_cover_zoom := maxf(
+		0.96,
+		maxf(viewport_size.x / 1408.0, viewport_size.y / 896.0)
 		* MapStyleDemo.CAMERA_COVER_OVERSCAN
-		* room.camera_overscan
+		* room.camera_overscan,
 	)
 	assert(camera.zoom.is_equal_approx(Vector2.ONE * expected_cover_zoom))
 	assert(camera.zoom.x >= 0.96)
-	assert(camera.limit_left == 128 and camera.limit_top == 128)
-	assert(camera.limit_right == 1408 and camera.limit_bottom == 896)
+	assert(camera.limit_left == 64 and camera.limit_top == 64)
+	assert(camera.limit_right == 1472 and camera.limit_bottom == 960)
 	assert(camera.position_smoothing_enabled)
 
 	assert(room.room_id == &"hospital_standard_combat")
@@ -96,7 +97,11 @@ func _run_test() -> void:
 	assert(room.size_class == MapRoomModule.RoomSizeClass.STANDARD)
 	assert(not room.is_multi_screen())
 	assert(room.walkable_outline.size() == 4)
-	assert(room.camera_guide_outline.size() == 4)
+	assert(room.camera_guide_outline == PackedVector2Array([
+		Vector2(640, 480), Vector2(896, 480),
+		Vector2(896, 672), Vector2(640, 672),
+	]))
+	assert(room.blocked_outlines.size() == 5)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
 	assert(room.door_anchor_overrides.size() == 2)
 	assert(room.door_anchor_world(&"west") == Vector2(256, 494))
@@ -131,9 +136,17 @@ func _run_test() -> void:
 		assert((door.get_node("DoorFrame") as Node2D).position == expected_recess)
 		assert((door.get_node("DoorOpening") as Polygon2D).position == expected_recess)
 
-	# Each of the two wall edges is split around a real door opening.
+	# Each of the two wall edges is split around a real door opening, while
+	# fixture footprints add four collision edges each without sealing the doors.
 	var boundary_segments := _boundary_segment_count(instance)
-	assert(boundary_segments == room.walkable_outline.size() + 2)
+	assert(boundary_segments == room.walkable_outline.size() + 2 + room.blocked_outlines.size() * 4)
+	assert(room.contains_world_point(Vector2(300, 494)))
+	assert(room.contains_world_point(Vector2(1236, 494)))
+	var fixture_center := Vector2(400, 320)
+	assert(not room.contains_world_point(fixture_center))
+	player.global_position = fixture_center
+	instance._physics_process(0.0)
+	assert(room.contains_world_point(player.global_position))
 
 	var outside_corner := Vector2(60, 180)
 	assert(not room.contains_world_point(outside_corner))
