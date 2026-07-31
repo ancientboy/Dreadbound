@@ -8,6 +8,7 @@ const COMBAT_ATLAS: Texture2D = preload("res://assets/art/vfx/combat_core.png")
 const METRO_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/metro_enemy_skills.png")
 const SANATORIUM_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/sanatorium_enemy_skills.png")
 const BASIC_MELEE_CRESCENT: Texture2D = preload("res://assets/art/vfx/basic_melee_crescent.svg")
+const BASIC_MELEE_CRESCENT_SCALE := 0.70
 const PROFESSION_SKILL_ATLASES := {
 	"steadfast": preload("res://assets/art/vfx/profession_skills_steadfast.png"),
 	"armorer": preload("res://assets/art/vfx/profession_skills_armorer.png"),
@@ -262,13 +263,16 @@ func _draw() -> void:
 				_draw_fx_cell(0, event.origin + direction * event.radius * 0.52, event.radius * 1.16, melee_arc_rotation(direction), Color(1.0, 1.0, 1.0, fade))
 			"weapon_swing":
 				var swing_direction: Vector2 = event.payload.normalized()
-				var swing_angle := swing_direction.angle()
+				var swing_angle := melee_arc_rotation(swing_direction)
 				var presentation_scale := lerpf(
 					0.96,
 					1.0,
 					ease(clampf(progress / 0.12, 0.0, 1.0), -1.8),
 				)
-				var crescent_width := clampf(event.radius * 1.48, 112.0, 164.0)
+				var crescent_width := (
+					clampf(event.radius * 1.48, 112.0, 164.0)
+					* BASIC_MELEE_CRESCENT_SCALE
+				)
 				var crescent_size := (
 					Vector2(crescent_width, crescent_width * 0.75)
 					* presentation_scale

@@ -9,6 +9,7 @@ const MELEE_VISUAL_SCALE := 0.78
 const MELEE_BACK_LAYER := 0
 const MELEE_FRONT_LAYER := 80
 const BASIC_MELEE_CRESCENT: Texture2D = preload("res://assets/art/vfx/basic_melee_crescent.svg")
+const BASIC_MELEE_CRESCENT_SCALE := 0.70
 const MELEE_TEXTURES := {
 	&"echo_cross": preload(
 		"res://assets/art/vfx/melee_hd/runtime/echo_cross_slash.png"
@@ -523,11 +524,11 @@ func _draw_procedural_melee(
 			draw_size = Vector2(134.0, 100.5)
 		&"rift_arc":
 			draw_size = Vector2(150.0, 112.5)
-	draw_size *= presentation_scale
+	draw_size *= presentation_scale * BASIC_MELEE_CRESCENT_SCALE
 
 	# The asset is already a complete, transparent crescent. Never rebuild its
 	# inner edge from radial points, which was the source of the center bulge.
-	var rotation := direction.angle() + float(profile.rotation)
+	var rotation := direction.angle() + PI + float(profile.rotation)
 	draw_set_transform(origin, rotation, Vector2.ONE)
 	draw_texture_rect(
 		BASIC_MELEE_CRESCENT,
