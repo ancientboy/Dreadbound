@@ -35,7 +35,7 @@ var active_boss: Node2D
 var boss_reward_preview: Node2D
 var boss_warning_overlay: Control
 var boss_warning_banner: Control
-var boss_warning_icon: Label
+var boss_warning_icon: Control
 var boss_warning_tween: Tween
 var boss_warning_banner_rest_position := Vector2.ZERO
 var boss_warning_play_count := 0
@@ -541,21 +541,38 @@ func _create_boss_warning_overlay() -> void:
 	boss_warning_banner.offset_right = 330.0
 	boss_warning_banner.offset_bottom = 70.0
 	boss_warning_banner.alignment = BoxContainer.ALIGNMENT_CENTER
+	boss_warning_banner.theme = top_panel.theme
 	boss_warning_banner.add_theme_constant_override("separation", 28)
 	boss_warning_overlay.add_child(boss_warning_banner)
 
-	boss_warning_icon = Label.new()
+	boss_warning_icon = Control.new()
 	boss_warning_icon.name = "WarningIcon"
-	boss_warning_icon.text = "⚠"
-	boss_warning_icon.add_theme_color_override("font_color", Color(1.0, 0.16, 0.1, 1.0))
-	boss_warning_icon.add_theme_color_override(
-		"font_shadow_color",
-		Color(0.35, 0.0, 0.0, 0.9),
-	)
-	boss_warning_icon.add_theme_constant_override("shadow_offset_x", 4)
-	boss_warning_icon.add_theme_constant_override("shadow_offset_y", 4)
-	boss_warning_icon.add_theme_font_size_override("font_size", 78)
+	boss_warning_icon.custom_minimum_size = Vector2(96.0, 96.0)
+	boss_warning_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	boss_warning_banner.add_child(boss_warning_icon)
+	var warning_triangle := Line2D.new()
+	warning_triangle.name = "WarningTriangle"
+	warning_triangle.points = PackedVector2Array([
+		Vector2(48, 7), Vector2(89, 82), Vector2(7, 82), Vector2(48, 7),
+	])
+	warning_triangle.width = 6.0
+	warning_triangle.default_color = Color(1.0, 0.16, 0.1, 1.0)
+	warning_triangle.antialiased = true
+	boss_warning_icon.add_child(warning_triangle)
+	var warning_bar := ColorRect.new()
+	warning_bar.name = "WarningBar"
+	warning_bar.position = Vector2(44, 31)
+	warning_bar.size = Vector2(8, 28)
+	warning_bar.color = Color(1.0, 0.16, 0.1, 1.0)
+	warning_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_warning_icon.add_child(warning_bar)
+	var warning_dot := ColorRect.new()
+	warning_dot.name = "WarningDot"
+	warning_dot.position = Vector2(44, 66)
+	warning_dot.size = Vector2(8, 8)
+	warning_dot.color = Color(1.0, 0.16, 0.1, 1.0)
+	warning_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_warning_icon.add_child(warning_dot)
 
 	var copy := VBoxContainer.new()
 	copy.name = "WarningCopy"
