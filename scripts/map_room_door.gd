@@ -60,7 +60,11 @@ func configure(
 	_theme = new_theme
 	_visual_profile = new_visual_profile.duplicate(true)
 	rotation = 0.0
-	if direction == &"south" and not _uses_containment_visuals():
+	if (
+		direction == &"south"
+		and not _uses_containment_visuals()
+		and not bool(_visual_profile.get("preserve_authored_orientation", false))
+	):
 		rotation = PI
 
 
@@ -137,6 +141,9 @@ static func opposite_direction(value: StringName) -> StringName:
 func _build_visuals() -> void:
 	if _uses_containment_visuals():
 		_build_containment_door_visuals()
+		return
+	if _visual_profile.has("art_texture_path"):
+		_build_authored_tile_door_visuals()
 		return
 	if direction == &"west" or direction == &"east":
 		_build_tile_door_visuals()

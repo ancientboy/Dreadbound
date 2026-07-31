@@ -63,6 +63,11 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_foreground_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_props_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_doors_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/l_elite_floor_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/l_elite_wall_shell_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/l_elite_foreground_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/l_elite_props_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/l_elite_doors_v1.webp",
 		"res://resources/map_themes/dungeon1_hospital.tres",
 	]:
 		assert(ResourceLoader.exists(asset_path))
@@ -130,7 +135,32 @@ func _init() -> void:
 	assert(not long_module.contains_world_point(Vector2(1010, 500)))
 	long_module.free()
 	long_builder.free()
-	assert(rooms[2]["grid_cells"].size() == 45)
+	assert(rooms[2]["grid_cells"].size() == 66)
+	assert(rooms[2]["title"] == "L 形精英收容区")
+	assert(rooms[2]["map_bounds"] == Rect2(0, 0, 2048, 1536))
+	assert(rooms[2]["camera_view_bounds"] == Rect2(64, 64, 1920, 1408))
+	assert(rooms[2]["blocked_outlines"].size() == 12)
+	assert(rooms[2]["door_sockets"][0]["anchor"] == Vector2(176, 350))
+	assert(rooms[2]["door_sockets"][1]["direction"] == &"south")
+	assert(rooms[2]["door_sockets"][1]["anchor"] == Vector2(1354, 1380))
+	assert(rooms[2]["door_profile"].has("south_source_region"))
+	assert(rooms[2]["floor_macro"]["world_rect"] == Rect2(0, 0, 2048, 1536))
+	assert(rooms[2]["wall_shell"]["regions"].size() == 4)
+	assert(rooms[2]["content_slots"].size() == 6)
+	assert(rooms[2]["zones"].size() == 2)
+	var elite_builder := ModularHospitalRoom.new()
+	elite_builder.build_from_spec(rooms[2])
+	var elite_module := MapRoomModule.new()
+	elite_module.apply_built_spec(rooms[2], elite_builder)
+	assert(elite_builder.get_node("LEliteFloorMacro") is Sprite2D)
+	assert(elite_builder.get_node("LEliteWallShell").get_child_count() == 4)
+	assert(elite_builder.blocked_outlines.size() == 12)
+	assert(elite_module.contains_world_point(Vector2(720, 380)))
+	assert(elite_module.contains_world_point(Vector2(1380, 1180)))
+	assert(not elite_module.contains_world_point(Vector2(500, 900)))
+	assert(not elite_module.contains_world_point(Vector2(1180, 900)))
+	elite_module.free()
+	elite_builder.free()
 	var boss_room: Dictionary = rooms[3]
 	assert(boss_room["grid_cells"].size() == 160)
 	assert(boss_room["obstacle_cells"].size() == 4)
@@ -162,5 +192,5 @@ func _init() -> void:
 		== &"cover_a"
 	)
 	boss_builder.free()
-	print("Map theme catalog passed: authored standard and long rooms plus elite and Boss layouts")
+	print("Map theme catalog passed: three authored sanatorium rooms plus the Boss layout")
 	quit()

@@ -241,29 +241,65 @@ func _run_test() -> void:
 	assert(instance.activated_zone_count == 2)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 4)
 
-	# The third room validates a concave L outline, automatic inner wall overlap,
-	# explicit door anchors, navigation triangulation, and two-axis camera travel.
+	# The third room is the approved authored L-shaped elite zone: the west
+	# corridor turns through an observation-room blind corner before the
+	# two-pod elite arena and south exit.
 	instance._show_room_variant(2)
 	await process_frame
 	assert(room.room_id == &"hospital_l_elite")
-	assert(room.walkable_outline.size() == 8)
+	assert(room.room_kind == "elite")
+	assert(room.size_class == MapRoomModule.RoomSizeClass.LARGE)
+	assert(room.walkable_outline.size() >= 6)
 	assert(room.camera_guide_outline.size() == 8)
-	assert(room.door_directions == PackedStringArray(["west", "east"]))
-	assert(modular.floor_tiles.get_used_cells().size() == 45)
-	assert(modular.get_node("ContentSlots").get_child_count() == 4)
-	assert(modular.get_node("ThemeProps").get_child_count() == 4)
-	assert(not modular.has_node("StandardFloorMacro"))
-	assert(not modular.has_node("StandardWallShell"))
-	assert(room.camera_bounds == Rect2(0, 0, 2048, 1280))
-	assert(_boundary_segment_count(instance) == 10)
-	assert(room.contains_world_point(Vector2(512, 448)))
-	assert(room.contains_world_point(Vector2(1408, 832)))
-	assert(not room.contains_world_point(Vector2(1408, 448)))
-	var upper_camera := room.guided_camera_world_point(Vector2(512, 448))
-	var lower_camera := room.guided_camera_world_point(Vector2(1536, 896))
+	assert(room.blocked_outlines.size() == 12)
+	assert(room.door_directions == PackedStringArray(["west", "south"]))
+	assert(room.door_anchor_world(&"west") == Vector2(176, 350))
+	assert(room.door_anchor_world(&"south") == Vector2(1354, 1380))
+	assert(modular.floor_tiles.get_used_cells().size() == 66)
+	assert(modular.get_node("ContentSlots").get_child_count() == 6)
+	assert(modular.get_node("ThemeProps").get_child_count() == 0)
+	var elite_floor := modular.get_node("LEliteFloorMacro") as Sprite2D
+	assert(elite_floor != null)
+	assert(elite_floor.texture.get_size() == Vector2(2048, 1536))
+	assert(elite_floor.position == Vector2.ZERO)
+	assert(elite_floor.scale == Vector2.ONE)
+	var elite_shell := modular.get_node("LEliteWallShell") as Node2D
+	assert(elite_shell != null and elite_shell.get_child_count() == 4)
+	assert((elite_shell.get_node("Architecture") as Sprite2D).z_index == -7)
+	assert((elite_shell.get_node("BackProps") as Sprite2D).z_index == -2)
+	assert((elite_shell.get_node("FrontProps") as Sprite2D).z_index == 37)
+	assert((elite_shell.get_node("ForegroundWall") as Sprite2D).z_index == 38)
+	assert(not modular.wall_base_tiles.visible)
+	assert(not modular.side_wall_tiles.visible)
+	assert(not modular.foreground_walls.visible)
+	assert(room.camera_bounds == Rect2(0, 0, 2048, 1536))
+	assert(camera.limit_left == 64 and camera.limit_top == 64)
+	assert(camera.limit_right == 1984 and camera.limit_bottom == 1472)
+	assert(room.contains_world_point(Vector2(720, 380)))
+	assert(room.contains_world_point(Vector2(1380, 1180)))
+	assert(not room.contains_world_point(Vector2(500, 900)))
+	assert(not room.contains_world_point(Vector2(1180, 900)))
+	var upper_camera := room.guided_camera_world_point(Vector2(512, 384))
+	var lower_camera := room.guided_camera_world_point(Vector2(1380, 1120))
 	assert(lower_camera.x > upper_camera.x)
 	assert(lower_camera.y > upper_camera.y)
 	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
+	assert(zones.get_child_count() == 2)
+	assert(instance.activated_zone_count == 1)
+	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
+	for elite_door in instance.exit_doors:
+		assert(elite_door.get_node("LeftLeaf") is Sprite2D)
+		assert(elite_door.get_node("RightLeaf") is Sprite2D)
+		assert((elite_door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
+		assert((elite_door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
+		if elite_door.direction == &"south":
+			assert(elite_door.rotation == 0.0)
+
+	player.global_position = Vector2(1360, 660)
+	instance._physics_process(0.0)
+	await process_frame
+	assert(instance.activated_zone_count == 2)
+	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 5)
 
 	# The fourth room is a fully themed 16x10 Boss arena with a unique authored
 	# floor, split wall shell, obstacle navigation, sealed doors, and reward hook.
@@ -351,7 +387,7 @@ func _run_test() -> void:
 
 	instance.queue_free()
 	print(
-		"Map style demo passed: modular samples plus the themed Boss arena retain "
+		"Map style demo passed: authored sanatorium rooms plus the themed Boss arena retain "
 		+ "continuous walls, encounters, obstacle navigation, doors, and cameras",
 	)
 	quit()

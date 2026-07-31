@@ -44,6 +44,21 @@ const SANATORIUM_LONG_WARD_PROPS := (
 const SANATORIUM_LONG_WARD_DOORS := (
 	SANATORIUM_V2_ROOT + "long_ward_doors_v1.webp"
 )
+const SANATORIUM_L_ELITE_FLOOR := (
+	SANATORIUM_V2_ROOT + "l_elite_floor_v1.webp"
+)
+const SANATORIUM_L_ELITE_WALL_SHELL := (
+	SANATORIUM_V2_ROOT + "l_elite_wall_shell_v1.webp"
+)
+const SANATORIUM_L_ELITE_FOREGROUND := (
+	SANATORIUM_V2_ROOT + "l_elite_foreground_v1.webp"
+)
+const SANATORIUM_L_ELITE_PROPS := (
+	SANATORIUM_V2_ROOT + "l_elite_props_v1.webp"
+)
+const SANATORIUM_L_ELITE_DOORS := (
+	SANATORIUM_V2_ROOT + "l_elite_doors_v1.webp"
+)
 const HOSPITAL_BOSS_FLOOR_MACRO := (
 	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
 	+ "boss_floor_macro_v1.webp"
@@ -293,44 +308,113 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"room_id": &"hospital_l_elite",
 		"theme_id": HOSPITAL_THEME,
 		"theme_resource": HOSPITAL_THEME_RESOURCE,
-		"title": "L 形精英病区",
+		"title": "L 形精英收容区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"camera_zoom": Vector2(0.72, 0.72),
-		"map_bounds": Rect2(0, 0, 2048, 1280),
-		"spawn": Vector2(512, 448),
+		"camera_zoom": Vector2(0.90, 0.90),
+		"camera_overscan": 1.04,
+		"camera_view_bounds": Rect2(64, 64, 1920, 1408),
+		"map_bounds": Rect2(0, 0, 2048, 1536),
+		"spawn": Vector2(320, 384),
 		"grid_cells": (
-			_rect_cells(Vector2i(2, 2), Vector2i(7, 3))
-			+ _rect_cells(Vector2i(6, 5), Vector2i(8, 3))
+			_rect_cells(Vector2i(1, 2), Vector2i(12, 2))
+			+ _rect_cells(Vector2i(7, 4), Vector2i(6, 7))
 		),
 		"camera_guide_outline": PackedVector2Array([
-			Vector2(512, 448), Vector2(1024, 448),
-			Vector2(1024, 704), Vector2(1536, 704),
-			Vector2(1536, 896), Vector2(896, 896),
-			Vector2(896, 576), Vector2(512, 576),
+			Vector2(384, 384), Vector2(1120, 384),
+			Vector2(1120, 576), Vector2(1472, 576),
+			Vector2(1472, 1120), Vector2(1120, 1120),
+			Vector2(1120, 512), Vector2(384, 512),
 		]),
-		"door_sockets": [
-			_door("west", Vector2i(1, 3)),
-			_door("east", Vector2i(14, 6)),
+		# Every blocker follows a visible floor-contact silhouette. The glass
+		# observation wall, pod crowns and hanging details remain non-blocking.
+		"blocked_outlines": [
+			_chamfered_rect_outline(Rect2(548, 268, 140, 78), 10.0),
+			_chamfered_rect_outline(Rect2(854, 270, 164, 82), 10.0),
+			PackedVector2Array([
+				Vector2(1092, 308), Vector2(1112, 286),
+				Vector2(1358, 286), Vector2(1382, 312),
+				Vector2(1348, 430), Vector2(1130, 430),
+			]),
+			_chamfered_rect_outline(Rect2(1268, 444, 128, 54), 10.0),
+			_chamfered_rect_outline(Rect2(1068, 752, 236, 336), 24.0),
+			_chamfered_rect_outline(Rect2(1498, 752, 236, 336), 24.0),
+			_chamfered_rect_outline(Rect2(982, 744, 58, 278), 10.0),
+			_chamfered_rect_outline(Rect2(1742, 744, 58, 278), 10.0),
+			_chamfered_rect_outline(Rect2(1082, 642, 62, 70), 10.0),
+			_chamfered_rect_outline(Rect2(1580, 642, 62, 70), 10.0),
+			_chamfered_rect_outline(Rect2(1004, 1082, 82, 46), 10.0),
+			_chamfered_rect_outline(Rect2(1716, 1082, 82, 46), 10.0),
 		],
-		"door_profile": _hospital_door_profile(),
+		"door_sockets": [
+			_door_at("west", Vector2i(0, 2), Vector2(176, 350)),
+			_door_at("south", Vector2i(10, 11), Vector2(1354, 1380)),
+		],
+		"door_profile": _sanatorium_l_elite_door_profile(),
+		"hide_theme_props": true,
+		"floor_macro": {
+			"node_name": "LEliteFloorMacro",
+			"texture_path": SANATORIUM_L_ELITE_FLOOR,
+			"world_rect": Rect2(0, 0, 2048, 1536),
+			"z_index": -24,
+		},
+		"wall_shell": {
+			"node_name": "LEliteWallShell",
+			"texture_path": SANATORIUM_L_ELITE_WALL_SHELL,
+			"hide_generated_walls": true,
+			"regions": [
+				_layer_region(
+					"architecture",
+					SANATORIUM_L_ELITE_WALL_SHELL,
+					Rect2(0, 0, 2048, 1536),
+					Rect2(0, 0, 2048, 1536),
+					-7,
+				),
+				_layer_region(
+					"back_props",
+					SANATORIUM_L_ELITE_PROPS,
+					Rect2(0, 0, 2048, 900),
+					Rect2(0, 0, 2048, 900),
+					-2,
+				),
+				_layer_region(
+					"front_props",
+					SANATORIUM_L_ELITE_PROPS,
+					Rect2(0, 900, 2048, 636),
+					Rect2(0, 900, 2048, 636),
+					37,
+					true,
+				),
+				_layer_region(
+					"foreground_wall",
+					SANATORIUM_L_ELITE_FOREGROUND,
+					Rect2(0, 0, 2048, 1536),
+					Rect2(0, 0, 2048, 1536),
+					38,
+					true,
+				),
+			],
+		},
 		"guide_line": PackedVector2Array([
-			Vector2(274, 448), Vector2(960, 448),
-			Vector2(960, 832), Vector2(1774, 832),
+			Vector2(214, 350), Vector2(1018, 350),
+			Vector2(1120, 482), Vector2(1360, 650),
+			Vector2(1360, 1342),
 		]),
 		"content_slots": [
-			_slot("upper_cover", "cover", Vector2i(5, 3), "cover_a"),
-			_slot("junction", "objective", Vector2i(7, 4), "objective"),
-			_slot("lower_spawn", "enemy", Vector2i(9, 6), "enemy"),
-			_slot("east_cover", "cover", Vector2i(12, 6), "cover_b"),
+			_slot("corner_ambush_a", "enemy", Vector2i(7, 3), "enemy"),
+			_slot("corner_ambush_b", "enemy", Vector2i(9, 4), "enemy"),
+			_slot("observation_console", "objective", Vector2i(10, 3), "objective"),
+			_slot("elite_spawn", "enemy", Vector2i(10, 6), "enemy"),
+			_slot("pod_guard_west", "enemy", Vector2i(8, 8), "enemy"),
+			_slot("pod_guard_east", "enemy", Vector2i(12, 8), "enemy"),
 		],
 		"zones": [
-			_zone("upper_ward", Rect2(256, 256, 896, 384), true, [
-				Vector2(512, 448), Vector2(896, 448),
-			], ["隔离病患", "巡诊残响"]),
-			_zone("lower_ward", Rect2(768, 640, 1024, 384), false, [
-				Vector2(1088, 832), Vector2(1536, 832),
-			], ["破损护理体", "精英隔离体"]),
+			_zone("blind_corner_ambush", Rect2(768, 256, 704, 448), true, [
+				Vector2(1000, 380), Vector2(1260, 560),
+			], ["巡诊残响", "观察室伏击体"]),
+			_zone("containment_elite", Rect2(896, 576, 896, 704), false, [
+				Vector2(1210, 690), Vector2(1600, 690), Vector2(1370, 1170),
+			], ["双舱守卫", "精英隔离体", "失控护理长"]),
 		],
 	},
 	{
@@ -524,6 +608,20 @@ static func _sanatorium_long_ward_door_profile() -> Dictionary:
 		"visual_scale": 1.0,
 		"side_visual_recess": 0.0,
 		"travel_distance": 76.0,
+	}
+
+
+static func _sanatorium_l_elite_door_profile() -> Dictionary:
+	return {
+		"theme_mark": &"medical_cross",
+		"mark_color": Color(0.32, 0.78, 0.7, 0.52),
+		"art_texture_path": SANATORIUM_L_ELITE_DOORS,
+		"west_source_region": Rect2(70, 142, 168, 332),
+		"south_source_region": Rect2(1190, 1300, 328, 236),
+		"visual_scale": 1.0,
+		"side_visual_recess": 0.0,
+		"travel_distance": 82.0,
+		"preserve_authored_orientation": true,
 	}
 
 
