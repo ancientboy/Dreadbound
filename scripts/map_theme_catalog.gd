@@ -29,6 +29,9 @@ const SANATORIUM_V2_PROPS := (
 const SANATORIUM_V2_DOORS := (
 	SANATORIUM_V2_ROOT + "standard_combat_doors_v1.png"
 )
+const SANATORIUM_DOOR_MODULES := (
+	SANATORIUM_V2_ROOT + "sanatorium_door_modules_v1.webp"
+)
 const SANATORIUM_LONG_WARD_FLOOR := (
 	SANATORIUM_V2_ROOT + "long_ward_floor_v1.webp"
 )
@@ -322,8 +325,8 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_chamfered_rect_outline(Rect2(1324, 806, 34, 30), 6.0),
 		],
 		"door_sockets": [
-			_door_at("west", Vector2i(0, 2), Vector2(128, 405)),
-			_door_at("south", Vector2i(10, 11), Vector2(1320, 1305)),
+			_door_at("west", Vector2i(0, 2), Vector2(176, 350)),
+			_door_at("south", Vector2i(10, 11), Vector2(1341, 1320)),
 		],
 		"door_profile": _sanatorium_l_elite_door_profile(),
 		"hide_theme_props": true,
@@ -577,12 +580,12 @@ static func _sanatorium_long_ward_door_profile() -> Dictionary:
 	return {
 		"theme_mark": &"medical_cross",
 		"mark_color": Color(0.32, 0.78, 0.7, 0.52),
-		"art_texture_path": SANATORIUM_LONG_WARD_DOORS,
-		"west_source_region": Rect2(20, 350, 190, 260),
-		"east_source_region": Rect2(1838, 350, 190, 260),
-		"visual_scale": 1.0,
+		"art_texture_path": SANATORIUM_DOOR_MODULES,
+		"west_source_region": Rect2(16, 16, 78, 154),
+		"east_source_region": Rect2(112, 16, 78, 154),
+		"visual_scale": 1.5,
 		"side_visual_recess": 0.0,
-		"travel_distance": 76.0,
+		"travel_distance": 58.0,
 	}
 
 
@@ -590,12 +593,15 @@ static func _sanatorium_l_elite_door_profile() -> Dictionary:
 	return {
 		"theme_mark": &"medical_cross",
 		"mark_color": Color(0.32, 0.78, 0.7, 0.52),
-		"art_texture_path": SANATORIUM_L_ELITE_DOORS,
-		"west_source_region": Rect2(70, 142, 168, 332),
-		"south_source_region": Rect2(1190, 1300, 328, 236),
-		"visual_scale": 1.0,
+		"art_texture_path": SANATORIUM_DOOR_MODULES,
+		"west_source_region": Rect2(16, 16, 78, 154),
+		"south_source_region": Rect2(224, 112, 154, 78),
+		"west_visual_scale": 0.95,
+		"south_visual_scale": 0.82,
+		"south_split_axis": &"vertical",
 		"side_visual_recess": 0.0,
-		"travel_distance": 82.0,
+		"west_travel_distance": 38.0,
+		"south_travel_distance": 31.0,
 		"preserve_authored_orientation": true,
 	}
 

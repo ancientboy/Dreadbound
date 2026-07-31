@@ -22,8 +22,10 @@ ART_ROOT = ROOT / "assets/art/worlds/map_demo/dungeon1_sanatorium_v2"
 STANDARD_FLOOR = ART_ROOT / "standard_combat_floor_v1.png"
 STANDARD_WALL = ART_ROOT / "standard_combat_wall_shell_v1.png"
 STANDARD_FOREGROUND = ART_ROOT / "standard_combat_foreground_v1.png"
+STANDARD_DOORS = ART_ROOT / "standard_combat_doors_v1.png"
 PROP_ATLAS = ART_ROOT / "sanatorium_modular_props_v2.webp"
 ELITE_EMPTY_ARCHITECTURE = ART_ROOT / "l_elite_empty_architecture_v2.webp"
+DOOR_MODULES = ART_ROOT / "sanatorium_door_modules_v1.webp"
 
 LONG_SIZE = (2048, 1024)
 ELITE_SIZE = (2048, 1536)
@@ -62,6 +64,21 @@ def _fit_with_padding(
 
 def _erase(image: Image.Image, box: tuple[int, int, int, int]) -> None:
     image.paste((0, 0, 0, 0), box)
+
+
+def _erase_dark_pixels(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    threshold: int = 30,
+) -> None:
+    """Clear only a doorway's opaque near-black placeholder pixels."""
+    left, top, right, bottom = box
+    pixels = image.load()
+    for y in range(top, bottom):
+        for x in range(left, right):
+            red, green, blue, alpha = pixels[x, y]
+            if alpha > 0 and max(red, green, blue) <= threshold:
+                pixels[x, y] = (red, green, blue, 0)
 
 
 def _trim(image: Image.Image) -> Image.Image:
@@ -140,6 +157,26 @@ def _transparent_connected_black(image: Image.Image) -> Image.Image:
 
     rgba.putalpha(ImageChops.invert(outside))
     return rgba
+
+
+def _build_door_modules(door_source: Image.Image) -> None:
+    """Build a transparent four-direction door-leaf atlas.
+
+    Only the approved standard-room door leaves are reused.  No wall, floor,
+    doorway recess, or black concept-art background is allowed in this atlas.
+    The room wall shell owns the socket and frame; runtime owns these leaves.
+    """
+    west = door_source.crop((154, 401, 232, 555))
+    east = door_source.crop((1354, 401, 1432, 555))
+    north = east.transpose(Image.Transpose.ROTATE_90)
+    south = west.transpose(Image.Transpose.ROTATE_270)
+
+    atlas = Image.new("RGBA", (416, 208))
+    atlas.alpha_composite(west, (16, 16))
+    atlas.alpha_composite(east, (112, 16))
+    atlas.alpha_composite(north, (224, 16))
+    atlas.alpha_composite(south, (224, 112))
+    _save_webp(atlas, DOOR_MODULES)
 
 
 def _build_long_ward(
@@ -241,6 +278,10 @@ def _build_l_elite(
     floor = _fit_with_padding(floor, ELITE_SIZE)
     wall = _fit_with_padding(wall, ELITE_SIZE)
     foreground = _fit_with_padding(foreground, ELITE_SIZE)
+    # The generated empty architecture contains an opaque black placeholder
+    # inside the south socket.  It must not sit above the runtime door leaves.
+    # Clear only those dark pixels, preserving the authored jamb and threshold.
+    _erase_dark_pixels(foreground, (1268, 1252, 1414, 1362))
 
     props = _place_props(
         atlas,
@@ -268,9 +309,11 @@ def main() -> int:
     floor_source = _load(STANDARD_FLOOR)
     wall_source = _load(STANDARD_WALL)
     foreground_source = _load(STANDARD_FOREGROUND)
+    door_source = _load(STANDARD_DOORS)
     atlas = _load(PROP_ATLAS)
     elite_empty_architecture = _load(ELITE_EMPTY_ARCHITECTURE)
 
+    _build_door_modules(door_source)
     _build_long_ward(floor_source, wall_source, foreground_source, atlas)
     _build_l_elite(elite_empty_architecture, atlas)
     print("Built modular long ward and L-shaped elite room layers.")

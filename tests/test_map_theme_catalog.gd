@@ -64,6 +64,7 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_foreground_v1.png",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_props_v1.png",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_doors_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/sanatorium_door_modules_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_floor_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_wall_shell_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_foreground_v1.webp",
@@ -125,6 +126,12 @@ func _init() -> void:
 	assert(rooms[1]["door_sockets"][0]["anchor"] == Vector2(256, 512))
 	assert(rooms[1]["door_sockets"][1]["anchor"] == Vector2(1792, 512))
 	assert(rooms[1]["door_profile"].has("art_texture_path"))
+	assert(
+		rooms[1]["door_profile"]["art_texture_path"]
+		== MapThemeCatalog.SANATORIUM_DOOR_MODULES
+	)
+	assert(rooms[1]["door_profile"]["west_source_region"] == Rect2(16, 16, 78, 154))
+	assert(rooms[1]["door_profile"]["east_source_region"] == Rect2(112, 16, 78, 154))
 	assert(rooms[1]["floor_macro"]["world_rect"] == Rect2(0, 0, 2048, 1024))
 	assert(rooms[1]["wall_shell"]["regions"].size() == 4)
 	assert(rooms[1]["content_slots"].size() == 5)
@@ -157,10 +164,17 @@ func _init() -> void:
 	assert(rooms[2]["map_bounds"] == Rect2(0, 0, 2048, 1536))
 	assert(rooms[2]["camera_view_bounds"] == Rect2(64, 64, 1920, 1408))
 	assert(rooms[2]["blocked_outlines"].size() == 7)
-	assert(rooms[2]["door_sockets"][0]["anchor"] == Vector2(128, 405))
+	assert(rooms[2]["door_sockets"][0]["anchor"] == Vector2(176, 350))
 	assert(rooms[2]["door_sockets"][1]["direction"] == &"south")
-	assert(rooms[2]["door_sockets"][1]["anchor"] == Vector2(1320, 1305))
+	assert(rooms[2]["door_sockets"][1]["anchor"] == Vector2(1341, 1320))
 	assert(rooms[2]["door_profile"].has("south_source_region"))
+	assert(
+		rooms[2]["door_profile"]["art_texture_path"]
+		== MapThemeCatalog.SANATORIUM_DOOR_MODULES
+	)
+	assert(rooms[2]["door_profile"]["west_source_region"] == Rect2(16, 16, 78, 154))
+	assert(rooms[2]["door_profile"]["south_source_region"] == Rect2(224, 112, 154, 78))
+	assert(rooms[2]["door_profile"]["south_split_axis"] == &"vertical")
 	assert(rooms[2]["floor_macro"]["world_rect"] == Rect2(0, 0, 2048, 1536))
 	assert(rooms[2]["wall_shell"]["regions"].size() == 4)
 	assert(rooms[2]["content_slots"].size() == 6)
@@ -175,6 +189,10 @@ func _init() -> void:
 	assert(elite_wall_image.get_pixel(1320, 1305).a < 0.05)
 	assert(elite_props_image.get_pixel(128, 405).a < 0.05)
 	assert(elite_props_image.get_pixel(1320, 1305).a < 0.05)
+	var elite_foreground_image := _texture_image(
+		MapThemeCatalog.SANATORIUM_L_ELITE_FOREGROUND
+	)
+	assert(elite_foreground_image.get_pixel(1341, 1320).a < 0.05)
 	var elite_builder := ModularHospitalRoom.new()
 	elite_builder.build_from_spec(rooms[2])
 	var elite_module := MapRoomModule.new()

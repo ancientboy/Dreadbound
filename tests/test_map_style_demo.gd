@@ -235,6 +235,10 @@ func _run_test() -> void:
 		assert(door.get_node("RightLeaf") is Sprite2D)
 		assert((door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
 		assert((door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
+		assert(
+			((door.get_node("LeftLeaf") as Sprite2D).texture as AtlasTexture).region.size
+			== Vector2(39, 154)
+		)
 
 	player.global_position = Vector2(1280, 520)
 	instance._physics_process(0.0)
@@ -254,8 +258,8 @@ func _run_test() -> void:
 	assert(room.camera_guide_outline.size() == 8)
 	assert(room.blocked_outlines.size() == 7)
 	assert(room.door_directions == PackedStringArray(["west", "south"]))
-	assert(room.door_anchor_world(&"west") == Vector2(128, 405))
-	assert(room.door_anchor_world(&"south") == Vector2(1320, 1305))
+	assert(room.door_anchor_world(&"west") == Vector2(176, 350))
+	assert(room.door_anchor_world(&"south") == Vector2(1341, 1320))
 	assert(modular.floor_tiles.get_used_cells().size() == 66)
 	assert(modular.get_node("ContentSlots").get_child_count() == 6)
 	assert(modular.get_node("ThemeProps").get_child_count() == 0)
@@ -303,6 +307,13 @@ func _run_test() -> void:
 		assert((elite_door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
 		if elite_door.direction == &"south":
 			assert(elite_door.rotation == 0.0)
+			var south_left := elite_door.get_node("LeftLeaf") as Sprite2D
+			var south_right := elite_door.get_node("RightLeaf") as Sprite2D
+			assert((south_left.texture as AtlasTexture).region.size == Vector2(154, 39))
+			assert(is_zero_approx(south_left.position.x))
+			assert(is_zero_approx(south_right.position.x))
+			assert(south_left.position.y < 0.0)
+			assert(south_right.position.y > 0.0)
 
 	player.global_position = Vector2(1360, 660)
 	instance._physics_process(0.0)

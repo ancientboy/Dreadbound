@@ -78,10 +78,17 @@ func unlock() -> void:
 	status_tween.tween_property(_locked_indicator, "modulate:a", 0.0, 0.14)
 	status_tween.tween_callback(func() -> void: _open_indicator.visible = true)
 	status_tween.tween_property(_open_indicator, "modulate:a", 1.0, 0.16)
+	var direction_travel_key := "%s_travel_distance" % String(direction)
 	var travel_distance := (
-		float(_visual_profile.get("travel_distance", 58.0))
+		float(_visual_profile.get(
+			direction_travel_key,
+			_visual_profile.get("travel_distance", 58.0),
+		))
 		if direction == &"west" or direction == &"east"
-		else (86.0 if _uses_containment_visuals() else 78.0)
+		else float(_visual_profile.get(
+			direction_travel_key,
+			86.0 if _uses_containment_visuals() else 78.0,
+		))
 	)
 	var travel := _slide_axis * travel_distance
 	var door_tween := create_tween().set_parallel(true)
@@ -362,7 +369,6 @@ func _build_tile_door_visuals() -> void:
 
 
 func _build_authored_tile_door_visuals() -> void:
-	_slide_axis = Vector2.RIGHT
 	var texture_path := String(_visual_profile["art_texture_path"])
 	assert(
 		ResourceLoader.exists(texture_path),
@@ -373,13 +379,26 @@ func _build_authored_tile_door_visuals() -> void:
 	var source_key := "%s_source_region" % String(direction)
 	var source_region: Rect2 = _visual_profile.get(source_key, Rect2())
 	assert(source_region.has_area(), "Authored door requires a source region")
-	var visual_scale := float(_visual_profile.get("visual_scale", 1.0))
+	var visual_scale_key := "%s_visual_scale" % String(direction)
+	var visual_scale := float(_visual_profile.get(
+		visual_scale_key,
+		_visual_profile.get("visual_scale", 1.0),
+	))
+	var split_axis_key := "%s_split_axis" % String(direction)
+	var split_axis := StringName(_visual_profile.get(
+		split_axis_key,
+		_visual_profile.get("split_axis", &"horizontal"),
+	))
+	assert(
+		split_axis == &"horizontal" or split_axis == &"vertical",
+		"Authored door split axis must be horizontal or vertical",
+	)
+	_slide_axis = Vector2.DOWN if split_axis == &"vertical" else Vector2.RIGHT
 	var recess := float(_visual_profile.get(
 		"side_visual_recess",
 		SIDE_DOOR_VISUAL_RECESS,
 	))
 	var visual_offset := outward_vector() * recess
-	var half_width := source_region.size.x * 0.5
 
 	var opening := Polygon2D.new()
 	opening.name = "DoorOpening"
@@ -401,26 +420,58 @@ func _build_authored_tile_door_visuals() -> void:
 	frame.z_index = 6
 	add_child(frame)
 
-	var left_region := Rect2(
-		source_region.position,
-		Vector2(half_width, source_region.size.y),
-	)
-	var right_region := Rect2(
-		source_region.position + Vector2(half_width, 0),
-		Vector2(half_width, source_region.size.y),
-	)
+	var first_region: Rect2
+	var second_region: Rect2
+	var first_position: Vector2
+	var second_position: Vector2
+	if split_axis == &"vertical":
+		var half_height := source_region.size.y * 0.5
+		first_region = Rect2(
+			source_region.position,
+			Vector2(source_region.size.x, half_height),
+		)
+		second_region = Rect2(
+			source_region.position + Vector2(0, half_height),
+			Vector2(source_region.size.x, half_height),
+		)
+		first_position = visual_offset + Vector2(
+			0,
+			-half_height * visual_scale * 0.5,
+		)
+		second_position = visual_offset + Vector2(
+			0,
+			half_height * visual_scale * 0.5,
+		)
+	else:
+		var half_width := source_region.size.x * 0.5
+		first_region = Rect2(
+			source_region.position,
+			Vector2(half_width, source_region.size.y),
+		)
+		second_region = Rect2(
+			source_region.position + Vector2(half_width, 0),
+			Vector2(half_width, source_region.size.y),
+		)
+		first_position = visual_offset + Vector2(
+			-half_width * visual_scale * 0.5,
+			0,
+		)
+		second_position = visual_offset + Vector2(
+			half_width * visual_scale * 0.5,
+			0,
+		)
 	_left_leaf = _make_authored_leaf(
 		"LeftLeaf",
 		door_texture,
-		left_region,
-		visual_offset + Vector2(-half_width * visual_scale * 0.5, 0),
+		first_region,
+		first_position,
 		visual_scale,
 	)
 	_right_leaf = _make_authored_leaf(
 		"RightLeaf",
 		door_texture,
-		right_region,
-		visual_offset + Vector2(half_width * visual_scale * 0.5, 0),
+		second_region,
+		second_position,
 		visual_scale,
 	)
 	_left_closed_position = _left_leaf.position
