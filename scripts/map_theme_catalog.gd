@@ -41,6 +41,7 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_door("west", Vector2i(1, 4)),
 			_door("east", Vector2i(10, 4)),
 		],
+		"door_profile": _hospital_door_profile(),
 		"floor_macro": {
 			"node_name": "StandardFloorMacro",
 			"texture_path": HOSPITAL_FLOOR_MACRO,
@@ -95,6 +96,7 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_door("west", Vector2i(1, 4)),
 			_door("east", Vector2i(14, 4)),
 		],
+		"door_profile": _hospital_door_profile(),
 		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1774, 576)]),
 		"content_slots": [
 			_slot("west_cover", "cover", Vector2i(4, 3), "cover_a"),
@@ -135,6 +137,7 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			_door("west", Vector2i(1, 3)),
 			_door("east", Vector2i(14, 6)),
 		],
+		"door_profile": _hospital_door_profile(),
 		"guide_line": PackedVector2Array([
 			Vector2(274, 448), Vector2(960, 448),
 			Vector2(960, 832), Vector2(1774, 832),
@@ -182,6 +185,8 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		],
 		"door_profile": {
 			"style": &"containment",
+			"theme_mark": &"containment_warning",
+			"mark_color": Color(0.98, 0.28, 0.16, 0.68),
 		},
 		"floor_macro": {
 			"node_name": "BossFloorMacro",
@@ -288,6 +293,13 @@ static func _rect_cells(origin: Vector2i, size: Vector2i) -> Array:
 		for x_index in size.x:
 			result.append(origin + Vector2i(x_index, y_index))
 	return result
+
+
+static func _hospital_door_profile() -> Dictionary:
+	return {
+		"theme_mark": &"medical_cross",
+		"mark_color": Color(0.32, 0.78, 0.7, 0.52),
+	}
 
 
 static func _door(direction: String, cell: Vector2i) -> Dictionary:
