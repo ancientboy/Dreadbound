@@ -5,6 +5,8 @@ const MAP_SIZE := Vector2(1536.0, 1024.0)
 const SAMPLE_ENCOUNTER := &"map_demo_sample"
 const DOOR_GAP_HALF_WIDTH := 78.0
 const CAMERA_COVER_OVERSCAN := 1.01
+const BOSS_WARNING_TITLE := "高危收容体苏醒"
+const BOSS_WARNING_SUBTITLE := "警告 · 生命信号异常 · 收容协议已锁定"
 const PATIENT_SCENE: PackedScene = preload("res://scenes/entities/patient.tscn")
 const ROOM_DOOR_SCRIPT: Script = preload("res://scripts/map_room_door.gd")
 
@@ -31,6 +33,12 @@ var room_switching := false
 var room_cleared := false
 var active_boss: Node2D
 var boss_reward_preview: Node2D
+var boss_warning_overlay: Control
+var boss_warning_banner: Control
+var boss_warning_icon: Label
+var boss_warning_tween: Tween
+var boss_warning_banner_rest_position := Vector2.ZERO
+var boss_warning_play_count := 0
 
 
 func _ready() -> void:
@@ -40,6 +48,7 @@ func _ready() -> void:
 	_build_collision()
 	_create_variant_controls()
 	_create_transition_fade()
+	_create_boss_warning_overlay()
 	_create_exit_doors()
 	get_viewport().size_changed.connect(_layout_hud)
 	return_button.pressed.connect(_return_home)
@@ -125,6 +134,7 @@ func _show_room_variant(index: int, entry_direction: StringName = &"") -> void:
 	if room_variants.is_empty() or room_switching:
 		return
 	room_switching = true
+	_stop_boss_warning()
 	current_room_index = posmod(index, room_variants.size())
 	var spec := room_variants[current_room_index]
 	for enemy in get_tree().get_nodes_in_group(SAMPLE_ENCOUNTER):
@@ -475,6 +485,145 @@ func _spawn_configured_boss() -> void:
 	$Enemies.add_child(active_boss)
 	if active_boss.has_method("activate"):
 		active_boss.call("activate", player)
+	_play_boss_warning()
+
+
+func _create_boss_warning_overlay() -> void:
+	boss_warning_overlay = Control.new()
+	boss_warning_overlay.name = "BossWarningOverlay"
+	boss_warning_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_warning_overlay.modulate.a = 0.0
+	boss_warning_overlay.visible = false
+	$HUD.add_child(boss_warning_overlay)
+	boss_warning_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var veil := ColorRect.new()
+	veil.name = "WarningVeil"
+	veil.color = Color(0.22, 0.0, 0.0, 0.18)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_warning_overlay.add_child(veil)
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var band := ColorRect.new()
+	band.name = "WarningBand"
+	band.color = Color(0.18, 0.005, 0.008, 0.88)
+	band.anchor_right = 1.0
+	band.anchor_top = 0.5
+	band.anchor_bottom = 0.5
+	band.offset_top = -92.0
+	band.offset_bottom = 92.0
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_warning_overlay.add_child(band)
+
+	for line_spec in [
+		{"name": "UpperScanLine", "top": -92.0},
+		{"name": "LowerScanLine", "top": 88.0},
+	]:
+		var scan_line := ColorRect.new()
+		scan_line.name = line_spec["name"]
+		scan_line.color = Color(1.0, 0.12, 0.08, 0.92)
+		scan_line.anchor_right = 1.0
+		scan_line.anchor_top = 0.5
+		scan_line.anchor_bottom = 0.5
+		scan_line.offset_top = float(line_spec["top"])
+		scan_line.offset_bottom = float(line_spec["top"]) + 4.0
+		scan_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		boss_warning_overlay.add_child(scan_line)
+
+	boss_warning_banner = HBoxContainer.new()
+	boss_warning_banner.name = "WarningBanner"
+	boss_warning_banner.anchor_left = 0.5
+	boss_warning_banner.anchor_right = 0.5
+	boss_warning_banner.anchor_top = 0.5
+	boss_warning_banner.anchor_bottom = 0.5
+	boss_warning_banner.offset_left = -330.0
+	boss_warning_banner.offset_top = -70.0
+	boss_warning_banner.offset_right = 330.0
+	boss_warning_banner.offset_bottom = 70.0
+	boss_warning_banner.alignment = BoxContainer.ALIGNMENT_CENTER
+	boss_warning_banner.add_theme_constant_override("separation", 28)
+	boss_warning_overlay.add_child(boss_warning_banner)
+
+	boss_warning_icon = Label.new()
+	boss_warning_icon.name = "WarningIcon"
+	boss_warning_icon.text = "⚠"
+	boss_warning_icon.add_theme_color_override("font_color", Color(1.0, 0.16, 0.1, 1.0))
+	boss_warning_icon.add_theme_color_override(
+		"font_shadow_color",
+		Color(0.35, 0.0, 0.0, 0.9),
+	)
+	boss_warning_icon.add_theme_constant_override("shadow_offset_x", 4)
+	boss_warning_icon.add_theme_constant_override("shadow_offset_y", 4)
+	boss_warning_icon.add_theme_font_size_override("font_size", 78)
+	boss_warning_banner.add_child(boss_warning_icon)
+
+	var copy := VBoxContainer.new()
+	copy.name = "WarningCopy"
+	copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	copy.add_theme_constant_override("separation", 4)
+	boss_warning_banner.add_child(copy)
+	var title := Label.new()
+	title.name = "WarningTitle"
+	title.text = BOSS_WARNING_TITLE
+	title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.76, 1.0))
+	title.add_theme_font_size_override("font_size", 30)
+	copy.add_child(title)
+	var subtitle := Label.new()
+	subtitle.name = "WarningSubtitle"
+	subtitle.text = BOSS_WARNING_SUBTITLE
+	subtitle.add_theme_color_override("font_color", Color(1.0, 0.32, 0.25, 0.9))
+	subtitle.add_theme_font_size_override("font_size", 17)
+	copy.add_child(subtitle)
+
+
+func _play_boss_warning() -> void:
+	if boss_warning_overlay == null:
+		return
+	_stop_boss_warning()
+	boss_warning_play_count += 1
+	boss_warning_overlay.visible = true
+	boss_warning_overlay.modulate.a = 0.0
+	boss_warning_icon.modulate.a = 1.0
+	boss_warning_banner_rest_position = boss_warning_banner.position
+	boss_warning_banner.position = boss_warning_banner_rest_position - Vector2(76.0, 0.0)
+	boss_warning_tween = create_tween()
+	boss_warning_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_warning_tween.tween_property(boss_warning_overlay, "modulate:a", 1.0, 0.18)
+	boss_warning_tween.parallel().tween_property(
+		boss_warning_banner,
+		"position",
+		boss_warning_banner_rest_position,
+		0.36,
+	)
+	for blink_index in 3:
+		boss_warning_tween.tween_property(boss_warning_icon, "modulate:a", 0.24, 0.13)
+		boss_warning_tween.tween_property(boss_warning_icon, "modulate:a", 1.0, 0.13)
+	boss_warning_tween.tween_interval(0.28)
+	boss_warning_tween.tween_property(boss_warning_overlay, "modulate:a", 0.0, 0.42)
+	boss_warning_tween.parallel().tween_property(
+		boss_warning_banner,
+		"position",
+		boss_warning_banner_rest_position + Vector2(48.0, 0.0),
+		0.42,
+	)
+	boss_warning_tween.finished.connect(_finish_boss_warning)
+
+
+func _stop_boss_warning() -> void:
+	var running_tween := boss_warning_tween
+	boss_warning_tween = null
+	if running_tween != null and running_tween.is_valid():
+		running_tween.kill()
+	_finish_boss_warning()
+
+
+func _finish_boss_warning() -> void:
+	if boss_warning_overlay != null:
+		boss_warning_overlay.visible = false
+		boss_warning_overlay.modulate.a = 0.0
+	if boss_warning_banner != null and boss_warning_play_count > 0:
+		boss_warning_banner.position = boss_warning_banner_rest_position
+	boss_warning_tween = null
 
 
 func _content_slot_world_position(slot_id: StringName) -> Vector2:
