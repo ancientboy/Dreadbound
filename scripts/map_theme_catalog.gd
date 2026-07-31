@@ -49,13 +49,13 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
 		"camera_zoom": Vector2(0.96, 0.96),
 		"camera_overscan": 1.08,
-		"camera_view_bounds": Rect2(128, 128, 1280, 768),
+		"camera_view_bounds": Rect2(64, 64, 1408, 896),
 		"map_bounds": Rect2(0, 0, 1536, 1024),
 		"spawn": Vector2(384, 544),
 		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(8, 5)),
 		"camera_guide_outline": PackedVector2Array([
-			Vector2(704, 512), Vector2(832, 512),
-			Vector2(832, 640), Vector2(704, 640),
+			Vector2(640, 480), Vector2(896, 480),
+			Vector2(896, 672), Vector2(640, 672),
 		]),
 		"door_sockets": [
 			_door_at("west", Vector2i(1, 4), Vector2(256, 494)),
