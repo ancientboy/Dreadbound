@@ -275,6 +275,7 @@ func _make_containment_leaf(
 	_add_frame_part(leaf, "CenterSeam", Rect2(seam_x, -56, 3, 112), Color("061920"))
 	var brace_x := 23.0 if mirror_details else -34.0
 	_add_frame_part(leaf, "Brace", Rect2(brace_x, -31, 11, 62), Color(0.12, 0.25, 0.29, 0.92))
+	_add_door_theme_stencil(leaf, Vector2(82, 98), mirror_details)
 	return leaf
 
 
@@ -401,7 +402,102 @@ func _make_tile_leaf(node_name: String, center_position: Vector2) -> Polygon2D:
 	_add_frame_part(leaf, "InsetPanel", Rect2(-14, -17, 28, 32), Color("25444a"))
 	_add_frame_part(leaf, "InnerHighlight", Rect2(-11, -15, 3, 27), Color(0.43, 0.68, 0.69, 0.48))
 	_add_frame_part(leaf, "CenterSeam", Rect2(-2, -23, 4, 46), Color("081c22"))
+	_add_door_theme_stencil(leaf, Vector2(28, 32), node_name == "RightLeaf")
 	return leaf
+
+
+func _add_door_theme_stencil(
+	parent_node: Node2D,
+	bounds: Vector2,
+	mirror_details: bool,
+) -> void:
+	var stencil := Node2D.new()
+	stencil.name = "ThemeStencil"
+	stencil.z_index = 5
+	parent_node.add_child(stencil)
+	var mark_color: Color = _visual_profile.get(
+		"mark_color",
+		Color(0.38, 0.82, 0.76, 0.56),
+	)
+	var mark_id := StringName(_visual_profile.get("theme_mark", &"medical_cross"))
+	if mark_id == &"containment_warning":
+		_add_containment_warning_stencil(stencil, bounds, mark_color)
+	else:
+		_add_medical_stencil(stencil, bounds, mark_color, mirror_details)
+
+
+func _add_medical_stencil(
+	stencil: Node2D,
+	bounds: Vector2,
+	color: Color,
+	mirror_details: bool,
+) -> void:
+	var scale_factor := clampf(minf(bounds.x / 82.0, bounds.y / 98.0), 0.42, 1.0)
+	var cross := Polygon2D.new()
+	cross.name = "MedicalCross"
+	cross.polygon = PackedVector2Array([
+		Vector2(-4, -17), Vector2(4, -17), Vector2(4, -5),
+		Vector2(16, -5), Vector2(16, 5), Vector2(4, 5),
+		Vector2(4, 17), Vector2(-4, 17), Vector2(-4, 5),
+		Vector2(-16, 5), Vector2(-16, -5), Vector2(-4, -5),
+	])
+	cross.color = color
+	cross.scale = Vector2.ONE * scale_factor
+	stencil.add_child(cross)
+	var stripe := Line2D.new()
+	stripe.name = "IsolationStripe"
+	stripe.points = PackedVector2Array([
+		Vector2(-bounds.x * 0.34, bounds.y * 0.34),
+		Vector2(bounds.x * 0.34, bounds.y * 0.34),
+	])
+	stripe.width = maxf(1.5, 3.0 * scale_factor)
+	stripe.default_color = Color(color.r, color.g, color.b, color.a * 0.72)
+	stripe.antialiased = true
+	stencil.add_child(stripe)
+	if mirror_details:
+		stencil.scale.x = -1.0
+
+
+func _add_containment_warning_stencil(
+	stencil: Node2D,
+	bounds: Vector2,
+	color: Color,
+) -> void:
+	var scale_factor := clampf(minf(bounds.x / 82.0, bounds.y / 98.0), 0.42, 1.0)
+	var triangle := Line2D.new()
+	triangle.name = "WarningTriangle"
+	triangle.points = PackedVector2Array([
+		Vector2(0, -25), Vector2(23, 19), Vector2(-23, 19), Vector2(0, -25),
+	])
+	triangle.width = 3.2
+	triangle.default_color = color
+	triangle.antialiased = true
+	triangle.scale = Vector2.ONE * scale_factor
+	stencil.add_child(triangle)
+	var alert_bar := _add_frame_part(
+		stencil,
+		"AlertBar",
+		Rect2(-2.5, -12, 5, 18),
+		color,
+	)
+	alert_bar.scale = Vector2.ONE * scale_factor
+	var alert_dot := _add_frame_part(
+		stencil,
+		"AlertDot",
+		Rect2(-2.5, 10, 5, 5),
+		color,
+	)
+	alert_dot.scale = Vector2.ONE * scale_factor
+	var lower_stripe := Line2D.new()
+	lower_stripe.name = "ContainmentStripe"
+	lower_stripe.points = PackedVector2Array([
+		Vector2(-bounds.x * 0.34, bounds.y * 0.38),
+		Vector2(bounds.x * 0.34, bounds.y * 0.38),
+	])
+	lower_stripe.width = maxf(1.5, 3.0 * scale_factor)
+	lower_stripe.default_color = Color(color.r, color.g, color.b, color.a * 0.68)
+	lower_stripe.antialiased = true
+	stencil.add_child(lower_stripe)
 
 
 func _make_sprite(
