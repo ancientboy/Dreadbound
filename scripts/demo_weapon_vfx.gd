@@ -507,39 +507,47 @@ func _draw_procedural_melee(
 	var normal := direction.orthogonal()
 	var color: Color = event.color
 	var style := profile.get("style", &"light_arc") as StringName
-	var reveal := ease(clampf(progress / 0.62, 0.0, 1.0), -1.2)
-	var fade := 1.0 - smoothstep(0.58, 1.0, progress)
-	var radius := 46.0
-	var thickness := 17.0
-	var half_sweep := 1.02
+	var fade := 1.0 - smoothstep(0.50, 1.0, progress)
+	# The crescent is complete on its first visible frame. Only its overall
+	# scale and opacity breathe; the blade silhouette never grows from a line.
+	var presentation_scale := lerpf(
+		0.96,
+		1.0,
+		ease(clampf(progress / 0.14, 0.0, 1.0), -1.8),
+	)
+	var radius := 50.0
+	var thickness := 20.0
+	var half_sweep := 1.14
 	match style:
 		&"heavy_arc":
+			radius = 63.0
+			thickness = 28.0
+			half_sweep = 1.24
+		&"blunt_arc":
+			radius = 48.0
+			thickness = 22.0
+			half_sweep = 1.06
+		&"electric_arc":
+			radius = 51.0
+			thickness = 21.0
+			half_sweep = 1.12
+		&"rift_arc":
 			radius = 58.0
 			thickness = 24.0
-			half_sweep = 1.14
-		&"blunt_arc":
-			radius = 43.0
-			thickness = 18.0
-			half_sweep = 0.90
-		&"electric_arc":
-			radius = 46.0
-			thickness = 17.0
-			half_sweep = 0.98
-		&"rift_arc":
-			radius = 52.0
-			thickness = 20.0
-			half_sweep = 1.08
+			half_sweep = 1.20
+	radius *= presentation_scale
+	thickness *= presentation_scale
 
 	var center_angle := direction.angle() + float(profile.rotation)
 	var start_angle := center_angle - half_sweep
-	var end_angle := lerpf(start_angle, center_angle + half_sweep, reveal)
+	var end_angle := center_angle + half_sweep
 	_draw_crescent_blade(
 		origin,
-		radius + 2.0,
-		thickness + 8.0,
+		radius + 3.0,
+		thickness + 10.0,
 		start_angle,
 		end_angle,
-		Color(color, 0.16 * fade),
+		Color(color, 0.18 * fade),
 	)
 	_draw_crescent_blade(
 		origin,
@@ -547,44 +555,32 @@ func _draw_procedural_melee(
 		thickness,
 		start_angle,
 		end_angle,
-		Color(color.lightened(0.26), 0.78 * fade),
+		Color(color.lightened(0.20), 0.88 * fade),
 	)
 	draw_arc(
 		origin,
-		radius + 1.0,
+		radius + 0.5,
 		start_angle,
 		end_angle,
-		24,
-		Color(Color.WHITE, 0.82 * fade),
-		1.6 if style != &"heavy_arc" else 2.2,
+		28,
+		Color(Color.WHITE, 0.58 * fade),
+		1.5 if style != &"heavy_arc" else 2.0,
 		true,
 	)
 
-	if style == &"blunt_arc":
-		var pressure_center := origin + direction * radius * 0.72
-		draw_arc(
-			pressure_center,
-			lerpf(5.0, 17.0, reveal),
-			0.0,
-			TAU,
-			18,
-			Color(color, 0.55 * fade),
-			2.0,
-			true,
-		)
-	elif style == &"electric_arc":
+	if style == &"electric_arc":
 		for strand in range(2):
 			var points := PackedVector2Array()
-			for index in range(7):
-				var ratio := float(index) / 6.0
+			for index in range(9):
+				var ratio := float(index) / 8.0
 				var angle := lerpf(start_angle, end_angle, ratio)
-				var jitter := sin(ratio * 23.0 + strand * 2.1) * 3.2
+				var jitter := sin(ratio * 25.0 + strand * 2.1) * 2.8
 				points.append(
 					origin
 					+ Vector2.from_angle(angle) * (radius + jitter)
 					+ normal * (strand * 2.0 - 1.0)
 				)
-			draw_polyline(points, Color(color.lightened(0.45), 0.74 * fade), 1.5, true)
+			draw_polyline(points, Color(color.lightened(0.45), 0.64 * fade), 1.4, true)
 	elif style == &"rift_arc":
 		for side in [-1.0, 1.0]:
 			draw_arc(
@@ -592,9 +588,9 @@ func _draw_procedural_melee(
 				radius + side * 3.0,
 				start_angle,
 				end_angle,
-				20,
-				Color(color.darkened(0.08), 0.48 * fade),
-				2.4,
+				24,
+				Color(color.darkened(0.08), 0.40 * fade),
+				2.2,
 				true,
 			)
 
