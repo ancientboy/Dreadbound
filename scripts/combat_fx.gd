@@ -108,8 +108,15 @@ func movement_echo(position: Vector2, facing_direction: Vector2, color: Color, r
 	_spawn("echo", position - facing_direction * 8.0, facing_direction, 0.0, 0.22 if resonant else 0.14, color)
 
 
-func enemy_hit(position: Vector2, direction: Vector2, heavy := false, color := Color("e69372")) -> void:
-	_spawn("enemy_hit", position, direction, 0.0, 0.16 if heavy else 0.11, color)
+func enemy_hit(
+	_position: Vector2,
+	_direction: Vector2,
+	heavy := false,
+	_color := Color("e69372"),
+) -> void:
+	# Enemy bodies already flash, stagger and recoil in their own damage
+	# handlers. Keep the tactile camera response, but do not stack a detached
+	# atlas spark over every target.
 	_kick_camera(1.7 if heavy else 0.7)
 
 
@@ -256,26 +263,33 @@ func _draw() -> void:
 				var swing_direction: Vector2 = event.payload.normalized()
 				var swing_angle := swing_direction.angle()
 				var sweep_progress := ease(progress, -1.4)
-				var end_angle := swing_angle - 0.72 + sweep_progress * 1.44
-				var trail_radius := clampf(event.radius * 0.58, 30.0, 64.0)
-				draw_arc(
+				var end_angle := swing_angle - 1.02 + sweep_progress * 2.04
+				var start_angle := end_angle - 1.18
+				var trail_radius := clampf(event.radius * 0.58, 34.0, 68.0)
+				_draw_crescent_blade(
+					event.origin,
+					trail_radius + 2.0,
+					24.0,
+					start_angle,
+					end_angle,
+					Color(color, fade * 0.16),
+				)
+				_draw_crescent_blade(
 					event.origin,
 					trail_radius,
-					end_angle - 0.62,
+					16.0,
+					start_angle,
 					end_angle,
-					16,
-					Color(color, fade * 0.82),
-					4.2,
-					true,
+					Color(color.lightened(0.28), fade * 0.78),
 				)
 				draw_arc(
 					event.origin,
-					trail_radius - 6.0,
-					end_angle - 0.48,
-					end_angle - 0.04,
-					12,
-					Color(color.lightened(0.28), fade * 0.48),
-					1.8,
+					trail_radius + 1.0,
+					start_angle,
+					end_angle,
+					20,
+					Color(Color.WHITE, fade * 0.82),
+					1.6,
 					true,
 				)
 			"tracer", "pellet":
@@ -315,8 +329,6 @@ func _draw() -> void:
 			"echo":
 				draw_circle(event.origin - event.payload * progress * 15.0, 13.0 - progress * 4.0, Color(color, 0.18 * fade))
 				draw_circle(event.origin - event.payload * progress * 12.0, 5.0, Color(color, 0.55 * fade))
-			"enemy_hit":
-				_draw_fx_cell(5, event.origin, 48.0 + progress * 20.0, event.payload.angle(), Color(1.0, 0.86, 0.82, fade))
 			"enemy_defeat":
 				_draw_fx_cell(6, event.origin, 58.0 + progress * 44.0, progress * 0.4, Color(1.0, 1.0, 1.0, fade))
 			"telegraph":
@@ -396,6 +408,28 @@ func _draw() -> void:
 						direction.angle(),
 						Color(1.0, 1.0, 1.0, fade),
 					)
+
+
+func _draw_crescent_blade(
+	center: Vector2,
+	radius: float,
+	thickness: float,
+	start_angle: float,
+	end_angle: float,
+	color: Color,
+) -> void:
+	var points := PackedVector2Array()
+	var segments := 22
+	for index in range(segments + 1):
+		var ratio := float(index) / float(segments)
+		var angle := lerpf(start_angle, end_angle, ratio)
+		points.append(center + Vector2.from_angle(angle) * radius)
+	for index in range(segments, -1, -1):
+		var ratio := float(index) / float(segments)
+		var angle := lerpf(start_angle, end_angle, ratio)
+		var inner_radius := radius - thickness * sin(ratio * PI)
+		points.append(center + Vector2.from_angle(angle) * inner_radius)
+	draw_colored_polygon(points, color)
 
 
 func _draw_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:

@@ -292,6 +292,10 @@ func melee_uses_hd_texture(family: StringName) -> bool:
 	return profile.get("style", &"") == &"hd"
 
 
+func melee_uses_crescent(family: StringName) -> bool:
+	return not melee_uses_hd_texture(family)
+
+
 func melee_layer_for_direction(direction: Vector2) -> int:
 	return (
 		MELEE_BACK_LAYER
@@ -470,6 +474,7 @@ func _draw_melee_accents(event: Dictionary, progress: float) -> void:
 	)
 	if profile.get("style", &"") != &"hd":
 		_draw_procedural_melee(event, progress, profile)
+		return
 	var fade := 1.0 - smoothstep(0.62, 1.0, progress)
 	var radius := float(event.reach)
 	var tip := origin + direction * radius
@@ -504,54 +509,54 @@ func _draw_procedural_melee(
 	var style := profile.get("style", &"light_arc") as StringName
 	var reveal := ease(clampf(progress / 0.62, 0.0, 1.0), -1.2)
 	var fade := 1.0 - smoothstep(0.58, 1.0, progress)
-	var radius := 43.0
-	var thickness := 7.0
-	var half_sweep := 0.82
+	var radius := 46.0
+	var thickness := 17.0
+	var half_sweep := 1.02
 	match style:
 		&"heavy_arc":
-			radius = 54.0
-			thickness = 12.0
-			half_sweep = 1.02
+			radius = 58.0
+			thickness = 24.0
+			half_sweep = 1.14
 		&"blunt_arc":
-			radius = 39.0
-			thickness = 9.0
-			half_sweep = 0.72
+			radius = 43.0
+			thickness = 18.0
+			half_sweep = 0.90
 		&"electric_arc":
-			radius = 42.0
-			thickness = 8.0
-			half_sweep = 0.78
+			radius = 46.0
+			thickness = 17.0
+			half_sweep = 0.98
 		&"rift_arc":
-			radius = 48.0
-			thickness = 9.0
-			half_sweep = 0.94
+			radius = 52.0
+			thickness = 20.0
+			half_sweep = 1.08
 
 	var center_angle := direction.angle() + float(profile.rotation)
 	var start_angle := center_angle - half_sweep
 	var end_angle := lerpf(start_angle, center_angle + half_sweep, reveal)
-	_draw_arc_ribbon(
+	_draw_crescent_blade(
 		origin,
-		radius - thickness * 1.35,
-		radius + thickness * 0.75,
+		radius + 2.0,
+		thickness + 8.0,
 		start_angle,
 		end_angle,
-		Color(color, 0.12 * fade),
+		Color(color, 0.16 * fade),
 	)
-	_draw_arc_ribbon(
+	_draw_crescent_blade(
 		origin,
-		radius - thickness * 0.35,
-		radius + thickness * 0.28,
+		radius,
+		thickness,
 		start_angle,
 		end_angle,
-		Color(color.lightened(0.36), 0.72 * fade),
+		Color(color.lightened(0.26), 0.78 * fade),
 	)
 	draw_arc(
 		origin,
-		radius,
+		radius + 1.0,
 		start_angle,
 		end_angle,
-		20,
-		Color(Color.WHITE, 0.72 * fade),
-		1.4 if style != &"heavy_arc" else 2.0,
+		24,
+		Color(Color.WHITE, 0.82 * fade),
+		1.6 if style != &"heavy_arc" else 2.2,
 		true,
 	)
 
@@ -745,6 +750,32 @@ func _draw_arc_ribbon(
 		points.append(
 			center + Vector2.from_angle(lerpf(start_angle, end_angle, ratio)) * inner_radius
 		)
+	draw_colored_polygon(points, color)
+
+
+func _draw_crescent_blade(
+	center: Vector2,
+	radius: float,
+	thickness: float,
+	start_angle: float,
+	end_angle: float,
+	color: Color,
+) -> void:
+	# A crescent is widest at the middle of the swing and tapers to two sharp
+	# tips. This keeps the center transparent instead of looking like a filled
+	# circular impact pasted over the player.
+	var points := PackedVector2Array()
+	var segments := 24
+	for index in range(segments + 1):
+		var ratio := float(index) / float(segments)
+		var angle := lerpf(start_angle, end_angle, ratio)
+		points.append(center + Vector2.from_angle(angle) * radius)
+	for index in range(segments, -1, -1):
+		var ratio := float(index) / float(segments)
+		var angle := lerpf(start_angle, end_angle, ratio)
+		var taper := sin(ratio * PI)
+		var inner_radius := radius - thickness * taper
+		points.append(center + Vector2.from_angle(angle) * inner_radius)
 	draw_colored_polygon(points, color)
 
 
