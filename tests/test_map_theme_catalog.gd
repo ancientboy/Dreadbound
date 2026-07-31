@@ -65,9 +65,20 @@ func _init() -> void:
 	assert(rooms[0]["hide_theme_props"])
 	assert(rooms[0]["camera_zoom"] == Vector2(0.96, 0.96))
 	assert(is_equal_approx(float(rooms[0]["camera_overscan"]), 1.08))
-	assert(rooms[0]["camera_view_bounds"] == Rect2(128, 128, 1280, 768))
+	assert(rooms[0]["camera_view_bounds"] == Rect2(64, 64, 1408, 896))
+	assert(rooms[0]["camera_guide_outline"] == PackedVector2Array([
+		Vector2(640, 480), Vector2(896, 480),
+		Vector2(896, 672), Vector2(640, 672),
+	]))
+	assert(rooms[0]["blocked_outlines"].size() == 5)
+	assert(rooms[0]["blocked_outlines"][0] == PackedVector2Array([
+		Vector2(320, 276), Vector2(552, 276),
+		Vector2(552, 404), Vector2(320, 404),
+	]))
 	assert(rooms[0]["floor_macro"]["world_rect"] == Rect2(0, 32, 1536, 960))
 	assert(rooms[0]["wall_shell"]["regions"].size() == 4)
+	assert(rooms[0]["wall_shell"]["regions"][1]["world_rect"] == Rect2(256, 192, 1024, 400))
+	assert(rooms[0]["wall_shell"]["regions"][2]["world_rect"] == Rect2(256, 752, 1024, 240))
 	assert(rooms[0]["door_sockets"][0]["anchor"] == Vector2(256, 494))
 	assert(rooms[0]["door_sockets"][1]["anchor"] == Vector2(1280, 494))
 	assert(rooms[0]["door_profile"].has("art_texture_path"))
