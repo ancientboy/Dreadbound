@@ -81,13 +81,14 @@ func _run_test() -> void:
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	var viewport_size := instance.get_viewport_rect().size
 	var expected_cover_zoom := (
-		maxf(viewport_size.x / 1536.0, viewport_size.y / 1024.0)
+		maxf(viewport_size.x / 1280.0, viewport_size.y / 768.0)
 		* MapStyleDemo.CAMERA_COVER_OVERSCAN
 		* room.camera_overscan
 	)
 	assert(camera.zoom.is_equal_approx(Vector2.ONE * expected_cover_zoom))
-	assert(camera.zoom.x > 0.72)
-	assert(camera.limit_right == 1536 and camera.limit_bottom == 1024)
+	assert(camera.zoom.x >= 0.96)
+	assert(camera.limit_left == 128 and camera.limit_top == 128)
+	assert(camera.limit_right == 1408 and camera.limit_bottom == 896)
 	assert(camera.position_smoothing_enabled)
 
 	assert(room.room_id == &"hospital_standard_combat")
