@@ -70,11 +70,28 @@ func _init() -> void:
 		Vector2(640, 480), Vector2(896, 480),
 		Vector2(896, 672), Vector2(640, 672),
 	]))
-	assert(rooms[0]["blocked_outlines"].size() == 5)
+	assert(rooms[0]["blocked_outlines"].size() == 10)
 	assert(rooms[0]["blocked_outlines"][0] == PackedVector2Array([
-		Vector2(320, 276), Vector2(552, 276),
-		Vector2(552, 404), Vector2(320, 404),
+		Vector2(340, 326), Vector2(354, 312),
+		Vector2(474, 312), Vector2(490, 328),
+		Vector2(482, 382), Vector2(350, 382),
 	]))
+	assert(rooms[0]["blocked_outlines"][1] == PackedVector2Array([
+		Vector2(511, 338), Vector2(531, 338),
+		Vector2(538, 345), Vector2(538, 377),
+		Vector2(531, 384), Vector2(511, 384),
+		Vector2(504, 377), Vector2(504, 345),
+	]))
+	# The transparent corners and gaps inside the old coarse rectangles stay walkable.
+	var standard_builder := ModularHospitalRoom.new()
+	standard_builder.build_from_spec(rooms[0])
+	var standard_module := MapRoomModule.new()
+	standard_module.apply_built_spec(rooms[0], standard_builder)
+	assert(standard_module.contains_world_point(Vector2(324, 286)))
+	assert(standard_module.contains_world_point(Vector2(496, 350)))
+	assert(not standard_module.contains_world_point(Vector2(400, 350)))
+	standard_module.free()
+	standard_builder.free()
 	assert(rooms[0]["floor_macro"]["world_rect"] == Rect2(0, 32, 1536, 960))
 	assert(rooms[0]["wall_shell"]["regions"].size() == 4)
 	assert(rooms[0]["wall_shell"]["regions"][1]["world_rect"] == Rect2(256, 192, 1024, 400))
