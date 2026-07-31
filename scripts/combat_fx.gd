@@ -262,34 +262,44 @@ func _draw() -> void:
 			"weapon_swing":
 				var swing_direction: Vector2 = event.payload.normalized()
 				var swing_angle := swing_direction.angle()
-				var sweep_progress := ease(progress, -1.4)
-				var end_angle := swing_angle - 1.02 + sweep_progress * 2.04
-				var start_angle := end_angle - 1.18
-				var trail_radius := clampf(event.radius * 0.58, 34.0, 68.0)
-				_draw_crescent_blade(
-					event.origin,
-					trail_radius + 2.0,
-					24.0,
-					start_angle,
-					end_angle,
-					Color(color, fade * 0.16),
+				var presentation_scale := lerpf(
+					0.96,
+					1.0,
+					ease(clampf(progress / 0.12, 0.0, 1.0), -1.8),
+				)
+				var trail_radius := clampf(event.radius * 0.68, 44.0, 76.0)
+				trail_radius *= presentation_scale
+				var half_sweep := 1.16
+				var start_angle := swing_angle - half_sweep
+				var end_angle := swing_angle + half_sweep
+				var crescent_center := (
+					event.origin
+					+ swing_direction * clampf(event.radius * 0.38, 28.0, 48.0)
 				)
 				_draw_crescent_blade(
-					event.origin,
-					trail_radius,
-					16.0,
+					crescent_center,
+					trail_radius + 3.0,
+					30.0 * presentation_scale,
 					start_angle,
 					end_angle,
-					Color(color.lightened(0.28), fade * 0.78),
+					Color(color, fade * 0.18),
+				)
+				_draw_crescent_blade(
+					crescent_center,
+					trail_radius,
+					21.0 * presentation_scale,
+					start_angle,
+					end_angle,
+					Color(color.lightened(0.20), fade * 0.88),
 				)
 				draw_arc(
-					event.origin,
-					trail_radius + 1.0,
+					crescent_center,
+					trail_radius + 0.5,
 					start_angle,
 					end_angle,
-					20,
-					Color(Color.WHITE, fade * 0.82),
-					1.6,
+					28,
+					Color(Color.WHITE, fade * 0.58),
+					1.5,
 					true,
 				)
 			"tracer", "pellet":
