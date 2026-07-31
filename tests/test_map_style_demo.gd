@@ -101,7 +101,7 @@ func _run_test() -> void:
 		Vector2(640, 480), Vector2(896, 480),
 		Vector2(896, 672), Vector2(640, 672),
 	]))
-	assert(room.blocked_outlines.size() == 5)
+	assert(room.blocked_outlines.size() == 10)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
 	assert(room.door_anchor_overrides.size() == 2)
 	assert(room.door_anchor_world(&"west") == Vector2(256, 494))
@@ -136,13 +136,18 @@ func _run_test() -> void:
 		assert((door.get_node("DoorFrame") as Node2D).position == expected_recess)
 		assert((door.get_node("DoorOpening") as Polygon2D).position == expected_recess)
 
-	# Each of the two wall edges is split around a real door opening, while
-	# fixture footprints add four collision edges each without sealing the doors.
+	# Door openings remain free; fixture collision uses each polygon's real
+	# edge count and leaves transparent corners/component gaps walkable.
 	var boundary_segments := _boundary_segment_count(instance)
-	assert(boundary_segments == room.walkable_outline.size() + 2 + room.blocked_outlines.size() * 4)
+	var fixture_edge_count := 0
+	for blocked_outline in room.blocked_outlines:
+		fixture_edge_count += blocked_outline.size()
+	assert(boundary_segments == room.walkable_outline.size() + 2 + fixture_edge_count)
 	assert(room.contains_world_point(Vector2(300, 494)))
 	assert(room.contains_world_point(Vector2(1236, 494)))
-	var fixture_center := Vector2(400, 320)
+	assert(room.contains_world_point(Vector2(324, 286)))
+	assert(room.contains_world_point(Vector2(496, 350)))
+	var fixture_center := Vector2(400, 350)
 	assert(not room.contains_world_point(fixture_center))
 	player.global_position = fixture_center
 	instance._physics_process(0.0)
