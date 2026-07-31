@@ -132,6 +132,8 @@ func _run_test() -> void:
 		assert(door.get_node("DoorFrame") is Node2D)
 		assert(door.get_node("LeftLeaf") is Polygon2D)
 		assert(door.get_node("RightLeaf") is Polygon2D)
+		assert(door.get_node("LeftLeaf/ThemeStencil/MedicalCross") is Polygon2D)
+		assert(door.get_node("RightLeaf/ThemeStencil/MedicalCross") is Polygon2D)
 		assert(door.get_node("LockedIndicator") is Polygon2D)
 		assert(door.get_node("OpenIndicator") is Polygon2D)
 		assert(door.get_node("DoorBlocker") is StaticBody2D)
@@ -287,12 +289,24 @@ func _run_test() -> void:
 		assert(not door.has_node("DoorFrame"))
 		assert(door.get_node("LeftLeaf") is Polygon2D)
 		assert(door.get_node("RightLeaf") is Polygon2D)
+		assert(door.get_node("LeftLeaf/ThemeStencil/WarningTriangle") is Line2D)
+		assert(door.get_node("RightLeaf/ThemeStencil/WarningTriangle") is Line2D)
 		assert((door.get_node("DoorOpening") as Polygon2D).position == Vector2.ZERO)
 		assert((door.get_node("LeftLeaf") as Polygon2D).position == Vector2(-49, 0))
 		assert((door.get_node("RightLeaf") as Polygon2D).position == Vector2(49, 0))
 		if door.direction == &"south":
 			assert(door.z_index > (boss_shell.get_node("ForegroundWall") as Sprite2D).z_index)
 	assert(camera.zoom.x >= 0.84)
+	assert(instance.boss_warning_play_count == 1)
+	assert(instance.boss_warning_overlay.visible)
+	assert(instance.boss_warning_icon.text == "⚠")
+	assert(
+		instance.boss_warning_overlay.get_node(
+			"WarningBanner/WarningCopy/WarningTitle",
+		).text == MapStyleDemo.BOSS_WARNING_TITLE
+	)
+	instance._stop_boss_warning()
+	assert(not instance.boss_warning_overlay.visible)
 	instance.active_boss.free()
 	await process_frame
 	await process_frame
