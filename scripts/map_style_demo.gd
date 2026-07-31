@@ -595,7 +595,7 @@ func _play_boss_warning() -> void:
 		boss_warning_banner_rest_position,
 		0.36,
 	)
-	for blink_index in 3:
+	for _blink_index in range(3):
 		boss_warning_tween.tween_property(boss_warning_icon, "modulate:a", 0.24, 0.13)
 		boss_warning_tween.tween_property(boss_warning_icon, "modulate:a", 1.0, 0.13)
 	boss_warning_tween.tween_interval(0.28)
