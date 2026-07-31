@@ -87,10 +87,11 @@ func _configure_player() -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 6.5
 	camera.limit_smoothed = true
-	camera.limit_left = roundi(sample_room.camera_bounds.position.x)
-	camera.limit_top = roundi(sample_room.camera_bounds.position.y)
-	camera.limit_right = roundi(sample_room.camera_bounds.end.x)
-	camera.limit_bottom = roundi(sample_room.camera_bounds.end.y)
+	var view_bounds := _camera_view_bounds()
+	camera.limit_left = roundi(view_bounds.position.x)
+	camera.limit_top = roundi(view_bounds.position.y)
+	camera.limit_right = roundi(view_bounds.end.x)
+	camera.limit_bottom = roundi(view_bounds.end.y)
 	player.weapon_vfx = weapon_vfx
 	rendered_character.select_preview_family(&"crowbar")
 	rendered_character.modulate = Color(0.84, 0.95, 1.0, 1.0)
@@ -98,8 +99,18 @@ func _configure_player() -> void:
 	_update_guided_camera()
 
 
+func _camera_view_bounds() -> Rect2:
+	if current_room_index < 0 or current_room_index >= room_variants.size():
+		return sample_room.camera_bounds
+	var configured: Rect2 = room_variants[current_room_index].get(
+		"camera_view_bounds",
+		sample_room.camera_bounds,
+	)
+	return configured if configured.has_area() else sample_room.camera_bounds
+
+
 func _fit_camera_to_viewport() -> void:
-	var bounds := sample_room.camera_bounds
+	var bounds := _camera_view_bounds()
 	var viewport_size := get_viewport_rect().size
 	if not bounds.has_area() or viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		camera.zoom = sample_room.camera_zoom
