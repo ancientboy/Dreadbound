@@ -8,6 +8,7 @@ const MAX_EVENTS := 24
 const MELEE_VISUAL_SCALE := 0.78
 const MELEE_BACK_LAYER := 0
 const MELEE_FRONT_LAYER := 80
+const BASIC_MELEE_CRESCENT: Texture2D = preload("res://assets/art/vfx/basic_melee_crescent.svg")
 const MELEE_TEXTURES := {
 	&"echo_cross": preload(
 		"res://assets/art/vfx/melee_hd/runtime/echo_cross_slash.png"
@@ -504,95 +505,43 @@ func _draw_procedural_melee(
 ) -> void:
 	var origin: Vector2 = event.origin
 	var direction: Vector2 = event.direction
-	var normal := direction.orthogonal()
 	var color: Color = event.color
 	var style := profile.get("style", &"light_arc") as StringName
 	var fade := 1.0 - smoothstep(0.50, 1.0, progress)
-	# The crescent is complete on its first visible frame. Only its overall
-	# scale and opacity breathe; the blade silhouette never grows from a line.
 	var presentation_scale := lerpf(
 		0.96,
 		1.0,
 		ease(clampf(progress / 0.14, 0.0, 1.0), -1.8),
 	)
-	var radius := 50.0
-	var thickness := 20.0
-	var half_sweep := 1.14
+	var draw_size := Vector2(132.0, 99.0)
 	match style:
 		&"heavy_arc":
-			radius = 63.0
-			thickness = 28.0
-			half_sweep = 1.24
+			draw_size = Vector2(164.0, 123.0)
 		&"blunt_arc":
-			radius = 48.0
-			thickness = 22.0
-			half_sweep = 1.06
+			draw_size = Vector2(124.0, 93.0)
 		&"electric_arc":
-			radius = 51.0
-			thickness = 21.0
-			half_sweep = 1.12
+			draw_size = Vector2(134.0, 100.5)
 		&"rift_arc":
-			radius = 58.0
-			thickness = 24.0
-			half_sweep = 1.20
-	radius *= presentation_scale
-	thickness *= presentation_scale
+			draw_size = Vector2(150.0, 112.5)
+	draw_size *= presentation_scale
 
-	var center_angle := direction.angle() + float(profile.rotation)
-	var start_angle := center_angle - half_sweep
-	var end_angle := center_angle + half_sweep
-	_draw_crescent_blade(
-		origin,
-		radius + 3.0,
-		thickness + 10.0,
-		start_angle,
-		end_angle,
-		Color(color, 0.18 * fade),
+	# The asset is already a complete, transparent crescent. Never rebuild its
+	# inner edge from radial points, which was the source of the center bulge.
+	var rotation := direction.angle() + float(profile.rotation)
+	draw_set_transform(origin, rotation, Vector2.ONE)
+	draw_texture_rect(
+		BASIC_MELEE_CRESCENT,
+		Rect2(-draw_size * 0.54, draw_size * 1.08),
+		false,
+		Color(color, fade * 0.18),
 	)
-	_draw_crescent_blade(
-		origin,
-		radius,
-		thickness,
-		start_angle,
-		end_angle,
-		Color(color.lightened(0.20), 0.88 * fade),
+	draw_texture_rect(
+		BASIC_MELEE_CRESCENT,
+		Rect2(-draw_size * 0.5, draw_size),
+		false,
+		Color(color.lightened(0.24), fade * 0.92),
 	)
-	draw_arc(
-		origin,
-		radius + 0.5,
-		start_angle,
-		end_angle,
-		28,
-		Color(Color.WHITE, 0.58 * fade),
-		1.5 if style != &"heavy_arc" else 2.0,
-		true,
-	)
-
-	if style == &"electric_arc":
-		for strand in range(2):
-			var points := PackedVector2Array()
-			for index in range(9):
-				var ratio := float(index) / 8.0
-				var angle := lerpf(start_angle, end_angle, ratio)
-				var jitter := sin(ratio * 25.0 + strand * 2.1) * 2.8
-				points.append(
-					origin
-					+ Vector2.from_angle(angle) * (radius + jitter)
-					+ normal * (strand * 2.0 - 1.0)
-				)
-			draw_polyline(points, Color(color.lightened(0.45), 0.64 * fade), 1.4, true)
-	elif style == &"rift_arc":
-		for side in [-1.0, 1.0]:
-			draw_arc(
-				origin + normal * side * 2.5,
-				radius + side * 3.0,
-				start_angle,
-				end_angle,
-				24,
-				Color(color.darkened(0.08), 0.40 * fade),
-				2.2,
-				true,
-			)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_ballistic(event: Dictionary, progress: float) -> void:
@@ -746,32 +695,6 @@ func _draw_arc_ribbon(
 		points.append(
 			center + Vector2.from_angle(lerpf(start_angle, end_angle, ratio)) * inner_radius
 		)
-	draw_colored_polygon(points, color)
-
-
-func _draw_crescent_blade(
-	center: Vector2,
-	radius: float,
-	thickness: float,
-	start_angle: float,
-	end_angle: float,
-	color: Color,
-) -> void:
-	# A crescent is widest at the middle of the swing and tapers to two sharp
-	# tips. This keeps the center transparent instead of looking like a filled
-	# circular impact pasted over the player.
-	var points := PackedVector2Array()
-	var segments := 24
-	for index in range(segments + 1):
-		var ratio := float(index) / float(segments)
-		var angle := lerpf(start_angle, end_angle, ratio)
-		points.append(center + Vector2.from_angle(angle) * radius)
-	for index in range(segments, -1, -1):
-		var ratio := float(index) / float(segments)
-		var angle := lerpf(start_angle, end_angle, ratio)
-		var taper := sin(ratio * PI)
-		var inner_radius := radius - thickness * taper
-		points.append(center + Vector2.from_angle(angle) * inner_radius)
 	draw_colored_polygon(points, color)
 
 
