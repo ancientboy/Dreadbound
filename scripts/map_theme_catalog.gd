@@ -57,6 +57,13 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			Vector2(640, 480), Vector2(896, 480),
 			Vector2(896, 672), Vector2(640, 672),
 		]),
+		"blocked_outlines": [
+			_rect_outline(Rect2(320, 276, 232, 128)),
+			_rect_outline(Rect2(616, 276, 232, 128)),
+			_rect_outline(Rect2(912, 276, 232, 128)),
+			_rect_outline(Rect2(320, 760, 256, 136)),
+			_rect_outline(Rect2(960, 760, 256, 136)),
+		],
 		"door_sockets": [
 			_door_at("west", Vector2i(1, 4), Vector2(256, 494)),
 			_door_at("east", Vector2i(10, 4), Vector2(1280, 494)),
@@ -334,6 +341,15 @@ static func _rect_cells(origin: Vector2i, size: Vector2i) -> Array:
 		for x_index in size.x:
 			result.append(origin + Vector2i(x_index, y_index))
 	return result
+
+
+static func _rect_outline(rect: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([
+		rect.position,
+		Vector2(rect.end.x, rect.position.y),
+		rect.end,
+		Vector2(rect.position.x, rect.end.y),
+	])
 
 
 static func _hospital_door_profile() -> Dictionary:
