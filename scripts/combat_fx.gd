@@ -272,8 +272,8 @@ func _draw() -> void:
 				var half_sweep := 1.16
 				var start_angle := swing_angle - half_sweep
 				var end_angle := swing_angle + half_sweep
-				var crescent_center := (
-					event.origin
+				var crescent_center: Vector2 = (
+					Vector2(event.origin)
 					+ swing_direction * clampf(event.radius * 0.38, 28.0, 48.0)
 				)
 				_draw_crescent_blade(
