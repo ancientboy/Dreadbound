@@ -299,7 +299,9 @@ func _run_test() -> void:
 	assert(camera.zoom.x >= 0.84)
 	assert(instance.boss_warning_play_count == 1)
 	assert(instance.boss_warning_overlay.visible)
-	assert(instance.boss_warning_icon.text == "⚠")
+	assert(instance.boss_warning_icon is Control)
+	assert(instance.boss_warning_icon.get_node("WarningTriangle") is Line2D)
+	assert(instance.boss_warning_icon.get_node("WarningBar") is ColorRect)
 	var warning_title := instance.boss_warning_overlay.get_node(
 		"WarningBanner/WarningCopy/WarningTitle",
 	) as Label
