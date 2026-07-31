@@ -53,10 +53,21 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/standard_wall_shell_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/boss_floor_macro_v1.webp",
 		"res://assets/art/worlds/map_demo/dungeon1_hospital/boss_wall_shell_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_floor_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_wall_shell_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_foreground_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_props_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_doors_v1.png",
 		"res://resources/map_themes/dungeon1_hospital.tres",
 	]:
 		assert(ResourceLoader.exists(asset_path))
 	assert(rooms[0]["grid_cells"].size() == 40)
+	assert(rooms[0]["hide_theme_props"])
+	assert(rooms[0]["floor_macro"]["world_rect"] == Rect2(0, 32, 1536, 960))
+	assert(rooms[0]["wall_shell"]["regions"].size() == 4)
+	assert(rooms[0]["door_sockets"][0]["anchor"] == Vector2(256, 494))
+	assert(rooms[0]["door_sockets"][1]["anchor"] == Vector2(1280, 494))
+	assert(rooms[0]["door_profile"].has("art_texture_path"))
 	assert(rooms[1]["grid_cells"].size() == 60)
 	assert(rooms[2]["grid_cells"].size() == 45)
 	var boss_room: Dictionary = rooms[3]

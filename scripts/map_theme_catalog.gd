@@ -11,6 +11,24 @@ const HOSPITAL_WALL_SHELL := (
 	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
 	+ "standard_wall_shell_v1.webp"
 )
+const SANATORIUM_V2_ROOT := (
+	"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/"
+)
+const SANATORIUM_V2_FLOOR := (
+	SANATORIUM_V2_ROOT + "standard_combat_floor_v1.png"
+)
+const SANATORIUM_V2_WALL_SHELL := (
+	SANATORIUM_V2_ROOT + "standard_combat_wall_shell_v1.png"
+)
+const SANATORIUM_V2_FOREGROUND := (
+	SANATORIUM_V2_ROOT + "standard_combat_foreground_v1.png"
+)
+const SANATORIUM_V2_PROPS := (
+	SANATORIUM_V2_ROOT + "standard_combat_props_v1.png"
+)
+const SANATORIUM_V2_DOORS := (
+	SANATORIUM_V2_ROOT + "standard_combat_doors_v1.png"
+)
 const HOSPITAL_BOSS_FLOOR_MACRO := (
 	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
 	+ "boss_floor_macro_v1.webp"
@@ -31,41 +49,62 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"size_class": MapRoomModule.RoomSizeClass.STANDARD,
 		"camera_zoom": Vector2(0.72, 0.72),
 		"map_bounds": Rect2(0, 0, 1536, 1024),
-		"spawn": Vector2(384, 576),
+		"spawn": Vector2(384, 544),
 		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(8, 5)),
 		"camera_guide_outline": PackedVector2Array([
 			Vector2(704, 512), Vector2(832, 512),
 			Vector2(832, 640), Vector2(704, 640),
 		]),
 		"door_sockets": [
-			_door("west", Vector2i(1, 4)),
-			_door("east", Vector2i(10, 4)),
+			_door_at("west", Vector2i(1, 4), Vector2(256, 494)),
+			_door_at("east", Vector2i(10, 4), Vector2(1280, 494)),
 		],
-		"door_profile": _hospital_door_profile(),
+		"door_profile": _sanatorium_v2_door_profile(),
+		"hide_theme_props": true,
 		"floor_macro": {
 			"node_name": "StandardFloorMacro",
-			"texture_path": HOSPITAL_FLOOR_MACRO,
-			"world_rect": Rect2(152, 192, 1232, 768),
-			"corner_cut": Vector2(44, 44),
+			"texture_path": SANATORIUM_V2_FLOOR,
+			"world_rect": Rect2(0, 32, 1536, 960),
 			"z_index": -24,
 		},
 		"wall_shell": {
 			"node_name": "StandardWallShell",
-			"texture_path": HOSPITAL_WALL_SHELL,
+			"texture_path": SANATORIUM_V2_WALL_SHELL,
 			"hide_generated_walls": true,
 			"regions": [
-				_shell_region("back_wall", Rect2(0, 0, 1536, 256), -7),
-				_shell_region("west_wall", Rect2(0, 256, 256, 640), 4),
-				_shell_region("east_wall", Rect2(1280, 256, 256, 640), 4),
-				_shell_region(
+				_layer_region(
+					"architecture",
+					SANATORIUM_V2_WALL_SHELL,
+					Rect2(0, 0, 1586, 992),
+					Rect2(0, 32, 1536, 960),
+					-7,
+				),
+				_layer_region(
+					"back_props",
+					SANATORIUM_V2_PROPS,
+					Rect2(0, 0, 1586, 620),
+					Rect2(0, 32, 1536, 600),
+					-2,
+				),
+				_layer_region(
+					"front_props",
+					SANATORIUM_V2_PROPS,
+					Rect2(0, 620, 1586, 372),
+					Rect2(0, 632, 1536, 360),
+					37,
+					true,
+				),
+				_layer_region(
 					"foreground_wall",
-					Rect2(0, 896, 1536, 128),
+					SANATORIUM_V2_FOREGROUND,
+					Rect2(0, 0, 1586, 992),
+					Rect2(0, 32, 1536, 960),
 					38,
 					true,
 				),
 			],
 		},
-		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1262, 576)]),
+		"guide_line": PackedVector2Array([Vector2(274, 494), Vector2(1262, 494)]),
 		"content_slots": [
 			_slot("west_cover", "cover", Vector2i(4, 3), "cover_a"),
 			_slot("objective", "objective", Vector2i(6, 4), "objective"),
@@ -302,6 +341,19 @@ static func _hospital_door_profile() -> Dictionary:
 	}
 
 
+static func _sanatorium_v2_door_profile() -> Dictionary:
+	return {
+		"theme_mark": &"medical_cross",
+		"mark_color": Color(0.32, 0.78, 0.7, 0.52),
+		"art_texture_path": SANATORIUM_V2_DOORS,
+		"west_source_region": Rect2(154, 401, 78, 154),
+		"east_source_region": Rect2(1354, 401, 78, 154),
+		"visual_scale": 1536.0 / 1586.0,
+		"side_visual_recess": 69.5,
+		"travel_distance": 47.0,
+	}
+
+
 static func _door(direction: String, cell: Vector2i) -> Dictionary:
 	return {
 		"direction": StringName(direction),
@@ -341,6 +393,24 @@ static func _shell_region(
 		"id": StringName(id),
 		"source_region": rect,
 		"world_rect": rect,
+		"z_index": z_index,
+		"foreground": foreground,
+	}
+
+
+static func _layer_region(
+	id: String,
+	texture_path: String,
+	source_region: Rect2,
+	world_rect: Rect2,
+	z_index: int,
+	foreground := false,
+) -> Dictionary:
+	return {
+		"id": StringName(id),
+		"texture_path": texture_path,
+		"source_region": source_region,
+		"world_rect": world_rect,
 		"z_index": z_index,
 		"foreground": foreground,
 	}

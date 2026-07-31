@@ -47,38 +47,24 @@ func _run_test() -> void:
 	assert(floor_tiles.tile_set.tile_size == Vector2i(128, 128))
 	assert(modular.get_node("DoorSockets").get_child_count() == 2)
 	assert(modular.get_node("ContentSlots").get_child_count() == 3)
-	var floor_macro := modular.get_node("StandardFloorMacro") as Polygon2D
+	var floor_macro := modular.get_node("StandardFloorMacro") as Sprite2D
 	assert(floor_macro != null)
-	assert(floor_macro.texture.get_size() == Vector2(2048, 1280))
-	assert(floor_macro.position == Vector2(152, 192))
-	assert(floor_macro.scale == Vector2.ONE)
-	assert(floor_macro.polygon == PackedVector2Array([
-		Vector2(44, 0),
-		Vector2(1188, 0),
-		Vector2(1232, 44),
-		Vector2(1232, 724),
-		Vector2(1188, 768),
-		Vector2(44, 768),
-		Vector2(0, 724),
-		Vector2(0, 44),
-	]))
-	assert(floor_macro.uv.size() == floor_macro.polygon.size())
-	for point_index in floor_macro.polygon.size():
-		var expected_uv := (
-			floor_macro.polygon[point_index]
-			/ Vector2(1232, 768)
-			* Vector2(2048, 1280)
-		)
-		assert(floor_macro.uv[point_index].is_equal_approx(expected_uv))
+	assert(floor_macro.texture.get_size() == Vector2(1586, 992))
+	assert(floor_macro.position == Vector2(0, 32))
+	assert(floor_macro.scale.is_equal_approx(Vector2(
+		1536.0 / 1586.0,
+		960.0 / 992.0,
+	)))
 	assert(floor_macro.z_index > floor_tiles.z_index)
 	assert(floor_macro.z_index < wall_tiles.z_index)
 	var wall_shell := modular.get_node("StandardWallShell") as Node2D
 	assert(wall_shell != null and wall_shell.get_child_count() == 4)
 	for wall_region in wall_shell.get_children():
 		assert((wall_region as Sprite2D).z_index > floor_macro.z_index)
-	assert((wall_shell.get_node("BackWall") as Sprite2D).z_index == -7)
-	assert((wall_shell.get_node("WestWall") as Sprite2D).position == Vector2(0, 256))
-	assert((wall_shell.get_node("EastWall") as Sprite2D).position == Vector2(1280, 256))
+	assert((wall_shell.get_node("Architecture") as Sprite2D).z_index == -7)
+	assert((wall_shell.get_node("Architecture") as Sprite2D).position == Vector2(0, 32))
+	assert((wall_shell.get_node("BackProps") as Sprite2D).z_index == -2)
+	assert((wall_shell.get_node("FrontProps") as Sprite2D).z_index == 37)
 	assert((wall_shell.get_node("ForegroundWall") as Sprite2D).z_index == 38)
 	assert(not wall_tiles.visible)
 	assert(not side_wall_tiles.visible)
@@ -86,12 +72,12 @@ func _run_test() -> void:
 	assert(not modular.has_node("FloorDetails/MedicalGuideLine"))
 	assert(not modular.has_node("FloorDetails/MedicalGuideGlow"))
 	assert(not modular.has_node("FloorDetails/ObjectiveBay"))
-	assert(modular.get_node("ThemeProps").get_child_count() == 3)
+	assert(modular.get_node("ThemeProps").get_child_count() == 0)
 	assert(modular.get_node("LightAccents").get_child_count() == 2)
 	assert(modular.theme.theme_id == MapThemeCatalog.HOSPITAL_THEME)
 	assert(modular.theme.display_name == "异常侵蚀医疗研究设施")
 	assert(modular is RoomBuilder)
-	assert(_sprite_count(modular) == 7)
+	assert(_sprite_count(modular) == 5)
 	assert(MapStyleDemo.MAP_SIZE == Vector2(1536, 1024))
 	var viewport_size := instance.get_viewport_rect().size
 	var expected_cover_zoom := (
@@ -112,6 +98,8 @@ func _run_test() -> void:
 	assert(room.camera_guide_outline.size() == 4)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
 	assert(room.door_anchor_overrides.size() == 2)
+	assert(room.door_anchor_world(&"west") == Vector2(256, 494))
+	assert(room.door_anchor_world(&"east") == Vector2(1280, 494))
 	assert(room.get_obstacles().is_empty())
 	assert(room.get_node("NavigationRegion2D") is NavigationRegion2D)
 	assert((room.get_node("NavigationRegion2D") as NavigationRegion2D).enabled)
@@ -130,15 +118,15 @@ func _run_test() -> void:
 		assert(door.rotation == 0.0)
 		assert(door.get_node("DoorOpening") is Polygon2D)
 		assert(door.get_node("DoorFrame") is Node2D)
-		assert(door.get_node("LeftLeaf") is Polygon2D)
-		assert(door.get_node("RightLeaf") is Polygon2D)
-		assert(door.get_node("LeftLeaf/ThemeStencil/MedicalCross") is Polygon2D)
-		assert(door.get_node("RightLeaf/ThemeStencil/MedicalCross") is Polygon2D)
+		assert(door.get_node("LeftLeaf") is Sprite2D)
+		assert(door.get_node("RightLeaf") is Sprite2D)
+		assert((door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
+		assert((door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
 		assert(door.get_node("LockedIndicator") is Polygon2D)
 		assert(door.get_node("OpenIndicator") is Polygon2D)
 		assert(door.get_node("DoorBlocker") is StaticBody2D)
 		assert(door._theme == modular.theme)
-		var expected_recess := door.outward_vector() * MapRoomDoor.SIDE_DOOR_VISUAL_RECESS
+		var expected_recess := door.outward_vector() * 69.5
 		assert((door.get_node("DoorFrame") as Node2D).position == expected_recess)
 		assert((door.get_node("DoorOpening") as Polygon2D).position == expected_recess)
 

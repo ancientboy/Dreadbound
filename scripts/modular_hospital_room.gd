@@ -131,6 +131,8 @@ func _build_theme_props() -> void:
 	props.z_index = 7
 	props.y_sort_enabled = true
 	add_child(props)
+	if bool(room_spec.get("hide_theme_props", false)):
+		return
 	for slot_spec in room_spec.get("content_slots", []):
 		var visual_id := StringName(slot_spec.get("visual_id", &""))
 		if visual_id == &"":

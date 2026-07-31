@@ -75,9 +75,9 @@ func unlock() -> void:
 	status_tween.tween_callback(func() -> void: _open_indicator.visible = true)
 	status_tween.tween_property(_open_indicator, "modulate:a", 1.0, 0.16)
 	var travel_distance := (
-		86.0
-		if _uses_containment_visuals()
-		else (58.0 if direction == &"west" or direction == &"east" else 78.0)
+		float(_visual_profile.get("travel_distance", 58.0))
+		if direction == &"west" or direction == &"east"
+		else (86.0 if _uses_containment_visuals() else 78.0)
 	)
 	var travel := _slide_axis * travel_distance
 	var door_tween := create_tween().set_parallel(true)
@@ -280,6 +280,9 @@ func _make_containment_leaf(
 
 
 func _build_tile_door_visuals() -> void:
+	if _visual_profile.has("art_texture_path"):
+		_build_authored_tile_door_visuals()
+		return
 	_slide_axis = Vector2.DOWN
 	var visual_offset := outward_vector() * SIDE_DOOR_VISUAL_RECESS
 	var recess_shadow := Polygon2D.new()
@@ -349,6 +352,114 @@ func _build_tile_door_visuals() -> void:
 	_open_indicator.position = visual_offset + Vector2(33, 0)
 	_open_indicator.visible = false
 	_open_indicator.modulate.a = 0.0
+
+
+func _build_authored_tile_door_visuals() -> void:
+	_slide_axis = Vector2.RIGHT
+	var texture_path := String(_visual_profile["art_texture_path"])
+	assert(
+		ResourceLoader.exists(texture_path),
+		"Authored door texture does not exist: %s" % texture_path,
+	)
+	var door_texture := load(texture_path) as Texture2D
+	assert(door_texture != null, "Authored door texture must be a Texture2D")
+	var source_key := "%s_source_region" % String(direction)
+	var source_region: Rect2 = _visual_profile.get(source_key, Rect2())
+	assert(source_region.has_area(), "Authored door requires a source region")
+	var visual_scale := float(_visual_profile.get("visual_scale", 1.0))
+	var recess := float(_visual_profile.get(
+		"side_visual_recess",
+		SIDE_DOOR_VISUAL_RECESS,
+	))
+	var visual_offset := outward_vector() * recess
+	var half_width := source_region.size.x * 0.5
+
+	var opening := Polygon2D.new()
+	opening.name = "DoorOpening"
+	var opening_half_size := source_region.size * visual_scale * 0.5
+	opening.polygon = PackedVector2Array([
+		Vector2(-opening_half_size.x, -opening_half_size.y),
+		Vector2(opening_half_size.x, -opening_half_size.y),
+		opening_half_size,
+		Vector2(-opening_half_size.x, opening_half_size.y),
+	])
+	opening.color = Color(0.004, 0.014, 0.018, 1.0)
+	opening.z_index = -2
+	opening.position = visual_offset
+	add_child(opening)
+
+	var frame := Node2D.new()
+	frame.name = "DoorFrame"
+	frame.position = visual_offset
+	frame.z_index = 6
+	add_child(frame)
+
+	var left_region := Rect2(
+		source_region.position,
+		Vector2(half_width, source_region.size.y),
+	)
+	var right_region := Rect2(
+		source_region.position + Vector2(half_width, 0),
+		Vector2(half_width, source_region.size.y),
+	)
+	_left_leaf = _make_authored_leaf(
+		"LeftLeaf",
+		door_texture,
+		left_region,
+		visual_offset + Vector2(-half_width * visual_scale * 0.5, 0),
+		visual_scale,
+	)
+	_right_leaf = _make_authored_leaf(
+		"RightLeaf",
+		door_texture,
+		right_region,
+		visual_offset + Vector2(half_width * visual_scale * 0.5, 0),
+		visual_scale,
+	)
+	_left_closed_position = _left_leaf.position
+	_right_closed_position = _right_leaf.position
+
+	_seal_glow = Polygon2D.new()
+	_seal_glow.name = "LockField"
+	_seal_glow.polygon = opening.polygon
+	_seal_glow.color = Color(0.95, 0.12, 0.08, 0.055)
+	_seal_glow.position = visual_offset
+	_seal_glow.z_index = 3
+	add_child(_seal_glow)
+	_locked_indicator = _make_indicator(
+		"LockedIndicator",
+		_theme.door_locked_color if _theme != null else Color(1.0, 0.12, 0.08, 0.9),
+	)
+	_open_indicator = _make_indicator(
+		"OpenIndicator",
+		_theme.door_open_color if _theme != null else Color(0.18, 1.0, 0.72, 0.9),
+	)
+	var indicator_offset := opening_half_size.x + 8.0
+	_locked_indicator.position = visual_offset + Vector2(indicator_offset, 0)
+	_open_indicator.position = visual_offset + Vector2(indicator_offset, 0)
+	_open_indicator.visible = false
+	_open_indicator.modulate.a = 0.0
+
+
+func _make_authored_leaf(
+	node_name: String,
+	texture: Texture2D,
+	source_region: Rect2,
+	center_position: Vector2,
+	visual_scale: float,
+) -> Sprite2D:
+	var atlas := AtlasTexture.new()
+	atlas.atlas = texture
+	atlas.region = source_region
+	var leaf := Sprite2D.new()
+	leaf.name = node_name
+	leaf.texture = atlas
+	leaf.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	leaf.position = center_position
+	leaf.scale = Vector2.ONE * visual_scale
+	leaf.z_index = 2
+	add_child(leaf)
+	return leaf
 
 
 func _add_frame_part(

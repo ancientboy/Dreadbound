@@ -228,14 +228,19 @@ func _build_wall_shell() -> void:
 	var shell_spec: Dictionary = room_spec.get("wall_shell", {})
 	if shell_spec.is_empty():
 		return
-	var texture := _load_room_texture(shell_spec)
-	if texture == null:
+	var default_texture := _load_room_texture(shell_spec)
+	if default_texture == null:
 		return
 	room_wall_shell = Node2D.new()
 	room_wall_shell.name = String(shell_spec.get("node_name", "RoomWallShell"))
 	add_child(room_wall_shell)
 	for region_spec_value in shell_spec.get("regions", []):
 		var region_spec: Dictionary = region_spec_value
+		var texture := default_texture
+		if region_spec.has("texture") or region_spec.has("texture_path"):
+			texture = _load_room_texture(region_spec)
+		if texture == null:
+			continue
 		var source_region: Rect2 = region_spec.get("source_region", Rect2())
 		var world_rect: Rect2 = region_spec.get("world_rect", Rect2())
 		assert(source_region.has_area(), "Wall shell region requires a source_region")
