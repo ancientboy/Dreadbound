@@ -57,12 +57,43 @@ static func _hospital_rooms() -> Array[Dictionary]:
 			Vector2(640, 480), Vector2(896, 480),
 			Vector2(896, 672), Vector2(640, 672),
 		]),
+		# Collision follows each fixture's floor-contact silhouette. Keep visual
+		# overhangs, curtains, and the gaps between bed frames and cabinets walkable.
 		"blocked_outlines": [
-			_rect_outline(Rect2(320, 276, 232, 128)),
-			_rect_outline(Rect2(616, 276, 232, 128)),
-			_rect_outline(Rect2(912, 276, 232, 128)),
-			_rect_outline(Rect2(320, 760, 256, 136)),
-			_rect_outline(Rect2(960, 760, 256, 136)),
+			# North-west bed frame and bedside cabinet.
+			PackedVector2Array([
+				Vector2(340, 326), Vector2(354, 312),
+				Vector2(474, 312), Vector2(490, 328),
+				Vector2(482, 382), Vector2(350, 382),
+			]),
+			_chamfered_rect_outline(Rect2(504, 338, 34, 46), 7.0),
+			# North-center bed frame and bedside cabinet.
+			PackedVector2Array([
+				Vector2(636, 326), Vector2(650, 312),
+				Vector2(770, 312), Vector2(786, 328),
+				Vector2(778, 382), Vector2(646, 382),
+			]),
+			_chamfered_rect_outline(Rect2(800, 338, 34, 46), 7.0),
+			# North-east bed frame and medical trolley.
+			PackedVector2Array([
+				Vector2(932, 326), Vector2(946, 312),
+				Vector2(1066, 312), Vector2(1082, 328),
+				Vector2(1074, 382), Vector2(942, 382),
+			]),
+			_chamfered_rect_outline(Rect2(1096, 336, 36, 48), 7.0),
+			# South-west and south-east foreground equipment: only the bases block.
+			PackedVector2Array([
+				Vector2(344, 820), Vector2(360, 804),
+				Vector2(468, 804), Vector2(484, 820),
+				Vector2(476, 874), Vector2(352, 874),
+			]),
+			_chamfered_rect_outline(Rect2(504, 830, 44, 46), 8.0),
+			PackedVector2Array([
+				Vector2(984, 820), Vector2(1000, 804),
+				Vector2(1108, 804), Vector2(1124, 820),
+				Vector2(1116, 874), Vector2(992, 874),
+			]),
+			_chamfered_rect_outline(Rect2(1144, 830, 44, 46), 8.0),
 		],
 		"door_sockets": [
 			_door_at("west", Vector2i(1, 4), Vector2(256, 494)),
@@ -349,6 +380,20 @@ static func _rect_outline(rect: Rect2) -> PackedVector2Array:
 		Vector2(rect.end.x, rect.position.y),
 		rect.end,
 		Vector2(rect.position.x, rect.end.y),
+	])
+
+
+static func _chamfered_rect_outline(rect: Rect2, corner: float) -> PackedVector2Array:
+	var inset := minf(corner, minf(rect.size.x, rect.size.y) * 0.5)
+	return PackedVector2Array([
+		rect.position + Vector2(inset, 0.0),
+		Vector2(rect.end.x - inset, rect.position.y),
+		Vector2(rect.end.x, rect.position.y + inset),
+		Vector2(rect.end.x, rect.end.y - inset),
+		Vector2(rect.end.x - inset, rect.end.y),
+		Vector2(rect.position.x + inset, rect.end.y),
+		Vector2(rect.position.x, rect.end.y - inset),
+		Vector2(rect.position.x, rect.position.y + inset),
 	])
 
 
