@@ -300,11 +300,10 @@ func _run_test() -> void:
 	assert(instance.boss_warning_play_count == 1)
 	assert(instance.boss_warning_overlay.visible)
 	assert(instance.boss_warning_icon.text == "⚠")
-	assert(
-		instance.boss_warning_overlay.get_node(
-			"WarningBanner/WarningCopy/WarningTitle",
-		).text == MapStyleDemo.BOSS_WARNING_TITLE
-	)
+	var warning_title := instance.boss_warning_overlay.get_node(
+		"WarningBanner/WarningCopy/WarningTitle",
+	) as Label
+	assert(warning_title.text == MapStyleDemo.BOSS_WARNING_TITLE)
 	instance._stop_boss_warning()
 	assert(not instance.boss_warning_overlay.visible)
 	instance.active_boss.free()
