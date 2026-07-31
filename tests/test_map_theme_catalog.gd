@@ -58,6 +58,11 @@ func _init() -> void:
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_foreground_v1.png",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_props_v1.png",
 		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/standard_combat_doors_v1.png",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_floor_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_wall_shell_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_foreground_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_props_v1.webp",
+		"res://assets/art/worlds/map_demo/dungeon1_sanatorium_v2/long_ward_doors_v1.webp",
 		"res://resources/map_themes/dungeon1_hospital.tres",
 	]:
 		assert(ResourceLoader.exists(asset_path))
@@ -100,6 +105,31 @@ func _init() -> void:
 	assert(rooms[0]["door_sockets"][1]["anchor"] == Vector2(1280, 494))
 	assert(rooms[0]["door_profile"].has("art_texture_path"))
 	assert(rooms[1]["grid_cells"].size() == 60)
+	assert(rooms[1]["title"] == "长条病区")
+	assert(rooms[1]["hide_theme_props"])
+	assert(rooms[1]["camera_zoom"] == Vector2(0.92, 0.92))
+	assert(is_equal_approx(float(rooms[1]["camera_overscan"]), 1.04))
+	assert(rooms[1]["camera_view_bounds"] == Rect2(64, 64, 1920, 896))
+	assert(rooms[1]["blocked_outlines"].size() == 18)
+	assert(rooms[1]["door_sockets"][0]["anchor"] == Vector2(190, 484))
+	assert(rooms[1]["door_sockets"][1]["anchor"] == Vector2(1858, 484))
+	assert(rooms[1]["door_profile"].has("art_texture_path"))
+	assert(rooms[1]["floor_macro"]["world_rect"] == Rect2(0, 0, 2048, 1024))
+	assert(rooms[1]["wall_shell"]["regions"].size() == 4)
+	assert(rooms[1]["content_slots"].size() == 5)
+	assert(rooms[1]["zones"].size() == 2)
+	var long_builder := ModularHospitalRoom.new()
+	long_builder.build_from_spec(rooms[1])
+	var long_module := MapRoomModule.new()
+	long_module.apply_built_spec(rooms[1], long_builder)
+	assert(long_builder.get_node("LongWardFloorMacro") is Sprite2D)
+	assert(long_builder.get_node("LongWardWallShell").get_child_count() == 4)
+	assert(long_builder.blocked_outlines.size() == 18)
+	assert(long_module.contains_world_point(Vector2(760, 500)))
+	assert(not long_module.contains_world_point(Vector2(390, 260)))
+	assert(not long_module.contains_world_point(Vector2(1010, 500)))
+	long_module.free()
+	long_builder.free()
 	assert(rooms[2]["grid_cells"].size() == 45)
 	var boss_room: Dictionary = rooms[3]
 	assert(boss_room["grid_cells"].size() == 160)
@@ -132,5 +162,5 @@ func _init() -> void:
 		== &"cover_a"
 	)
 	boss_builder.free()
-	print("Map theme catalog passed: three modular rooms and one themed Boss arena")
+	print("Map theme catalog passed: authored standard and long rooms plus elite and Boss layouts")
 	quit()

@@ -29,6 +29,21 @@ const SANATORIUM_V2_PROPS := (
 const SANATORIUM_V2_DOORS := (
 	SANATORIUM_V2_ROOT + "standard_combat_doors_v1.png"
 )
+const SANATORIUM_LONG_WARD_FLOOR := (
+	SANATORIUM_V2_ROOT + "long_ward_floor_v1.webp"
+)
+const SANATORIUM_LONG_WARD_WALL_SHELL := (
+	SANATORIUM_V2_ROOT + "long_ward_wall_shell_v1.webp"
+)
+const SANATORIUM_LONG_WARD_FOREGROUND := (
+	SANATORIUM_V2_ROOT + "long_ward_foreground_v1.webp"
+)
+const SANATORIUM_LONG_WARD_PROPS := (
+	SANATORIUM_V2_ROOT + "long_ward_props_v1.webp"
+)
+const SANATORIUM_LONG_WARD_DOORS := (
+	SANATORIUM_V2_ROOT + "long_ward_doors_v1.webp"
+)
 const HOSPITAL_BOSS_FLOOR_MACRO := (
 	"res://assets/art/worlds/map_demo/dungeon1_hospital/"
 	+ "boss_floor_macro_v1.webp"
@@ -160,35 +175,117 @@ static func _hospital_rooms() -> Array[Dictionary]:
 		"room_id": &"hospital_long_ward",
 		"theme_id": HOSPITAL_THEME,
 		"theme_resource": HOSPITAL_THEME_RESOURCE,
-		"title": "长条住院区",
+		"title": "长条病区",
 		"room_kind": "elite",
 		"size_class": MapRoomModule.RoomSizeClass.LARGE,
-		"camera_zoom": Vector2(0.72, 0.72),
+		"camera_zoom": Vector2(0.92, 0.92),
+		"camera_overscan": 1.04,
+		"camera_view_bounds": Rect2(64, 64, 1920, 896),
 		"map_bounds": Rect2(0, 0, 2048, 1024),
-		"spawn": Vector2(384, 576),
+		"spawn": Vector2(320, 520),
 		"grid_cells": _rect_cells(Vector2i(2, 2), Vector2i(12, 5)),
 		"camera_guide_outline": PackedVector2Array([
-			Vector2(640, 512), Vector2(1408, 512),
-			Vector2(1408, 640), Vector2(640, 640),
+			Vector2(448, 448), Vector2(1600, 448),
+			Vector2(1600, 672), Vector2(448, 672),
 		]),
-		"door_sockets": [
-			_door("west", Vector2i(1, 4)),
-			_door("east", Vector2i(14, 4)),
+		# Long-ward collision traces actual floor contact. Beds, cabinets,
+		# screen feet, station base and medical equipment remain independently
+		# approachable instead of forming broad invisible rectangles.
+		"blocked_outlines": [
+			_chamfered_rect_outline(Rect2(304, 156, 174, 214), 14.0),
+			_chamfered_rect_outline(Rect2(212, 148, 94, 104), 10.0),
+			_chamfered_rect_outline(Rect2(294, 404, 174, 218), 14.0),
+			_chamfered_rect_outline(Rect2(202, 406, 92, 98), 10.0),
+			_chamfered_rect_outline(Rect2(302, 666, 178, 218), 14.0),
+			_chamfered_rect_outline(Rect2(194, 666, 104, 98), 10.0),
+			_chamfered_rect_outline(Rect2(520, 300, 138, 34), 8.0),
+			_chamfered_rect_outline(Rect2(500, 548, 132, 34), 8.0),
+			_chamfered_rect_outline(Rect2(494, 792, 138, 34), 8.0),
+			PackedVector2Array([
+				Vector2(868, 420), Vector2(894, 396),
+				Vector2(1136, 396), Vector2(1170, 426),
+				Vector2(1154, 596), Vector2(886, 596),
+			]),
+			_chamfered_rect_outline(Rect2(1066, 574, 94, 74), 10.0),
+			_chamfered_rect_outline(Rect2(1318, 154, 88, 94), 10.0),
+			_chamfered_rect_outline(Rect2(1434, 130, 152, 132), 12.0),
+			_chamfered_rect_outline(Rect2(1590, 142, 120, 152), 14.0),
+			_chamfered_rect_outline(Rect2(1748, 268, 104, 32), 8.0),
+			PackedVector2Array([
+				Vector2(1644, 734), Vector2(1680, 704),
+				Vector2(1858, 770), Vector2(1842, 846),
+				Vector2(1660, 824), Vector2(1628, 790),
+			]),
+			_chamfered_rect_outline(Rect2(1496, 816, 88, 76), 10.0),
+			_chamfered_rect_outline(Rect2(1810, 810, 52, 42), 10.0),
 		],
-		"door_profile": _hospital_door_profile(),
-		"guide_line": PackedVector2Array([Vector2(274, 576), Vector2(1774, 576)]),
+		"door_sockets": [
+			_door_at("west", Vector2i(1, 4), Vector2(190, 484)),
+			_door_at("east", Vector2i(14, 4), Vector2(1858, 484)),
+		],
+		"door_profile": _sanatorium_long_ward_door_profile(),
+		"hide_theme_props": true,
+		"floor_macro": {
+			"node_name": "LongWardFloorMacro",
+			"texture_path": SANATORIUM_LONG_WARD_FLOOR,
+			"world_rect": Rect2(0, 0, 2048, 1024),
+			"z_index": -24,
+		},
+		"wall_shell": {
+			"node_name": "LongWardWallShell",
+			"texture_path": SANATORIUM_LONG_WARD_WALL_SHELL,
+			"hide_generated_walls": true,
+			"regions": [
+				_layer_region(
+					"architecture",
+					SANATORIUM_LONG_WARD_WALL_SHELL,
+					Rect2(0, 0, 2048, 1024),
+					Rect2(0, 0, 2048, 1024),
+					-7,
+				),
+				_layer_region(
+					"back_props",
+					SANATORIUM_LONG_WARD_PROPS,
+					Rect2(0, 0, 2048, 650),
+					Rect2(0, 0, 2048, 650),
+					-2,
+				),
+				_layer_region(
+					"front_props",
+					SANATORIUM_LONG_WARD_PROPS,
+					Rect2(0, 650, 2048, 374),
+					Rect2(0, 650, 2048, 374),
+					37,
+					true,
+				),
+				_layer_region(
+					"foreground_wall",
+					SANATORIUM_LONG_WARD_FOREGROUND,
+					Rect2(0, 0, 2048, 1024),
+					Rect2(0, 0, 2048, 1024),
+					38,
+					true,
+				),
+			],
+		},
+		"guide_line": PackedVector2Array([
+			Vector2(222, 484), Vector2(826, 484),
+			Vector2(826, 640), Vector2(1222, 640),
+			Vector2(1222, 484), Vector2(1826, 484),
+		]),
 		"content_slots": [
-			_slot("west_cover", "cover", Vector2i(4, 3), "cover_a"),
-			_slot("west_spawn", "enemy", Vector2i(6, 5), "enemy"),
-			_slot("east_spawn", "enemy", Vector2i(10, 3), "enemy"),
-			_slot("east_cover", "cover", Vector2i(12, 5), "cover_b"),
+			_slot("west_spawn_a", "enemy", Vector2i(5, 3), "enemy"),
+			_slot("west_spawn_b", "enemy", Vector2i(6, 5), "enemy"),
+			_slot("nurse_checkpoint", "objective", Vector2i(8, 4), "objective"),
+			_slot("east_spawn_a", "enemy", Vector2i(10, 3), "enemy"),
+			_slot("east_spawn_b", "enemy", Vector2i(12, 5), "enemy"),
 		],
 		"zones": [
-			_zone("west_wing", Rect2(256, 256, 768, 640), true, [
-				Vector2(640, 448), Vector2(896, 704),
+			_zone("ward_wave", Rect2(192, 240, 768, 672), true, [
+				Vector2(668, 406), Vector2(746, 716),
 			], ["游荡病患", "破损护理体"]),
-			_zone("east_wing", Rect2(1024, 256, 768, 640), false, [
-				Vector2(1216, 448), Vector2(1536, 704),
+			_zone("isolation_wave", Rect2(1088, 240, 768, 672), false, [
+				Vector2(1340, 432), Vector2(1568, 690),
 			], ["值守残影", "精英医护残响"]),
 		],
 	},
@@ -414,6 +511,19 @@ static func _sanatorium_v2_door_profile() -> Dictionary:
 		"visual_scale": 1536.0 / 1586.0,
 		"side_visual_recess": 69.5,
 		"travel_distance": 47.0,
+	}
+
+
+static func _sanatorium_long_ward_door_profile() -> Dictionary:
+	return {
+		"theme_mark": &"medical_cross",
+		"mark_color": Color(0.32, 0.78, 0.7, 0.52),
+		"art_texture_path": SANATORIUM_LONG_WARD_DOORS,
+		"west_source_region": Rect2(20, 350, 190, 260),
+		"east_source_region": Rect2(1838, 350, 190, 260),
+		"visual_scale": 1.0,
+		"side_visual_recess": 0.0,
+		"travel_distance": 76.0,
 	}
 
 

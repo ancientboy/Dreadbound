@@ -177,7 +177,9 @@ func _run_test() -> void:
 		var blocker := door.get_node("DoorBlocker/CollisionShape2D") as CollisionShape2D
 		assert(blocker.disabled)
 
-	# The second room uses the same builder but extends the long axis to 12 cells.
+	# The second room is the approved authored long ward: two encounter stages,
+	# a nurse-station checkpoint, layered art, authored doors and precise fixture
+	# footprints over a 2048x1024 horizontal camera track.
 	instance._show_room_variant(1)
 	await process_frame
 	assert(room.room_id == &"hospital_long_ward")
@@ -185,30 +187,53 @@ func _run_test() -> void:
 	assert(room.size_class == MapRoomModule.RoomSizeClass.LARGE)
 	assert(room.is_multi_screen())
 	assert(room.walkable_outline.size() == 4)
-	assert(room.camera_guide_outline.size() == 4)
+	assert(room.camera_guide_outline == PackedVector2Array([
+		Vector2(448, 448), Vector2(1600, 448),
+		Vector2(1600, 672), Vector2(448, 672),
+	]))
+	assert(room.blocked_outlines.size() == 18)
 	assert(room.door_directions == PackedStringArray(["west", "east"]))
+	assert(room.door_anchor_world(&"west") == Vector2(190, 484))
+	assert(room.door_anchor_world(&"east") == Vector2(1858, 484))
 	assert(zones.get_child_count() == 2)
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
 	assert(modular.visible)
 	assert(modular.floor_tiles.get_used_cells().size() == 60)
-	assert(modular.floor_tiles.get_cell_atlas_coords(Vector2i(10, 2)) == Vector2i(7, 0))
-	assert(
-		modular.floor_tiles.get_cell_alternative_tile(Vector2i(10, 2))
-		== RoomBuilder.TILE_FLIP_H
-	)
-	assert(modular.get_node("ContentSlots").get_child_count() == 4)
-	assert(modular.get_node("ThemeProps").get_child_count() == 4)
-	assert(not modular.has_node("StandardFloorMacro"))
-	assert(not modular.has_node("StandardWallShell"))
-	assert(modular.get_node("FloorDetails/MedicalGuideLine") is Line2D)
-	assert(modular.get_node("FloorDetails/MedicalGuideGlow") is Line2D)
+	assert(modular.get_node("ContentSlots").get_child_count() == 5)
+	assert(modular.get_node("ThemeProps").get_child_count() == 0)
+	var long_floor := modular.get_node("LongWardFloorMacro") as Sprite2D
+	assert(long_floor != null)
+	assert(long_floor.texture.get_size() == Vector2(2048, 1024))
+	assert(long_floor.position == Vector2.ZERO)
+	assert(long_floor.scale == Vector2.ONE)
+	var long_shell := modular.get_node("LongWardWallShell") as Node2D
+	assert(long_shell != null and long_shell.get_child_count() == 4)
+	assert((long_shell.get_node("Architecture") as Sprite2D).z_index == -7)
+	assert((long_shell.get_node("BackProps") as Sprite2D).z_index == -2)
+	assert((long_shell.get_node("FrontProps") as Sprite2D).z_index == 37)
+	assert((long_shell.get_node("ForegroundWall") as Sprite2D).z_index == 38)
+	assert(not modular.wall_base_tiles.visible)
+	assert(not modular.side_wall_tiles.visible)
+	assert(not modular.foreground_walls.visible)
+	assert(not modular.has_node("FloorDetails/MedicalGuideLine"))
+	assert(not modular.has_node("FloorDetails/MedicalGuideGlow"))
 	assert(room.camera_bounds == Rect2(0, 0, 2048, 1024))
-	assert(camera.limit_right == 2048 and camera.limit_bottom == 1024)
-	var west_camera := room.guided_camera_world_point(Vector2(384, 576))
-	var east_camera := room.guided_camera_world_point(Vector2(1664, 576))
+	assert(camera.limit_left == 64 and camera.limit_top == 64)
+	assert(camera.limit_right == 1984 and camera.limit_bottom == 960)
+	var west_camera := room.guided_camera_world_point(Vector2(320, 520))
+	var east_camera := room.guided_camera_world_point(Vector2(1728, 520))
 	assert(east_camera.x > west_camera.x)
 	assert(is_equal_approx(east_camera.y, west_camera.y))
+	assert(room.contains_world_point(Vector2(760, 500)))
+	assert(room.contains_world_point(Vector2(1260, 500)))
+	assert(not room.contains_world_point(Vector2(390, 260)))
+	assert(not room.contains_world_point(Vector2(1010, 500)))
+	for door in instance.exit_doors:
+		assert(door.get_node("LeftLeaf") is Sprite2D)
+		assert(door.get_node("RightLeaf") is Sprite2D)
+		assert((door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
+		assert((door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
 
 	player.global_position = Vector2(1280, 520)
 	instance._physics_process(0.0)
