@@ -230,8 +230,8 @@ func _unlock_exit_doors() -> void:
 	room_cleared = true
 	for door in exit_doors:
 		door.unlock()
-	objective_label.text = "房间已清理，独立门扇正在滑入墙体 · 请选择出口"
-	state_label.text = "门洞碰撞已开放，走近任意青色出口即可进入"
+	objective_label.text = "房间已清理，出口传送阵已启动 · 请选择方向"
+	state_label.text = "走入任意青色传送阵即可进入下一房间"
 
 
 func _on_door_traversal_requested(door: MapRoomDoor) -> void:
@@ -255,13 +255,13 @@ func _traverse_door(door: MapRoomDoor) -> void:
 	var saved_collision_mask := player.collision_mask
 	player.collision_layer = 0
 	player.collision_mask = 0
-	objective_label.text = "正在通过 %s 出口…" % _direction_label(chosen_direction)
+	objective_label.text = "正在通过%s传送阵…" % _direction_label(chosen_direction)
 
 	var exit_tween := create_tween().set_parallel(true)
 	exit_tween.tween_property(
 		player,
 		"global_position",
-		door.global_position + door.outward_vector() * 88.0,
+		door.activation_world_position(),
 		0.38,
 	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	exit_tween.tween_property(transition_fade, "color:a", 1.0, 0.28)
@@ -270,11 +270,12 @@ func _traverse_door(door: MapRoomDoor) -> void:
 	_show_room_variant(target_room_index, entry_direction)
 	var entrance := _door_for_direction(entry_direction)
 	if entrance != null:
+		player.global_position = entrance.activation_world_position()
 		var enter_tween := create_tween().set_parallel(true)
 		enter_tween.tween_property(
 			player,
 			"global_position",
-			entrance.global_position + entrance.inward_vector() * 92.0,
+			entrance.activation_world_position() + entrance.inward_vector() * 72.0,
 			0.44,
 		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		enter_tween.tween_property(transition_fade, "color:a", 0.0, 0.3)

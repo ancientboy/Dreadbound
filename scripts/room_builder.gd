@@ -160,6 +160,10 @@ func _build_floor_macro() -> void:
 	assert(source_region.has_area(), "Room floor macro requires a source_region")
 	assert(world_rect.has_area(), "Room floor macro requires a world_rect")
 	var corner_cut: Vector2 = macro_spec.get("corner_cut", Vector2.ZERO)
+	# Authored macro floors already own the complete visible footprint.  Keeping
+	# the generated tile layer underneath makes its blue fallback tiles show
+	# through transparent outer corners and L-shaped voids.
+	floor_tiles.visible = false
 	if corner_cut.x > 0.0 or corner_cut.y > 0.0:
 		var floor_polygon := Polygon2D.new()
 		floor_polygon.name = String(macro_spec.get("node_name", "RoomFloorMacro"))

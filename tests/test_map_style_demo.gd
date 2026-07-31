@@ -122,19 +122,22 @@ func _run_test() -> void:
 		assert(door is MapRoomDoor)
 		assert(door.state == MapRoomDoor.DoorState.SEALED)
 		assert(door.rotation == 0.0)
-		assert(door.get_node("DoorOpening") is Polygon2D)
-		assert(door.get_node("DoorFrame") is Node2D)
-		assert(door.get_node("LeftLeaf") is Sprite2D)
-		assert(door.get_node("RightLeaf") is Sprite2D)
-		assert((door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
-		assert((door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
-		assert(door.get_node("LockedIndicator") is Polygon2D)
-		assert(door.get_node("OpenIndicator") is Polygon2D)
+		assert(not door.has_node("DoorOpening"))
+		assert(not door.has_node("DoorFrame"))
+		assert(not door.has_node("LeftLeaf"))
+		assert(not door.has_node("RightLeaf"))
 		assert(door.get_node("DoorBlocker") is StaticBody2D)
+		assert(door.get_node("ExitPortal") is Node2D)
+		assert(door.get_node("ExitPortal/PortalRing") is Line2D)
+		assert(
+			door.activation_world_position()
+			== door.global_position + door.inward_vector() * MapRoomDoor.PORTAL_INSET
+		)
 		assert(door._theme == modular.theme)
-		var expected_recess := door.outward_vector() * 69.5
-		assert((door.get_node("DoorFrame") as Node2D).position == expected_recess)
-		assert((door.get_node("DoorOpening") as Polygon2D).position == expected_recess)
+		assert(
+			(door.get_node("ExitPortal") as Node2D).position
+			== door.inward_vector() * MapRoomDoor.PORTAL_INSET
+		)
 
 	# Door openings remain free; fixture collision uses each polygon's real
 	# edge count and leaves transparent corners/component gaps walkable.
@@ -175,10 +178,11 @@ func _run_test() -> void:
 	for door in instance.exit_doors:
 		assert(door.state != MapRoomDoor.DoorState.SEALED)
 		var blocker := door.get_node("DoorBlocker/CollisionShape2D") as CollisionShape2D
-		assert(blocker.disabled)
+		assert(not blocker.disabled)
+		assert(door.get_node("ExitPortal").modulate.a > 0.22)
 
 	# The second room is the approved authored long ward: two encounter stages,
-	# a nurse-station checkpoint, layered art, authored doors and precise fixture
+	# a nurse-station checkpoint, layered art, door-front portals and precise fixture
 	# footprints over a 2048x1024 horizontal camera track.
 	instance._show_room_variant(1)
 	await process_frame
@@ -200,6 +204,7 @@ func _run_test() -> void:
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
 	assert(modular.visible)
 	assert(modular.floor_tiles.get_used_cells().size() == 60)
+	assert(not modular.floor_tiles.visible)
 	assert(modular.get_node("ContentSlots").get_child_count() == 5)
 	assert(modular.get_node("ThemeProps").get_child_count() == 0)
 	var long_floor := modular.get_node("LongWardFloorMacro") as Sprite2D
@@ -231,14 +236,9 @@ func _run_test() -> void:
 	for corridor_x in range(288, 1793, 128):
 		assert(room.contains_world_point(Vector2(corridor_x, 512)))
 	for door in instance.exit_doors:
-		assert(door.get_node("LeftLeaf") is Sprite2D)
-		assert(door.get_node("RightLeaf") is Sprite2D)
-		assert((door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
-		assert((door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
-		assert(
-			((door.get_node("LeftLeaf") as Sprite2D).texture as AtlasTexture).region.size
-			== Vector2(39, 154)
-		)
+		assert(door.get_node("ExitPortal") is Node2D)
+		assert(not door.has_node("LeftLeaf"))
+		assert(not door.has_node("RightLeaf"))
 
 	player.global_position = Vector2(1280, 520)
 	instance._physics_process(0.0)
@@ -261,6 +261,7 @@ func _run_test() -> void:
 	assert(room.door_anchor_world(&"west") == Vector2(176, 350))
 	assert(room.door_anchor_world(&"south") == Vector2(1341, 1320))
 	assert(modular.floor_tiles.get_used_cells().size() == 66)
+	assert(not modular.floor_tiles.visible)
 	assert(modular.get_node("ContentSlots").get_child_count() == 6)
 	assert(modular.get_node("ThemeProps").get_child_count() == 0)
 	var elite_floor := modular.get_node("LEliteFloorMacro") as Sprite2D
@@ -301,19 +302,10 @@ func _run_test() -> void:
 	assert(instance.activated_zone_count == 1)
 	assert(get_nodes_in_group(MapStyleDemo.SAMPLE_ENCOUNTER).size() == 2)
 	for elite_door in instance.exit_doors:
-		assert(elite_door.get_node("LeftLeaf") is Sprite2D)
-		assert(elite_door.get_node("RightLeaf") is Sprite2D)
-		assert((elite_door.get_node("LeftLeaf") as Sprite2D).texture is AtlasTexture)
-		assert((elite_door.get_node("RightLeaf") as Sprite2D).texture is AtlasTexture)
-		if elite_door.direction == &"south":
-			assert(elite_door.rotation == 0.0)
-			var south_left := elite_door.get_node("LeftLeaf") as Sprite2D
-			var south_right := elite_door.get_node("RightLeaf") as Sprite2D
-			assert((south_left.texture as AtlasTexture).region.size == Vector2(154, 39))
-			assert(is_zero_approx(south_left.position.x))
-			assert(is_zero_approx(south_right.position.x))
-			assert(south_left.position.y < 0.0)
-			assert(south_right.position.y > 0.0)
+		assert(elite_door.get_node("ExitPortal") is Node2D)
+		assert(not elite_door.has_node("DoorFrame"))
+		assert(not elite_door.has_node("LeftLeaf"))
+		assert(not elite_door.has_node("RightLeaf"))
 
 	player.global_position = Vector2(1360, 660)
 	instance._physics_process(0.0)
@@ -373,17 +365,10 @@ func _run_test() -> void:
 		assert(door.state == MapRoomDoor.DoorState.SEALED)
 		assert(door._uses_containment_visuals())
 		assert(door.rotation == 0.0)
-		assert(not door.has_node("DoorRecessShadow"))
 		assert(not door.has_node("DoorFrame"))
-		assert(door.get_node("LeftLeaf") is Polygon2D)
-		assert(door.get_node("RightLeaf") is Polygon2D)
-		assert(door.get_node("LeftLeaf/ThemeStencil/WarningTriangle") is Line2D)
-		assert(door.get_node("RightLeaf/ThemeStencil/WarningTriangle") is Line2D)
-		assert((door.get_node("DoorOpening") as Polygon2D).position == Vector2.ZERO)
-		assert((door.get_node("LeftLeaf") as Polygon2D).position == Vector2(-49, 0))
-		assert((door.get_node("RightLeaf") as Polygon2D).position == Vector2(49, 0))
-		if door.direction == &"south":
-			assert(door.z_index > (boss_shell.get_node("ForegroundWall") as Sprite2D).z_index)
+		assert(not door.has_node("LeftLeaf"))
+		assert(not door.has_node("RightLeaf"))
+		assert(door.get_node("ExitPortal") is Node2D)
 	assert(camera.zoom.x >= 0.84)
 	assert(instance.boss_warning_play_count == 1)
 	assert(instance.boss_warning_overlay.visible)
@@ -408,7 +393,7 @@ func _run_test() -> void:
 	instance.queue_free()
 	print(
 		"Map style demo passed: authored sanatorium rooms plus the themed Boss arena retain "
-		+ "continuous walls, encounters, obstacle navigation, doors, and cameras",
+		+ "continuous walls, encounters, obstacle navigation, portals, and cameras",
 	)
 	quit()
 

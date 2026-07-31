@@ -12,6 +12,8 @@ enum DoorState {
 
 const VALID_DIRECTIONS := ["north", "south", "west", "east"]
 const SIDE_DOOR_VISUAL_RECESS := 48.0
+const PORTAL_INSET := 82.0
+const PORTAL_RADIUS := 52.0
 const LEGACY_FRAME := preload(
 	"res://assets/art/worlds/map_demo/sample_room_v2/doors/frame.png"
 )
@@ -35,6 +37,9 @@ var _theme: RoomTheme
 var _visual_profile: Dictionary = {}
 var _left_closed_position := Vector2.ZERO
 var _right_closed_position := Vector2.ZERO
+var _portal_root: Node2D
+var _portal_ring: Line2D
+var _portal_core: Polygon2D
 
 
 func _ready() -> void:
@@ -42,9 +47,9 @@ func _ready() -> void:
 	collision_mask = 1
 	monitoring = true
 	monitorable = false
-	z_index = 42 if _uses_containment_visuals() and direction == &"south" else 28
+	z_index = 28
 	body_entered.connect(_on_body_entered)
-	_build_visuals()
+	_build_portal_visuals()
 	_build_collision()
 
 
@@ -72,42 +77,13 @@ func unlock() -> void:
 	if state != DoorState.SEALED:
 		return
 	state = DoorState.UNLOCKING
-	if _blocker_shape != null:
-		_blocker_shape.set_deferred("disabled", true)
-	var status_tween := create_tween()
-	status_tween.tween_property(_locked_indicator, "modulate:a", 0.0, 0.14)
-	status_tween.tween_callback(func() -> void: _open_indicator.visible = true)
-	status_tween.tween_property(_open_indicator, "modulate:a", 1.0, 0.16)
-	var direction_travel_key := "%s_travel_distance" % String(direction)
-	var travel_distance := (
-		float(_visual_profile.get(
-			direction_travel_key,
-			_visual_profile.get("travel_distance", 58.0),
-		))
-		if direction == &"west" or direction == &"east"
-		else float(_visual_profile.get(
-			direction_travel_key,
-			86.0 if _uses_containment_visuals() else 78.0,
-		))
-	)
-	var travel := _slide_axis * travel_distance
-	var door_tween := create_tween().set_parallel(true)
-	door_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	door_tween.tween_property(
-		_left_leaf,
-		"position",
-		_left_closed_position - travel,
-		0.48,
-	)
-	door_tween.tween_property(
-		_right_leaf,
-		"position",
-		_right_closed_position + travel,
-		0.48,
-	)
-	door_tween.tween_property(_seal_glow, "modulate:a", 0.0, 0.32)
-	door_tween.tween_method(_set_open_progress, 0.0, 1.0, 0.48)
-	door_tween.finished.connect(func() -> void: state = DoorState.OPEN)
+	var portal_tween := create_tween().set_parallel(true)
+	portal_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	portal_tween.tween_property(_portal_root, "modulate:a", 1.0, 0.42)
+	portal_tween.tween_property(_portal_root, "scale", Vector2.ONE, 0.42)
+	portal_tween.tween_property(_portal_root, "rotation", TAU, 0.52)
+	portal_tween.tween_method(_set_open_progress, 0.0, 1.0, 0.42)
+	portal_tween.finished.connect(func() -> void: state = DoorState.OPEN)
 
 
 func begin_traversal() -> void:
@@ -130,6 +106,10 @@ func inward_vector() -> Vector2:
 
 func outward_vector() -> Vector2:
 	return -inward_vector()
+
+
+func activation_world_position() -> Vector2:
+	return global_position + inward_vector() * PORTAL_INSET
 
 
 static func opposite_direction(value: StringName) -> StringName:
@@ -701,13 +681,89 @@ func _make_indicator(node_name: String, color: Color) -> Polygon2D:
 	return indicator
 
 
+func _build_portal_visuals() -> void:
+	_portal_root = Node2D.new()
+	_portal_root.name = "ExitPortal"
+	_portal_root.position = inward_vector() * PORTAL_INSET
+	_portal_root.modulate.a = 0.22
+	_portal_root.scale = Vector2.ONE * 0.86
+	_portal_root.z_index = 18
+	add_child(_portal_root)
+
+	var shadow := Polygon2D.new()
+	shadow.name = "PortalShadow"
+	shadow.polygon = _circle_points(PORTAL_RADIUS + 12.0, 48, 0.55)
+	shadow.color = Color(0.0, 0.03, 0.045, 0.52)
+	_portal_root.add_child(shadow)
+
+	_portal_core = Polygon2D.new()
+	_portal_core.name = "PortalCore"
+	_portal_core.polygon = _circle_points(PORTAL_RADIUS - 8.0, 48, 0.48)
+	_portal_core.color = Color(0.03, 0.82, 0.78, 0.13)
+	_portal_core.z_index = 1
+	_portal_root.add_child(_portal_core)
+
+	_portal_ring = Line2D.new()
+	_portal_ring.name = "PortalRing"
+	_portal_ring.points = _closed_circle_points(PORTAL_RADIUS, 48, 0.48)
+	_portal_ring.width = 5.0
+	_portal_ring.default_color = Color(0.22, 1.0, 0.88, 0.92)
+	_portal_ring.antialiased = true
+	_portal_ring.z_index = 3
+	_portal_root.add_child(_portal_ring)
+
+	var inner_ring := Line2D.new()
+	inner_ring.name = "InnerRing"
+	inner_ring.points = _closed_circle_points(PORTAL_RADIUS - 15.0, 40, 0.48)
+	inner_ring.width = 2.0
+	inner_ring.default_color = Color(0.42, 0.94, 1.0, 0.52)
+	inner_ring.antialiased = true
+	inner_ring.z_index = 2
+	_portal_root.add_child(inner_ring)
+
+	for index in 4:
+		var rune := Line2D.new()
+		rune.name = "DirectionRune%d" % (index + 1)
+		var angle := TAU * float(index) / 4.0
+		var tangent := Vector2.from_angle(angle + PI * 0.5)
+		var center := Vector2.from_angle(angle) * (PORTAL_RADIUS - 5.0)
+		rune.points = PackedVector2Array([
+			center - tangent * 7.0,
+			center + Vector2.from_angle(angle) * 6.0,
+			center + tangent * 7.0,
+		])
+		rune.width = 3.0
+		rune.default_color = Color(0.68, 1.0, 0.94, 0.82)
+		rune.antialiased = true
+		rune.z_index = 4
+		_portal_root.add_child(rune)
+
+
+func _circle_points(radius: float, segments: int, vertical_scale: float) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for index in segments:
+		var angle := TAU * float(index) / float(segments)
+		points.append(Vector2(cos(angle) * radius, sin(angle) * radius * vertical_scale))
+	return points
+
+
+func _closed_circle_points(
+	radius: float,
+	segments: int,
+	vertical_scale: float,
+) -> PackedVector2Array:
+	var points := _circle_points(radius, segments, vertical_scale)
+	points.append(points[0])
+	return points
+
+
 func _build_collision() -> void:
 	var trigger := CollisionShape2D.new()
 	trigger.name = "TraversalTrigger"
-	var trigger_shape := RectangleShape2D.new()
-	trigger_shape.size = Vector2(134.0, 122.0)
+	var trigger_shape := CircleShape2D.new()
+	trigger_shape.radius = PORTAL_RADIUS
 	trigger.shape = trigger_shape
-	trigger.position = inward_vector() * 30.0
+	trigger.position = inward_vector() * PORTAL_INSET
 	add_child(trigger)
 
 	var blocker := StaticBody2D.new()
