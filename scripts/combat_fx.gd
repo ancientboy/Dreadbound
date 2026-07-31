@@ -7,6 +7,7 @@ const MAX_EVENTS := 48
 const COMBAT_ATLAS: Texture2D = preload("res://assets/art/vfx/combat_core.png")
 const METRO_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/metro_enemy_skills.png")
 const SANATORIUM_ENEMY_SKILLS: Texture2D = preload("res://assets/art/vfx/sanatorium_enemy_skills.png")
+const BASIC_MELEE_CRESCENT: Texture2D = preload("res://assets/art/vfx/basic_melee_crescent.svg")
 const PROFESSION_SKILL_ATLASES := {
 	"steadfast": preload("res://assets/art/vfx/profession_skills_steadfast.png"),
 	"armorer": preload("res://assets/art/vfx/profession_skills_armorer.png"),
@@ -267,40 +268,20 @@ func _draw() -> void:
 					1.0,
 					ease(clampf(progress / 0.12, 0.0, 1.0), -1.8),
 				)
-				var trail_radius := clampf(event.radius * 0.68, 44.0, 76.0)
-				trail_radius *= presentation_scale
-				var half_sweep := 1.16
-				var start_angle := swing_angle - half_sweep
-				var end_angle := swing_angle + half_sweep
+				var crescent_width := clampf(event.radius * 1.48, 112.0, 164.0)
+				var crescent_size := (
+					Vector2(crescent_width, crescent_width * 0.75)
+					* presentation_scale
+				)
 				var crescent_center: Vector2 = (
 					Vector2(event.origin)
-					+ swing_direction * clampf(event.radius * 0.38, 28.0, 48.0)
+					+ swing_direction * clampf(event.radius * 0.44, 34.0, 54.0)
 				)
-				_draw_crescent_blade(
+				_draw_melee_crescent_texture(
 					crescent_center,
-					trail_radius + 3.0,
-					30.0 * presentation_scale,
-					start_angle,
-					end_angle,
-					Color(color, fade * 0.18),
-				)
-				_draw_crescent_blade(
-					crescent_center,
-					trail_radius,
-					21.0 * presentation_scale,
-					start_angle,
-					end_angle,
-					Color(color.lightened(0.20), fade * 0.88),
-				)
-				draw_arc(
-					crescent_center,
-					trail_radius + 0.5,
-					start_angle,
-					end_angle,
-					28,
-					Color(Color.WHITE, fade * 0.58),
-					1.5,
-					true,
+					swing_angle,
+					crescent_size,
+					Color(color.lightened(0.26), fade * 0.92),
 				)
 			"tracer", "pellet":
 				var start_pos: Vector2 = event.origin.lerp(event.payload, progress * 0.24)
@@ -420,26 +401,28 @@ func _draw() -> void:
 					)
 
 
-func _draw_crescent_blade(
+func _draw_melee_crescent_texture(
 	center: Vector2,
-	radius: float,
-	thickness: float,
-	start_angle: float,
-	end_angle: float,
+	rotation: float,
+	draw_size: Vector2,
 	color: Color,
 ) -> void:
-	var points := PackedVector2Array()
-	var segments := 22
-	for index in range(segments + 1):
-		var ratio := float(index) / float(segments)
-		var angle := lerpf(start_angle, end_angle, ratio)
-		points.append(center + Vector2.from_angle(angle) * radius)
-	for index in range(segments, -1, -1):
-		var ratio := float(index) / float(segments)
-		var angle := lerpf(start_angle, end_angle, ratio)
-		var inner_radius := radius - thickness * sin(ratio * PI)
-		points.append(center + Vector2.from_angle(angle) * inner_radius)
-	draw_colored_polygon(points, color)
+	# Use one authored silhouette for the whole lifetime. Scaling and fading the
+	# texture cannot introduce the inward bulge created by the old radial mesh.
+	draw_set_transform(center, rotation, Vector2.ONE)
+	draw_texture_rect(
+		BASIC_MELEE_CRESCENT,
+		Rect2(-draw_size * 0.54, draw_size * 1.08),
+		false,
+		Color(color, color.a * 0.20),
+	)
+	draw_texture_rect(
+		BASIC_MELEE_CRESCENT,
+		Rect2(-draw_size * 0.5, draw_size),
+		false,
+		color,
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_fx_cell(index: int, center: Vector2, draw_size: float, rotation: float, modulate: Color) -> void:
